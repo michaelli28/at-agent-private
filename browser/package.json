@@ -1,0 +1,8 @@
+{
+  "name": "@adf/browser",
+  "version": "0.0.1",
+  "main": "src/playwrightClient.ts",
+  "dependencies": {
+    "playwright": "^1.40.0"
+  }
+}

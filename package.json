@@ -1,0 +1,34 @@
+{
+  "name": "accessibility-driver-framework",
+  "version": "0.0.1",
+  "private": true,
+  "workspaces": [
+    "browser",
+    "drivers",
+    "agent",
+    "evaluation",
+    "ui"
+  ],
+  "scripts": {
+    "build": "npm run build --workspaces",
+    "test": "npm run test --workspaces",
+    "lint": "eslint . --ext .ts,.tsx",
+    "dev:sr": "ts-node -r tsconfig-paths/register scripts/runScreenReaderDev.ts",
+    "test:regression": "ts-node -r tsconfig-paths/register scripts/runRegression.ts",
+    "start:agent": "ts-node -r tsconfig-paths/register scripts/runAgent.ts",
+    "benchmark:aria-at": "ts-node -r tsconfig-paths/register scripts/benchmarkAriaAt.ts"
+  },
+  "devDependencies": {
+    "@types/node": "^20.19.25",
+    "eslint": "^8.0.0",
+    "prettier": "^3.0.0",
+    "ts-node": "^10.9.2",
+    "tsconfig-paths": "^4.2.0",
+    "typescript": "^5.9.3"
+  },
+  "dependencies": {
+    "@google/generative-ai": "^0.24.1",
+    "dotenv": "^17.2.3",
+    "openai": "^6.9.1"
+  }
+}

@@ -1,0 +1,33 @@
+{
+  "compilerOptions": {
+    "target": "ES2020",
+    "module": "CommonJS",
+    "moduleResolution": "node",
+    "strict": true,
+    "esModuleInterop": true,
+    "skipLibCheck": true,
+    "forceConsistentCasingInFileNames": true,
+    "baseUrl": ".",
+    "paths": {
+      "@adf/browser/*": [
+        "browser/src/*"
+      ],
+      "@adf/drivers/*": [
+        "drivers/src/*"
+      ],
+      "@adf/agent/*": [
+        "agent/src/*"
+      ],
+      "@adf/evaluation/*": [
+        "evaluation/src/*"
+      ],
+      "@adf/ui/*": [
+        "ui/src/*"
+      ]
+    }
+  },
+  "exclude": [
+    "node_modules",
+    "dist"
+  ]
+}

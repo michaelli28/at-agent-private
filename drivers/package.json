@@ -1,0 +1,17 @@
+{
+  "name": "@adf/drivers",
+  "version": "0.0.1",
+  "main": "src/index.ts",
+  "scripts": {
+    "build": "tsc",
+    "build:injected": "esbuild src/injected/index.ts --bundle --outfile=dist/injected.js --platform=browser --target=es2020",
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "dependencies": {
+    "@adf/browser": "*",
+    "dom-accessibility-api": "^0.7.0"
+  },
+  "devDependencies": {
+    "esbuild": "^0.27.0"
+  }
+}

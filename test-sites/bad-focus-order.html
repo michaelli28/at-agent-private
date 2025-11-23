@@ -1,0 +1,27 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8">
+  <title>Focus Trap Test</title>
+</head>
+
+<body>
+  <h1>Test Case: Focus Trap</h1>
+  <button id="start">Start</button>
+  <!-- Violation: Focus trap -->
+  <input type="text" id="trap" placeholder="You cannot leave">
+  <button>End</button>
+
+  <script>
+    const trap = document.getElementById('trap');
+    trap.addEventListener('keydown', (e) => {
+      if (e.key === 'Tab') {
+        e.preventDefault();
+        trap.focus();
+      }
+    });
+  </script>
+</body>
+
+</html>

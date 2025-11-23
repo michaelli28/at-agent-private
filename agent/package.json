@@ -1,0 +1,9 @@
+{
+  "name": "@adf/agent",
+  "version": "0.0.1",
+  "main": "src/Agent.ts",
+  "dependencies": {
+    "@adf/drivers": "*",
+    "@adf/evaluation": "*"
+  }
+}

@@ -1,0 +1,37 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Accessibility Driver Debugger</title>
+    <style>
+        body { font-family: sans-serif; margin: 0; display: flex; height: 100vh; overflow: hidden; }
+        #main-view { flex: 1; position: relative; background: #f0f0f0; display: flex; align-items: center; justify-content: center; }
+        #browser-frame { width: 1280px; height: 720px; background: white; border: 1px solid #ccc; position: relative; }
+        #overlay { position: absolute; top: 0; left: 0; width: 100%; height: 100%; pointer-events: none; }
+        .cursor-box { position: absolute; border: 3px solid red; background: rgba(255, 0, 0, 0.1); transition: all 0.2s; }
+        #sidebar { width: 350px; background: #333; color: white; display: flex; flex-direction: column; padding: 10px; box-sizing: border-box; }
+        #transcript { flex: 1; overflow-y: auto; font-family: monospace; white-space: pre-wrap; }
+        .log-entry { margin-bottom: 5px; border-bottom: 1px solid #444; padding-bottom: 5px; }
+        .log-entry.sr { color: #4caf50; }
+        .log-entry.action { color: #2196f3; }
+        h2 { margin-top: 0; }
+    </style>
+</head>
+<body>
+    <div id="main-view">
+        <!-- In a real app, this would be an iframe or a streamed image. 
+             For now, we just show the overlay on a blank canvas representing the viewport. -->
+        <div id="browser-frame">
+            <div style="padding: 20px; color: #666;">
+                (Browser View Placeholder - In a full implementation, this would mirror the Playwright page)
+            </div>
+            <div id="overlay"></div>
+        </div>
+    </div>
+    <div id="sidebar">
+        <h2>Transcript</h2>
+        <div id="transcript"></div>
+    </div>
+    <script src="client.js"></script>
+</body>
+</html>
