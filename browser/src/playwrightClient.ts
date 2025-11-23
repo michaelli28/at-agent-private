@@ -5,6 +5,7 @@ export class BrowserClient {
   private browser: Browser | null = null;
   private page: Page | null = null;
   private cdpSession: CDPSession | null = null;
+  private navigationOccurred: boolean = false;
 
   /**
    * Launches the browser and opens a new page.
@@ -16,6 +17,11 @@ export class BrowserClient {
 
     // Enable DOM domain to ensure we can get box models
     await this.cdpSession.send('DOM.enable');
+
+    // Listen for page load events to detect full page navigations
+    this.page.on('load', () => {
+      this.navigationOccurred = true;
+    });
   }
 
   /**
@@ -94,6 +100,14 @@ export class BrowserClient {
   }
 
   /**
+   * Types text into the currently focused element.
+   */
+  async typeText(text: string): Promise<void> {
+    if (!this.page) throw new Error("Page not initialized.");
+    await this.page.keyboard.type(text);
+  }
+
+  /**
    * Simulates a mouse click at specific coordinates.
    */
   async click(x: number, y: number): Promise<void> {
@@ -158,5 +172,30 @@ export class BrowserClient {
   onConsoleMessage(callback: (msg: string) => void) {
     if (!this.page) return;
     this.page.on('console', msg => callback(msg.text()));
+  }
+
+  /**
+   * Gets the current page URL.
+   */
+  async getCurrentUrl(): Promise<string> {
+    if (!this.page) throw new Error("Page not initialized.");
+    return this.page.url();
+  }
+
+  /**
+   * Re-injects a script into the current page (useful after navigation).
+   */
+  async reinjectScript(content: string): Promise<void> {
+    if (!this.page) throw new Error("Page not initialized.");
+    await this.page.evaluate(content);
+  }
+
+  /**
+   * Checks if a full page navigation occurred and resets the flag.
+   */
+  checkAndClearNavigation(): boolean {
+    const occurred = this.navigationOccurred;
+    this.navigationOccurred = false;
+    return occurred;
   }
 }
