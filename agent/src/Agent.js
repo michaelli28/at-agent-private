@@ -1,112 +1,93 @@
-import { IAccessibilityDriver } from '@adf/drivers/src/IAccessibilityDriver';
-import { UserAction } from '@adf/drivers/src/types';
-import { AgentTrace, AgentStep, LLMClient, LLMResponse } from './types';
-
-export class Agent {
-  private maxSteps = 200;
-
-  constructor(
-    private driver: IAccessibilityDriver,
-    private llm: LLMClient
-  ) { }
-
-  async run(goal: string): Promise<AgentTrace> {
-    console.log('\n' + '='.repeat(80));
-    console.log('ACCESSIBILITY AGENT STARTING');
-    console.log('='.repeat(80));
-    console.log(`GOAL: "${goal}"`);
-    console.log(`DRIVER: ${this.driver.name}`);
-    console.log('='.repeat(80));
-
-    await this.driver.enable();
-
-    const trace: AgentTrace = {
-      goal,
-      success: false,
-      steps: []
-    };
-
-    try {
-      for (let i = 0; i < this.maxSteps; i++) {
-        console.log(`\n${'='.repeat(80)}`);
-        console.log(`STEP ${i + 1}`);
-        console.log('='.repeat(80));
-
-        // 1. Observe
-        const observation = await this.driver.getPerceptualOutput();
-        console.log(`SCREEN READER OUTPUT: "${observation.text}"`);
-
-        // 2. Plan (Construct Prompt & Call LLM)
-        const prompt = this.constructPrompt(goal, trace.steps, observation);
-        const response = await this.llm.generate(prompt);
-
-        console.log(`LLM THOUGHT: ${response.thought}`);
-
-        // Check for completion
-        if (response.done) {
-          trace.success = response.success || false;
-          console.log(`\n${'='.repeat(80)}`);
-          console.log(`FINISHED - Success: ${trace.success}`);
-          console.log('='.repeat(80));
-          break;
-        }
-
-        // Display action
-        const actionStr = response.action.type === 'KEY_PRESS'
-          ? `Press Key: ${response.action.key}`
-          : JSON.stringify(response.action);
-        console.log(`ACTION: ${actionStr}`);
-
-        // 3. Act
-        const result = await this.driver.performAction(response.action);
-
-        // Display result
-        console.log(`RESULT: ${result.success ? '[SUCCESS]' : '[FAILED]'} ${result.snapshot.text}`);
-        if (result.message) {
-          console.log(`   Message: ${result.message}`);
-        }
-
-        // 4. Record
-        const step: AgentStep = {
-          stepNumber: i + 1,
-          observation,
-          thought: response.thought,
-          action: response.action,
-          result
-        };
-        trace.steps.push(step);
-
-        if (!result.success) {
-          console.warn(`WARNING: Action failed: ${result.message}`);
-        }
-      }
-    } catch (error: any) {
-      trace.error = error.message;
-      console.error(`[Agent] Error:`, error);
-    } finally {
-      await this.driver.disable();
+"use strict";
+Object.defineProperty(exports, "__esModule", { value: true });
+exports.Agent = void 0;
+class Agent {
+    constructor(driver, llm) {
+        this.driver = driver;
+        this.llm = llm;
+        this.maxSteps = 200;
     }
-
-    return trace;
-  }
-
-  private constructPrompt(goal: string, history: AgentStep[], current: any): string {
-    const historyText = history.map(h =>
-      `Step ${h.stepNumber}:
+    async run(goal) {
+        console.log('\n' + '='.repeat(80));
+        console.log('ACCESSIBILITY AGENT STARTING');
+        console.log('='.repeat(80));
+        console.log(`GOAL: "${goal}"`);
+        console.log(`DRIVER: ${this.driver.name}`);
+        console.log('='.repeat(80));
+        await this.driver.enable();
+        const trace = {
+            goal,
+            success: false,
+            steps: []
+        };
+        try {
+            for (let i = 0; i < this.maxSteps; i++) {
+                console.log(`\n${'='.repeat(80)}`);
+                console.log(`STEP ${i + 1}`);
+                console.log('='.repeat(80));
+                // 1. Observe
+                const observation = await this.driver.getPerceptualOutput();
+                console.log(`SCREEN READER OUTPUT: "${observation.text}"`);
+                // 2. Plan (Construct Prompt & Call LLM)
+                const prompt = this.constructPrompt(goal, trace.steps, observation);
+                const response = await this.llm.generate(prompt);
+                console.log(`LLM THOUGHT: ${response.thought}`);
+                // Check for completion
+                if (response.done) {
+                    trace.success = response.success || false;
+                    console.log(`\n${'='.repeat(80)}`);
+                    console.log(`FINISHED - Success: ${trace.success}`);
+                    console.log('='.repeat(80));
+                    break;
+                }
+                // Display action
+                const actionStr = response.action.type === 'KEY_PRESS'
+                    ? `Press Key: ${response.action.key}`
+                    : JSON.stringify(response.action);
+                console.log(`ACTION: ${actionStr}`);
+                // 3. Act
+                const result = await this.driver.performAction(response.action);
+                // Display result
+                console.log(`RESULT: ${result.success ? '[SUCCESS]' : '[FAILED]'} ${result.snapshot.text}`);
+                if (result.message) {
+                    console.log(`   Message: ${result.message}`);
+                }
+                // 4. Record
+                const step = {
+                    stepNumber: i + 1,
+                    observation,
+                    thought: response.thought,
+                    action: response.action,
+                    result
+                };
+                trace.steps.push(step);
+                if (!result.success) {
+                    console.warn(`WARNING: Action failed: ${result.message}`);
+                }
+            }
+        }
+        catch (error) {
+            trace.error = error.message;
+            console.error(`[Agent] Error:`, error);
+        }
+        finally {
+            await this.driver.disable();
+        }
+        return trace;
+    }
+    constructPrompt(goal, history, current) {
+        const historyText = history.map(h => `Step ${h.stepNumber}:
        - Observed: "${h.observation.text}"
        - Action: ${JSON.stringify(h.action)}
-       - Result: ${h.result.success ? 'Success' : 'Failed: ' + h.result.message}`
-    ).join('\n');
-
-    // Detect repeated observations (stuck detection)
-    const recentObs = history.slice(-5).map(h => h.observation.text);
-    const lastObs = current.text;
-    const repeatCount = recentObs.filter(obs => obs === lastObs).length;
-    const stuckWarning = repeatCount >= 2
-      ? `\n WARNING: You've seen "${lastObs}" ${repeatCount + 1} times. You may be stuck! Try a different command.`
-      : '';
-
-    return `
+       - Result: ${h.result.success ? 'Success' : 'Failed: ' + h.result.message}`).join('\n');
+        // Detect repeated observations (stuck detection)
+        const recentObs = history.slice(-5).map(h => h.observation.text);
+        const lastObs = current.text;
+        const repeatCount = recentObs.filter(obs => obs === lastObs).length;
+        const stuckWarning = repeatCount >= 2
+            ? `\n WARNING: You've seen "${lastObs}" ${repeatCount + 1} times. You may be stuck! Try a different command.`
+            : '';
+        return `
 You are an assistive technology user interacting with a web page via a Screen Reader.
 Your Goal: "\${goal}"
 
@@ -445,5 +426,6 @@ Output: "Edit, Search, has text: tuition"
   "done": false
 }
     `.trim();
-  }
+    }
 }
+exports.Agent = Agent;

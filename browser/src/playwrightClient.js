@@ -1,0 +1,197 @@
+"use strict";
+Object.defineProperty(exports, "__esModule", { value: true });
+exports.BrowserClient = void 0;
+const playwright_1 = require("playwright");
+class BrowserClient {
+    constructor() {
+        this.browser = null;
+        this.page = null;
+        this.cdpSession = null;
+        this.navigationOccurred = false;
+    }
+    /**
+     * Launches the browser and opens a new page.
+     */
+    async launch(headless = true) {
+        this.browser = await playwright_1.chromium.launch({ headless });
+        this.page = await this.browser.newPage();
+        this.cdpSession = await this.page.context().newCDPSession(this.page);
+        // Enable DOM domain to ensure we can get box models
+        await this.cdpSession.send('DOM.enable');
+        // Listen for page load events to detect full page navigations
+        this.page.on('load', () => {
+            this.navigationOccurred = true;
+        });
+    }
+    /**
+     * Injects a script to run on every page load AND immediately.
+     */
+    async injectScript(content) {
+        if (!this.page)
+            throw new Error("Page not initialized.");
+        await this.page.addInitScript({ content });
+        await this.page.evaluate(content);
+    }
+    /**
+     * Navigates to a URL.
+     */
+    async goto(url) {
+        if (!this.page)
+            throw new Error("Browser not initialized. Call launch() first.");
+        await this.page.goto(url, { waitUntil: 'domcontentloaded' });
+    }
+    /**
+     * Fetches the full Accessibility Tree from CDP.
+     */
+    async getFullAXTree() {
+        if (!this.cdpSession)
+            throw new Error("CDP Session not initialized.");
+        // We don't need to explicitly enable Accessibility domain for getFullAXTree,
+        // but it's good practice if we were listening to events.
+        const response = await this.cdpSession.send('Accessibility.getFullAXTree');
+        return response.nodes;
+    }
+    /**
+     * Gets the bounding box for a specific backend DOM node ID.
+     * Returns null if the node has no visual representation (e.g. hidden).
+     */
+    async getBoundingBox(backendDOMNodeId) {
+        if (!this.cdpSession)
+            throw new Error("CDP Session not initialized.");
+        try {
+            const { model } = await this.cdpSession.send('DOM.getBoxModel', {
+                backendNodeId: backendDOMNodeId
+            });
+            // model.border is [x1, y1, x2, y2, x3, y3, x4, y4]
+            // We assume a rectangular shape for simplicity here.
+            const x = model.border[0];
+            const y = model.border[1];
+            const width = model.width;
+            const height = model.height;
+            return { x, y, width, height };
+        }
+        catch (error) {
+            // Node might be hidden or have no box model
+            return null;
+        }
+    }
+    /**
+     * Focuses a specific backend DOM node.
+     */
+    async focus(backendDOMNodeId) {
+        if (!this.cdpSession)
+            throw new Error("CDP Session not initialized.");
+        try {
+            await this.cdpSession.send('DOM.focus', { backendNodeId: backendDOMNodeId });
+        }
+        catch (e) {
+            // Ignore if not focusable
+        }
+    }
+    /**
+     * Simulates a key press.
+     */
+    async pressKey(key) {
+        if (!this.page)
+            throw new Error("Page not initialized.");
+        await this.page.keyboard.press(key);
+    }
+    /**
+     * Types text into the currently focused element.
+     */
+    async typeText(text) {
+        if (!this.page)
+            throw new Error("Page not initialized.");
+        await this.page.keyboard.type(text);
+    }
+    /**
+     * Simulates a mouse click at specific coordinates.
+     */
+    async click(x, y) {
+        if (!this.page)
+            throw new Error("Page not initialized.");
+        await this.page.mouse.click(x, y);
+    }
+    /**
+     * Takes a screenshot and returns it as a buffer.
+     */
+    async screenshot(path) {
+        if (!this.page)
+            throw new Error("Page not initialized.");
+        return await this.page.screenshot({ path, fullPage: true });
+    }
+    /**
+     * Closes the browser instance.
+     */
+    async close() {
+        if (this.browser) {
+            await this.browser.close();
+            this.browser = null;
+            this.page = null;
+            this.cdpSession = null;
+        }
+    }
+    /**
+     * Highlights a bounding box on the page for visual debugging.
+     */
+    async highlightBox(rect) {
+        if (!this.page)
+            return;
+        await this.page.evaluate((rect) => {
+            let box = document.getElementById('adf-highlight-box');
+            if (!box) {
+                box = document.createElement('div');
+                box.id = 'adf-highlight-box';
+                box.style.position = 'fixed'; // Fixed to viewport to match CDP coordinates
+                box.style.border = '2px solid red';
+                box.style.backgroundColor = 'rgba(255, 0, 0, 0.1)';
+                box.style.pointerEvents = 'none'; // Click-through
+                box.style.zIndex = '2147483647'; // Max z-index
+                document.body.appendChild(box);
+            }
+            if (rect) {
+                box.style.display = 'block';
+                box.style.left = `${rect.x}px`;
+                box.style.top = `${rect.y}px`;
+                box.style.width = `${rect.width}px`;
+                box.style.height = `${rect.height}px`;
+            }
+            else {
+                box.style.display = 'none';
+            }
+        }, rect);
+    }
+    /**
+     * Listen to console messages from the page.
+     */
+    onConsoleMessage(callback) {
+        if (!this.page)
+            return;
+        this.page.on('console', msg => callback(msg.text()));
+    }
+    /**
+     * Gets the current page URL.
+     */
+    async getCurrentUrl() {
+        if (!this.page)
+            throw new Error("Page not initialized.");
+        return this.page.url();
+    }
+    /**
+     * Re-injects a script into the current page (useful after navigation).
+     */
+    async reinjectScript(content) {
+        if (!this.page)
+            throw new Error("Page not initialized.");
+        await this.page.evaluate(content);
+    }
+    /**
+     * Checks if a full page navigation occurred and resets the flag.
+     */
+    checkAndClearNavigation() {
+        const occurred = this.navigationOccurred;
+        this.navigationOccurred = false;
+        return occurred;
+    }
+}
+exports.BrowserClient = BrowserClient;
