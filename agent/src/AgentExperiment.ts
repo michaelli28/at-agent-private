@@ -2,7 +2,7 @@ import { IAccessibilityDriver, ActionResult, PerceptualSnapshot, UserAction } fr
 import Cerebras from '@cerebras/cerebras_cloud_sdk';
 import { AgentStep, AgentTrace } from './types';
 
-const SYSTEM_PROMPT = `Complete the task using ONLY your tools and previous screen reader output. Do not rush to conclusions. Prove your answer is correct. Don't be fucking stupid or try to do things you can't do or I'll kill myself and everyone else around me.`;
+const SYSTEM_PROMPT = `Complete the task using ONLY your tools and previous screen reader output. Prioritize using the press_heading tool. Never give up, keep exploring. Prove your answer is correct.`;
 
 const TOOLS = [
   {
@@ -10,7 +10,8 @@ const TOOLS = [
     function: {
       name: 'press_arrow_down',
       description: 'Move to the next item in the virtual cursor order (screen reader Arrow Down). Use to read sequentially through content.',
-      parameters: { type: 'object', properties: {}, required: [] },
+      strict: true,
+      parameters: { type: 'object', properties: {}, required: [], additionalProperties: false },
     },
   },
   {
@@ -18,15 +19,8 @@ const TOOLS = [
     function: {
       name: 'press_arrow_up',
       description: 'Move to the previous item in the virtual cursor order (screen reader Arrow Up). Use to backtrack.',
-      parameters: { type: 'object', properties: {}, required: [] },
-    },
-  },
-  {
-    type: 'function' as const,
-    function: {
-      name: 'press_tab',
-      description: 'Move system focus to the next focusable element using Tab. Use to follow the focus order.',
-      parameters: { type: 'object', properties: {}, required: [] },
+      strict: true,
+      parameters: { type: 'object', properties: {}, required: [], additionalProperties: false },
     },
   },
   {
@@ -34,7 +28,8 @@ const TOOLS = [
     function: {
       name: 'press_enter',
       description: 'Activate the current item with Enter. Use on links, buttons, and controls after navigation.',
-      parameters: { type: 'object', properties: {}, required: [] },
+      strict: true,
+      parameters: { type: 'object', properties: {}, required: [], additionalProperties: false },
     },
   },
   {
@@ -42,7 +37,8 @@ const TOOLS = [
     function: {
       name: 'press_space',
       description: 'Activate the current item with Space (common for buttons/checkboxes). Use when Enter may not trigger.',
-      parameters: { type: 'object', properties: {}, required: [] },
+      strict: true,
+      parameters: { type: 'object', properties: {}, required: [], additionalProperties: false },
     },
   },
   {
@@ -50,7 +46,8 @@ const TOOLS = [
     function: {
       name: 'press_heading',
       description: 'Jump to the next heading using the screen reader “H” command. Use to skim page structure.',
-      parameters: { type: 'object', properties: {}, required: [] },
+      strict: true,
+      parameters: { type: 'object', properties: {}, required: [], additionalProperties: false },
     },
   },
   {
@@ -58,13 +55,15 @@ const TOOLS = [
     function: {
       name: 'finish_run',
       description: 'Call this when you are done. Set success=true/false and include a short reason or finding.',
+      strict: true,
       parameters: {
         type: 'object',
         properties: {
           success: { type: 'boolean' },
           reason: { type: 'string' },
         },
-        required: ['success'],
+        required: ['success', 'reason'],
+        additionalProperties: false,
       },
     },
   },
@@ -112,9 +111,10 @@ export class AgentExperiment {
         let chatCompletion;
         try {
           chatCompletion = await this.client.chat.completions.create({
-            model: 'llama3.1-70b',
+            model: 'gpt-oss-120b',
             messages: messages,
             tools: TOOLS,
+            // reasoning_effort: "low" // Remove this unless we are sure the model supports it. Standard OpenAI/Cerebras types might not have it.
           });
         } catch (e) {
           console.error('Error calling Cerebras API:', e);
@@ -127,11 +127,30 @@ export class AgentExperiment {
         }
 
         const choice = chatCompletion.choices[0];
-        const message = choice.message;
+        const message = choice.message as any; // Cast to access potential custom fields like reasoning
+        const reasoning = message.reasoning;
+        const content = message.content;
 
         // Log model thought/content
-        if (message.content) {
-          console.log(`[Thought]: ${message.content}`);
+        if (reasoning) {
+          console.log(`[Thought]: ${reasoning}`);
+        }
+        if (content) {
+          // If we have reasoning, the content is likely just the final answer or tool call explanation.
+          // If we don't have reasoning, content might contain the thought chain if the model isn't using the separate field.
+          if (!reasoning) {
+            console.log(`[Thought/Content]: ${content}`);
+          } else {
+            console.log(`[Content]: ${content}`);
+          }
+        }
+
+        // Reasoning Context Retention:
+        // "Reasoning tokens are not automatically retained across requests... include the reasoning text in the content field"
+        if (reasoning) {
+          // We construct a preserved message for history that includes the reasoning.
+          // We modify the message object before pushing it.
+          message.content = `<reasoning>${reasoning}</reasoning>\n${content || ''}`;
         }
 
         messages.push(message);
@@ -191,7 +210,7 @@ export class AgentExperiment {
             const step: AgentStep = {
               stepNumber: steps.length + 1,
               observation: result.snapshot,
-              thought: message.content || '',
+              thought: reasoning || content || '', // Prefer reasoning
               action: map.action,
               result,
               screenshotBase64: screenshot
@@ -299,8 +318,6 @@ function mapToolToAction(name: string | undefined, args: Record<string, any>): {
       return { action: { type: 'KEY_PRESS', key: 'ArrowDown' } };
     case 'press_arrow_up':
       return { action: { type: 'KEY_PRESS', key: 'ArrowUp' } };
-    case 'press_tab':
-      return { action: { type: 'KEY_PRESS', key: 'Tab' } };
     case 'press_enter':
       return { action: { type: 'KEY_PRESS', key: 'Enter' } };
     case 'press_space':

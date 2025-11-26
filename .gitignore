@@ -39,3 +39,4 @@ Thumbs.db
 tmp/
 temp/
 .env
+transcripts/

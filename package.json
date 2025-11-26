@@ -19,6 +19,7 @@
     "start:agent": "ts-node --transpile-only -r tsconfig-paths/register scripts/runAgent.ts",
     "start:agent-parallel": "ts-node --transpile-only -r tsconfig-paths/register scripts/runAgentParallel.ts",
     "start:agent-experiment": "ts-node --transpile-only -r tsconfig-paths/register scripts/runAgentExperiment.ts",
+    "start:agent-experiment-parallel": "ts-node --transpile-only -r tsconfig-paths/register scripts/runAgentExperimentParallel.ts",
     "benchmark:aria-at": "ts-node -r tsconfig-paths/register scripts/benchmarkAriaAt.ts"
   },
   "devDependencies": {

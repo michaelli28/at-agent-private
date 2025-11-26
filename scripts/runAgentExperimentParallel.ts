@@ -3,9 +3,7 @@ import * as fs from 'fs';
 import * as path from 'path';
 import { BrowserClient } from '../browser/src/playwrightClient';
 import { ScreenReaderDriver } from '../virtual-screen-reader/src/ScreenReaderDriver';
-import { Agent } from '../agent/src/Agent';
-import { buildOpenAIModel } from '../agent/src/OpenAIClient';
-import { buildGeminiModel } from '../agent/src/GeminiClient';
+import { AgentExperiment } from '../agent/src/AgentExperiment';
 import { Reporter } from '../evaluation/src/Reporter';
 import { Evaluator } from '../evaluation/src/Evaluator';
 import { AXNode } from '../browser/src/types';
@@ -16,41 +14,20 @@ interface AgentTask {
   id: string;
   url: string;
   goal: string;
-  provider?: 'openai' | 'gemini';
 }
 
 // EDIT THIS ARRAY TO ADD YOUR TASKS
 const TASKS: AgentTask[] = [
   {
-    id: 'task-1',
+    id: 'hacker',
     url: 'https://news.ycombinator.com/show',
     goal: 'Click on "Show HN: KiDoom – Running DOOM on PCB Traces" post and get a summary of what it is about',
-    provider: 'gemini'
   },
   {
-    id: 'task-2',
-    url: 'https://news.ycombinator.com/show',
-    goal: 'Click on "Show HN: We built an open source, zero webhooks payment processor" post and get a summary of what it is about',
-    provider: 'gemini'
-  },
-  {
-    id: 'task-3',
-    url: 'https://news.ycombinator.com/show',
-    goal: 'Click on "Show HN: A WordPress plugin that rewrites image URLs for near-zero-cost delivery" post and get a summary of what it is about',
-    provider: 'gemini'
-  },
-  {
-    id: 'task-4',
-    url: 'https://news.ycombinator.com/show',
-    goal: 'Click on "Show HN: I built an interactive HN Simulator" post and get a summary of what it is about',
-    provider: 'gemini'
-  },
-  {
-    id: 'task-5',
-    url: 'https://news.ycombinator.com/show',
-    goal: 'Click on "Show HN: Parm – Install GitHub releases just like your favorite package manager" post and get a summary of what it is about',
-    provider: 'gemini'
-  },
+    id: 'cmueats',
+    url: 'https://cmueats.com',
+    goal: 'Determine when Hunan Express closes on Wednesday.',
+  }
 ];
 
 // ---------------------
@@ -84,31 +61,36 @@ function log(taskId: string, emoji: string, message: string) {
 }
 
 async function runTask(task: AgentTask) {
-  const { id, url, goal, provider = 'openai' } = task;
+  const { id, url, goal } = task;
   const client = new BrowserClient();
 
   try {
     log(id, "🚀", `Starting task: "${goal}" on ${url}`);
-    await client.launch(false); // Headless false to show browser
+    await client.launch(false); // Headless false to show browser window
 
     log(id, "🌐", "Navigating...");
     await client.goto(url);
 
     const driver = new ScreenReaderDriver(client, (msg) => log(id, "🔊", msg));
-    const model = provider === 'gemini' ? buildGeminiModel() : buildOpenAIModel();
 
-    const agent = new Agent(driver, model, undefined, (step) => {
-      const thought = step.thought && step.thought.trim().length > 0
-        ? step.thought
-        : '(no thought)';
-      // Truncate thought if too long for cleaner parallel logs
-      const shortThought = thought.length > 100 ? thought.substring(0, 100) + '...' : thought;
+    // Instantiate AgentExperiment
+    // Constructor: (driver, captureScreenshot, onStep, apiKey)
+    const agent = new AgentExperiment(
+      driver,
+      undefined, // No screenshots for parallel run to save resources
+      (step) => {
+        const thought = step.thought && step.thought.trim().length > 0
+          ? step.thought
+          : '(no thought)';
+        // Truncate thought if too long for cleaner parallel logs
+        const shortThought = thought.length > 100 ? thought.substring(0, 100) + '...' : thought;
 
-      log(id, "🧠", `Thought: ${shortThought}`);
-      log(id, "⚡", `Action: ${step.action.type} ${step.action.key || ''}`);
-    });
+        log(id, "🧠", `Thought: ${shortThought}`);
+        log(id, "⚡", `Action: ${step.action.type} ${step.action.key || ''}`);
+      }
+    );
 
-    log(id, "🤖", "Running agent...");
+    log(id, "🤖", "Running agent (Cerebras)...");
     const trace = await agent.run(goal);
 
     // Save Transcript
@@ -129,8 +111,6 @@ async function runTask(task: AgentTask) {
     }
     const violations = evaluator.evaluate(axTree, trace);
 
-    // We won't print the full markdown report to console as it would be huge and interleaved.
-    // Instead, we'll summarize.
     const score = Math.max(0, 100 - (violations.length * 10)); // Simple scoring
     log(id, "📝", `Evaluation Score: ${score}/100. Violations: ${violations.length}`);
 
@@ -150,7 +130,7 @@ async function runTask(task: AgentTask) {
 }
 
 async function main() {
-  console.log(`${colors.bright}=== Running ${TASKS.length} Agent Tasks in Parallel ===${colors.reset}\n`);
+  console.log(`${colors.bright}=== Running ${TASKS.length} Agent Experiments in Parallel ===${colors.reset}\n`);
 
   const results = await Promise.all(TASKS.map(task => runTask(task)));
 

@@ -6,6 +6,7 @@ export class BrowserClient {
   private page: Page | null = null;
   private cdpSession: CDPSession | null = null;
   private navigationOccurred = false;
+  private pageLoadCallback: (() => Promise<void>) | null = null;
 
   /**
    * Launches the browser and opens a new page.
@@ -19,8 +20,11 @@ export class BrowserClient {
     await this.cdpSession.send('DOM.enable');
 
     // Track navigation
-    this.page.on('load', () => {
+    this.page.on('load', async () => {
       this.navigationOccurred = true;
+      if (this.pageLoadCallback) {
+        await this.pageLoadCallback();
+      }
     });
   }
 
@@ -56,9 +60,12 @@ export class BrowserClient {
     return await this.page.title();
   }
 
-  onPageLoad(callback: () => void) {
-    if (!this.page) return;
-    this.page.on('load', callback);
+  onPageLoad(callback: () => Promise<void>): void {
+    this.pageLoadCallback = callback;
+  }
+
+  getPage(): Page | null {
+    return this.page;
   }
 
   checkAndClearNavigation(): boolean {
