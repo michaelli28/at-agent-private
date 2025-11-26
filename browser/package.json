@@ -2,6 +2,9 @@
   "name": "@adf/browser",
   "version": "0.0.1",
   "main": "src/playwrightClient.ts",
+  "scripts": {
+    "build": "tsc --noEmit"
+  },
   "dependencies": {
     "playwright": "^1.40.0"
   }

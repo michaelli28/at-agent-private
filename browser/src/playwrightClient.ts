@@ -5,6 +5,7 @@ export class BrowserClient {
   private browser: Browser | null = null;
   private page: Page | null = null;
   private cdpSession: CDPSession | null = null;
+  private navigationOccurred = false;
 
   /**
    * Launches the browser and opens a new page.
@@ -16,6 +17,11 @@ export class BrowserClient {
 
     // Enable DOM domain to ensure we can get box models
     await this.cdpSession.send('DOM.enable');
+
+    // Track navigation
+    this.page.on('load', () => {
+      this.navigationOccurred = true;
+    });
   }
 
   /**
@@ -27,12 +33,43 @@ export class BrowserClient {
     await this.page.evaluate(content);
   }
 
+  async reinjectScript(content: string): Promise<void> {
+    if (!this.page) throw new Error("Page not initialized.");
+    await this.page.evaluate(content);
+  }
+
   /**
    * Navigates to a URL.
    */
   async goto(url: string): Promise<void> {
     if (!this.page) throw new Error("Browser not initialized. Call launch() first.");
     await this.page.goto(url, { waitUntil: 'domcontentloaded' });
+  }
+
+  async getCurrentUrl(): Promise<string> {
+    if (!this.page) return "";
+    return this.page.url();
+  }
+
+  async getTitle(): Promise<string> {
+    if (!this.page) return "";
+    return await this.page.title();
+  }
+
+  onPageLoad(callback: () => void) {
+    if (!this.page) return;
+    this.page.on('load', callback);
+  }
+
+  checkAndClearNavigation(): boolean {
+    const occurred = this.navigationOccurred;
+    this.navigationOccurred = false;
+    return occurred;
+  }
+
+  async typeText(text: string): Promise<void> {
+    if (!this.page) throw new Error("Page not initialized.");
+    await this.page.keyboard.type(text);
   }
 
   /**

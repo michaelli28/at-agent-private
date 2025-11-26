@@ -1,109 +1,372 @@
-import { IAccessibilityDriver } from '@adf/drivers/src/IAccessibilityDriver';
-import { UserAction } from '@adf/drivers/src/types';
-import { AgentTrace, AgentStep, LLMClient, LLMResponse } from './types';
+import { IAccessibilityDriver, ActionResult, PerceptualSnapshot, UserAction } from '@adf/virtual-screen-reader';
+import { BaseChatModel } from '@langchain/core/language_models/chat_models';
+import { AIMessage, BaseMessage, HumanMessage, SystemMessage, ToolMessage, isAIMessage } from '@langchain/core/messages';
+import { tool } from '@langchain/core/tools';
+import { END, MessagesZodState, START, StateGraph } from '@langchain/langgraph';
+import { z } from 'zod';
+import { AgentGraphState, AgentStep, AgentTrace } from './types';
+
+const SYSTEM_PROMPT = `Complete the task using ONLY your tools and previous screen reader output. Prioritize using the press_heading tool. Aim to find patterns that you can exploit to navigate the page faster. Prove your answer is correct.`;
+
+// Key-only toolset with instructive descriptions
+const pressArrowDown = tool(async () => `Pressed ArrowDown`, {
+  name: 'press_arrow_down',
+  description: 'Move to the next item in the virtual cursor order (screen reader Arrow Down). Use to read sequentially through content.',
+  schema: z.object({}),
+});
+
+const pressArrowUp = tool(async () => `Pressed ArrowUp`, {
+  name: 'press_arrow_up',
+  description: 'Move to the previous item in the virtual cursor order (screen reader Arrow Up). Use to backtrack.',
+  schema: z.object({}),
+});
+
+const pressEnter = tool(async () => `Pressed Enter`, {
+  name: 'press_enter',
+  description: 'Activate the current item with Enter. Use on links, buttons, and controls after navigation.',
+  schema: z.object({}),
+});
+
+const pressSpace = tool(async () => `Pressed Space`, {
+  name: 'press_space',
+  description: 'Activate the current item with Space (common for buttons/checkboxes). Use when Enter may not trigger.',
+  schema: z.object({}),
+});
+
+const pressHeading = tool(async () => `Pressed H`, {
+  name: 'press_heading',
+  description: 'Jump to the next heading using the screen reader “H” command. Use to skim page structure.',
+  schema: z.object({}),
+});
+
+const finishRun = tool(async ({ success, reason }: { success: boolean; reason?: string }) => `Finished run: ${success ? 'success' : 'failed'} ${reason || ''}`, {
+  name: 'finish_run',
+  description: 'Call this when you are done. Set success=true/false and include a short reason or finding.',
+  schema: z.object({ success: z.boolean(), reason: z.string().optional() }),
+});
+
+const toolsByName = {
+  [pressArrowDown.name]: pressArrowDown,
+  [pressArrowUp.name]: pressArrowUp,
+  [pressEnter.name]: pressEnter,
+  [pressSpace.name]: pressSpace,
+  [pressHeading.name]: pressHeading,
+  [finishRun.name]: finishRun,
+};
+
+const toolSpecifications = Object.values(toolsByName);
+
+// Zod state that combines messages reducer with our metadata
+type AgentState = AgentGraphState;
+
+const AgentStateSchema = (MessagesZodState as unknown as z.ZodObject<any>).extend({
+  goal: z.string(),
+  steps: z.array(z.custom<AgentStep>()).default([]),
+  done: z.boolean().default(false),
+  success: z.boolean().default(false),
+  error: z.string().optional(),
+}) as unknown as z.ZodType<AgentState>;
 
 export class Agent {
-  private maxSteps = 200;
-
   constructor(
     private driver: IAccessibilityDriver,
-    private llm: LLMClient
+    private model: BaseChatModel,
+    private captureScreenshot?: () => Promise<string | undefined>,
+    private onStep?: (step: AgentStep) => void
   ) { }
 
+  /**
+   * Execute the agent loop for a given goal. Enables the driver, seeds the graph with
+   * an initial observation, and returns the full trace after the graph finishes.
+   */
   async run(goal: string): Promise<AgentTrace> {
-    console.log(`[Agent] Starting goal: "${goal}"`);
     await this.driver.enable();
 
-    const trace: AgentTrace = {
-      goal,
-      success: false,
-      steps: []
-    };
-
     try {
-      for (let i = 0; i < this.maxSteps; i++) {
-        // 1. Observe
-        const observation = await this.driver.getPerceptualOutput();
+      const initialSnapshot = await this.driver.getPerceptualOutput();
+      const initialScreenshot = this.captureScreenshot ? await this.captureScreenshot() : undefined;
 
-        // 2. Plan (Construct Prompt & Call LLM)
-        const prompt = this.constructPrompt(goal, trace.steps, observation);
-        const response = await this.llm.generate(prompt);
+      const initialState: AgentState = {
+        goal,
+        messages: [
+          new SystemMessage(SYSTEM_PROMPT),
+          this.buildObservationMessage(goal, initialSnapshot, initialScreenshot),
+        ],
+        steps: [],
+        done: false,
+        success: false,
+      };
 
-        console.log(`[Agent] Step ${i + 1}: ${response.thought}`);
+      const recursionLimit = 200;
+      const app = this.buildGraph(goal).compile();
+      const finalState = await app.invoke(initialState, { recursionLimit });
 
-        // Check for completion
-        if (response.done) {
-          trace.success = response.success || false;
-          console.log(`[Agent] Finished. Success: ${trace.success}`);
-          break;
-        }
-
-        // 3. Act
-        const result = await this.driver.performAction(response.action);
-
-        // 4. Record
-        const step: AgentStep = {
-          stepNumber: i + 1,
-          observation,
-          thought: response.thought,
-          action: response.action,
-          result
-        };
-        trace.steps.push(step);
-
-        if (!result.success) {
-          console.warn(`[Agent] Action failed: ${result.message}`);
-        }
-      }
-    } catch (error: any) {
-      trace.error = error.message;
-      console.error(`[Agent] Error:`, error);
+      return {
+        goal,
+        success: finalState.success,
+        steps: finalState.steps,
+        error: finalState.error,
+      };
     } finally {
       await this.driver.disable();
     }
-
-    return trace;
   }
 
-  private constructPrompt(goal: string, history: AgentStep[], current: any): string {
-    const historyText = history.map(h =>
-      `Step ${h.stepNumber}:
-       - Observed: "${h.observation.text}"
-       - Action: ${JSON.stringify(h.action)}
-       - Result: ${h.result.success ? 'Success' : 'Failed: ' + h.result.message}`
-    ).join('\n');
+  /**
+   * Build the LangGraph state machine using standard nodes and conditional edges.
+   */
+  private buildGraph(goal: string) {
+    const driver = this.driver;
+    const boundModel = this.model.bindTools(toolSpecifications);
+    const captureScreenshot = this.captureScreenshot;
+    const onStep = this.onStep;
 
-    return `
-You are an assistive technology user interacting with a web page via a Screen Reader.
-Your Goal: "${goal}"
+    // Node: Call Model
+    const callModel = async (state: AgentState) => {
+      const response = await boundModel.invoke(state.messages);
+      return { messages: [response] };
+    };
 
-Screen Reader Output: "${current.text}"
+    // Node: Execute Tools
+    const executeTools = async (state: AgentState) => {
+      const aiMessage = state.messages[state.messages.length - 1] as AIMessage;
 
-History:
-${historyText}
+      const currentSteps = state.steps;
+      const appendedMessages: BaseMessage[] = [];
+      let done = state.done;
+      let success = state.success;
+      let error = state.error;
+      let nextSteps = [...currentSteps];
 
-Instructions:
-1. Analyze the current output and history.
-2. Decide the next action to move closer to the goal.
-3. You can use 'ArrowDown', 'ArrowUp', 'Enter', 'Tab', 'H' (next heading), etc.
-4. If you have achieved the goal, set "done": true and "success": true.
-5. If you are stuck or cannot achieve the goal, set "done": true and "success": false.
+      for (const call of aiMessage.tool_calls ?? []) {
+        const args = normalizeArgs(call.args);
+        const mapped = mapToolToAction(call.name, args);
 
-Respond ONLY in valid JSON format:
-{
-  "thought": "reasoning for the action",
-  "action": { "type": "KEY_PRESS", "key": "..." },
-  "done": false
-}
-    `.trim();
+        if (mapped.finish) {
+          done = true;
+          success = mapped.finish.success;
+          appendedMessages.push(new ToolMessage({
+            tool_call_id: call.id,
+            name: call.name,
+            content: JSON.stringify({ status: 'finished', success: mapped.finish.success, reason: mapped.finish.reason || '' })
+          }));
+
+          // Return immediately if finished
+          return {
+            messages: appendedMessages,
+            steps: nextSteps,
+            done,
+            success,
+            error,
+          };
+        }
+
+        if (!mapped.action) {
+          appendedMessages.push(new ToolMessage({
+            tool_call_id: call.id,
+            name: call.name,
+            content: JSON.stringify({ status: 'error', message: mapped.message })
+          }));
+          continue;
+        }
+
+        const result = await driver.performAction(mapped.action);
+        const screenshot = captureScreenshot ? await captureScreenshot() : undefined;
+        const step: AgentStep = {
+          stepNumber: nextSteps.length + 1,
+          observation: result.snapshot,
+          thought: toThought(aiMessage),
+          action: mapped.action,
+          result,
+          screenshotBase64: screenshot,
+        };
+
+        if (onStep) {
+          onStep(step);
+        }
+
+        nextSteps.push(step);
+
+        appendedMessages.push(new ToolMessage({
+          tool_call_id: call.id,
+          name: call.name,
+          content: JSON.stringify(formatActionResult(mapped.action, result))
+        }));
+
+        appendedMessages.push(this.buildObservationMessage(goal, result.snapshot, screenshot));
+      }
+
+      return {
+        messages: appendedMessages,
+        steps: nextSteps,
+        done,
+        success,
+        error,
+      };
+    };
+
+    // Node: Reminder (replaces the manual loop back with prompt)
+    const sendReminder = async (state: AgentState) => {
+      return {
+        messages: [new HumanMessage({ content: 'No tool calls returned. Use the available tools or call finish_run when done.' })]
+      };
+    };
+
+    // Edge Logic
+    const shouldContinue = (state: AgentState) => {
+      const lastMessage = state.messages[state.messages.length - 1];
+      // Check if the model decided to call tools
+      if (isAIMessage(lastMessage) && lastMessage.tool_calls && lastMessage.tool_calls.length > 0) {
+        return "tools";
+      }
+      // If no tools called, send reminder (loop back)
+      return "reminder";
+    };
+
+    const checkDone = (state: AgentState) => {
+      if (state.done) {
+        return END;
+      }
+      return "agent";
+    };
+
+    return new StateGraph(AgentStateSchema)
+      .addNode('agent', callModel)
+      .addNode('tools', executeTools)
+      .addNode('reminder', sendReminder)
+      .addEdge(START, 'agent')
+      .addConditionalEdges('agent', shouldContinue, {
+        tools: 'tools',
+        reminder: 'reminder'
+      })
+      .addEdge('reminder', 'agent')
+      .addConditionalEdges('tools', checkDone, {
+        [END]: END,
+        agent: 'agent'
+      });
+  }
+
+  /**
+   * Construct a HumanMessage containing structured text blocks describing the goal,
+   * the latest perceptual snapshot, and whether a screenshot was captured. Screenshot
+   * bytes stay out of the prompt to conserve context.
+   */
+  private buildObservationMessage(goal: string, snapshot?: PerceptualSnapshot, screenshotBase64?: string) {
+    const snapshotText = formatSnapshot(snapshot);
+    const promptText = `
+<observation_context>
+  <user_goal>
+    ${goal}
+  </user_goal>
+
+  <screen_reader_status>
+    ${snapshotText}
+  </screen_reader_status>
+</observation_context>
+`;
+
+    if (screenshotBase64) {
+      return new HumanMessage({
+        content: [
+          { type: 'text', text: promptText },
+          {
+            type: 'image',
+            source_type: 'base64',
+            mime_type: 'image/png',
+            data: screenshotBase64,
+          },
+        ],
+      });
+    }
+
+    return new HumanMessage({
+      content: promptText,
+    });
   }
 }
 
-/*
-Example LLM Response:
-{
-  "thought": "I am on a heading 'Welcome'. I need to find the 'Sign Up' link. I will move down to read the next item.",
-  "action": { "type": "KEY_PRESS", "key": "ArrowDown" },
-  "done": false
+function normalizeArgs(raw: unknown): Record<string, any> {
+  if (!raw) return {};
+  if (typeof raw === 'string') {
+    try {
+      return JSON.parse(raw);
+    } catch {
+      return {};
+    }
+  }
+  if (typeof raw === 'object') return raw as Record<string, any>;
+  return {};
 }
-*/
+
+/**
+ * Map an LLM tool name and parsed args to a driver action or finish signal.
+ */
+function mapToolToAction(name: string | undefined, args: Record<string, any>): { action?: UserAction; finish?: { success: boolean; reason?: string }; message?: string } {
+  switch (name) {
+    case 'press_arrow_down':
+      return { action: { type: 'KEY_PRESS', key: 'ArrowDown' } };
+    case 'press_arrow_up':
+      return { action: { type: 'KEY_PRESS', key: 'ArrowUp' } };
+    case 'press_enter':
+      return { action: { type: 'KEY_PRESS', key: 'Enter' } };
+    case 'press_space':
+      return { action: { type: 'KEY_PRESS', key: 'Space' } };
+    case 'press_heading':
+      return { action: { type: 'KEY_PRESS', key: 'H' } };
+    case 'finish_run':
+      return { finish: { success: Boolean(args.success), reason: typeof args.reason === 'string' ? args.reason : undefined } };
+    default:
+      return { message: `Unknown tool ${name}` };
+  }
+}
+
+/**
+ * Shape the driver result into a tool message payload.
+ */
+function formatActionResult(action: UserAction, result: ActionResult) {
+  return {
+    status: result.success ? 'ok' : 'error',
+    action,
+    message: result.message || '',
+    snapshot: result.snapshot,
+  };
+}
+
+function formatSnapshot(snapshot?: PerceptualSnapshot): string {
+  if (!snapshot) return 'No observation yet';
+  const box = snapshot.cursorBox ? ` (box: x=${snapshot.cursorBox.x}, y=${snapshot.cursorBox.y}, w=${snapshot.cursorBox.width}, h=${snapshot.cursorBox.height})` : '';
+  return `${snapshot.text}${box}`;
+}
+
+/**
+ * Flatten an AIMessage into a plain string for trace readability.
+ */
+function toThought(message: AIMessage): string {
+  if (typeof message.content === 'string') return message.content.trim();
+
+  if (Array.isArray(message.content)) {
+    const text = message.content
+      .map((part: any) => {
+        if (typeof part === 'string') return part;
+        if (part && typeof part === 'object' && 'text' in part) return (part as any).text;
+        return '';
+      })
+      .filter(Boolean)
+      .join('\n')
+      .trim();
+
+    if (text) return text;
+  }
+
+  if (message.tool_calls?.length) {
+    return message.tool_calls
+      .map((call) => {
+        const args = normalizeArgs(call.args);
+        const argPreview = Object.keys(args).length ? JSON.stringify(args) : '';
+        return argPreview ? `${call.name}: ${argPreview}` : call.name || 'tool_call';
+      })
+      .join('; ');
+  }
+
+  return '';
+}

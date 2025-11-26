@@ -1,9 +1,9 @@
 import 'dotenv/config';
 import { BrowserClient } from '../browser/src/playwrightClient';
-import { ScreenReaderDriver } from '../drivers/src/ScreenReaderDriver';
+import { ScreenReaderDriver } from '../virtual-screen-reader/src/ScreenReaderDriver';
 import { Agent } from '../agent/src/Agent';
-import { OpenAIClient } from '../agent/src/OpenAIClient';
-import { GeminiClient } from '../agent/src/GeminiClient';
+import { buildOpenAIModel } from '../agent/src/OpenAIClient';
+import { buildGeminiModel } from '../agent/src/GeminiClient';
 
 async function main() {
   const url = 'https://aria-at.w3.org/reports';
@@ -24,14 +24,8 @@ async function main() {
     const driver = new ScreenReaderDriver(client);
     await driver.enable(); // Explicitly enable to inject script
 
-    let llm;
-    if (provider === 'gemini') {
-      llm = new GeminiClient();
-    } else {
-      llm = new OpenAIClient();
-    }
-
-    const agent = new Agent(driver, llm);
+    const model = provider === 'gemini' ? buildGeminiModel() : buildOpenAIModel();
+    const agent = new Agent(driver, model);
 
     const startTime = Date.now();
     const trace = await agent.run(goal);

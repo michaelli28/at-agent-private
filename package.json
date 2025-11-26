@@ -7,15 +7,18 @@
     "drivers",
     "agent",
     "evaluation",
-    "ui"
+    "ui",
+    "virtual-screen-reader"
   ],
   "scripts": {
-    "build": "npm run build --workspaces",
-    "test": "npm run test --workspaces",
+    "build": "npm run build --workspaces --if-present",
+    "test": "npm run test --workspaces --if-present",
     "lint": "eslint . --ext .ts,.tsx",
     "dev:sr": "ts-node -r tsconfig-paths/register scripts/runScreenReaderDev.ts",
     "test:regression": "ts-node -r tsconfig-paths/register scripts/runRegression.ts",
-    "start:agent": "ts-node -r tsconfig-paths/register scripts/runAgent.ts",
+    "start:agent": "ts-node --transpile-only -r tsconfig-paths/register scripts/runAgent.ts",
+    "start:agent-parallel": "ts-node --transpile-only -r tsconfig-paths/register scripts/runAgentParallel.ts",
+    "start:agent-experiment": "ts-node --transpile-only -r tsconfig-paths/register scripts/runAgentExperiment.ts",
     "benchmark:aria-at": "ts-node -r tsconfig-paths/register scripts/benchmarkAriaAt.ts"
   },
   "devDependencies": {
@@ -28,7 +31,12 @@
   },
   "dependencies": {
     "@google/generative-ai": "^0.24.1",
+    "@langchain/core": "^1.0.6",
+    "@langchain/google-genai": "^2.0.0",
+    "@langchain/langgraph": "^1.0.2",
+    "@langchain/openai": "^1.1.3",
     "dotenv": "^17.2.3",
+    "langchain": "^1.0.6",
     "openai": "^6.9.1"
   }
 }

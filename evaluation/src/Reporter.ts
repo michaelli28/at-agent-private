@@ -46,7 +46,7 @@ export class Reporter {
 
 | Step | Action | Observation | Result |
 |------|--------|-------------|--------|
-${trace.steps.map(s => `| ${s.stepNumber} | \`${this.formatAction(s.action)}\` | "${this.truncate(s.observation.text)}" | ${s.result.success ? '✅' : '❌'} |`).join('\n')}
+${trace.steps.map(s => `| ${s.stepNumber} | \`${this.formatAction(s.action)}\` | "${this.truncate(s.observation.text)}" | ${s.result.success ? '✅' : '❌'} |\n> **Thought:** ${s.thought}`).join('\n')}
 `;
 
     return `${summary}\n${violationsSection}\n${traceSection}`;

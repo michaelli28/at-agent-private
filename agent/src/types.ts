@@ -1,4 +1,5 @@
-import { PerceptualSnapshot, UserAction, ActionResult } from '@adf/drivers/src/types';
+import { BaseMessage } from '@langchain/core/messages';
+import { PerceptualSnapshot, UserAction, ActionResult } from '@adf/virtual-screen-reader';
 
 export interface AgentStep {
   stepNumber: number;
@@ -6,6 +7,7 @@ export interface AgentStep {
   thought: string;
   action: UserAction;
   result: ActionResult;
+  screenshotBase64?: string;
 }
 
 export interface AgentTrace {
@@ -15,13 +17,11 @@ export interface AgentTrace {
   error?: string;
 }
 
-export interface LLMResponse {
-  thought: string;
-  action: UserAction;
+export interface AgentGraphState {
+  goal: string;
+  messages: BaseMessage[];
+  steps: AgentStep[];
   done: boolean;
-  success?: boolean; // If done is true
-}
-
-export interface LLMClient {
-  generate(prompt: string): Promise<LLMResponse>;
+  success: boolean;
+  error?: string;
 }

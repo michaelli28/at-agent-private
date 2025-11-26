@@ -1,9 +1,7 @@
 import 'dotenv/config';
 import { BrowserClient } from '../browser/src/playwrightClient';
 import { ScreenReaderDriver } from '../virtual-screen-reader/src/ScreenReaderDriver';
-import { Agent } from '../agent/src/Agent';
-import { buildOpenAIModel } from '../agent/src/OpenAIClient';
-import { buildGeminiModel } from '../agent/src/GeminiClient';
+import { AgentExperiment } from '../agent/src/AgentExperiment';
 import { Reporter } from '../evaluation/src/Reporter';
 import { Evaluator } from '../evaluation/src/Evaluator';
 import { AXNode } from '../browser/src/types';
@@ -31,21 +29,20 @@ async function main() {
   const args = getCliArgs();
   const url = args[0];
   const goal = args[1];
-  const provider = args.find((arg, idx) => idx === 2 && !arg.startsWith('--')) || 'openai';
   const captureScreenshots = args.includes('--with-screenshots') || process.env.npm_config_with_screenshots === 'true';
 
   if (!url || !goal) {
-    console.error('Usage: pnpm start:agent <url> "<goal>" [provider] [--with-screenshots]');
+    console.error('Usage: npx ts-node scripts/runAgentExperiment.ts <url> "<goal>" [--with-screenshots]');
     process.exit(1);
   }
 
   // Clear screen for a fresh start
   console.clear();
-  console.log(`${colors.bright}${colors.green}=== Accessibility Agent CLI ===${colors.reset}\n`);
+  console.log(`${colors.bright}${colors.green}=== Accessibility Agent Experiment CLI (Cerebras) ===${colors.reset}\n`);
 
   logInfo("Target URL", url);
   logInfo("Goal", goal);
-  logInfo("Model Provider", provider);
+  logInfo("Model Provider", "Groq (llama-3.3-70b-versatile)");
   logInfo("Screenshots", captureScreenshots ? "Enabled" : "Disabled");
   console.log(); // Spacer
 
@@ -60,10 +57,6 @@ async function main() {
 
     const driver = new ScreenReaderDriver(client);
 
-    const model = provider === 'gemini'
-      ? buildGeminiModel()
-      : buildOpenAIModel();
-
     const screenshotFn = captureScreenshots
       ? async () => {
           const buffer = await client.screenshot();
@@ -71,15 +64,22 @@ async function main() {
         }
       : undefined;
 
-    const agent = new Agent(driver, model, screenshotFn, (step) => {
-      const thought = step.thought && step.thought.trim().length > 0
-        ? step.thought
-        : '(no model thought returned)';
-      logStep("🧠", `Thought: ${thought}`);
-      logStep("⚡", `Action: ${step.action.type} ${step.action.key || ''}`);
-    });
+    // Instantiate AgentExperiment directly
+    // Constructor: (driver, captureScreenshot, onStep, apiKey)
+    const agent = new AgentExperiment(
+        driver, 
+        screenshotFn, 
+        (step) => {
+            const thought = step.thought && step.thought.trim().length > 0
+                ? step.thought
+                : '(no model thought returned)';
+            logStep("🧠", `Thought: ${thought}`);
+            logStep("⚡", `Action: ${step.action.type} ${step.action.key || ''}`);
+        }
+        // apiKey is optional, defaults to process.env['CEREBRAS_API_KEY']
+    );
 
-    logStep("🤖", "Starting Agent Execution...");
+    logStep("🤖", "Starting Agent Experiment Execution...");
     console.log(`${colors.dim}   (Press Ctrl+C to interrupt)\n${colors.reset}`);
 
     // Run the agent loop
@@ -116,17 +116,7 @@ async function main() {
 }
 
 function getCliArgs(): string[] {
-  const envArgs = process.env.npm_config_argv;
-  if (envArgs) {
-    try {
-      const parsed = JSON.parse(envArgs);
-      if (Array.isArray(parsed.raw)) {
-        return parsed.raw.slice(2);
-      }
-    } catch {
-      // fall through
-    }
-  }
+  // When running with npx ts-node, the args are just the process.argv starting from index 2
   return process.argv.slice(2);
 }
 
