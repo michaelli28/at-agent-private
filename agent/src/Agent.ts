@@ -4,9 +4,11 @@ import { AIMessage, BaseMessage, HumanMessage, SystemMessage, ToolMessage, isAIM
 import { tool } from '@langchain/core/tools';
 import { END, MessagesZodState, START, StateGraph } from '@langchain/langgraph';
 import { z } from 'zod';
+import * as fs from 'fs';
+import * as path from 'path';
 import { AgentGraphState, AgentStep, AgentTrace } from './types';
 
-const SYSTEM_PROMPT = `Complete the task using ONLY your tools and previous screen reader output. Prioritize using the press_heading tool. Aim to find patterns that you can exploit to navigate the page faster. Prove your answer is correct.`;
+const SYSTEM_PROMPT = fs.readFileSync(path.join(__dirname, '../system_prompt.txt'), 'utf-8').trim();
 
 // Key-only toolset with instructive descriptions
 const pressArrowDown = tool(async () => `Pressed ArrowDown`, {
@@ -132,37 +134,42 @@ export class Agent {
       const aiMessage = state.messages[state.messages.length - 1] as AIMessage;
 
       const currentSteps = state.steps;
-      const appendedMessages: BaseMessage[] = [];
+      const toolMessages: BaseMessage[] = [];
+      const observationMessages: BaseMessage[] = [];
       let done = state.done;
       let success = state.success;
       let error = state.error;
       let nextSteps = [...currentSteps];
 
       for (const call of aiMessage.tool_calls ?? []) {
+        // If we have already finished in this batch, we must still provide a ToolMessage
+        // for subsequent calls to satisfy the protocol, but we skip execution.
+        if (done) {
+          toolMessages.push(new ToolMessage({
+            tool_call_id: call.id,
+            name: call.name,
+            content: JSON.stringify({ status: 'ignored', message: 'Agent finished in the same step.' })
+          }));
+          continue;
+        }
+
         const args = normalizeArgs(call.args);
         const mapped = mapToolToAction(call.name, args);
 
         if (mapped.finish) {
           done = true;
           success = mapped.finish.success;
-          appendedMessages.push(new ToolMessage({
+          toolMessages.push(new ToolMessage({
             tool_call_id: call.id,
             name: call.name,
             content: JSON.stringify({ status: 'finished', success: mapped.finish.success, reason: mapped.finish.reason || '' })
           }));
-
-          // Return immediately if finished
-          return {
-            messages: appendedMessages,
-            steps: nextSteps,
-            done,
-            success,
-            error,
-          };
+          // Continue to next tool call to ensure all IDs are handled
+          continue;
         }
 
         if (!mapped.action) {
-          appendedMessages.push(new ToolMessage({
+          toolMessages.push(new ToolMessage({
             tool_call_id: call.id,
             name: call.name,
             content: JSON.stringify({ status: 'error', message: mapped.message })
@@ -187,17 +194,17 @@ export class Agent {
 
         nextSteps.push(step);
 
-        appendedMessages.push(new ToolMessage({
+        toolMessages.push(new ToolMessage({
           tool_call_id: call.id,
           name: call.name,
           content: JSON.stringify(formatActionResult(mapped.action, result))
         }));
 
-        appendedMessages.push(this.buildObservationMessage(goal, result.snapshot, screenshot));
+        observationMessages.push(this.buildObservationMessage(goal, result.snapshot, screenshot));
       }
 
       return {
-        messages: appendedMessages,
+        messages: [...toolMessages, ...observationMessages],
         steps: nextSteps,
         done,
         success,
@@ -309,10 +316,12 @@ function mapToolToAction(name: string | undefined, args: Record<string, any>): {
       return { action: { type: 'KEY_PRESS', key: 'ArrowUp' } };
     case 'press_enter':
       return { action: { type: 'KEY_PRESS', key: 'Enter' } };
-    case 'press_space':
-      return { action: { type: 'KEY_PRESS', key: 'Space' } };
     case 'press_heading':
       return { action: { type: 'KEY_PRESS', key: 'H' } };
+    case 'press_previous_heading':
+      return { action: { type: 'KEY_PRESS', key: 'Shift+H' } };
+    case 'instant_traverse':
+      return { action: { type: 'KEY_PRESS', key: 'Shift+A' } };
     case 'finish_run':
       return { finish: { success: Boolean(args.success), reason: typeof args.reason === 'string' ? args.reason : undefined } };
     default:

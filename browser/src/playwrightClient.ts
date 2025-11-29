@@ -11,8 +11,15 @@ export class BrowserClient {
   /**
    * Launches the browser and opens a new page.
    */
-  async launch(headless: boolean = true): Promise<void> {
-    this.browser = await chromium.launch({ headless });
+  async launch(headless: boolean = true, args: string[] = []): Promise<void> {
+    this.browser = await chromium.launch({ 
+        headless,
+        args: [
+            '--no-sandbox',
+            '--disable-setuid-sandbox',
+            ...args
+        ]
+    });
     this.page = await this.browser.newPage();
     this.cdpSession = await this.page.context().newCDPSession(this.page);
 

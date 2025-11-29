@@ -1,0 +1,4 @@
+<instructions>
+- Complete the task using ONLY your tools and previous screen reader output. 
+- Consider using the instant traverse tool.
+</instructions>

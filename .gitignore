@@ -40,3 +40,6 @@ tmp/
 temp/
 .env
 transcripts/
+downloads/
+logs/
+scripts/prompts

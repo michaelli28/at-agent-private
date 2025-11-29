@@ -1,8 +1,10 @@
 import { IAccessibilityDriver, ActionResult, PerceptualSnapshot, UserAction } from '@adf/virtual-screen-reader';
 import Cerebras from '@cerebras/cerebras_cloud_sdk';
+import * as fs from 'fs';
+import * as path from 'path';
 import { AgentStep, AgentTrace } from './types';
 
-const SYSTEM_PROMPT = `Complete the task using ONLY your tools and previous screen reader output. Prioritize using the press_heading tool. Never give up, keep exploring. Prove your answer is correct.`;
+const SYSTEM_PROMPT = fs.readFileSync(path.join(__dirname, '../system_prompt.txt'), 'utf-8').trim();
 
 const TOOLS = [
   {
@@ -35,8 +37,8 @@ const TOOLS = [
   {
     type: 'function' as const,
     function: {
-      name: 'press_space',
-      description: 'Activate the current item with Space (common for buttons/checkboxes). Use when Enter may not trigger.',
+      name: 'press_heading',
+      description: 'Jump to the next heading using the screen reader “H” command. Use to skim page structure.',
       strict: true,
       parameters: { type: 'object', properties: {}, required: [], additionalProperties: false },
     },
@@ -44,8 +46,17 @@ const TOOLS = [
   {
     type: 'function' as const,
     function: {
-      name: 'press_heading',
-      description: 'Jump to the next heading using the screen reader “H” command. Use to skim page structure.',
+      name: 'press_previous_heading',
+      description: 'Jump to the previous heading using the screen reader “Shift+H” command. Use to backtrack to a previous section.',
+      strict: true,
+      parameters: { type: 'object', properties: {}, required: [], additionalProperties: false },
+    },
+  },
+  {
+    type: 'function' as const,
+    function: {
+      name: 'instant_traverse',
+      description: 'Instantly traverse the entire page using the screen reader “Shift+A” command. This will read out all elements on the page in order. Use this to get a full overview of the page content quickly.',
       strict: true,
       parameters: { type: 'object', properties: {}, required: [], additionalProperties: false },
     },
@@ -320,10 +331,12 @@ function mapToolToAction(name: string | undefined, args: Record<string, any>): {
       return { action: { type: 'KEY_PRESS', key: 'ArrowUp' } };
     case 'press_enter':
       return { action: { type: 'KEY_PRESS', key: 'Enter' } };
-    case 'press_space':
-      return { action: { type: 'KEY_PRESS', key: 'Space' } };
     case 'press_heading':
       return { action: { type: 'KEY_PRESS', key: 'H' } };
+    case 'press_previous_heading':
+      return { action: { type: 'KEY_PRESS', key: 'Shift+H' } };
+    case 'instant_traverse':
+      return { action: { type: 'KEY_PRESS', key: 'Shift+A' } };
     case 'finish_run':
       return { finish: { success: Boolean(args.success), reason: typeof args.reason === 'string' ? args.reason : undefined } };
     default:
