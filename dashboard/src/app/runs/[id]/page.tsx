@@ -38,6 +38,8 @@ export default function TestRunDetailPage() {
     currentTestGoal: string;
     totalTests: number;
     completedTests: number;
+    passedTests: number;
+    failedTests: number;
     isRunning: boolean;
   } | null>(null);
 
@@ -136,6 +138,8 @@ export default function TestRunDetailPage() {
             currentTestGoal: data.currentTestGoal || '',
             totalTests: data.totalTests || 0,
             completedTests: data.completedTests || 0,
+            passedTests: data.passedTests || 0,
+            failedTests: data.failedTests || 0,
             isRunning: data.isRunning ?? true,
           });
         }
@@ -252,35 +256,48 @@ export default function TestRunDetailPage() {
         </div>
       </div>
 
-      {/* Stats */}
-      <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-6 gap-4 mb-8">
-        <div className="stat-card">
-          <div className="stat-value text-gray-700">{run.totalTests}</div>
-          <div className="stat-label">Total Tests</div>
-        </div>
-        <div className="stat-card">
-          <div className="stat-value text-success-600">{run.passedTests}</div>
-          <div className="stat-label">Passed</div>
-        </div>
-        <div className="stat-card">
-          <div className="stat-value text-danger-600">{run.failedTests}</div>
-          <div className="stat-label">Failed</div>
-        </div>
-        <div className="stat-card">
-          <div className={`stat-value ${run.passRate >= 80 ? 'text-success-600' : run.passRate >= 50 ? 'text-warning-500' : 'text-danger-600'}`}>
-            {run.passRate.toFixed(1)}%
+      {/* Stats - Use live data when running, otherwise use final run data */}
+      {(() => {
+        const isLive = run.status === 'running' && liveStatus;
+        const totalTests = isLive ? liveStatus.totalTests : run.totalTests;
+        const passedTests = isLive ? liveStatus.passedTests : run.passedTests;
+        const failedTests = isLive ? liveStatus.failedTests : run.failedTests;
+        const completedTests = isLive ? liveStatus.completedTests : run.totalTests;
+        const passRate = completedTests > 0 ? (passedTests / completedTests) * 100 : 0;
+
+        return (
+          <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-6 gap-4 mb-8">
+            <div className={`stat-card ${isLive ? 'ring-2 ring-primary-300' : ''}`}>
+              <div className="stat-value text-gray-700">
+                {isLive ? `${completedTests}/${totalTests}` : totalTests}
+              </div>
+              <div className="stat-label">{isLive ? 'Completed' : 'Total Tests'}</div>
+            </div>
+            <div className={`stat-card ${isLive ? 'ring-2 ring-primary-300' : ''}`}>
+              <div className="stat-value text-success-600">{passedTests}</div>
+              <div className="stat-label">Passed</div>
+            </div>
+            <div className={`stat-card ${isLive ? 'ring-2 ring-primary-300' : ''}`}>
+              <div className="stat-value text-danger-600">{failedTests}</div>
+              <div className="stat-label">Failed</div>
+            </div>
+            <div className={`stat-card ${isLive ? 'ring-2 ring-primary-300' : ''}`}>
+              <div className={`stat-value ${passRate >= 80 ? 'text-success-600' : passRate >= 50 ? 'text-warning-500' : 'text-danger-600'}`}>
+                {completedTests > 0 ? passRate.toFixed(1) : '-'}%
+              </div>
+              <div className="stat-label">Pass Rate</div>
+            </div>
+            <div className="stat-card">
+              <div className="stat-value text-danger-600">{run.totalViolations}</div>
+              <div className="stat-label">Violations</div>
+            </div>
+            <div className="stat-card">
+              <div className="stat-value text-gray-700">{formatDuration(run.totalDuration)}</div>
+              <div className="stat-label">Duration</div>
+            </div>
           </div>
-          <div className="stat-label">Pass Rate</div>
-        </div>
-        <div className="stat-card">
-          <div className="stat-value text-danger-600">{run.totalViolations}</div>
-          <div className="stat-label">Violations</div>
-        </div>
-        <div className="stat-card">
-          <div className="stat-value text-gray-700">{formatDuration(run.totalDuration)}</div>
-          <div className="stat-label">Duration</div>
-        </div>
-      </div>
+        );
+      })()}
 
       {/* Progress Bar */}
       <div className="card mb-8">

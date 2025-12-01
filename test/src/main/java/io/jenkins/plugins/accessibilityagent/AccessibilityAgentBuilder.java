@@ -164,6 +164,19 @@ public class AccessibilityAgentBuilder extends Builder implements SimpleBuildSte
 
                 results.add(finalResult);
 
+                // Notify dashboard of test completion for real-time stats
+                if (liveTestRunId != null) {
+                    notifyTestComplete(
+                        liveTestRunId,
+                        globalConfig,
+                        i,
+                        result.isSuccess(),
+                        config.url,
+                        config.goal,
+                        listener
+                    );
+                }
+
                 if (!result.isSuccess()) {
                     hasFailure = true;
                     String failReason = result.getError() != null ? result.getError() :
@@ -190,6 +203,19 @@ public class AccessibilityAgentBuilder extends Builder implements SimpleBuildSte
                         testDuration
                 );
                 results.add(errorResult);
+
+                // Notify dashboard of test completion (failure) for real-time stats
+                if (liveTestRunId != null) {
+                    notifyTestComplete(
+                        liveTestRunId,
+                        globalConfig,
+                        i,
+                        false,
+                        config.url,
+                        config.goal,
+                        listener
+                    );
+                }
 
                 listener.error("Test error: " + e.getMessage());
 
@@ -465,6 +491,57 @@ public class AccessibilityAgentBuilder extends Builder implements SimpleBuildSte
         }
 
         return null;
+    }
+
+    /**
+     * Notifies the dashboard that a single test has completed.
+     * This enables real-time pass/fail count updates in the dashboard.
+     */
+    private void notifyTestComplete(String testRunId,
+                                    AccessibilityAgentGlobalConfiguration globalConfig,
+                                    int testIndex,
+                                    boolean success,
+                                    String url,
+                                    String goal,
+                                    TaskListener listener) {
+        String dashboardUrl = globalConfig.getDashboardUrl();
+        String dashboardApiKey = globalConfig.getDashboardApiKey();
+
+        try {
+            JsonObject payload = new JsonObject();
+            payload.addProperty("testRunId", testRunId);
+            payload.addProperty("testIndex", testIndex);
+            payload.addProperty("success", success);
+            payload.addProperty("url", url);
+            payload.addProperty("goal", goal);
+
+            String jsonPayload = new Gson().toJson(payload);
+
+            String apiEndpoint = dashboardUrl.endsWith("/")
+                ? dashboardUrl + "api/live/test-complete"
+                : dashboardUrl + "/api/live/test-complete";
+            URL apiUrl = new URL(apiEndpoint);
+            HttpURLConnection conn = (HttpURLConnection) apiUrl.openConnection();
+            conn.setRequestMethod("POST");
+            conn.setRequestProperty("Content-Type", "application/json");
+            conn.setRequestProperty("X-API-Key", dashboardApiKey);
+            conn.setDoOutput(true);
+            conn.setConnectTimeout(10000);
+            conn.setReadTimeout(10000);
+
+            try (OutputStream os = conn.getOutputStream()) {
+                byte[] input = jsonPayload.getBytes(StandardCharsets.UTF_8);
+                os.write(input, 0, input.length);
+            }
+
+            int responseCode = conn.getResponseCode();
+            if (responseCode != 200 && responseCode != 201) {
+                listener.getLogger().println("[Live] Warning: Failed to notify test complete: HTTP " + responseCode);
+            }
+            conn.disconnect();
+        } catch (Exception e) {
+            listener.getLogger().println("[Live] Warning: Error notifying test complete: " + e.getMessage());
+        }
     }
 
     /**

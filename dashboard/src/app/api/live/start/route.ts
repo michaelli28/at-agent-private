@@ -77,6 +77,8 @@ export async function POST(request: NextRequest) {
       currentTestGoal: tests?.[0]?.goal || '',
       totalTests: totalTests || tests?.length || 0,
       completedTests: 0,
+      passedTests: 0,
+      failedTests: 0,
       isRunning: true,
       tests: tests || [],
       createdAt: FieldValue.serverTimestamp(),
