@@ -2,6 +2,55 @@ import { NextRequest, NextResponse } from 'next/server';
 import { adminDb } from '@/lib/firebase-admin';
 import { SubmitResultsRequest, SubmitResultsResponse } from '@/types';
 import { FieldValue } from 'firebase-admin/firestore';
+import { sendFailedTestNotification, FailedTestNotificationData } from '@/lib/email';
+
+// Helper function to check user settings and send notification if enabled
+async function sendFailedTestNotificationIfEnabled(
+  userId: string | undefined,
+  data: FailedTestNotificationData
+): Promise<void> {
+  if (!userId) {
+    console.log('[Notification] No owner userId for project, skipping notification');
+    return;
+  }
+
+  try {
+    // Get user settings
+    const settingsQuery = await adminDb
+      .collection('userSettings')
+      .where('userId', '==', userId)
+      .limit(1)
+      .get();
+
+    if (settingsQuery.empty) {
+      console.log('[Notification] No settings found for user, skipping notification');
+      return;
+    }
+
+    const settings = settingsQuery.docs[0].data();
+
+    if (!settings.emailNotificationsEnabled) {
+      console.log('[Notification] Email notifications disabled for user');
+      return;
+    }
+
+    if (!settings.notificationEmail) {
+      console.log('[Notification] No notification email configured');
+      return;
+    }
+
+    console.log(`[Notification] Sending failed test notification to ${settings.notificationEmail}`);
+    const result = await sendFailedTestNotification(settings.notificationEmail, data);
+
+    if (result.success) {
+      console.log('[Notification] Email sent successfully');
+    } else {
+      console.error('[Notification] Failed to send email:', result.error);
+    }
+  } catch (error) {
+    console.error('[Notification] Error sending notification:', error);
+  }
+}
 
 export async function POST(request: NextRequest) {
   try {
@@ -39,6 +88,7 @@ export async function POST(request: NextRequest) {
 
     const projectDoc = projectQuery.docs[0];
     const projectId = projectDoc.id;
+    const projectName = projectDoc.data().name || 'Unknown Project';
 
     // Calculate aggregates
     const totalTests = body.results.length;
@@ -52,6 +102,7 @@ export async function POST(request: NextRequest) {
     const testRunData = {
       projectId,
       platform: body.platform || 'other',
+      jobName: body.jobName || null,
       buildNumber: body.buildNumber || null,
       buildUrl: body.buildUrl || null,
       branch: body.branch || null,
@@ -99,9 +150,29 @@ export async function POST(request: NextRequest) {
       updatedAt: FieldValue.serverTimestamp(),
     });
 
+    // Send email notification if there are failures and user has notifications enabled
+    if (failedTests > 0) {
+      await sendFailedTestNotificationIfEnabled(
+        projectDoc.data().ownerId,
+        {
+          projectName,
+          jobName: body.jobName,
+          buildNumber: body.buildNumber,
+          buildUrl: body.buildUrl,
+          totalTests,
+          passedTests,
+          failedTests,
+          passRate,
+          dashboardUrl: process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000',
+          testRunId: testRunRef.id,
+        }
+      );
+    }
+
     return NextResponse.json<SubmitResultsResponse>({
       success: true,
       testRunId: testRunRef.id,
+      projectName,
     });
   } catch (error) {
     console.error('Error submitting results:', error);

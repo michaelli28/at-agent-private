@@ -4,7 +4,13 @@
  * CLI wrapper for the accessibility agent that outputs JSON results.
  * Used by the Jenkins plugin to run accessibility tests.
  *
- * Usage: pnpm start:agent-cli <url> "<goal>" [provider] [--json]
+ * Usage: pnpm start:agent-cli <url> "<goal>" [provider] [--json] [--live]
+ *
+ * Live mode environment variables:
+ *   DASHBOARD_URL - Dashboard API URL (e.g., https://dashboard.example.com)
+ *   DASHBOARD_API_KEY - API key for the project
+ *   TEST_RUN_ID - Test run ID (from /api/live/start)
+ *   TEST_INDEX - Index of current test (0, 1, 2...)
  */
 
 import 'dotenv/config';
@@ -34,15 +40,67 @@ interface CliResult {
     }>;
 }
 
+/**
+ * Send a live step to the dashboard API
+ */
+async function sendLiveStep(
+    dashboardUrl: string,
+    apiKey: string,
+    testRunId: string,
+    testIndex: number,
+    url: string,
+    goal: string,
+    step: any
+): Promise<void> {
+    try {
+        const response = await fetch(`${dashboardUrl}/api/live/step`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-API-Key': apiKey,
+            },
+            body: JSON.stringify({
+                testRunId,
+                testIndex,
+                url,
+                goal,
+                stepNumber: step.stepNumber,
+                action: step.action ? JSON.stringify(step.action) : '',
+                observation: step.observation?.text || '',
+                thought: step.thought || '',
+            }),
+        });
+
+        if (!response.ok) {
+            console.error(`Failed to send live step: ${response.status}`);
+        }
+    } catch (error) {
+        console.error('Error sending live step:', error);
+    }
+}
+
 async function main() {
     const args = process.argv.slice(2);
     const url = args[0];
     const goal = args[1];
     const provider = args[2] || 'openai';
     const jsonOutput = args.includes('--json');
+    const liveMode = args.includes('--live');
+
+    // Live mode configuration from environment
+    const dashboardUrl = process.env.DASHBOARD_URL;
+    const dashboardApiKey = process.env.DASHBOARD_API_KEY;
+    const testRunId = process.env.TEST_RUN_ID;
+    const testIndex = parseInt(process.env.TEST_INDEX || '0', 10);
 
     if (!url || !goal) {
-        console.error('Usage: pnpm start:agent-cli <url> "<goal>" [provider] [--json]');
+        console.error('Usage: pnpm start:agent-cli <url> "<goal>" [provider] [--json] [--live]');
+        process.exit(1);
+    }
+
+    // Validate live mode requirements
+    if (liveMode && (!dashboardUrl || !dashboardApiKey || !testRunId)) {
+        console.error('Live mode requires DASHBOARD_URL, DASHBOARD_API_KEY, and TEST_RUN_ID environment variables');
         process.exit(1);
     }
 
@@ -76,8 +134,16 @@ async function main() {
             ? buildGeminiModel()
             : buildOpenAIModel();
 
-        const stepCallback = jsonOutput ? undefined : (step: any) => {
-            console.log(`Step ${step.stepNumber}: ${step.action.type} ${step.action.key || ''}`);
+        const stepCallback = (step: any) => {
+            // Console output for non-JSON mode
+            if (!jsonOutput) {
+                console.log(`Step ${step.stepNumber}: ${step.action.type} ${step.action.key || ''}`);
+            }
+
+            // Send to dashboard in live mode
+            if (liveMode && dashboardUrl && dashboardApiKey && testRunId) {
+                sendLiveStep(dashboardUrl, dashboardApiKey, testRunId, testIndex, url, goal, step);
+            }
         };
 
         const agent = new Agent(driver, model, stepCallback);
@@ -114,8 +180,8 @@ async function main() {
     }
 
     if (jsonOutput) {
-        // Output clean JSON for parsing
-        console.log(JSON.stringify(result, null, 2));
+        // Output compact JSON for parsing (no pretty-print for easier detection)
+        console.log(JSON.stringify(result));
     } else {
         // Human-readable output
         console.log('\n--- Result ---');

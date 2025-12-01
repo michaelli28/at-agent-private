@@ -14,6 +14,7 @@ export interface TestRun {
   id: string;
   projectId: string;
   platform: 'jenkins' | 'github-actions' | 'gitlab-ci' | 'other';
+  jobName?: string; // Jenkins job name or CI pipeline name
   buildNumber?: string;
   buildUrl?: string;
   branch?: string;
@@ -54,6 +55,31 @@ export interface TestStep {
   screenshot?: string;
 }
 
+// Live step for real-time tracking during test execution
+export interface LiveStep {
+  id: string;
+  testRunId: string;
+  testIndex: number; // Which test in the run (0, 1, 2...)
+  url: string;
+  goal: string;
+  stepNumber: number;
+  action: string;
+  observation: string;
+  thought?: string;
+  createdAt: Date;
+}
+
+// Live test run status for real-time tracking
+export interface LiveTestStatus {
+  testRunId: string;
+  currentTestIndex: number;
+  currentTestUrl: string;
+  currentTestGoal: string;
+  totalTests: number;
+  completedTests: number;
+  isRunning: boolean;
+}
+
 export interface Violation {
   type: string;
   message: string;
@@ -66,6 +92,7 @@ export interface Violation {
 export interface SubmitResultsRequest {
   apiKey: string;
   platform: TestRun['platform'];
+  jobName?: string;
   buildNumber?: string;
   buildUrl?: string;
   branch?: string;
@@ -81,12 +108,35 @@ export interface SubmitResultsRequest {
     duration: number;
   }[];
   totalDuration: number;
+  metadata?: Record<string, any>;
 }
 
 export interface SubmitResultsResponse {
   success: boolean;
   testRunId?: string;
+  projectName?: string;
   error?: string;
+}
+
+// User settings types
+export interface UserSettings {
+  id: string;
+  userId: string;
+  // General settings
+  dashboardName: string;
+  defaultTimeRange: number; // days
+  showViolationsInSummary: boolean;
+  autoExpandFailedTests: boolean;
+  // Notification settings
+  emailNotificationsEnabled: boolean;
+  weeklyReportsEnabled: boolean;
+  notificationEmail: string;
+  // Thresholds
+  goodPassRateThreshold: number;
+  warningPassRateThreshold: number;
+  // Timestamps
+  createdAt: Date;
+  updatedAt: Date;
 }
 
 // Dashboard view types

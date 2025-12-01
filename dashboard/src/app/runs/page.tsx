@@ -160,7 +160,12 @@ export default function TestRunsPage() {
                 <tbody>
                   {filteredRuns.map((run) => (
                     <tr key={run.id}>
-                      <td className="font-medium text-gray-900">{run.projectName}</td>
+                      <td className="font-medium text-gray-900">
+                        {run.projectName}
+                        {run.jobName && (
+                          <div className="text-xs text-gray-500 font-normal">{run.jobName}</div>
+                        )}
+                      </td>
                       <td>
                         <span className="badge badge-neutral capitalize">{run.platform}</span>
                       </td>

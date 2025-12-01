@@ -1,11 +1,11 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useCallback } from 'react';
 import { useParams } from 'next/navigation';
 import Link from 'next/link';
-import { doc, getDoc, collection, query, where, getDocs } from 'firebase/firestore';
+import { doc, getDoc, collection, query, where, getDocs, onSnapshot } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
-import { TestRun, TestResult, Project } from '@/types';
+import { TestRun, TestResult, Project, LiveStep } from '@/types';
 import {
   ArrowLeft,
   CheckCircle,
@@ -14,7 +14,9 @@ import {
   Clock,
   ExternalLink,
   ChevronDown,
-  ChevronRight
+  ChevronRight,
+  Loader2,
+  Radio
 } from 'lucide-react';
 import { format } from 'date-fns';
 
@@ -28,30 +30,23 @@ export default function TestRunDetailPage() {
   const [loading, setLoading] = useState(true);
   const [expandedResults, setExpandedResults] = useState<Set<string>>(new Set());
 
-  useEffect(() => {
-    fetchRunData();
-  }, [runId]);
+  // Live tracking state
+  const [liveSteps, setLiveSteps] = useState<LiveStep[]>([]);
+  const [liveStatus, setLiveStatus] = useState<{
+    currentTestIndex: number;
+    currentTestUrl: string;
+    currentTestGoal: string;
+    totalTests: number;
+    completedTests: number;
+    isRunning: boolean;
+  } | null>(null);
 
-  async function fetchRunData() {
+  // Define fetch functions with useCallback to avoid dependency warnings
+  const fetchProjectInfo = useCallback(async () => {
     try {
-      // Fetch the test run
       const runDoc = await getDoc(doc(db, 'testRuns', runId));
-      if (!runDoc.exists()) {
-        setLoading(false);
-        return;
-      }
-
-      const runData = {
-        id: runDoc.id,
-        ...runDoc.data(),
-        createdAt: runDoc.data().createdAt?.toDate(),
-        completedAt: runDoc.data().completedAt?.toDate(),
-      } as TestRun;
-      setRun(runData);
-
-      // Fetch the project
-      if (runData.projectId) {
-        const projectDoc = await getDoc(doc(db, 'projects', runData.projectId));
+      if (runDoc.exists() && runDoc.data().projectId) {
+        const projectDoc = await getDoc(doc(db, 'projects', runDoc.data().projectId));
         if (projectDoc.exists()) {
           setProject({
             id: projectDoc.id,
@@ -59,25 +54,125 @@ export default function TestRunDetailPage() {
           } as Project);
         }
       }
+    } catch (error) {
+      console.error('Error fetching project info:', error);
+    }
+  }, [runId]);
 
-      // Fetch test results
+  const fetchResults = useCallback(async () => {
+    try {
       const resultsQuery = query(
         collection(db, 'testResults'),
         where('testRunId', '==', runId)
       );
       const resultsSnap = await getDocs(resultsQuery);
-      const resultsData = resultsSnap.docs.map(doc => ({
-        id: doc.id,
-        ...doc.data(),
-        createdAt: doc.data().createdAt?.toDate(),
+      const resultsData = resultsSnap.docs.map(docSnap => ({
+        id: docSnap.id,
+        ...docSnap.data(),
+        createdAt: docSnap.data().createdAt?.toDate(),
       })) as TestResult[];
       setResults(resultsData);
     } catch (error) {
-      console.error('Error fetching run data:', error);
-    } finally {
-      setLoading(false);
+      console.error('Error fetching results:', error);
     }
-  }
+  }, [runId]);
+
+  // Subscribe to real-time updates for the test run document itself
+  useEffect(() => {
+    const runUnsubscribe = onSnapshot(
+      doc(db, 'testRuns', runId),
+      (docSnap) => {
+        if (docSnap.exists()) {
+          const runData = {
+            id: docSnap.id,
+            ...docSnap.data(),
+            createdAt: docSnap.data().createdAt?.toDate(),
+            completedAt: docSnap.data().completedAt?.toDate(),
+          } as TestRun;
+          setRun(runData);
+
+          // If run is completed or just completed, fetch final results
+          if (runData.status === 'completed') {
+            fetchResults();
+          }
+        } else {
+          // Document doesn't exist
+          setRun(null);
+        }
+        setLoading(false);
+      },
+      (error) => {
+        console.error('Error subscribing to test run:', error);
+        setLoading(false);
+      }
+    );
+
+    // Fetch project info once
+    fetchProjectInfo();
+
+    return () => {
+      runUnsubscribe();
+    };
+  }, [runId, fetchProjectInfo, fetchResults]);
+
+  // Subscribe to live updates when run is in 'running' status
+  useEffect(() => {
+    if (!run || run.status !== 'running') {
+      // Clear live data when not running
+      setLiveStatus(null);
+      setLiveSteps([]);
+      return;
+    }
+
+    // Subscribe to live status
+    const liveStatusUnsubscribe = onSnapshot(
+      doc(db, 'liveStatus', runId),
+      (docSnap) => {
+        if (docSnap.exists()) {
+          const data = docSnap.data();
+          setLiveStatus({
+            currentTestIndex: data.currentTestIndex || 0,
+            currentTestUrl: data.currentTestUrl || '',
+            currentTestGoal: data.currentTestGoal || '',
+            totalTests: data.totalTests || 0,
+            completedTests: data.completedTests || 0,
+            isRunning: data.isRunning ?? true,
+          });
+        }
+      },
+      (error) => {
+        console.error('Error subscribing to live status:', error);
+      }
+    );
+
+    // Subscribe to live steps - using simpler query without orderBy to avoid index requirement
+    // We'll sort client-side instead
+    const liveStepsQuery = query(
+      collection(db, 'liveSteps'),
+      where('testRunId', '==', runId)
+    );
+
+    const liveStepsUnsubscribe = onSnapshot(liveStepsQuery, (snapshot) => {
+      const steps = snapshot.docs.map((docSnap) => ({
+        id: docSnap.id,
+        ...docSnap.data(),
+        createdAt: docSnap.data().createdAt?.toDate(),
+      })) as LiveStep[];
+      // Sort client-side by stepNumber and testIndex
+      steps.sort((a, b) => {
+        if (a.testIndex !== b.testIndex) return a.testIndex - b.testIndex;
+        return a.stepNumber - b.stepNumber;
+      });
+      setLiveSteps(steps);
+    }, (error) => {
+      console.error('Error subscribing to live steps:', error);
+    });
+
+    return () => {
+      liveStatusUnsubscribe();
+      liveStepsUnsubscribe();
+    };
+  }, [run?.status, runId]);
 
   function toggleExpanded(resultId: string) {
     const newExpanded = new Set(expandedResults);
@@ -204,6 +299,64 @@ export default function TestRunDetailPage() {
           </div>
         </div>
       </div>
+
+      {/* Live Status Panel - Only shown when run is in progress */}
+      {run.status === 'running' && liveStatus && (
+        <div className="card mb-8 border-2 border-primary-500 bg-primary-50">
+          <div className="card-header bg-primary-100 border-b border-primary-200">
+            <div className="flex items-center space-x-2">
+              <Radio className="w-5 h-5 text-primary-600 animate-pulse" />
+              <h2 className="text-lg font-semibold text-primary-800">Live Test Execution</h2>
+              <span className="badge bg-primary-600 text-white">
+                Test {liveStatus.currentTestIndex + 1} of {liveStatus.totalTests}
+              </span>
+            </div>
+          </div>
+          <div className="card-body">
+            {/* Current Test Info */}
+            <div className="mb-4 p-3 bg-white rounded-lg border border-primary-200">
+              <div className="text-sm text-gray-500 mb-1">Currently Testing:</div>
+              <div className="font-medium text-gray-900">{liveStatus.currentTestGoal}</div>
+              <div className="text-sm text-gray-500 mt-1">{liveStatus.currentTestUrl}</div>
+            </div>
+
+            {/* Live Steps for Current Test */}
+            <div className="space-y-2 max-h-96 overflow-y-auto">
+              <div className="text-sm font-medium text-gray-700 mb-2 flex items-center">
+                <Loader2 className="w-4 h-4 mr-2 animate-spin text-primary-600" />
+                Agent Steps ({liveSteps.filter(s => s.testIndex === liveStatus.currentTestIndex).length})
+              </div>
+              {liveSteps
+                .filter(s => s.testIndex === liveStatus.currentTestIndex)
+                .map((step) => (
+                  <div
+                    key={step.id}
+                    className="flex items-start space-x-3 p-3 bg-white rounded-lg border border-gray-200 animate-fadeIn"
+                  >
+                    <span className="flex-shrink-0 w-6 h-6 bg-primary-100 text-primary-700 rounded-full flex items-center justify-center text-xs font-medium">
+                      {step.stepNumber}
+                    </span>
+                    <div className="flex-1 min-w-0">
+                      <div className="text-sm font-medium text-gray-900">{step.action}</div>
+                      {step.observation && (
+                        <div className="text-sm text-gray-500 mt-1">{step.observation}</div>
+                      )}
+                      {step.thought && (
+                        <div className="text-xs text-gray-400 mt-1 italic">{step.thought}</div>
+                      )}
+                    </div>
+                  </div>
+                ))}
+              {liveSteps.filter(s => s.testIndex === liveStatus.currentTestIndex).length === 0 && (
+                <div className="text-center py-4 text-gray-500">
+                  <Loader2 className="w-6 h-6 mx-auto mb-2 animate-spin" />
+                  Waiting for agent to start...
+                </div>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Test Results */}
       <div className="card">

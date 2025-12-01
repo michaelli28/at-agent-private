@@ -2,10 +2,11 @@
 
 import { useEffect, useState } from 'react';
 import Link from 'next/link';
-import { collection, getDocs, addDoc, deleteDoc, doc, serverTimestamp } from 'firebase/firestore';
+import { collection, getDocs, addDoc, serverTimestamp } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
+import { useAuth } from '@/contexts/AuthContext';
 import { Project } from '@/types';
-import { FolderKanban, Plus, Trash2, Copy, Check, ExternalLink } from 'lucide-react';
+import { FolderKanban, Plus, Trash2, Copy, Check, ExternalLink, Eye, EyeOff } from 'lucide-react';
 
 function generateApiKey(): string {
   const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789';
@@ -17,6 +18,7 @@ function generateApiKey(): string {
 }
 
 export default function ProjectsPage() {
+  const { user } = useAuth();
   const [projects, setProjects] = useState<Project[]>([]);
   const [loading, setLoading] = useState(true);
   const [showCreateModal, setShowCreateModal] = useState(false);
@@ -24,6 +26,7 @@ export default function ProjectsPage() {
   const [newProjectDescription, setNewProjectDescription] = useState('');
   const [creating, setCreating] = useState(false);
   const [copiedId, setCopiedId] = useState<string | null>(null);
+  const [visibleKeys, setVisibleKeys] = useState<Set<string>>(new Set());
 
   useEffect(() => {
     fetchProjects();
@@ -47,7 +50,7 @@ export default function ProjectsPage() {
   }
 
   async function createProject() {
-    if (!newProjectName.trim()) return;
+    if (!newProjectName.trim() || !user) return;
 
     setCreating(true);
     try {
@@ -56,6 +59,7 @@ export default function ProjectsPage() {
         name: newProjectName.trim(),
         description: newProjectDescription.trim(),
         apiKey,
+        ownerId: user.uid,
         createdAt: serverTimestamp(),
         updatedAt: serverTimestamp(),
       });
@@ -70,16 +74,28 @@ export default function ProjectsPage() {
     }
   }
 
-  async function deleteProject(projectId: string) {
-    if (!confirm('Are you sure you want to delete this project? This will also delete all associated test runs and results.')) {
+  async function deleteProject(projectId: string, projectName: string) {
+    if (!confirm(`Are you sure you want to delete "${projectName}"?\n\nThis will permanently delete:\n- The project\n- All test runs\n- All test results\n\nThis action cannot be undone.`)) {
       return;
     }
 
     try {
-      await deleteDoc(doc(db, 'projects', projectId));
-      fetchProjects();
+      const response = await fetch(`/api/projects/${projectId}`, {
+        method: 'DELETE',
+      });
+
+      const data = await response.json();
+
+      if (data.success) {
+        console.log(`Deleted project: ${data.deletedTestRuns} test runs, ${data.deletedTestResults} test results`);
+        fetchProjects();
+      } else {
+        console.error('Error deleting project:', data.error);
+        alert('Failed to delete project: ' + data.error);
+      }
     } catch (error) {
       console.error('Error deleting project:', error);
+      alert('Failed to delete project. Please try again.');
     }
   }
 
@@ -87,6 +103,20 @@ export default function ProjectsPage() {
     navigator.clipboard.writeText(apiKey);
     setCopiedId(projectId);
     setTimeout(() => setCopiedId(null), 2000);
+  }
+
+  function toggleKeyVisibility(projectId: string) {
+    const newVisible = new Set(visibleKeys);
+    if (newVisible.has(projectId)) {
+      newVisible.delete(projectId);
+    } else {
+      newVisible.add(projectId);
+    }
+    setVisibleKeys(newVisible);
+  }
+
+  function maskApiKey(apiKey: string): string {
+    return apiKey.substring(0, 6) + '•'.repeat(20) + apiKey.substring(apiKey.length - 4);
   }
 
   if (loading) {
@@ -128,8 +158,9 @@ export default function ProjectsPage() {
                     </div>
                   </div>
                   <button
-                    onClick={() => deleteProject(project.id)}
+                    onClick={() => deleteProject(project.id, project.name)}
                     className="text-gray-400 hover:text-danger-600 transition-colors"
+                    title="Delete project"
                   >
                     <Trash2 className="w-5 h-5" />
                   </button>
@@ -139,11 +170,23 @@ export default function ProjectsPage() {
                   <label className="label">API Key</label>
                   <div className="flex items-center space-x-2">
                     <code className="flex-1 text-xs bg-gray-100 px-3 py-2 rounded font-mono truncate">
-                      {project.apiKey}
+                      {visibleKeys.has(project.id) ? project.apiKey : maskApiKey(project.apiKey)}
                     </code>
+                    <button
+                      onClick={() => toggleKeyVisibility(project.id)}
+                      className="btn btn-secondary btn-sm"
+                      title={visibleKeys.has(project.id) ? 'Hide key' : 'Show key'}
+                    >
+                      {visibleKeys.has(project.id) ? (
+                        <EyeOff className="w-4 h-4" />
+                      ) : (
+                        <Eye className="w-4 h-4" />
+                      )}
+                    </button>
                     <button
                       onClick={() => copyApiKey(project.apiKey, project.id)}
                       className="btn btn-secondary btn-sm"
+                      title="Copy key"
                     >
                       {copiedId === project.id ? (
                         <Check className="w-4 h-4 text-success-600" />

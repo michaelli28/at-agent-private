@@ -12,15 +12,42 @@ import java.util.List;
  * Build action that stores accessibility test results and provides the dashboard view.
  */
 public class AccessibilityAgentBuildAction implements RunAction2, Serializable {
-    private static final long serialVersionUID = 1L;
+    private static final long serialVersionUID = 2L;
 
     private transient Run<?, ?> run;
     private final List<AccessibilityTestResult> results;
     private final long totalDurationMs;
+    private String dashboardUrl;
+    private String dashboardTestRunId;
 
     public AccessibilityAgentBuildAction(List<AccessibilityTestResult> results, long totalDurationMs) {
         this.results = results != null ? results : new ArrayList<>();
         this.totalDurationMs = totalDurationMs;
+    }
+
+    public void setDashboardInfo(String dashboardUrl, String testRunId) {
+        this.dashboardUrl = dashboardUrl;
+        this.dashboardTestRunId = testRunId;
+    }
+
+    public String getDashboardUrl() {
+        return dashboardUrl;
+    }
+
+    public String getDashboardTestRunId() {
+        return dashboardTestRunId;
+    }
+
+    public String getDashboardResultsUrl() {
+        if (dashboardUrl == null || dashboardTestRunId == null) {
+            return null;
+        }
+        String baseUrl = dashboardUrl.endsWith("/") ? dashboardUrl : dashboardUrl + "/";
+        return baseUrl + "runs/" + dashboardTestRunId;
+    }
+
+    public boolean hasDashboardResults() {
+        return dashboardUrl != null && dashboardTestRunId != null;
     }
 
     @Override

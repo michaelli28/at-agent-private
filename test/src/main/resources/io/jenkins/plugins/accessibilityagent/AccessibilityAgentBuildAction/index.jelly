@@ -151,6 +151,15 @@
             <div class="a11y-dashboard">
                 <h1>Accessibility Test Results</h1>
 
+                <j:if test="${it.hasDashboardResults()}">
+                    <div style="margin-bottom: 16px; padding: 12px 16px; background: #e3f2fd; border-radius: 8px; border: 1px solid #90caf9;">
+                        <span style="margin-right: 8px;">📊</span>
+                        <a href="${it.dashboardResultsUrl}" target="_blank" rel="noopener noreferrer" style="color: #1565c0; font-weight: 500;">
+                            View detailed results in Dashboard →
+                        </a>
+                    </div>
+                </j:if>
+
                 <div class="a11y-progress-bar">
                     <div class="a11y-progress-fill" style="width: ${it.passRate}%"></div>
                 </div>

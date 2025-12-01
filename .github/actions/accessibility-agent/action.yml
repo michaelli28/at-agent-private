@@ -1,0 +1,57 @@
+name: 'Accessibility Agent'
+description: 'Run AI-powered accessibility tests using a virtual screen reader'
+author: 'at-agent'
+
+branding:
+  icon: 'eye'
+  color: 'green'
+
+inputs:
+  test-config:
+    description: 'Path to the test configuration file (JSON format)'
+    required: true
+  provider:
+    description: 'LLM provider to use (openai or gemini)'
+    required: false
+    default: 'openai'
+  openai-api-key:
+    description: 'OpenAI API key (required if provider is openai)'
+    required: false
+  gemini-api-key:
+    description: 'Gemini API key (required if provider is gemini)'
+    required: false
+  headless:
+    description: 'Run browser in headless mode'
+    required: false
+    default: 'true'
+  continue-on-failure:
+    description: 'Continue running tests even if one fails'
+    required: false
+    default: 'true'
+  dashboard-url:
+    description: 'Dashboard URL for live tracking and results (optional)'
+    required: false
+  dashboard-api-key:
+    description: 'Dashboard API key for authentication (required if dashboard-url is set)'
+    required: false
+  agent-path:
+    description: 'Path to the at-agent installation directory'
+    required: true
+
+outputs:
+  total-tests:
+    description: 'Total number of tests run'
+  passed-tests:
+    description: 'Number of tests that passed'
+  failed-tests:
+    description: 'Number of tests that failed'
+  pass-rate:
+    description: 'Percentage of tests that passed'
+  dashboard-url:
+    description: 'URL to view results on the dashboard (if configured)'
+  results-json:
+    description: 'JSON string containing full test results'
+
+runs:
+  using: 'node20'
+  main: 'dist/index.js'

@@ -2,6 +2,7 @@
 
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
+import { useAuth } from '@/contexts/AuthContext';
 import {
   LayoutDashboard,
   FolderKanban,
@@ -10,7 +11,7 @@ import {
   Settings,
   Key,
   FileText,
-  Layers
+  LogOut
 } from 'lucide-react';
 
 const navigation = [
@@ -25,20 +26,42 @@ const navigation = [
 
 export default function Sidebar() {
   const pathname = usePathname();
+  const { user, signOut } = useAuth();
+
+  // Get user initials for avatar
+  function getUserInitials(): string {
+    if (!user) return 'U';
+    if (user.displayName) {
+      const parts = user.displayName.split(' ');
+      return parts.map(p => p[0]).join('').substring(0, 2).toUpperCase();
+    }
+    if (user.email) {
+      return user.email[0].toUpperCase();
+    }
+    return 'U';
+  }
+
+  function getUserDisplayName(): string {
+    if (!user) return 'User';
+    return user.displayName || user.email || 'User';
+  }
+
+  async function handleSignOut() {
+    try {
+      await signOut();
+    } catch (error) {
+      console.error('Sign out error:', error);
+    }
+  }
 
   return (
     <div className="fixed inset-y-0 left-0 w-64 bg-[#F9FAFB] border-r border-gray-200">
       <div className="flex flex-col h-full">
         {/* Logo */}
         <div className="flex items-center h-16 px-6 border-b border-gray-200">
-          <div className="flex items-center space-x-3">
-            <div className="w-9 h-9 bg-primary-500 rounded-lg flex items-center justify-center shadow-sm">
-              <Layers className="w-5 h-5 text-white" />
-            </div>
-            <div>
-              <span className="text-gray-900 font-semibold text-base">A11y Agent</span>
-              <span className="block text-xs text-gray-400">Dashboard</span>
-            </div>
+          <div>
+            <span className="text-gray-900 font-semibold text-base">AT Agent</span>
+            <span className="block text-xs text-gray-400">Dashboard</span>
           </div>
         </div>
 
@@ -71,14 +94,21 @@ export default function Sidebar() {
 
         {/* Footer */}
         <div className="p-4 border-t border-gray-200">
-          <div className="flex items-center px-3 py-2 rounded-lg hover:bg-gray-100 transition-colors cursor-pointer">
+          <div className="flex items-center px-3 py-2 rounded-lg">
             <div className="w-8 h-8 rounded-full bg-primary-500 flex items-center justify-center text-white text-sm font-medium mr-3">
-              U
+              {getUserInitials()}
             </div>
             <div className="flex-1 min-w-0">
-              <div className="text-sm font-medium text-gray-900 truncate">User</div>
-              <div className="text-xs text-gray-400">Free Plan</div>
+              <div className="text-sm font-medium text-gray-900 truncate">{getUserDisplayName()}</div>
+              <div className="text-xs text-gray-400 truncate">{user?.email}</div>
             </div>
+            <button
+              onClick={handleSignOut}
+              className="p-1.5 rounded-lg hover:bg-gray-200 text-gray-500 hover:text-gray-700 transition-colors"
+              title="Sign out"
+            >
+              <LogOut className="w-4 h-4" />
+            </button>
           </div>
         </div>
       </div>

@@ -114,6 +114,20 @@ public class AccessibilityAgentBuilder extends Builder implements SimpleBuildSte
         listener.getLogger().println("Headless: " + globalConfig.isHeadlessBrowser());
         listener.getLogger().println();
 
+        // Start live tracking if dashboard is configured
+        String liveTestRunId = null;
+        String dashboardUrl = globalConfig.getDashboardUrl();
+        String dashboardApiKey = globalConfig.getDashboardApiKey();
+
+        if (dashboardUrl != null && !dashboardUrl.isEmpty() &&
+            dashboardApiKey != null && !dashboardApiKey.isEmpty()) {
+            liveTestRunId = startLiveRun(run, env, globalConfig, testConfigs, listener);
+            if (liveTestRunId != null) {
+                listener.getLogger().println("[Live] Test run started: " + liveTestRunId);
+                listener.getLogger().println("[Live] View live progress at: " + dashboardUrl + "/runs/" + liveTestRunId);
+            }
+        }
+
         List<AccessibilityTestResult> results = new ArrayList<>();
         long totalStartTime = System.currentTimeMillis();
         boolean hasFailure = false;
@@ -130,7 +144,8 @@ public class AccessibilityAgentBuilder extends Builder implements SimpleBuildSte
 
             try {
                 AccessibilityTestResult result = runSingleTest(
-                        config, globalConfig, workspace, launcher, listener, env
+                        config, globalConfig, workspace, launcher, listener, env,
+                        liveTestRunId, i  // Pass live tracking info
                 );
                 long testDuration = System.currentTimeMillis() - testStartTime;
 
@@ -193,6 +208,16 @@ public class AccessibilityAgentBuilder extends Builder implements SimpleBuildSte
         AccessibilityAgentBuildAction action = new AccessibilityAgentBuildAction(results, totalDuration);
         run.addAction(action);
 
+        // Complete live run or send batch results to dashboard
+        String dashboardResultsUrl = null;
+        if (liveTestRunId != null) {
+            // Complete the live run with final results
+            dashboardResultsUrl = completeLiveRun(liveTestRunId, globalConfig, action, results, totalDuration, listener);
+        } else {
+            // Fall back to batch send if live tracking wasn't started
+            dashboardResultsUrl = sendResultsToDashboard(run, env, globalConfig, action, results, totalDuration, listener);
+        }
+
         // Print summary
         listener.getLogger().println("===========================================");
         listener.getLogger().println("  Test Summary");
@@ -202,10 +227,10 @@ public class AccessibilityAgentBuilder extends Builder implements SimpleBuildSte
         listener.getLogger().println("Failed: " + action.getFailedTests());
         listener.getLogger().println("Pass Rate: " + action.getFormattedPassRate());
         listener.getLogger().println("Duration: " + action.getFormattedTotalDuration());
+        if (dashboardResultsUrl != null) {
+            listener.getLogger().println("Dashboard: " + dashboardResultsUrl);
+        }
         listener.getLogger().println("===========================================");
-
-        // Send results to dashboard if configured
-        sendResultsToDashboard(run, env, globalConfig, results, totalDuration, listener);
 
         // Set build result based on test outcomes
         if (hasFailure && failBuildOnTestFailure) {
@@ -215,35 +240,180 @@ public class AccessibilityAgentBuilder extends Builder implements SimpleBuildSte
 
     /**
      * Sends test results to the external dashboard if configured.
+     * Returns the dashboard results URL if successful, null otherwise.
      */
-    private void sendResultsToDashboard(Run<?, ?> run, EnvVars env,
-                                         AccessibilityAgentGlobalConfiguration globalConfig,
-                                         List<AccessibilityTestResult> results,
-                                         long totalDuration,
-                                         TaskListener listener) {
+    private String sendResultsToDashboard(Run<?, ?> run, EnvVars env,
+                                          AccessibilityAgentGlobalConfiguration globalConfig,
+                                          AccessibilityAgentBuildAction action,
+                                          List<AccessibilityTestResult> results,
+                                          long totalDuration,
+                                          TaskListener listener) {
         String dashboardUrl = globalConfig.getDashboardUrl();
         String dashboardApiKey = globalConfig.getDashboardApiKey();
 
         if (dashboardUrl == null || dashboardUrl.isEmpty()) {
-            return; // Dashboard not configured, skip
+            listener.getLogger().println("[Dashboard] Not configured, skipping.");
+            return null;
         }
 
         if (dashboardApiKey == null || dashboardApiKey.isEmpty()) {
-            listener.getLogger().println("Dashboard URL configured but API key is missing. Skipping dashboard reporting.");
-            return;
+            listener.getLogger().println("[Dashboard] URL configured but API key is missing. Skipping.");
+            return null;
         }
 
-        try {
-            listener.getLogger().println();
-            listener.getLogger().println("Sending results to dashboard: " + dashboardUrl);
+        listener.getLogger().println();
+        listener.getLogger().println("[Dashboard] Preparing to send results to: " + dashboardUrl);
 
-            // Build the JSON payload
+        // Build the JSON payload
+        JsonObject payload = buildDashboardPayload(run, env, results, totalDuration);
+        String jsonPayload = new Gson().toJson(payload);
+
+        listener.getLogger().println("[Dashboard] Payload size: " + jsonPayload.length() + " bytes");
+        listener.getLogger().println("[Dashboard] Tests: " + results.size() + ", Duration: " + totalDuration + "ms");
+
+        // Retry logic with exponential backoff
+        int maxRetries = 3;
+        int retryDelayMs = 1000;
+        String testRunId = null;
+        String lastError = null;
+
+        for (int attempt = 1; attempt <= maxRetries; attempt++) {
+            try {
+                listener.getLogger().println("[Dashboard] Attempt " + attempt + "/" + maxRetries + "...");
+
+                String apiEndpoint = dashboardUrl.endsWith("/") ? dashboardUrl + "api/results" : dashboardUrl + "/api/results";
+                URL url = new URL(apiEndpoint);
+                HttpURLConnection conn = (HttpURLConnection) url.openConnection();
+                conn.setRequestMethod("POST");
+                conn.setRequestProperty("Content-Type", "application/json");
+                conn.setRequestProperty("X-API-Key", dashboardApiKey);
+                conn.setDoOutput(true);
+                conn.setConnectTimeout(30000);
+                conn.setReadTimeout(60000);
+
+                try (OutputStream os = conn.getOutputStream()) {
+                    byte[] input = jsonPayload.getBytes(StandardCharsets.UTF_8);
+                    os.write(input, 0, input.length);
+                }
+
+                int responseCode = conn.getResponseCode();
+                listener.getLogger().println("[Dashboard] Response code: " + responseCode);
+
+                if (responseCode == 200 || responseCode == 201) {
+                    // Read response to get testRunId and project info
+                    try (BufferedReader br = new BufferedReader(new InputStreamReader(conn.getInputStream(), StandardCharsets.UTF_8))) {
+                        StringBuilder response = new StringBuilder();
+                        String line;
+                        while ((line = br.readLine()) != null) {
+                            response.append(line);
+                        }
+                        JsonObject responseJson = JsonParser.parseString(response.toString()).getAsJsonObject();
+
+                        if (responseJson.has("testRunId")) {
+                            testRunId = responseJson.get("testRunId").getAsString();
+                        }
+
+                        String projectName = responseJson.has("projectName")
+                                ? responseJson.get("projectName").getAsString()
+                                : "Unknown";
+
+                        listener.getLogger().println("[Dashboard] Success! Project: " + projectName);
+
+                        if (testRunId != null) {
+                            String resultsUrl = dashboardUrl + (dashboardUrl.endsWith("/") ? "" : "/") + "runs/" + testRunId;
+                            listener.getLogger().println("[Dashboard] View results at: " + resultsUrl);
+
+                            // Store dashboard info in the build action
+                            action.setDashboardInfo(dashboardUrl, testRunId);
+
+                            conn.disconnect();
+                            return resultsUrl;
+                        }
+                    }
+                    conn.disconnect();
+                    return null;
+                } else {
+                    // Read error response
+                    String errorBody = "";
+                    try (BufferedReader br = new BufferedReader(new InputStreamReader(conn.getErrorStream(), StandardCharsets.UTF_8))) {
+                        StringBuilder response = new StringBuilder();
+                        String line;
+                        while ((line = br.readLine()) != null) {
+                            response.append(line);
+                        }
+                        errorBody = response.toString();
+                    } catch (Exception ignored) {}
+
+                    lastError = "HTTP " + responseCode + ": " + errorBody;
+                    listener.getLogger().println("[Dashboard] Error: " + lastError);
+
+                    // Don't retry on client errors (4xx)
+                    if (responseCode >= 400 && responseCode < 500) {
+                        listener.getLogger().println("[Dashboard] Client error, not retrying.");
+                        break;
+                    }
+                }
+
+                conn.disconnect();
+            } catch (Exception e) {
+                lastError = e.getClass().getSimpleName() + ": " + e.getMessage();
+                listener.getLogger().println("[Dashboard] Exception: " + lastError);
+            }
+
+            // Wait before retrying (if not the last attempt)
+            if (attempt < maxRetries) {
+                listener.getLogger().println("[Dashboard] Waiting " + retryDelayMs + "ms before retry...");
+                try {
+                    Thread.sleep(retryDelayMs);
+                } catch (InterruptedException ie) {
+                    Thread.currentThread().interrupt();
+                    break;
+                }
+                retryDelayMs *= 2; // Exponential backoff
+            }
+        }
+
+        listener.getLogger().println("[Dashboard] Failed to send results after " + maxRetries + " attempts. Last error: " + lastError);
+        return null;
+    }
+
+    /**
+     * Starts a live test run on the dashboard for real-time step tracking.
+     * Returns the testRunId if successful, null otherwise.
+     */
+    private String startLiveRun(Run<?, ?> run, EnvVars env,
+                                AccessibilityAgentGlobalConfiguration globalConfig,
+                                List<TestConfig> testConfigs,
+                                TaskListener listener) {
+        String dashboardUrl = globalConfig.getDashboardUrl();
+        String dashboardApiKey = globalConfig.getDashboardApiKey();
+
+        try {
+            listener.getLogger().println("[Live] Starting live test run...");
+
+            // Build the tests array
+            JsonArray testsArray = new JsonArray();
+            for (TestConfig config : testConfigs) {
+                JsonObject testObj = new JsonObject();
+                testObj.addProperty("url", config.url);
+                testObj.addProperty("goal", config.goal);
+                testsArray.add(testObj);
+            }
+
+            // Build payload
             JsonObject payload = new JsonObject();
             payload.addProperty("platform", "jenkins");
+            payload.addProperty("jobName", run.getParent().getFullName());
             payload.addProperty("buildNumber", String.valueOf(run.getNumber()));
-            payload.addProperty("buildUrl", run.getAbsoluteUrl());
+            try {
+                String buildUrl = run.getAbsoluteUrl();
+                if (buildUrl != null) {
+                    payload.addProperty("buildUrl", buildUrl);
+                }
+            } catch (Exception e) {
+                // Jenkins URL not configured
+            }
 
-            // Get branch and commit info from environment
             String branch = env.get("GIT_BRANCH", env.get("BRANCH_NAME", ""));
             String commit = env.get("GIT_COMMIT", "");
             if (!branch.isEmpty()) {
@@ -253,9 +423,67 @@ public class AccessibilityAgentBuilder extends Builder implements SimpleBuildSte
                 payload.addProperty("commit", commit);
             }
 
-            payload.addProperty("totalDuration", totalDuration);
+            payload.addProperty("totalTests", testConfigs.size());
+            payload.add("tests", testsArray);
 
-            // Add results array
+            String jsonPayload = new Gson().toJson(payload);
+
+            String apiEndpoint = dashboardUrl.endsWith("/") ? dashboardUrl + "api/live/start" : dashboardUrl + "/api/live/start";
+            URL url = new URL(apiEndpoint);
+            HttpURLConnection conn = (HttpURLConnection) url.openConnection();
+            conn.setRequestMethod("POST");
+            conn.setRequestProperty("Content-Type", "application/json");
+            conn.setRequestProperty("X-API-Key", dashboardApiKey);
+            conn.setDoOutput(true);
+            conn.setConnectTimeout(30000);
+            conn.setReadTimeout(30000);
+
+            try (OutputStream os = conn.getOutputStream()) {
+                byte[] input = jsonPayload.getBytes(StandardCharsets.UTF_8);
+                os.write(input, 0, input.length);
+            }
+
+            int responseCode = conn.getResponseCode();
+            if (responseCode == 200 || responseCode == 201) {
+                try (BufferedReader br = new BufferedReader(new InputStreamReader(conn.getInputStream(), StandardCharsets.UTF_8))) {
+                    StringBuilder response = new StringBuilder();
+                    String line;
+                    while ((line = br.readLine()) != null) {
+                        response.append(line);
+                    }
+                    JsonObject responseJson = JsonParser.parseString(response.toString()).getAsJsonObject();
+                    if (responseJson.has("testRunId")) {
+                        return responseJson.get("testRunId").getAsString();
+                    }
+                }
+            } else {
+                listener.getLogger().println("[Live] Failed to start live run: HTTP " + responseCode);
+            }
+            conn.disconnect();
+        } catch (Exception e) {
+            listener.getLogger().println("[Live] Error starting live run: " + e.getMessage());
+        }
+
+        return null;
+    }
+
+    /**
+     * Completes a live test run with final results.
+     * Returns the dashboard results URL if successful, null otherwise.
+     */
+    private String completeLiveRun(String testRunId,
+                                   AccessibilityAgentGlobalConfiguration globalConfig,
+                                   AccessibilityAgentBuildAction action,
+                                   List<AccessibilityTestResult> results,
+                                   long totalDuration,
+                                   TaskListener listener) {
+        String dashboardUrl = globalConfig.getDashboardUrl();
+        String dashboardApiKey = globalConfig.getDashboardApiKey();
+
+        try {
+            listener.getLogger().println("[Live] Completing test run...");
+
+            // Build results array
             JsonArray resultsArray = new JsonArray();
             for (AccessibilityTestResult result : results) {
                 JsonObject resultObj = new JsonObject();
@@ -300,10 +528,16 @@ public class AccessibilityAgentBuilder extends Builder implements SimpleBuildSte
 
                 resultsArray.add(resultObj);
             }
-            payload.add("results", resultsArray);
 
-            // Send HTTP POST request
-            String apiEndpoint = dashboardUrl.endsWith("/") ? dashboardUrl + "api/results" : dashboardUrl + "/api/results";
+            // Build payload
+            JsonObject payload = new JsonObject();
+            payload.addProperty("testRunId", testRunId);
+            payload.add("results", resultsArray);
+            payload.addProperty("totalDuration", totalDuration);
+
+            String jsonPayload = new Gson().toJson(payload);
+
+            String apiEndpoint = dashboardUrl.endsWith("/") ? dashboardUrl + "api/live/complete" : dashboardUrl + "/api/live/complete";
             URL url = new URL(apiEndpoint);
             HttpURLConnection conn = (HttpURLConnection) url.openConnection();
             conn.setRequestMethod("POST");
@@ -311,9 +545,7 @@ public class AccessibilityAgentBuilder extends Builder implements SimpleBuildSte
             conn.setRequestProperty("X-API-Key", dashboardApiKey);
             conn.setDoOutput(true);
             conn.setConnectTimeout(30000);
-            conn.setReadTimeout(30000);
-
-            String jsonPayload = new Gson().toJson(payload);
+            conn.setReadTimeout(60000);
 
             try (OutputStream os = conn.getOutputStream()) {
                 byte[] input = jsonPayload.getBytes(StandardCharsets.UTF_8);
@@ -322,38 +554,108 @@ public class AccessibilityAgentBuilder extends Builder implements SimpleBuildSte
 
             int responseCode = conn.getResponseCode();
             if (responseCode == 200 || responseCode == 201) {
-                // Read response to get testRunId
-                try (BufferedReader br = new BufferedReader(new InputStreamReader(conn.getInputStream(), StandardCharsets.UTF_8))) {
-                    StringBuilder response = new StringBuilder();
-                    String line;
-                    while ((line = br.readLine()) != null) {
-                        response.append(line);
-                    }
-                    JsonObject responseJson = JsonParser.parseString(response.toString()).getAsJsonObject();
-                    if (responseJson.has("testRunId")) {
-                        String testRunId = responseJson.get("testRunId").getAsString();
-                        listener.getLogger().println("Results sent successfully. View at: " + dashboardUrl + "/runs/" + testRunId);
-                    } else {
-                        listener.getLogger().println("Results sent to dashboard successfully.");
-                    }
-                }
-            } else {
-                listener.getLogger().println("Warning: Failed to send results to dashboard. HTTP " + responseCode);
-                // Try to read error response
-                try (BufferedReader br = new BufferedReader(new InputStreamReader(conn.getErrorStream(), StandardCharsets.UTF_8))) {
-                    StringBuilder response = new StringBuilder();
-                    String line;
-                    while ((line = br.readLine()) != null) {
-                        response.append(line);
-                    }
-                    listener.getLogger().println("Dashboard error: " + response.toString());
-                } catch (Exception ignored) {}
-            }
+                listener.getLogger().println("[Live] Test run completed successfully");
+                String resultsUrl = dashboardUrl + (dashboardUrl.endsWith("/") ? "" : "/") + "runs/" + testRunId;
 
+                // Store dashboard info in the build action
+                action.setDashboardInfo(dashboardUrl, testRunId);
+
+                return resultsUrl;
+            } else {
+                listener.getLogger().println("[Live] Failed to complete run: HTTP " + responseCode);
+            }
             conn.disconnect();
         } catch (Exception e) {
-            listener.getLogger().println("Warning: Could not send results to dashboard: " + e.getMessage());
+            listener.getLogger().println("[Live] Error completing run: " + e.getMessage());
         }
+
+        return null;
+    }
+
+    /**
+     * Builds the JSON payload for the dashboard API.
+     */
+    private JsonObject buildDashboardPayload(Run<?, ?> run, EnvVars env,
+                                              List<AccessibilityTestResult> results,
+                                              long totalDuration) {
+        JsonObject payload = new JsonObject();
+        payload.addProperty("platform", "jenkins");
+        payload.addProperty("buildNumber", String.valueOf(run.getNumber()));
+
+        // Add job name for better identification
+        String jobName = run.getParent().getFullName();
+        payload.addProperty("jobName", jobName);
+
+        // Build URL might not be available if Jenkins URL is not configured
+        try {
+            String buildUrl = run.getAbsoluteUrl();
+            if (buildUrl != null) {
+                payload.addProperty("buildUrl", buildUrl);
+            }
+        } catch (Exception e) {
+            // Jenkins URL not configured, skip buildUrl
+        }
+
+        // Get branch and commit info from environment
+        String branch = env.get("GIT_BRANCH", env.get("BRANCH_NAME", ""));
+        String commit = env.get("GIT_COMMIT", "");
+        if (!branch.isEmpty()) {
+            payload.addProperty("branch", branch.replace("origin/", ""));
+        }
+        if (!commit.isEmpty()) {
+            payload.addProperty("commit", commit);
+        }
+
+        payload.addProperty("totalDuration", totalDuration);
+
+        // Add results array
+        JsonArray resultsArray = new JsonArray();
+        for (AccessibilityTestResult result : results) {
+            JsonObject resultObj = new JsonObject();
+            resultObj.addProperty("url", result.getUrl());
+            resultObj.addProperty("goal", result.getGoal());
+            resultObj.addProperty("success", result.isSuccess());
+            if (result.getReason() != null) {
+                resultObj.addProperty("reason", result.getReason());
+            }
+            if (result.getError() != null) {
+                resultObj.addProperty("error", result.getError());
+            }
+            resultObj.addProperty("duration", result.getDurationMs());
+
+            // Add steps
+            JsonArray stepsArray = new JsonArray();
+            for (AccessibilityTestResult.TestStep step : result.getSteps()) {
+                JsonObject stepObj = new JsonObject();
+                stepObj.addProperty("stepNumber", step.getStepNumber());
+                stepObj.addProperty("action", step.getAction());
+                stepObj.addProperty("observation", step.getObservation());
+                if (step.getThought() != null && !step.getThought().isEmpty()) {
+                    stepObj.addProperty("thought", step.getThought());
+                }
+                stepsArray.add(stepObj);
+            }
+            resultObj.add("steps", stepsArray);
+
+            // Add violations
+            JsonArray violationsArray = new JsonArray();
+            for (AccessibilityTestResult.Violation violation : result.getViolations()) {
+                JsonObject violObj = new JsonObject();
+                violObj.addProperty("type", violation.getType());
+                violObj.addProperty("message", violation.getMessage());
+                if (violation.getElement() != null && !violation.getElement().isEmpty()) {
+                    violObj.addProperty("element", violation.getElement());
+                }
+                violObj.addProperty("severity", violation.getSeverity());
+                violationsArray.add(violObj);
+            }
+            resultObj.add("violations", violationsArray);
+
+            resultsArray.add(resultObj);
+        }
+        payload.add("results", resultsArray);
+
+        return payload;
     }
 
     private AccessibilityTestResult runSingleTest(TestConfig config,
@@ -361,7 +663,9 @@ public class AccessibilityAgentBuilder extends Builder implements SimpleBuildSte
                                                    FilePath workspace,
                                                    Launcher launcher,
                                                    TaskListener listener,
-                                                   EnvVars env) throws IOException, InterruptedException {
+                                                   EnvVars env,
+                                                   String liveTestRunId,
+                                                   int testIndex) throws IOException, InterruptedException {
 
         // Build the command to run the agent using npm script
         // Use the npm path from the environment's PATH (set by NodeJS tool)
@@ -392,6 +696,11 @@ public class AccessibilityAgentBuilder extends Builder implements SimpleBuildSte
         command.add(globalConfig.getLlmProvider());
         command.add("--json"); // Request JSON output for parsing
 
+        // Add --live flag if live tracking is enabled
+        if (liveTestRunId != null) {
+            command.add("--live");
+        }
+
         // Set up environment with API key - include full PATH from Jenkins
         EnvVars processEnv = new EnvVars(env);
         String apiKey = globalConfig.getApiKey();
@@ -403,6 +712,18 @@ public class AccessibilityAgentBuilder extends Builder implements SimpleBuildSte
 
         if (globalConfig.isHeadlessBrowser()) {
             processEnv.put("HEADLESS", "true");
+        }
+
+        // Add live tracking environment variables
+        if (liveTestRunId != null) {
+            String dashboardUrl = globalConfig.getDashboardUrl();
+            if (dashboardUrl.endsWith("/")) {
+                dashboardUrl = dashboardUrl.substring(0, dashboardUrl.length() - 1);
+            }
+            processEnv.put("DASHBOARD_URL", dashboardUrl);
+            processEnv.put("DASHBOARD_API_KEY", globalConfig.getDashboardApiKey());
+            processEnv.put("TEST_RUN_ID", liveTestRunId);
+            processEnv.put("TEST_INDEX", String.valueOf(testIndex));
         }
 
         // Execute the agent from the agent installation directory

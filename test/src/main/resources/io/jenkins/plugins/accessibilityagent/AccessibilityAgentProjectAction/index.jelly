@@ -149,7 +149,7 @@
                                 <j:forEach var="build" items="${builds}">
                                     <tr>
                                         <td>
-                                            <a href="../${build.buildNumber}/accessibility-results/">#${build.buildNumber}</a>
+                                            <a href="${it.project.absoluteUrl}${build.buildNumber}/accessibility-results/">#${build.buildNumber}</a>
                                         </td>
                                         <td>${build.totalTests}</td>
                                         <td>
