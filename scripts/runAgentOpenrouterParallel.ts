@@ -1,8 +1,8 @@
 import 'dotenv/config';
 import * as fs from 'fs';
 import * as path from 'path';
-import { BrowserClient } from '../browser/src/playwrightClient';
-import { ScreenReaderDriver } from '../virtual-screen-reader/src/ScreenReaderDriver';
+import { BrowserClient } from '@adf/browser/playwrightClient';
+import { ScreenReaderDriver } from '@adf/drivers';
 import { AgentOpenrouter } from '../agent/src/AgentOpenrouter';
 import { Reporter } from '../evaluation/src/Reporter';
 import { Evaluator } from '../evaluation/src/Evaluator';

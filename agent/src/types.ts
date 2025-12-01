@@ -1,5 +1,5 @@
 import { BaseMessage } from '@langchain/core/messages';
-import { PerceptualSnapshot, UserAction, ActionResult } from '@adf/virtual-screen-reader';
+import { PerceptualSnapshot, UserAction, ActionResult } from '@adf/drivers';
 
 export interface AgentStep {
   stepNumber: number;

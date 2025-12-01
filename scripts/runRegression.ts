@@ -1,6 +1,6 @@
 import path from 'path';
-import { BrowserClient } from '../browser/src/playwrightClient';
-import { ScreenReaderDriver } from '../virtual-screen-reader/src/ScreenReaderDriver';
+import { BrowserClient } from '@adf/browser/playwrightClient';
+import { ScreenReaderDriver } from '@adf/drivers';
 import { Evaluator } from '../evaluation/src/Evaluator';
 import { AgentTrace } from '../agent/src/types';
 

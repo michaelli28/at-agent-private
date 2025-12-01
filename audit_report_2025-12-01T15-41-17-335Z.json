@@ -1,0 +1,83 @@
+{
+  "summary": "The page has several significant accessibility issues affecting non-text content, document structure, text contrast, and responsive behavior at high zoom and with custom text spacing. Interactive controls also have semantic and target-size problems that can hinder assistive technology users and people with motor impairments. Addressing these areas will substantially improve usability for screen reader users and users with low vision.",
+  "score": 68,
+  "violations": [
+    {
+      "severity": "Critical",
+      "wcag_article": "Success Criterion 1.1.1 Non-text Content",
+      "description": "Key recipe images are missing alternative text, so screen reader users receive no meaningful description of the dishes represented by those images.",
+      "location": "Recipe cards: <img src=\"/food/cake.png\" class=\"Recipe__image\" />, <img src=\"/food/spaget.png\" class=\"Recipe__image\" />, <img src=\"/food/steak.png\" class=\"Recipe__image\" />, <img src=\"/food/burger.png\" class=\"Recipe__image\" />, <img src=\"/food/grilled_cheese.png\" class=\"Recipe__image\" />, <img src=\"/food/lemon_bar.png\" class=\"Recipe__image\" />, <img src=\"/food/kale_salad.png\" class=\"Recipe__image\" />, <img src=\"/food/trail_mix.png\" class=\"Recipe__image\" /> (DOM and visual reports).",
+      "recommendation": "Add a descriptive alt attribute to each meaningful recipe image (e.g., alt=\"Chocolate cake with frosting\", alt=\"Plate of spaghetti with tomato sauce\"), ensuring each conveys the essential information a sighted user would gain from the image."
+    },
+    {
+      "severity": "Minor",
+      "wcag_article": "Success Criterion 1.1.1 Non-text Content",
+      "description": "Decorative icons are exposed to assistive technologies with the literal alt text \"decorative icon\", which adds meaningless verbosity for screen reader users instead of being properly hidden.",
+      "location": "Stat icons: <img class=\"Stat__value-icon\" src=\"/egg.8b86a041.svg\" alt=\"decorative icon\" />, <img class=\"Stat__value-icon\" src=\"/recipe.d071fedf.svg\" alt=\"decorative icon\" />, <img class=\"Stat__value-icon\" src=\"/fire.012d9ab2.svg\" alt=\"decorative icon\" /> (DOM and visual reports).",
+      "recommendation": "For purely decorative icons, use an empty alt attribute (alt=\"\") and/or aria-hidden=\"true\" on the <img> elements so they are ignored by screen readers."
+    },
+    {
+      "severity": "Major",
+      "wcag_article": "Success Criterion 1.3.1 Info and Relationships",
+      "description": "Recipe titles are visually styled as headings but coded as generic <div> elements, so the heading structure and relationships are not programmatically conveyed to assistive technologies.",
+      "location": "Recipe headings: <div class=\"Heading\">Chocolate Cake</div>, <div class=\"Heading\">Mom's Spaghetti</div>, <div class=\"Heading\">Filet Mignon</div>, <div class=\"Heading\">Mega Burger</div>, <div class=\"Heading\">Grilled Cheese</div>, <div class=\"Heading\">Lemon Squares</div>, <div class=\"Heading\">Kale Salad</div>, <div class=\"Heading\">Trail Mix</div> (DOM and visual reports).",
+      "recommendation": "Mark up each recipe title as a semantic heading appropriate to the page hierarchy (e.g., <h2 class=\"Heading\">Chocolate Cake</h2>), so screen reader users can navigate recipes by heading level."
+    },
+    {
+      "severity": "Minor",
+      "wcag_article": "Success Criterion 2.4.2 Page Titled",
+      "description": "The document title uses placeholder text rather than a meaningful description of the page, making it harder for users—especially screen reader and tabbed-browsing users—to identify the page’s purpose.",
+      "location": "Document head: <title>[INSERT TITLE HERE]</title> (DOM and visual reports).",
+      "recommendation": "Update the <title> element to succinctly describe the page content (e.g., \"Awesome Recipes Dashboard\" or \"My Recipe Stats\")."
+    },
+    {
+      "severity": "Major",
+      "wcag_article": "Success Criterion 1.4.3 Contrast (Minimum)",
+      "description": "The difficulty indicators use low-contrast text colors against a white background, making them hard to read for users with low vision and failing minimum contrast requirements for normal-sized text.",
+      "location": "Difficulty cells: selector td.Beginner (text color #76bf98 on white, contrast ratio 2.17:1) and td.Intermediate (yellow/orange text on white, described as insufficient contrast) in the visual report.",
+      "recommendation": "Choose text colors for difficulty labels that provide at least a 4.5:1 contrast ratio against the white background (e.g., darken the green and yellow/orange tones or change the background color) and verify with a contrast checker."
+    },
+    {
+      "severity": "Major",
+      "wcag_article": "Success Criterion 1.4.3 Contrast (Minimum)",
+      "description": "Text in the statistics area and chart axis labels has insufficient contrast against their dark backgrounds, making labels difficult to discern for users with low vision.",
+      "location": "Stats section labels: .Stat__label (e.g., \"Eggs used\", \"Recipes made\") and chart axis labels: .Stat__value-histogram-month (e.g., \"nov\", \"dec\"), both reported as low contrast in the visual analysis.",
+      "recommendation": "Increase the text color contrast for .Stat__label and .Stat__value-histogram-month so each label reaches at least a 4.5:1 contrast ratio with its background, adjusting text or background colors as needed."
+    },
+    {
+      "severity": "Critical",
+      "wcag_article": "Success Criterion 1.4.10 Reflow",
+      "description": "The page lacks a responsive viewport meta tag, which can prevent proper reflow on small screens or at 400% zoom, forcing horizontal scrolling and risking loss of information or functionality.",
+      "location": "Head section: Report 1 – Reflow (400% Zoom) notes the absence of <meta name=\"viewport\" content=\"width=device-width, initial-scale=1\" />.",
+      "recommendation": "Add a responsive viewport meta tag (e.g., <meta name=\"viewport\" content=\"width=device-width, initial-scale=1\" />) and verify that at a width equivalent to 320 CSS pixels all content and functionality remain available without requiring horizontal scrolling."
+    },
+    {
+      "severity": "Major",
+      "wcag_article": "Success Criterion 1.4.12 Text Spacing",
+      "description": "When user style sheets or browser settings increase line height, paragraph spacing, letter spacing, and word spacing, content can overlap, be cut off, or obstruct interactive elements, indicating the layout does not robustly support required text spacing adjustments.",
+      "location": "Regression findings: Report 1 – Text Spacing notes failures when applying the WCAG text-spacing test styles (increased line-height, letter-spacing, word-spacing, and margins).",
+      "recommendation": "Test the page with the WCAG text-spacing overrides (line-height 1.5, paragraph spacing 2.0, letter-spacing 0.12em, word-spacing 0.16em) and adjust CSS (e.g., increase container heights, allow elements to wrap, avoid fixed heights on text containers) so no text is clipped, overlaps, or becomes unusable."
+    },
+    {
+      "severity": "Major",
+      "wcag_article": "Success Criterion 4.1.2 Name, Role, Value",
+      "description": "The edit control is implemented as a focusable generic <div> containing an image, without a semantic button role or a programmatically determinable accessible name on the interactive element itself, which can confuse assistive technology users.",
+      "location": "Edit controls in recipe cards: <div class=\"Recipes__card-head\"><div tabindex=\"0\"><img src=\"/pencil.e81f7a41.png\" class=\"edit\" alt=\"Edit\" data-testid=\"edit-button\" /></div> ...</div> and .Recipes__card-head > div[tabindex='0'] (DOM, visual, and regression reports).",
+      "recommendation": "Use a native <button> element for the edit control (e.g., <button type=\"button\" class=\"edit\" aria-label=\"Edit Chocolate Cake\">...</button>) or, if a non-button element is required, add role=\"button\" and an explicit accessible name (e.g., aria-label) to the focusable element, ensuring keyboard and assistive technology users perceive it as a button."
+    },
+    {
+      "severity": "Major",
+      "wcag_article": "Success Criterion 4.1.2 Name, Role, Value",
+      "description": "ARIA menubar and menuitem roles are applied to what appears to be static branding text, causing the content to be exposed as an interactive menu to assistive technologies even though it does not behave like one.",
+      "location": "Navigation/branding area: <ul role=\"menubar\"><li tabindex=\"0\" role=\"menuitem\"> ... <span>awesome recipes</span></li></ul> (DOM report).",
+      "recommendation": "Remove the menubar/menuitem roles from static branding content and only use ARIA menu patterns for actual application menus that implement the expected keyboard behavior; for simple navigation or branding, rely on semantic HTML elements (e.g., <nav>, <a>) without inappropriate ARIA roles."
+    },
+    {
+      "severity": "Major",
+      "wcag_article": "Success Criterion 2.5.8 Target Size (Minimum)",
+      "description": "The edit control appears to rely on a small pencil icon as the interactive hit area, which is likely smaller than the recommended 24x24 CSS pixels, making it difficult for users with motor impairments or on touch devices to activate reliably.",
+      "location": "Edit buttons: <div tabindex=\"0\"><img src=\"/pencil.e81f7a41.png\" class=\"edit\" alt=\"Edit\" /></div> (visual analysis of all edit buttons).",
+      "recommendation": "Increase the clickable area of the edit control so the target size is at least 24x24 CSS pixels, either by enlarging the button element itself or adding sufficient padding while keeping the visual icon size as desired."
+    }
+  ]
+}

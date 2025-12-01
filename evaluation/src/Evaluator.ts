@@ -12,6 +12,9 @@ export class Evaluator {
 
     // 1. Static Analysis (on the provided tree snapshot)
     violations.push(...this.checkMissingNames(axTree));
+    violations.push(...this.checkKeyboardOperability(axTree));
+    violations.push(...this.checkPageTitle(axTree));
+    violations.push(...this.checkHeadingOrder(axTree));
 
     // 2. Dynamic Analysis (on the interaction history)
     violations.push(...this.checkFocusTraps(trace));
@@ -44,6 +47,92 @@ export class Evaluator {
         }
       }
     }
+    return violations;
+  }
+
+  /**
+   * Check WCAG 2.1.1 / 2.1.3: Keyboard / Keyboard (No Exception).
+   * Heuristic: Interactive elements must be focusable.
+   */
+  private checkKeyboardOperability(nodes: AXNode[]): Violation[] {
+    const violations: Violation[] = [];
+    const interactiveRoles = ['button', 'link', 'menuitem', 'checkbox', 'radio', 'textbox', 'combobox', 'listbox'];
+
+    for (const node of nodes) {
+      const role = node.role?.value;
+      if (role && typeof role === 'string' && interactiveRoles.includes(role)) {
+        const focusable = this.getBooleanProperty(node, 'focusable');
+        if (focusable === false) {
+          violations.push({
+            ruleId: 'WCAG-2.1.1',
+            description: `Interactive element with role '${role}' is not keyboard focusable.`,
+            severity: 'serious',
+            axNodeId: node.nodeId,
+            evidence: `Node (BackendID: ${node.backendDOMNodeId}) has role '${role}' but 'focusable' is false.`
+          });
+        }
+      }
+    }
+
+    return violations;
+  }
+
+  /**
+   * Check WCAG 2.4.2: Page Titled.
+   * Heuristic: Root document node should have a non-empty name (page title).
+   */
+  private checkPageTitle(nodes: AXNode[]): Violation[] {
+    const violations: Violation[] = [];
+    const docNode = nodes.find(n => {
+      const role = n.role?.value;
+      return role === 'document' || role === 'RootWebArea' || role === 'WebArea';
+    });
+
+    if (docNode) {
+      const title = docNode.name?.value;
+      if (!title || (typeof title === 'string' && title.trim() === '')) {
+        violations.push({
+          ruleId: 'WCAG-2.4.2',
+          description: 'Document is missing a descriptive page title.',
+          severity: 'moderate',
+          axNodeId: docNode.nodeId,
+          evidence: `Root document node (BackendID: ${docNode.backendDOMNodeId}) has an empty or missing name.`
+        });
+      }
+    }
+
+    return violations;
+  }
+
+  /**
+   * Check WCAG 2.4.6: Headings and Labels.
+   * Heuristic: Heading levels should not skip more than one level (e.g., H1 -> H3).
+   */
+  private checkHeadingOrder(nodes: AXNode[]): Violation[] {
+    const violations: Violation[] = [];
+    const headings = nodes
+      .filter(n => n.role?.value === 'heading')
+      .map(n => {
+        const levelProp = n.properties?.find(p => p.name === 'level');
+        const level = typeof levelProp?.value?.value === 'number' ? levelProp.value.value : undefined;
+        return { node: n, level };
+      })
+      .filter(h => typeof h.level === 'number');
+
+    let lastLevel: number | null = null;
+    for (const heading of headings) {
+      if (lastLevel !== null && heading.level! - lastLevel > 1) {
+        violations.push({
+          ruleId: 'WCAG-2.4.6',
+          description: `Heading levels skip from H${lastLevel} to H${heading.level}.`,
+          severity: 'moderate',
+          axNodeId: heading.node.nodeId,
+          evidence: `Heading node (BackendID: ${heading.node.backendDOMNodeId}) level ${heading.level} follows level ${lastLevel}.`
+        });
+      }
+      lastLevel = heading.level!;
+    }
+
     return violations;
   }
 
@@ -82,5 +171,12 @@ export class Evaluator {
     }
 
     return violations;
+  }
+
+  private getBooleanProperty(node: AXNode, name: string): boolean | undefined {
+    const prop = node.properties?.find(p => p.name === name);
+    const value = prop?.value?.value;
+    if (typeof value === 'boolean') return value;
+    return undefined;
   }
 }

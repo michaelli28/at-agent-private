@@ -1,0 +1,62 @@
+{
+  "summary": "A number of Level A and AA accessibility issues are present, notably missing alternative text on key images, poor semantic structure, and interactive controls that are not properly coded. These, along with inadequate color contrast and layout that fails to reflow on small screens, significantly impact users of assistive technologies and people with low vision or mobile users. Addressing the critical issues first would substantially improve the page's overall accessibility.",
+  "score": 60,
+  "violations": [
+    {
+      "severity": "Critical",
+      "wcag_article": "1.1.1 Non-text Content",
+      "description": "Key recipe images are missing alt attributes even though they convey meaningful information about each dish, so screen reader users receive no equivalent text alternative.",
+      "location": "Recipe images in each recipe card, e.g. <img src=\"/food/cake.png\" class=\"Recipe__image\" />, /spaget.png, /steak.png, /burger.png, /grilled_cheese.png, /lemon_bar.png, /kale_salad.png, /trail_mix.png (DOM and visual reports).",
+      "recommendation": "Add concise, descriptive alt text to each meaningful recipe image (e.g., alt=\"Chocolate cake\", alt=\"Spaghetti with tomato sauce\"). Only use alt=\"\" for images that are purely decorative and do not convey content."
+    },
+    {
+      "severity": "Minor",
+      "wcag_article": "1.1.1 Non-text Content",
+      "description": "Stat icons use the literal alt text \"decorative icon\", which will be read by screen readers but does not describe a purpose and is distracting if the icons are truly decorative.",
+      "location": "Stat icons next to numeric values, e.g. <img class=\"Stat__value-icon\" src=\"/egg.8b86a041.svg\" alt=\"decorative icon\" />, and similar /recipe.d071fedf.svg and /fire.012d9ab2.svg (DOM report).",
+      "recommendation": "If these icons are decorative, set alt=\"\" and optionally role=\"presentation\" so they are ignored by assistive technologies. If they convey meaning (e.g., servings, recipes, calories), provide specific descriptive alt text such as alt=\"Eggs\", alt=\"Recipes\", or alt=\"Calories\"."
+    },
+    {
+      "severity": "Major",
+      "wcag_article": "1.3.1 Info and Relationships",
+      "description": "Visual headings are not properly coded as headings and some heading elements are misused for plain numeric values, so the document structure and relationships are not programmatically determinable for assistive technologies.",
+      "location": "Recipe titles rendered as <div class=\"Heading\">Chocolate Cake</div>, <div class=\"Heading\">Mom's Spaghetti</div>, etc. (visual and regression reports) and Stats section where <h2> elements are used primarily for numeric values rather than section headings (regression report).",
+      "recommendation": "Use semantic heading elements (e.g., <h2>, <h3>) for all visual headings such as recipe names, following a logical hierarchy, and reserve heading elements for labeling sections rather than for standalone numbers. Move numeric values into text elements associated with a meaningful heading, such as <h2>Stats</h2><p>9 recipes</p>."
+    },
+    {
+      "severity": "Major",
+      "wcag_article": "1.3.1 Info and Relationships",
+      "description": "Recipe cards and the overall recipes collection are not wrapped in semantic container elements, making it harder for assistive technology users to understand and navigate distinct pieces of content.",
+      "location": "Recipe card grid and overall recipes list, as described in regression report entries: \"Recipe cards are not marked up with semantic container elements (e.g., <article> with aria-labelledby)\" and \"The overall recipes collection is not wrapped in a semantic section (e.g., <section> with its own heading)\".",
+      "recommendation": "Wrap each recipe card in an <article> (or similar landmark) with aria-labelledby referencing its title, and wrap the full set of recipes in a <section> with a clear heading (e.g., <h2>Recipes</h2>) to expose content groupings and improve screen reader navigation."
+    },
+    {
+      "severity": "Major",
+      "wcag_article": "1.4.3 Contrast (Minimum)",
+      "description": "The difficulty level text \"Beginner\" has insufficient color contrast against the white background, making it hard to read for users with low vision or color vision deficiencies.",
+      "location": "<td class=\"Beginner\">Beginner</td> labels in multiple recipe cards, with light green text (#76bf98) on white (#ffffff), contrast ratio 2.17:1 (visual report).",
+      "recommendation": "Increase the color contrast of the \"Beginner\" text (or its background) so that the contrast ratio is at least 4.5:1 for normal text, for example by using a darker green or a darker text color while maintaining the same background."
+    },
+    {
+      "severity": "Critical",
+      "wcag_article": "1.4.10 Reflow",
+      "description": "The page lacks a responsive viewport meta tag, causing the layout not to adapt to small screens and forcing horizontal scrolling at high zoom levels instead of reflowing content vertically.",
+      "location": "<head> element where <meta name=\"viewport\" content=\"width=device-width, initial-scale=1\" /> is missing, as noted in regression reports: \"Missing responsive viewport meta tag in the <head>\" and \"The page lacked a <meta name=\"viewport\" ...> tag, causing the layout not to adapt to small screens and forcing horizontal scrolling\".",
+      "recommendation": "Add a responsive viewport meta tag such as <meta name=\"viewport\" content=\"width=device-width, initial-scale=1\"> and verify that at 400% zoom or a 320 CSS pixel-wide viewport, all primary content can be accessed with vertical scrolling only, without requiring horizontal scrolling."
+    },
+    {
+      "severity": "Major",
+      "wcag_article": "2.4.2 Page Titled",
+      "description": "The document title is placeholder text and does not describe the page content, making it difficult for users (especially screen reader users) to identify the purpose of the page.",
+      "location": "<title>[INSERT TITLE HERE]</title> in the document <head> (DOM and regression reports).",
+      "recommendation": "Set a unique, descriptive page title that reflects the page’s purpose, such as \"Recipe Dashboard\" or \"Recipe Collection – Cooking App\", and ensure each distinct page in the site has its own meaningful title."
+    },
+    {
+      "severity": "Critical",
+      "wcag_article": "4.1.2 Name, Role, Value",
+      "description": "Interactive controls are implemented as generic <div tabindex=\"0\"> elements containing images instead of semantic buttons, so their role and accessible name are not reliably exposed to assistive technologies.",
+      "location": "Editable controls referenced in regression Report 2: \"Editable controls are implemented as <div tabindex=\"0\"> containing an image instead of using semantic <button> elements\".",
+      "recommendation": "Replace these <div tabindex=\"0\"> elements with native <button> elements, or at minimum add appropriate ARIA roles (role=\"button\"), keyboard activation handling for Enter and Space, and clear accessible names (via text content or aria-label) that describe the control’s action."
+    }
+  ]
+}

@@ -1,4 +1,4 @@
-import { IAccessibilityDriver, ActionResult, PerceptualSnapshot, UserAction } from '@adf/virtual-screen-reader';
+import { IAccessibilityDriver, ActionResult, PerceptualSnapshot, UserAction } from '@adf/drivers';
 import { OpenRouter } from '@openrouter/sdk';
 import * as fs from 'fs';
 import * as path from 'path';

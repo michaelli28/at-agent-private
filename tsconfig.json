@@ -12,14 +12,11 @@
       "@adf/browser/*": [
         "browser/src/*"
       ],
+      "@adf/drivers": [
+        "drivers/src/index.ts"
+      ],
       "@adf/drivers/*": [
         "drivers/src/*"
-      ],
-      "@adf/virtual-screen-reader": [
-        "virtual-screen-reader/src/index.ts"
-      ],
-      "@adf/virtual-screen-reader/*": [
-        "virtual-screen-reader/src/*"
       ],
       "@adf/agent/*": [
         "agent/src/*"

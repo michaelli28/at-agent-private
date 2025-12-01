@@ -1,5 +1,5 @@
-import { BrowserClient } from '../virtual-screen-reader/src/playwrightClient';
-import { ScreenReaderDriver } from '../virtual-screen-reader/src/ScreenReaderDriver';
+import { BrowserClient } from '@adf/browser/playwrightClient';
+import { ScreenReaderDriver } from '@adf/drivers';
 import * as readline from 'readline';
 
 async function main() {

@@ -2,8 +2,8 @@ import express from 'express';
 import { WebSocketServer } from 'ws';
 import http from 'http';
 import path from 'path';
-import { BrowserClient } from '../browser/src/playwrightClient';
-import { ScreenReaderDriver } from '../virtual-screen-reader/src/ScreenReaderDriver';
+import { BrowserClient } from '@adf/browser/playwrightClient';
+import { ScreenReaderDriver } from '@adf/drivers';
 
 const app = express();
 const server = http.createServer(app);

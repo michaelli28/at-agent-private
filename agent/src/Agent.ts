@@ -1,4 +1,4 @@
-import { IAccessibilityDriver, ActionResult, PerceptualSnapshot, UserAction } from '@adf/virtual-screen-reader';
+import { IAccessibilityDriver, ActionResult, PerceptualSnapshot, UserAction } from '@adf/drivers';
 import { BaseChatModel } from '@langchain/core/language_models/chat_models';
 import { AIMessage, BaseMessage, HumanMessage, SystemMessage, ToolMessage, isAIMessage } from '@langchain/core/messages';
 import { tool } from '@langchain/core/tools';

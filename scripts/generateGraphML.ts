@@ -1,6 +1,6 @@
 import * as fs from 'fs';
 import * as path from 'path';
-import { BrowserClient } from '../virtual-screen-reader/src/playwrightClient'; // Import BrowserClient
+import { BrowserClient } from '@adf/browser/playwrightClient'; // Import BrowserClient
 
 // Types for the serialized tree data from the browser
 interface SerializedNode {
@@ -44,10 +44,10 @@ async function main() {
     await browserClient.launch(true); // Launch in headless mode
 
     // Inject the screen reader script
-    const injectedScriptPath = path.join(__dirname, '../virtual-screen-reader/dist/injected.js');
+    const injectedScriptPath = path.join(__dirname, '../drivers/dist/injected.js');
     if (!fs.existsSync(injectedScriptPath)) {
         console.error(`Error: Injected script not found at ${injectedScriptPath}`);
-        console.error('Please run "npm run build:injected" in virtual-screen-reader directory first.');
+        console.error('Please run "npm run build:injected" in the drivers package first.');
         await browserClient.close(); // Close using BrowserClient
         process.exit(1);
     }

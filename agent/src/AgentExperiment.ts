@@ -1,4 +1,4 @@
-import { IAccessibilityDriver, ActionResult, PerceptualSnapshot, UserAction } from '@adf/virtual-screen-reader';
+import { IAccessibilityDriver, ActionResult, PerceptualSnapshot, UserAction } from '@adf/drivers';
 import Cerebras from '@cerebras/cerebras_cloud_sdk';
 import * as fs from 'fs';
 import * as path from 'path';

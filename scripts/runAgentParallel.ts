@@ -1,8 +1,8 @@
 import 'dotenv/config';
 import * as fs from 'fs';
 import * as path from 'path';
-import { BrowserClient } from '../browser/src/playwrightClient';
-import { ScreenReaderDriver } from '../virtual-screen-reader/src/ScreenReaderDriver';
+import { BrowserClient } from '@adf/browser/playwrightClient';
+import { ScreenReaderDriver } from '@adf/drivers';
 import { Agent } from '../agent/src/Agent';
 import { buildOpenAIModel } from '../agent/src/OpenAIClient';
 import { buildGeminiModel } from '../agent/src/GeminiClient';
