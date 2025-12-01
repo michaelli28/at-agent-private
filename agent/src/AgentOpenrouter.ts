@@ -62,17 +62,17 @@ const TOOLS = [
       },
     },
   },
-  {
-    type: 'function' as const,
-    function: {
-      name: 'instant_traverse',
-      description: 'Instantly traverse the entire page using the screen reader “Shift+A” command. This will read out all elements on the page in order. Use this to get a full overview of the page content quickly.',
-      parameters: {
-        type: 'object',
-        properties: {},
-      },
-    },
-  },
+  // {
+  //   type: 'function' as const,
+  //   function: {
+  //     name: 'instant_traverse',
+  //     description: 'Instantly traverse the entire page using the screen reader “Shift+A” command. This will read out all elements on the page in order. Use this to get a full overview of the page content quickly.',
+  //     parameters: {
+  //       type: 'object',
+  //       properties: {},
+  //     },
+  //   },
+  // },
   {
     type: 'function' as const,
     function: {
@@ -96,10 +96,9 @@ export class AgentOpenrouter {
 
   constructor(
     private driver: IAccessibilityDriver,
-    private captureScreenshot?: () => Promise<string | undefined>,
     private onStep?: (step: AgentStep) => void,
     apiKey?: string,
-    model: string,
+    model?: string,
   ) {
     this.openRouter = new OpenRouter({
       apiKey: apiKey || process.env['OPENROUTER_API_KEY'],
@@ -108,7 +107,7 @@ export class AgentOpenrouter {
         'X-Title': 'Accessibility Agent', // Optional. Site title for rankings on openrouter.ai.
       },
     });
-    this.model = model;
+    this.model = model || 'google/gemini-2.0-flash-001';
   }
 
   async run(goal: string): Promise<AgentTrace> {
@@ -116,11 +115,10 @@ export class AgentOpenrouter {
 
     try {
       const initialSnapshot = await this.driver.getPerceptualOutput();
-      const initialScreenshot = this.captureScreenshot ? await this.captureScreenshot() : undefined;
 
       const messages: any[] = [
         { role: 'system', content: SYSTEM_PROMPT },
-        this.buildObservationMessage(goal, initialSnapshot, initialScreenshot),
+        this.buildObservationMessage(goal, initialSnapshot),
       ];
 
       const steps: AgentStep[] = [];
@@ -188,11 +186,10 @@ export class AgentOpenrouter {
               break;
             }
 
-            const map = mapToolToAction(toolName, args);
+            const map = mapToolToAction(toolName);
 
             if (map.action) {
               const result = await this.driver.performAction(map.action);
-              const screenshot = this.captureScreenshot ? await this.captureScreenshot() : undefined;
 
               const step: AgentStep = {
                 stepNumber: steps.length + 1,
@@ -200,7 +197,6 @@ export class AgentOpenrouter {
                 thought: reasoning || content || '',
                 action: map.action,
                 result,
-                screenshotBase64: screenshot
               };
 
               steps.push(step);
@@ -214,7 +210,7 @@ export class AgentOpenrouter {
               });
 
               // Interleaved Observation (User)
-              messages.push(this.buildObservationMessage(goal, result.snapshot, screenshot));
+              messages.push(this.buildObservationMessage(goal, result.snapshot));
             } else {
               // Error or Unknown
               const errorMessage = map.message || `Unknown tool ${toolName}`;
@@ -255,9 +251,11 @@ export class AgentOpenrouter {
     }
   }
 
-  private buildObservationMessage(goal: string, snapshot?: PerceptualSnapshot, screenshotBase64?: string) {
+  private buildObservationMessage(goal: string, snapshot?: PerceptualSnapshot) {
     const snapshotText = formatSnapshot(snapshot);
-    const promptText = `
+    return {
+      role: 'user',
+      content: `
 <observation_context>
   <user_goal>
     ${goal}
@@ -271,26 +269,7 @@ export class AgentOpenrouter {
     Based on the screen reader output above, determine the next necessary action to progress towards the goal. Select the appropriate tool.
   </instructions>
 </observation_context>
-`;
-
-    if (screenshotBase64) {
-      return {
-        role: 'user',
-        content: [
-          { type: 'text', text: promptText },
-          {
-            type: 'image_url',
-            image_url: {
-              url: `data:image/png;base64,${screenshotBase64}`
-            }
-          }
-        ]
-      };
-    }
-
-    return {
-      role: 'user',
-      content: promptText
+`
     };
   }
 }
@@ -308,7 +287,7 @@ function normalizeArgs(raw: unknown): Record<string, any> {
   return {};
 }
 
-function mapToolToAction(name: string | undefined, args: Record<string, any>): { action?: UserAction; message?: string } {
+function mapToolToAction(name: string | undefined): { action?: UserAction; message?: string } {
   switch (name) {
     case 'press_arrow_down':
       return { action: { type: 'KEY_PRESS', key: 'ArrowDown' } };

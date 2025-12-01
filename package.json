@@ -17,6 +17,7 @@
     "dev:sr": "ts-node --transpile-only -r tsconfig-paths/register scripts/runScreenReaderDev.ts",
     "test:regression": "ts-node --transpile-only -r tsconfig-paths/register scripts/runRegression.ts",
     "start:agent": "ts-node --transpile-only -r tsconfig-paths/register scripts/runAgent.ts",
+    "start:agent-cli": "ts-node --transpile-only -r tsconfig-paths/register scripts/runAgentCli.ts",
     "start:agent-parallel": "ts-node --transpile-only -r tsconfig-paths/register scripts/runAgentParallel.ts",
     "start:agent-experiment": "ts-node --transpile-only -r tsconfig-paths/register scripts/runAgentExperiment.ts",
     "start:agent-experiment-parallel": "ts-node --transpile-only -r tsconfig-paths/register scripts/runAgentExperimentParallel.ts",
@@ -33,7 +34,8 @@
     "test-browser": "ts-node --transpile-only scripts/testBrowserClient.ts",
     "visualize-report": "ts-node --transpile-only -r tsconfig-paths/register scripts/generateReportHtml.ts",
     "generate-graph": "ts-node --transpile-only scripts/generateGraphML.ts",
-    "generate-sitemap": "ts-node --transpile-only scripts/generateSitemap.ts"
+    "generate-sitemap": "ts-node --transpile-only scripts/generateSitemap.ts",
+    "start:ui": "ts-node --transpile-only -r tsconfig-paths/register ui/server.ts"
   },
   "devDependencies": {
     "@types/node": "^20.19.25",

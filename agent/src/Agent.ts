@@ -67,13 +67,13 @@ const AgentStateSchema = (MessagesZodState as unknown as z.ZodObject<any>).exten
   done: z.boolean().default(false),
   success: z.boolean().default(false),
   error: z.string().optional(),
+  reason: z.string().optional(),
 }) as unknown as z.ZodType<AgentState>;
 
 export class Agent {
   constructor(
     private driver: IAccessibilityDriver,
     private model: BaseChatModel,
-    private captureScreenshot?: () => Promise<string | undefined>,
     private onStep?: (step: AgentStep) => void
   ) { }
 
@@ -86,13 +86,12 @@ export class Agent {
 
     try {
       const initialSnapshot = await this.driver.getPerceptualOutput();
-      const initialScreenshot = this.captureScreenshot ? await this.captureScreenshot() : undefined;
 
       const initialState: AgentState = {
         goal,
         messages: [
           new SystemMessage(SYSTEM_PROMPT),
-          this.buildObservationMessage(goal, initialSnapshot, initialScreenshot),
+          this.buildObservationMessage(goal, initialSnapshot),
         ],
         steps: [],
         done: false,
@@ -108,6 +107,7 @@ export class Agent {
         success: finalState.success,
         steps: finalState.steps,
         error: finalState.error,
+        reason: finalState.reason,
       };
     } finally {
       await this.driver.disable();
@@ -120,7 +120,6 @@ export class Agent {
   private buildGraph(goal: string) {
     const driver = this.driver;
     const boundModel = this.model.bindTools(toolSpecifications);
-    const captureScreenshot = this.captureScreenshot;
     const onStep = this.onStep;
 
     // Node: Call Model
@@ -139,6 +138,7 @@ export class Agent {
       let done = state.done;
       let success = state.success;
       let error = state.error;
+      let reason = state.reason;
       let nextSteps = [...currentSteps];
 
       for (const call of aiMessage.tool_calls ?? []) {
@@ -159,6 +159,7 @@ export class Agent {
         if (mapped.finish) {
           done = true;
           success = mapped.finish.success;
+          reason = mapped.finish.reason;
           toolMessages.push(new ToolMessage({
             tool_call_id: call.id,
             name: call.name,
@@ -178,14 +179,12 @@ export class Agent {
         }
 
         const result = await driver.performAction(mapped.action);
-        const screenshot = captureScreenshot ? await captureScreenshot() : undefined;
         const step: AgentStep = {
           stepNumber: nextSteps.length + 1,
           observation: result.snapshot,
           thought: toThought(aiMessage),
           action: mapped.action,
           result,
-          screenshotBase64: screenshot,
         };
 
         if (onStep) {
@@ -200,7 +199,7 @@ export class Agent {
           content: JSON.stringify(formatActionResult(mapped.action, result))
         }));
 
-        observationMessages.push(this.buildObservationMessage(goal, result.snapshot, screenshot));
+        observationMessages.push(this.buildObservationMessage(goal, result.snapshot));
       }
 
       return {
@@ -209,6 +208,7 @@ export class Agent {
         done,
         success,
         error,
+        reason,
       };
     };
 
@@ -254,13 +254,13 @@ export class Agent {
   }
 
   /**
-   * Construct a HumanMessage containing structured text blocks describing the goal,
-   * the latest perceptual snapshot, and whether a screenshot was captured. Screenshot
-   * bytes stay out of the prompt to conserve context.
+   * Construct a HumanMessage containing structured text blocks describing the goal
+   * and the latest perceptual snapshot.
    */
-  private buildObservationMessage(goal: string, snapshot?: PerceptualSnapshot, screenshotBase64?: string) {
+  private buildObservationMessage(goal: string, snapshot?: PerceptualSnapshot) {
     const snapshotText = formatSnapshot(snapshot);
-    const promptText = `
+    return new HumanMessage({
+      content: `
 <observation_context>
   <user_goal>
     ${goal}
@@ -270,24 +270,7 @@ export class Agent {
     ${snapshotText}
   </screen_reader_status>
 </observation_context>
-`;
-
-    if (screenshotBase64) {
-      return new HumanMessage({
-        content: [
-          { type: 'text', text: promptText },
-          {
-            type: 'image',
-            source_type: 'base64',
-            mime_type: 'image/png',
-            data: screenshotBase64,
-          },
-        ],
-      });
-    }
-
-    return new HumanMessage({
-      content: promptText,
+`
     });
   }
 }

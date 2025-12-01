@@ -1,0 +1,30 @@
+[
+  {
+    "url": "http://localhost:3000",
+    "goal": "Navigate through the home page and verify all interactive elements (buttons, links) have proper accessible names"
+  },
+  {
+    "url": "http://localhost:3000",
+    "goal": "Check the heading structure on the home page - verify headings follow proper hierarchy (h1, h2, h3) without skipping levels"
+  },
+  {
+    "url": "http://localhost:3000",
+    "goal": "Find the newsletter signup form and verify the email input has a proper label"
+  },
+  {
+    "url": "http://localhost:3000/products",
+    "goal": "Navigate the products page and verify all product cards are accessible with proper headings"
+  },
+  {
+    "url": "http://localhost:3000/products",
+    "goal": "Check if the sort dropdown has a proper label for screen reader users"
+  },
+  {
+    "url": "http://localhost:3000/contact",
+    "goal": "Navigate the contact form and verify all form inputs have associated labels"
+  },
+  {
+    "url": "http://localhost:3000/contact",
+    "goal": "Check the heading hierarchy on the contact page for proper structure"
+  }
+]

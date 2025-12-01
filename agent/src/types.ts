@@ -15,6 +15,7 @@ export interface AgentTrace {
   success: boolean;
   steps: AgentStep[];
   error?: string;
+  reason?: string;
 }
 
 export interface AgentGraphState {
@@ -24,4 +25,5 @@ export interface AgentGraphState {
   done: boolean;
   success: boolean;
   error?: string;
+  reason?: string;
 }

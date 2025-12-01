@@ -5,6 +5,7 @@ import { AgentOpenrouter } from '../agent/src/AgentOpenrouter';
 import { Reporter } from '../evaluation/src/Reporter';
 import { Evaluator } from '../evaluation/src/Evaluator';
 import { AXNode } from '../browser/src/types';
+import { AgentStep } from '../agent/src/types';
 
 // Simple ANSI color codes for cleaner output
 const colors = {
@@ -29,11 +30,10 @@ async function main() {
   const args = getCliArgs();
   const url = args[0];
   const goal = args[1];
-  const model = args[2] || 'google/gemini-2.0-flash-001'; // Allow model override via args
-  const captureScreenshots = args.includes('--with-screenshots') || process.env.npm_config_with_screenshots === 'true';
+  const model = args[2] || 'google/gemini-3-pro'; // Allow model override via args
 
   if (!url || !goal) {
-    console.error('Usage: npx ts-node scripts/runAgentOpenrouter.ts <url> "<goal>" [model] [--with-screenshots]');
+    console.error('Usage: npx ts-node scripts/runAgentOpenrouter.ts <url> "<goal>" [model]');
     process.exit(1);
   }
 
@@ -44,11 +44,10 @@ async function main() {
   logInfo("Target URL", url);
   logInfo("Goal", goal);
   logInfo("Model", model);
-  logInfo("Screenshots", captureScreenshots ? "Enabled" : "Disabled");
   console.log(); // Spacer
 
   const client = new BrowserClient();
-  
+
   logStep("🚀", "Launching Browser...");
   await client.launch(false);
 
@@ -58,26 +57,18 @@ async function main() {
 
     const driver = new ScreenReaderDriver(client);
 
-    const screenshotFn = captureScreenshots
-      ? async () => {
-          const buffer = await client.screenshot();
-          return buffer.toString('base64');
-        }
-      : undefined;
-
     // Instantiate AgentOpenrouter
     const agent = new AgentOpenrouter(
-        driver, 
-        screenshotFn, 
-        (step) => {
-            const thought = step.thought && step.thought.trim().length > 0
-                ? step.thought
-                : '(no model thought returned)';
-            logStep("🧠", `Thought: ${thought}`);
-            logStep("⚡", `Action: ${step.action.type} ${step.action.key || ''}`);
-        },
-        undefined, // apiKey (defaults to env)
-        model
+      driver,
+      (step: AgentStep) => {
+        const thought = step.thought && step.thought.trim().length > 0
+          ? step.thought
+          : '(no model thought returned)';
+        logStep("🧠", `Thought: ${thought}`);
+        logStep("⚡", `Action: ${step.action.type} ${step.action.key || ''}`);
+      },
+      undefined, // apiKey (defaults to env)
+      model
     );
 
     logStep("🤖", "Starting Agent Execution...");
@@ -88,7 +79,7 @@ async function main() {
     console.log(); // Spacer
 
     logStep("🏁", "Agent execution finished.");
-    
+
     logStep("📊", "Evaluating session...");
     const evaluator = new Evaluator();
     let axTree: AXNode[] = [];
@@ -97,7 +88,7 @@ async function main() {
     } catch (e) {
       console.warn(`${colors.yellow}   Warning: Could not fetch AXTree for evaluation.${colors.reset}`);
     }
-    
+
     const violations = evaluator.evaluate(axTree, trace);
 
     // Generate Report

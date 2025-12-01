@@ -32,10 +32,9 @@ async function main() {
   const url = args[0];
   const goal = args[1];
   const provider = args.find((arg, idx) => idx === 2 && !arg.startsWith('--')) || 'openai';
-  const captureScreenshots = args.includes('--with-screenshots') || process.env.npm_config_with_screenshots === 'true';
 
   if (!url || !goal) {
-    console.error('Usage: pnpm start:agent <url> "<goal>" [provider] [--with-screenshots]');
+    console.error('Usage: pnpm start:agent <url> "<goal>" [provider]');
     process.exit(1);
   }
 
@@ -46,11 +45,10 @@ async function main() {
   logInfo("Target URL", url);
   logInfo("Goal", goal);
   logInfo("Model Provider", provider);
-  logInfo("Screenshots", captureScreenshots ? "Enabled" : "Disabled");
   console.log(); // Spacer
 
   const client = new BrowserClient();
-  
+
   logStep("🚀", "Launching Browser...");
   await client.launch(false);
 
@@ -64,18 +62,7 @@ async function main() {
       ? buildGeminiModel()
       : buildOpenAIModel();
 
-    const screenshotFn = captureScreenshots
-      ? async () => {
-          const buffer = await client.screenshot();
-          return buffer.toString('base64');
-        }
-      : undefined;
-
-    const agent = new Agent(driver, model, screenshotFn, (step) => {
-      const thought = step.thought && step.thought.trim().length > 0
-        ? step.thought
-        : '(no model thought returned)';
-      logStep("🧠", `Thought: ${thought}`);
+    const agent = new Agent(driver, model, (step) => {
       logStep("⚡", `Action: ${step.action.type} ${step.action.key || ''}`);
     });
 
