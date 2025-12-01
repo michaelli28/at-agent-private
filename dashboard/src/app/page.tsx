@@ -1,8 +1,8 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useRef } from 'react';
 import Link from 'next/link';
-import { collection, query, orderBy, limit, getDocs } from 'firebase/firestore';
+import { collection, query, orderBy, limit, getDocs, onSnapshot } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
 import { TestRun, Project } from '@/types';
 import {
@@ -30,71 +30,76 @@ interface DashboardData {
 export default function DashboardPage() {
   const [data, setData] = useState<DashboardData | null>(null);
   const [loading, setLoading] = useState(true);
+  const [projects, setProjects] = useState<Project[]>([]);
+  const projectsRef = useRef<Project[]>([]);
 
+  // Fetch projects first
   useEffect(() => {
-    async function fetchDashboardData() {
-      try {
-        // Fetch projects
-        const projectsSnap = await getDocs(collection(db, 'projects'));
-        const projects = projectsSnap.docs.map(doc => ({
-          id: doc.id,
-          ...doc.data()
-        })) as Project[];
-
-        // Fetch recent test runs
-        const runsQuery = query(
-          collection(db, 'testRuns'),
-          orderBy('createdAt', 'desc'),
-          limit(10)
-        );
-        const runsSnap = await getDocs(runsQuery);
-        const runs = runsSnap.docs.map(doc => ({
-          id: doc.id,
-          ...doc.data(),
-          createdAt: doc.data().createdAt?.toDate(),
-          completedAt: doc.data().completedAt?.toDate(),
-        })) as TestRun[];
-
-        // Add project names to runs
-        const runsWithProjects = runs.map(run => ({
-          ...run,
-          projectName: projects.find(p => p.id === run.projectId)?.name || 'Unknown Project'
-        }));
-
-        // Calculate totals
-        let totalTests = 0;
-        let totalPassed = 0;
-        let totalFailed = 0;
-        let totalViolations = 0;
-
-        // Fetch all runs for totals
-        const allRunsSnap = await getDocs(collection(db, 'testRuns'));
-        allRunsSnap.docs.forEach(doc => {
-          const run = doc.data();
-          totalTests += run.totalTests || 0;
-          totalPassed += run.passedTests || 0;
-          totalFailed += run.failedTests || 0;
-          totalViolations += run.totalViolations || 0;
-        });
-
-        setData({
-          totalProjects: projects.length,
-          totalTestRuns: allRunsSnap.size,
-          totalTests,
-          totalPassed,
-          totalFailed,
-          totalViolations,
-          recentRuns: runsWithProjects,
-        });
-      } catch (error) {
-        console.error('Error fetching dashboard data:', error);
-      } finally {
-        setLoading(false);
-      }
+    async function fetchProjects() {
+      const projectsSnap = await getDocs(collection(db, 'projects'));
+      const projectsData = projectsSnap.docs.map(doc => ({
+        id: doc.id,
+        ...doc.data()
+      })) as Project[];
+      setProjects(projectsData);
+      projectsRef.current = projectsData;
     }
-
-    fetchDashboardData();
+    fetchProjects();
   }, []);
+
+  // Subscribe to real-time updates for test runs
+  useEffect(() => {
+    // Subscribe to recent runs
+    const recentRunsQuery = query(
+      collection(db, 'testRuns'),
+      orderBy('createdAt', 'desc'),
+      limit(10)
+    );
+
+    const unsubscribeRecent = onSnapshot(recentRunsQuery, (snapshot) => {
+      const runs = snapshot.docs.map(doc => ({
+        id: doc.id,
+        ...doc.data(),
+        createdAt: doc.data().createdAt?.toDate(),
+        completedAt: doc.data().completedAt?.toDate(),
+        projectName: projectsRef.current.find(p => p.id === doc.data().projectId)?.name || 'Unknown Project'
+      })) as (TestRun & { projectName?: string })[];
+
+      setData(prev => prev ? { ...prev, recentRuns: runs } : null);
+    });
+
+    // Subscribe to all runs for totals
+    const unsubscribeAll = onSnapshot(collection(db, 'testRuns'), (snapshot) => {
+      let totalTests = 0;
+      let totalPassed = 0;
+      let totalFailed = 0;
+      let totalViolations = 0;
+
+      snapshot.docs.forEach(doc => {
+        const run = doc.data();
+        totalTests += run.totalTests || 0;
+        totalPassed += run.passedTests || 0;
+        totalFailed += run.failedTests || 0;
+        totalViolations += run.totalViolations || 0;
+      });
+
+      setData(prev => ({
+        totalProjects: projectsRef.current.length,
+        totalTestRuns: snapshot.size,
+        totalTests,
+        totalPassed,
+        totalFailed,
+        totalViolations,
+        recentRuns: prev?.recentRuns || [],
+      }));
+      setLoading(false);
+    });
+
+    return () => {
+      unsubscribeRecent();
+      unsubscribeAll();
+    };
+  }, [projects]);
 
   if (loading) {
     return (

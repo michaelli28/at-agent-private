@@ -3,7 +3,7 @@
 import { useEffect, useState } from 'react';
 import { useParams } from 'next/navigation';
 import Link from 'next/link';
-import { doc, getDoc, collection, query, where, orderBy, getDocs, limit } from 'firebase/firestore';
+import { doc, getDoc, collection, query, where, orderBy, getDocs, limit, onSnapshot } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
 import { Project, TestRun } from '@/types';
 import { ArrowLeft, Copy, Check, ExternalLink, TrendingUp, TrendingDown, Minus } from 'lucide-react';
@@ -18,46 +18,54 @@ export default function ProjectDetailPage() {
   const [loading, setLoading] = useState(true);
   const [copiedKey, setCopiedKey] = useState(false);
 
+  // Fetch project details once
   useEffect(() => {
-    fetchProjectData();
+    async function fetchProject() {
+      try {
+        const projectDoc = await getDoc(doc(db, 'projects', projectId));
+        if (!projectDoc.exists()) {
+          setLoading(false);
+          return;
+        }
+        setProject({
+          id: projectDoc.id,
+          ...projectDoc.data(),
+          createdAt: projectDoc.data().createdAt?.toDate(),
+          updatedAt: projectDoc.data().updatedAt?.toDate(),
+        } as Project);
+      } catch (error) {
+        console.error('Error fetching project:', error);
+        setLoading(false);
+      }
+    }
+    fetchProject();
   }, [projectId]);
 
-  async function fetchProjectData() {
-    try {
-      // Fetch project
-      const projectDoc = await getDoc(doc(db, 'projects', projectId));
-      if (!projectDoc.exists()) {
-        setLoading(false);
-        return;
-      }
-      setProject({
-        id: projectDoc.id,
-        ...projectDoc.data(),
-        createdAt: projectDoc.data().createdAt?.toDate(),
-        updatedAt: projectDoc.data().updatedAt?.toDate(),
-      } as Project);
+  // Subscribe to real-time updates for runs
+  useEffect(() => {
+    const runsQuery = query(
+      collection(db, 'testRuns'),
+      where('projectId', '==', projectId),
+      orderBy('createdAt', 'desc'),
+      limit(50)
+    );
 
-      // Fetch recent runs for this project
-      const runsQuery = query(
-        collection(db, 'testRuns'),
-        where('projectId', '==', projectId),
-        orderBy('createdAt', 'desc'),
-        limit(50)
-      );
-      const runsSnap = await getDocs(runsQuery);
-      const runsData = runsSnap.docs.map(doc => ({
+    const unsubscribe = onSnapshot(runsQuery, (snapshot) => {
+      const runsData = snapshot.docs.map(doc => ({
         id: doc.id,
         ...doc.data(),
         createdAt: doc.data().createdAt?.toDate(),
         completedAt: doc.data().completedAt?.toDate(),
       })) as TestRun[];
       setRuns(runsData);
-    } catch (error) {
-      console.error('Error fetching project:', error);
-    } finally {
       setLoading(false);
-    }
-  }
+    }, (error) => {
+      console.error('Error fetching runs:', error);
+      setLoading(false);
+    });
+
+    return () => unsubscribe();
+  }, [projectId]);
 
   function copyApiKey() {
     if (project?.apiKey) {

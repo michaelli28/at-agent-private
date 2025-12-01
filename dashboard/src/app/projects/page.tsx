@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from 'react';
 import Link from 'next/link';
-import { collection, getDocs, addDoc, serverTimestamp } from 'firebase/firestore';
+import { collection, getDocs, addDoc, serverTimestamp, onSnapshot } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
 import { useAuth } from '@/contexts/AuthContext';
 import { Project } from '@/types';
@@ -28,13 +28,9 @@ export default function ProjectsPage() {
   const [copiedId, setCopiedId] = useState<string | null>(null);
   const [visibleKeys, setVisibleKeys] = useState<Set<string>>(new Set());
 
+  // Subscribe to real-time updates for projects
   useEffect(() => {
-    fetchProjects();
-  }, []);
-
-  async function fetchProjects() {
-    try {
-      const snapshot = await getDocs(collection(db, 'projects'));
+    const unsubscribe = onSnapshot(collection(db, 'projects'), (snapshot) => {
       const projectsData = snapshot.docs.map(doc => ({
         id: doc.id,
         ...doc.data(),
@@ -42,12 +38,14 @@ export default function ProjectsPage() {
         updatedAt: doc.data().updatedAt?.toDate(),
       })) as Project[];
       setProjects(projectsData);
-    } catch (error) {
-      console.error('Error fetching projects:', error);
-    } finally {
       setLoading(false);
-    }
-  }
+    }, (error) => {
+      console.error('Error fetching projects:', error);
+      setLoading(false);
+    });
+
+    return () => unsubscribe();
+  }, []);
 
   async function createProject() {
     if (!newProjectName.trim() || !user) return;
@@ -66,7 +64,7 @@ export default function ProjectsPage() {
       setShowCreateModal(false);
       setNewProjectName('');
       setNewProjectDescription('');
-      fetchProjects();
+      // Real-time subscription will automatically update the list
     } catch (error) {
       console.error('Error creating project:', error);
     } finally {
@@ -88,7 +86,7 @@ export default function ProjectsPage() {
 
       if (data.success) {
         console.log(`Deleted project: ${data.deletedTestRuns} test runs, ${data.deletedTestResults} test results`);
-        fetchProjects();
+        // Real-time subscription will automatically update the list
       } else {
         console.error('Error deleting project:', data.error);
         alert('Failed to delete project: ' + data.error);

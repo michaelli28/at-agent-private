@@ -1,8 +1,8 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useRef } from 'react';
 import Link from 'next/link';
-import { collection, query, orderBy, getDocs, limit, startAfter, DocumentData, QueryDocumentSnapshot } from 'firebase/firestore';
+import { collection, query, orderBy, getDocs, limit, startAfter, DocumentData, QueryDocumentSnapshot, onSnapshot } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
 import { TestRun, Project } from '@/types';
 import { History, ExternalLink, ChevronLeft, ChevronRight } from 'lucide-react';
@@ -18,11 +18,48 @@ export default function TestRunsPage() {
   const [hasMore, setHasMore] = useState(true);
   const [filterProject, setFilterProject] = useState<string>('all');
   const [filterPlatform, setFilterPlatform] = useState<string>('all');
+  const projectsRef = useRef<Project[]>([]);
 
+  // Fetch projects first, then subscribe to runs
   useEffect(() => {
     fetchProjects();
-    fetchRuns();
   }, []);
+
+  // Subscribe to real-time updates for runs after projects are loaded
+  useEffect(() => {
+    if (projects.length === 0 && !loading) return;
+
+    projectsRef.current = projects;
+
+    const q = query(
+      collection(db, 'testRuns'),
+      orderBy('createdAt', 'desc'),
+      limit(RUNS_PER_PAGE)
+    );
+
+    const unsubscribe = onSnapshot(q, (snapshot) => {
+      const runsData = snapshot.docs.map(doc => {
+        const data = doc.data();
+        return {
+          id: doc.id,
+          ...data,
+          createdAt: data.createdAt?.toDate(),
+          completedAt: data.completedAt?.toDate(),
+          projectName: projectsRef.current.find(p => p.id === data.projectId)?.name || 'Unknown Project'
+        };
+      }) as (TestRun & { projectName?: string })[];
+
+      setRuns(runsData);
+      setLastDoc(snapshot.docs[snapshot.docs.length - 1] || null);
+      setHasMore(snapshot.docs.length === RUNS_PER_PAGE);
+      setLoading(false);
+    }, (error) => {
+      console.error('Error subscribing to runs:', error);
+      setLoading(false);
+    });
+
+    return () => unsubscribe();
+  }, [projects]);
 
   async function fetchProjects() {
     const snapshot = await getDocs(collection(db, 'projects'));
@@ -33,52 +70,31 @@ export default function TestRunsPage() {
     setProjects(projectsData);
   }
 
-  async function fetchRuns(startAfterDoc?: QueryDocumentSnapshot<DocumentData>) {
-    setLoading(true);
-    try {
-      let q = query(
-        collection(db, 'testRuns'),
-        orderBy('createdAt', 'desc'),
-        limit(RUNS_PER_PAGE)
-      );
+  async function loadMore() {
+    if (!lastDoc || !hasMore) return;
 
-      if (startAfterDoc) {
-        q = query(q, startAfter(startAfterDoc));
-      }
+    const q = query(
+      collection(db, 'testRuns'),
+      orderBy('createdAt', 'desc'),
+      startAfter(lastDoc),
+      limit(RUNS_PER_PAGE)
+    );
 
-      const snapshot = await getDocs(q);
-      const runsData = snapshot.docs.map(doc => ({
+    const snapshot = await getDocs(q);
+    const runsData = snapshot.docs.map(doc => {
+      const data = doc.data();
+      return {
         id: doc.id,
-        ...doc.data(),
-        createdAt: doc.data().createdAt?.toDate(),
-        completedAt: doc.data().completedAt?.toDate(),
-      })) as TestRun[];
+        ...data,
+        createdAt: data.createdAt?.toDate(),
+        completedAt: data.completedAt?.toDate(),
+        projectName: projectsRef.current.find(p => p.id === data.projectId)?.name || 'Unknown Project'
+      };
+    }) as (TestRun & { projectName?: string })[];
 
-      // Add project names
-      const runsWithProjects = runsData.map(run => ({
-        ...run,
-        projectName: projects.find(p => p.id === run.projectId)?.name || 'Unknown Project'
-      }));
-
-      if (startAfterDoc) {
-        setRuns(prev => [...prev, ...runsWithProjects]);
-      } else {
-        setRuns(runsWithProjects);
-      }
-
-      setLastDoc(snapshot.docs[snapshot.docs.length - 1] || null);
-      setHasMore(snapshot.docs.length === RUNS_PER_PAGE);
-    } catch (error) {
-      console.error('Error fetching runs:', error);
-    } finally {
-      setLoading(false);
-    }
-  }
-
-  function loadMore() {
-    if (lastDoc && hasMore) {
-      fetchRuns(lastDoc);
-    }
+    setRuns(prev => [...prev, ...runsData]);
+    setLastDoc(snapshot.docs[snapshot.docs.length - 1] || null);
+    setHasMore(snapshot.docs.length === RUNS_PER_PAGE);
   }
 
   const filteredRuns = runs.filter(run => {
