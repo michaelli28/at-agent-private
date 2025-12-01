@@ -135,37 +135,6 @@ export default function ApiKeysPage() {
         </div>
       )}
 
-      {/* Usage Instructions */}
-      <div className="card mt-8">
-        <div className="card-header">
-          <h2 className="text-lg font-semibold">Using API Keys</h2>
-        </div>
-        <div className="card-body prose prose-sm max-w-none">
-          <p>
-            API keys are used to authenticate requests when submitting test results from your CI/CD pipeline.
-            Include the API key in the request header when calling the results API.
-          </p>
-
-          <h3>Example Request</h3>
-          <pre className="bg-gray-900 text-gray-100 p-4 rounded-lg overflow-x-auto">
-{`curl -X POST https://your-dashboard.com/api/results \\
-  -H "Content-Type: application/json" \\
-  -H "X-API-Key: YOUR_API_KEY" \\
-  -d '{
-    "platform": "jenkins",
-    "buildNumber": "123",
-    "results": [...]
-  }'`}
-          </pre>
-
-          <p className="mt-4">
-            For detailed integration instructions, see the{' '}
-            <Link href="/docs" className="text-primary-600 hover:text-primary-700">
-              documentation
-            </Link>.
-          </p>
-        </div>
-      </div>
     </div>
   );
 }

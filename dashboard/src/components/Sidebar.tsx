@@ -20,7 +20,6 @@ const navigation = [
   { name: 'Test Runs', href: '/runs', icon: History },
   { name: 'Trends', href: '/trends', icon: TrendingUp },
   { name: 'API Keys', href: '/api-keys', icon: Key },
-  { name: 'Documentation', href: '/docs', icon: FileText },
   { name: 'Settings', href: '/settings', icon: Settings },
 ];
 

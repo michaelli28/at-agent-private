@@ -62,18 +62,37 @@ export async function POST(request: NextRequest) {
     const liveStatusRef = adminDb.collection('liveStatus').doc(testRunId);
 
     // Use increment to atomically update counts
-    const updateData: Record<string, any> = {
+    const liveUpdateData: Record<string, any> = {
       completedTests: FieldValue.increment(1),
       updatedAt: FieldValue.serverTimestamp(),
     };
 
+    // Also update the testRuns document for real-time display in runs list
+    const testRunUpdateData: Record<string, any> = {
+      updatedAt: FieldValue.serverTimestamp(),
+    };
+
     if (success) {
-      updateData.passedTests = FieldValue.increment(1);
+      liveUpdateData.passedTests = FieldValue.increment(1);
+      testRunUpdateData.passedTests = FieldValue.increment(1);
     } else {
-      updateData.failedTests = FieldValue.increment(1);
+      liveUpdateData.failedTests = FieldValue.increment(1);
+      testRunUpdateData.failedTests = FieldValue.increment(1);
     }
 
-    await liveStatusRef.update(updateData);
+    // Calculate pass rate based on completed tests
+    const liveStatusDoc = await liveStatusRef.get();
+    const liveData = liveStatusDoc.data();
+    if (liveData) {
+      const completedTests = (liveData.completedTests || 0) + 1;
+      const passedTests = (liveData.passedTests || 0) + (success ? 1 : 0);
+      testRunUpdateData.passRate = completedTests > 0 ? (passedTests / completedTests) * 100 : 0;
+    }
+
+    await Promise.all([
+      liveStatusRef.update(liveUpdateData),
+      testRunRef.update(testRunUpdateData),
+    ]);
 
     return NextResponse.json({
       success: true,

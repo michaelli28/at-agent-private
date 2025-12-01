@@ -142,8 +142,6 @@ export default function TestRunsPage() {
               <option value="all">All Platforms</option>
               <option value="jenkins">Jenkins</option>
               <option value="github-actions">GitHub Actions</option>
-              <option value="gitlab-ci">GitLab CI</option>
-              <option value="other">Other</option>
             </select>
           </div>
         </div>
