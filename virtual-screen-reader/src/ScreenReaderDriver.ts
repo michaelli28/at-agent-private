@@ -23,12 +23,26 @@ export class ScreenReaderDriver implements IAccessibilityDriver {
         this.logger("Screen Reader Enabled (In-Browser)");
 
         // Load and cache the driver script
-        const scriptPath = path.join(__dirname, '../dist/injected.js');
-        if (fs.existsSync(scriptPath)) {
+        // Support both bundled and unbundled paths
+        const possiblePaths = [
+            path.join(__dirname, '../dist/injected.js'),           // unbundled (tsx): src -> dist
+            path.join(__dirname, '../../virtual-screen-reader/dist/injected.js'),  // bundled: dist -> virtual-screen-reader/dist
+            path.join(process.cwd(), 'virtual-screen-reader/dist/injected.js'),    // bundled: from CWD
+        ];
+
+        let scriptPath = '';
+        for (const p of possiblePaths) {
+            if (fs.existsSync(p)) {
+                scriptPath = p;
+                break;
+            }
+        }
+
+        if (scriptPath) {
             this.scriptContent = fs.readFileSync(scriptPath, 'utf-8');
             await this.client.injectScript(this.scriptContent);
         } else {
-            this.logger(`ERROR: Injected driver script not found at: ${scriptPath}`);
+            this.logger(`ERROR: Injected driver script not found. Tried: ${possiblePaths.join(', ')}`);
         }
 
         // Listen for spoken output
@@ -68,8 +82,8 @@ export class ScreenReaderDriver implements IAccessibilityDriver {
         // Clear stale spoken text IMMEDIATELY to prevent old page text from persisting
         this.lastSpokenText = "";
 
-        // Wait for the new page to be ready
-        await new Promise(resolve => setTimeout(resolve, 1000));
+        // Wait for the new page to be ready (reduced from 1000ms)
+        await new Promise(resolve => setTimeout(resolve, 300));
 
         // Re-inject the screen reader script
         this.logger(`[ScreenReaderDriver] Re-injecting screen reader script on new page`);
@@ -78,8 +92,8 @@ export class ScreenReaderDriver implements IAccessibilityDriver {
         // Set initial text for new page with page context
         this.lastSpokenText = `Navigated to new page: "${pageTitle}"`;
 
-        // Give the screen reader time to initialize
-        await new Promise(resolve => setTimeout(resolve, 300));
+        // Give the screen reader time to initialize (reduced from 300ms)
+        await new Promise(resolve => setTimeout(resolve, 100));
     }
 
     private async checkForNavigation(): Promise<boolean> {
@@ -97,8 +111,8 @@ export class ScreenReaderDriver implements IAccessibilityDriver {
             // Clear stale spoken text IMMEDIATELY to prevent old page text from persisting
             this.lastSpokenText = "";
 
-            // Wait for the new page to be ready and for any pending operations to complete
-            await new Promise(resolve => setTimeout(resolve, 1500));
+            // Wait for the new page to be ready (reduced from 1500ms)
+            await new Promise(resolve => setTimeout(resolve, 500));
 
             // Re-inject the screen reader script
             this.logger(`[ScreenReaderDriver] Re-injecting screen reader script on new page`);
@@ -107,8 +121,8 @@ export class ScreenReaderDriver implements IAccessibilityDriver {
             // Set initial text for new page with page context
             this.lastSpokenText = `Navigated to new page: "${pageTitle}"`;
 
-            // Give the screen reader time to initialize and find first element
-            await new Promise(resolve => setTimeout(resolve, 500));
+            // Give the screen reader time to initialize (reduced from 500ms)
+            await new Promise(resolve => setTimeout(resolve, 150));
 
             return true;
         }
@@ -168,12 +182,12 @@ export class ScreenReaderDriver implements IAccessibilityDriver {
                 // Pass the normalized key to the browser
                 await this.client.pressKey(normalizedKey);
 
-                // If Enter key, wait longer as it might trigger navigation
+                // If Enter key, wait longer as it might trigger navigation (reduced from 1500ms)
                 if (action.key === 'Enter') {
-                    await new Promise(resolve => setTimeout(resolve, 1500));
+                    await new Promise(resolve => setTimeout(resolve, 500));
                 } else {
                     // Wait a bit for the injected script to process and emit output
-                    await new Promise(resolve => setTimeout(resolve, 100));
+                    await new Promise(resolve => setTimeout(resolve, 50));
                 }
 
                 // Check if we navigated to a new page after the action

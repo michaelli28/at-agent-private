@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from 'react';
 import Link from 'next/link';
-import { collection, getDocs, addDoc, serverTimestamp, onSnapshot } from 'firebase/firestore';
+import { collection, getDocs, addDoc, serverTimestamp, onSnapshot, query, where } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
 import { useAuth } from '@/contexts/AuthContext';
 import { Project } from '@/types';
@@ -28,15 +28,27 @@ export default function ProjectsPage() {
   const [copiedId, setCopiedId] = useState<string | null>(null);
   const [visibleKeys, setVisibleKeys] = useState<Set<string>>(new Set());
 
-  // Subscribe to real-time updates for projects
+  // Subscribe to real-time updates for user's projects only
   useEffect(() => {
-    const unsubscribe = onSnapshot(collection(db, 'projects'), (snapshot) => {
+    if (!user) {
+      setProjects([]);
+      setLoading(false);
+      return;
+    }
+
+    const projectsQuery = query(
+      collection(db, 'projects'),
+      where('ownerId', '==', user.uid)
+    );
+
+    const unsubscribe = onSnapshot(projectsQuery, (snapshot) => {
       const projectsData = snapshot.docs.map(doc => ({
         id: doc.id,
         ...doc.data(),
         createdAt: doc.data().createdAt?.toDate(),
         updatedAt: doc.data().updatedAt?.toDate(),
       })) as Project[];
+
       setProjects(projectsData);
       setLoading(false);
     }, (error) => {
@@ -45,7 +57,7 @@ export default function ProjectsPage() {
     });
 
     return () => unsubscribe();
-  }, []);
+  }, [user]);
 
   async function createProject() {
     if (!newProjectName.trim() || !user) return;

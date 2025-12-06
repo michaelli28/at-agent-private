@@ -2,14 +2,14 @@
 
 import { useEffect, useState, useRef } from 'react';
 import Link from 'next/link';
-import { collection, query, orderBy, limit, getDocs, onSnapshot } from 'firebase/firestore';
+import { collection, query, limit, onSnapshot, where } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
+import { useAuth } from '@/contexts/AuthContext';
 import { TestRun, Project } from '@/types';
 import {
   CheckCircle,
   XCircle,
   Clock,
-  AlertTriangle,
   ArrowRight,
   Activity,
   Layers,
@@ -23,83 +23,126 @@ interface DashboardData {
   totalTests: number;
   totalPassed: number;
   totalFailed: number;
-  totalViolations: number;
   recentRuns: (TestRun & { projectName?: string })[];
 }
 
 export default function DashboardPage() {
+  const { user } = useAuth();
   const [data, setData] = useState<DashboardData | null>(null);
   const [loading, setLoading] = useState(true);
   const [projects, setProjects] = useState<Project[]>([]);
   const projectsRef = useRef<Project[]>([]);
+  const projectIdsRef = useRef<string[]>([]);
 
-  // Fetch projects first
+  // Fetch user's projects first
   useEffect(() => {
-    async function fetchProjects() {
-      const projectsSnap = await getDocs(collection(db, 'projects'));
-      const projectsData = projectsSnap.docs.map(doc => ({
+    if (!user) {
+      setProjects([]);
+      projectsRef.current = [];
+      projectIdsRef.current = [];
+      setLoading(false);
+      return;
+    }
+
+    const projectsQuery = query(
+      collection(db, 'projects'),
+      where('ownerId', '==', user.uid)
+    );
+
+    const unsubscribe = onSnapshot(projectsQuery, (snapshot) => {
+      const projectsData = snapshot.docs.map(doc => ({
         id: doc.id,
         ...doc.data()
       })) as Project[];
+
       setProjects(projectsData);
       projectsRef.current = projectsData;
-    }
-    fetchProjects();
-  }, []);
-
-  // Subscribe to real-time updates for test runs
-  useEffect(() => {
-    // Subscribe to recent runs
-    const recentRunsQuery = query(
-      collection(db, 'testRuns'),
-      orderBy('createdAt', 'desc'),
-      limit(10)
-    );
-
-    const unsubscribeRecent = onSnapshot(recentRunsQuery, (snapshot) => {
-      const runs = snapshot.docs.map(doc => ({
-        id: doc.id,
-        ...doc.data(),
-        createdAt: doc.data().createdAt?.toDate(),
-        completedAt: doc.data().completedAt?.toDate(),
-        projectName: projectsRef.current.find(p => p.id === doc.data().projectId)?.name || 'Unknown Project'
-      })) as (TestRun & { projectName?: string })[];
-
-      setData(prev => prev ? { ...prev, recentRuns: runs } : null);
+      projectIdsRef.current = projectsData.map(p => p.id);
     });
 
-    // Subscribe to all runs for totals
-    const unsubscribeAll = onSnapshot(collection(db, 'testRuns'), (snapshot) => {
+    return () => unsubscribe();
+  }, [user]);
+
+  // Subscribe to real-time updates for test runs (filtered by user's projects)
+  useEffect(() => {
+    if (!user || projects.length === 0) {
+      if (!user) {
+        setData(null);
+        setLoading(false);
+      } else if (projects.length === 0 && projectsRef.current.length === 0) {
+        // User has no projects yet
+        setData({
+          totalProjects: 0,
+          totalTestRuns: 0,
+          totalTests: 0,
+          totalPassed: 0,
+          totalFailed: 0,
+          recentRuns: [],
+        });
+        setLoading(false);
+      }
+      return;
+    }
+
+    const projectIds = projectIdsRef.current;
+    if (projectIds.length === 0) return;
+
+    // Subscribe to runs for user's projects only
+    // Firestore 'in' query supports up to 30 items
+    // Query without orderBy to avoid composite index requirement, sort client-side
+    const projectIdsToQuery = projectIds.slice(0, 30);
+    const runsQuery = query(
+      collection(db, 'testRuns'),
+      where('projectId', 'in', projectIdsToQuery),
+      limit(100)
+    );
+
+    const unsubscribe = onSnapshot(runsQuery, (snapshot) => {
       let totalTests = 0;
       let totalPassed = 0;
       let totalFailed = 0;
-      let totalViolations = 0;
 
-      snapshot.docs.forEach(doc => {
-        const run = doc.data();
-        totalTests += run.totalTests || 0;
-        totalPassed += run.passedTests || 0;
-        totalFailed += run.failedTests || 0;
-        totalViolations += run.totalViolations || 0;
+      const allRuns = snapshot.docs.map(doc => {
+        const data = doc.data();
+        totalTests += data.totalTests || 0;
+        totalPassed += data.passedTests || 0;
+        totalFailed += data.failedTests || 0;
+
+        return {
+          id: doc.id,
+          ...data,
+          createdAt: data.createdAt?.toDate(),
+          completedAt: data.completedAt?.toDate(),
+          projectName: projectsRef.current.find(p => p.id === data.projectId)?.name || 'Unknown Project'
+        };
+      }) as (TestRun & { projectName?: string })[];
+
+      // Sort client-side by createdAt descending
+      allRuns.sort((a, b) => {
+        if (!a.createdAt) return 1;
+        if (!b.createdAt) return -1;
+        return b.createdAt.getTime() - a.createdAt.getTime();
       });
 
-      setData(prev => ({
+      // Take only the 10 most recent for display
+      const recentRuns = allRuns.slice(0, 10);
+
+      setData({
         totalProjects: projectsRef.current.length,
         totalTestRuns: snapshot.size,
         totalTests,
         totalPassed,
         totalFailed,
-        totalViolations,
-        recentRuns: prev?.recentRuns || [],
-      }));
+        recentRuns,
+      });
+      setLoading(false);
+    }, (error) => {
+      console.error('Error fetching test runs:', error);
       setLoading(false);
     });
 
-    return () => {
-      unsubscribeRecent();
-      unsubscribeAll();
-    };
-  }, [projects]);
+    return () => unsubscribe();
+  }, [user, projects]);
 
   if (loading) {
     return (
@@ -158,16 +201,6 @@ export default function DashboardPage() {
           </p>
         </div>
 
-        <div className="card p-5">
-          <div className="flex items-center justify-between mb-3">
-            <div className="w-10 h-10 bg-danger-50 rounded-lg flex items-center justify-center">
-              <AlertTriangle className="w-5 h-5 text-danger-500" />
-            </div>
-            <span className="text-xs font-medium text-gray-400 uppercase tracking-wide">Violations</span>
-          </div>
-          <div className="text-3xl font-bold text-danger-600">{data?.totalViolations || 0}</div>
-          <p className="text-sm text-gray-500 mt-1">Accessibility issues found</p>
-        </div>
       </div>
 
       {/* Recent Test Runs */}
@@ -191,7 +224,6 @@ export default function DashboardPage() {
                   <th>Build</th>
                   <th>Tests</th>
                   <th>Pass Rate</th>
-                  <th>Violations</th>
                   <th>Date</th>
                   <th></th>
                 </tr>
@@ -221,17 +253,6 @@ export default function DashboardPage() {
                       }`}>
                         {run.passRate.toFixed(1)}%
                       </span>
-                    </td>
-                    <td>
-                      {run.totalViolations > 0 ? (
-                        <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-danger-50 text-danger-700">
-                          {run.totalViolations}
-                        </span>
-                      ) : (
-                        <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-gray-100 text-gray-500">
-                          0
-                        </span>
-                      )}
                     </td>
                     <td className="text-gray-400 text-xs">
                       {run.createdAt ? format(run.createdAt, 'MMM d, HH:mm') : '-'}

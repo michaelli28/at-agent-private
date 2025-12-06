@@ -164,18 +164,6 @@ export default function SettingsPage() {
               <input
                 type="checkbox"
                 className="w-4 h-4 text-primary-600 rounded"
-                checked={settings.showViolationsInSummary}
-                onChange={(e) => updateSetting('showViolationsInSummary', e.target.checked)}
-              />
-              <span className="text-sm text-gray-700">Show violations in summary cards</span>
-            </label>
-          </div>
-
-          <div>
-            <label className="flex items-center space-x-3">
-              <input
-                type="checkbox"
-                className="w-4 h-4 text-primary-600 rounded"
                 checked={settings.autoExpandFailedTests}
                 onChange={(e) => updateSetting('autoExpandFailedTests', e.target.checked)}
               />

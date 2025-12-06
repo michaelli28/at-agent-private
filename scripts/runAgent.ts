@@ -1,12 +1,12 @@
 import 'dotenv/config';
-import { BrowserClient } from '../browser/src/playwrightClient';
+import { BrowserClient } from '../virtual-screen-reader/src/playwrightClient';
 import { ScreenReaderDriver } from '../virtual-screen-reader/src/ScreenReaderDriver';
 import { Agent } from '../agent/src/Agent';
 import { buildOpenAIModel } from '../agent/src/OpenAIClient';
 import { buildGeminiModel } from '../agent/src/GeminiClient';
 import { Reporter } from '../evaluation/src/Reporter';
 import { Evaluator } from '../evaluation/src/Evaluator';
-import { AXNode } from '../browser/src/types';
+import { AXNode } from '../virtual-screen-reader/src/types';
 
 // Simple ANSI color codes for cleaner output
 const colors = {
@@ -34,7 +34,7 @@ async function main() {
   const provider = args.find((arg, idx) => idx === 2 && !arg.startsWith('--')) || 'openai';
 
   if (!url || !goal) {
-    console.error('Usage: pnpm start:agent <url> "<goal>" [provider]');
+    console.error('Usage: npm run start:agent <url> "<goal>" [provider]');
     process.exit(1);
   }
 

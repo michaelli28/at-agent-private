@@ -69,6 +69,7 @@ export async function POST(request: NextRequest) {
 
     // Create a liveStatus document for real-time tracking
     const liveStatusRef = adminDb.collection('liveStatus').doc(testRunRef.id);
+    const browserViewerUrl = process.env.BROWSER_VIEWER_URL || '';
     await liveStatusRef.set({
       testRunId: testRunRef.id,
       projectId,
@@ -81,6 +82,7 @@ export async function POST(request: NextRequest) {
       failedTests: 0,
       isRunning: true,
       tests: tests || [],
+      browserViewerUrl: browserViewerUrl || null,
       createdAt: FieldValue.serverTimestamp(),
       updatedAt: FieldValue.serverTimestamp(),
     });

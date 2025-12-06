@@ -1,10 +1,10 @@
 import 'dotenv/config';
-import { BrowserClient } from '../browser/src/playwrightClient';
+import { BrowserClient } from '../virtual-screen-reader/src/playwrightClient';
 import { ScreenReaderDriver } from '../virtual-screen-reader/src/ScreenReaderDriver';
 import { AgentExperiment } from '../agent/src/AgentExperiment';
 import { Reporter } from '../evaluation/src/Reporter';
 import { Evaluator } from '../evaluation/src/Evaluator';
-import { AXNode } from '../browser/src/types';
+import { AXNode } from '../virtual-screen-reader/src/types';
 
 // Simple ANSI color codes for cleaner output
 const colors = {

@@ -1,0 +1,38 @@
+# fly.toml - Fly.io configuration for AT Agent Dashboard
+# Deploy with: fly deploy --dockerfile Dockerfile --build-arg from root directory
+# Or from dashboard dir: fly deploy --dockerfile ../Dockerfile.fly
+
+app = 'at-agent-dashboard'
+primary_region = 'sjc'
+
+[build]
+  dockerfile = "Dockerfile.fly"
+  [build.args]
+    NEXT_PUBLIC_FIREBASE_API_KEY = "AIzaSyDUXtNTwUCzvLaQTcMoX3C6w2VSGUkGCyk"
+    NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN = "at-agent-cea8c.firebaseapp.com"
+    NEXT_PUBLIC_FIREBASE_PROJECT_ID = "at-agent-cea8c"
+    NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET = "at-agent-cea8c.firebasestorage.app"
+    NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID = "261846785138"
+    NEXT_PUBLIC_FIREBASE_APP_ID = "1:261846785138:web:54471b51c0092e5c18f6eb"
+    NEXT_PUBLIC_APP_URL = "https://at-agent-dashboard.fly.dev"
+
+[env]
+  NODE_ENV = "production"
+  PORT = "3000"
+  HEADLESS = "true"
+  RERUN_WORKER_ENABLED = "false"
+  RERUN_POLL_INTERVAL = "5000"
+  NEXT_PUBLIC_APP_URL = "https://at-agent-dashboard.fly.dev"
+
+[http_service]
+  internal_port = 3000
+  force_https = true
+  auto_stop_machines = false
+  auto_start_machines = true
+  min_machines_running = 1
+  processes = ["app"]
+
+[[vm]]
+  memory = "1gb"
+  cpu_kind = "shared"
+  cpus = 1

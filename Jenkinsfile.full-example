@@ -8,8 +8,8 @@ pipeline {
     agent any
 
     environment {
-        // Your app's staging URL after deployment
-        STAGING_URL = 'http://localhost:3000'
+        // Your app's staging URL after deployment (replace with your actual staging URL)
+        STAGING_URL = 'https://staging.your-app.example.com'
     }
 
     stages {

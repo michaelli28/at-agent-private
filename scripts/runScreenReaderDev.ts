@@ -5,7 +5,7 @@ import * as readline from 'readline';
 async function main() {
   const url = process.argv[2];
   if (!url) {
-    console.error('Please provide a URL. Usage: pnpm dev:sr <url>');
+    console.error('Please provide a URL. Usage: npm run dev:sr <url>');
     process.exit(1);
   }
 

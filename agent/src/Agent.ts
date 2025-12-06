@@ -4,11 +4,14 @@ import { AIMessage, BaseMessage, HumanMessage, SystemMessage, ToolMessage, isAIM
 import { tool } from '@langchain/core/tools';
 import { END, MessagesZodState, START, StateGraph } from '@langchain/langgraph';
 import { z } from 'zod';
-import * as fs from 'fs';
-import * as path from 'path';
 import { AgentGraphState, AgentStep, AgentTrace } from './types';
 
-const SYSTEM_PROMPT = fs.readFileSync(path.join(__dirname, '../system_prompt.txt'), 'utf-8').trim();
+const SYSTEM_PROMPT = `<instructions>
+- Complete the task using ONLY your tools and previous screen reader output.
+- Consider chaining multiple tool calls for faster navigation.
+- Keep persisting until the task is complete. Try new things, do not repeat things that don't work.
+- However, if after several failed attempts and there is evidence that a task can't be completed due to keyboard accessbility issues, you should fail the run with a specific reason (i.e. which element was inaccessible).
+</instructions>`;
 
 // Key-only toolset with instructive descriptions
 const pressArrowDown = tool(async () => `Pressed ArrowDown`, {
@@ -37,8 +40,38 @@ const pressSpace = tool(async () => `Pressed Space`, {
 
 const pressHeading = tool(async () => `Pressed H`, {
   name: 'press_heading',
-  description: 'Jump to the next heading using the screen reader “H” command. Use to skim page structure.',
+  description: 'Jump to the next heading using the screen reader "H" command. Use to skim page structure.',
   schema: z.object({}),
+});
+
+const pressTab = tool(async () => `Pressed Tab`, {
+  name: 'press_tab',
+  description: 'Move focus to the next focusable element (Tab key). Use to navigate between form fields, links, and buttons.',
+  schema: z.object({}),
+});
+
+const pressShiftTab = tool(async () => `Pressed Shift+Tab`, {
+  name: 'press_shift_tab',
+  description: 'Move focus to the previous focusable element (Shift+Tab). Use to go back to previous form field or control.',
+  schema: z.object({}),
+});
+
+const pressEscape = tool(async () => `Pressed Escape`, {
+  name: 'press_escape',
+  description: 'Press Escape key. Use to close dialogs, menus, or cancel current operation.',
+  schema: z.object({}),
+});
+
+const typeText = tool(async ({ text }: { text: string }) => `Typed: ${text}`, {
+  name: 'type_text',
+  description: 'Type text into the currently focused input field. Use after focusing on a text input, textarea, or editable element.',
+  schema: z.object({ text: z.string().describe('The text to type into the focused element') }),
+});
+
+const pressKey = tool(async ({ key }: { key: string }) => `Pressed: ${key}`, {
+  name: 'press_key',
+  description: 'Press an arbitrary keyboard key or key combination. Use for keys not covered by other tools. Examples: "Backspace", "Delete", "Control+A", "Shift+End", "F", "B" (for next form field/button in screen reader).',
+  schema: z.object({ key: z.string().describe('The key or key combination to press (e.g., "Backspace", "Control+A", "F1")') }),
 });
 
 const finishRun = tool(async ({ success, reason }: { success: boolean; reason?: string }) => `Finished run: ${success ? 'success' : 'failed'} ${reason || ''}`, {
@@ -53,6 +86,11 @@ const toolsByName = {
   [pressEnter.name]: pressEnter,
   [pressSpace.name]: pressSpace,
   [pressHeading.name]: pressHeading,
+  [pressTab.name]: pressTab,
+  [pressShiftTab.name]: pressShiftTab,
+  [pressEscape.name]: pressEscape,
+  [typeText.name]: typeText,
+  [pressKey.name]: pressKey,
   [finishRun.name]: finishRun,
 };
 
@@ -299,10 +337,28 @@ function mapToolToAction(name: string | undefined, args: Record<string, any>): {
       return { action: { type: 'KEY_PRESS', key: 'ArrowUp' } };
     case 'press_enter':
       return { action: { type: 'KEY_PRESS', key: 'Enter' } };
+    case 'press_space':
+      return { action: { type: 'KEY_PRESS', key: 'Space' } };
     case 'press_heading':
       return { action: { type: 'KEY_PRESS', key: 'H' } };
     case 'press_previous_heading':
       return { action: { type: 'KEY_PRESS', key: 'Shift+H' } };
+    case 'press_tab':
+      return { action: { type: 'KEY_PRESS', key: 'Tab' } };
+    case 'press_shift_tab':
+      return { action: { type: 'KEY_PRESS', key: 'Shift+Tab' } };
+    case 'press_escape':
+      return { action: { type: 'KEY_PRESS', key: 'Escape' } };
+    case 'type_text':
+      if (typeof args.text !== 'string' || args.text.length === 0) {
+        return { message: 'type_text requires a non-empty "text" argument' };
+      }
+      return { action: { type: 'TYPE', text: args.text } };
+    case 'press_key':
+      if (typeof args.key !== 'string' || args.key.length === 0) {
+        return { message: 'press_key requires a non-empty "key" argument' };
+      }
+      return { action: { type: 'KEY_PRESS', key: args.key } };
     case 'instant_traverse':
       return { action: { type: 'KEY_PRESS', key: 'Shift+A' } };
     case 'finish_run':

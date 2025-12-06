@@ -1,37 +1,47 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import { collection, getDocs } from 'firebase/firestore';
+import { collection, query, where, onSnapshot } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
+import { useAuth } from '@/contexts/AuthContext';
 import { Project } from '@/types';
 import { Key, Copy, Check, Eye, EyeOff } from 'lucide-react';
 import Link from 'next/link';
 
 export default function ApiKeysPage() {
+  const { user } = useAuth();
   const [projects, setProjects] = useState<Project[]>([]);
   const [loading, setLoading] = useState(true);
   const [copiedId, setCopiedId] = useState<string | null>(null);
   const [visibleKeys, setVisibleKeys] = useState<Set<string>>(new Set());
 
   useEffect(() => {
-    fetchProjects();
-  }, []);
+    if (!user) {
+      setProjects([]);
+      setLoading(false);
+      return;
+    }
 
-  async function fetchProjects() {
-    try {
-      const snapshot = await getDocs(collection(db, 'projects'));
+    const projectsQuery = query(
+      collection(db, 'projects'),
+      where('ownerId', '==', user.uid)
+    );
+
+    const unsubscribe = onSnapshot(projectsQuery, (snapshot) => {
       const projectsData = snapshot.docs.map(doc => ({
         id: doc.id,
         ...doc.data(),
         createdAt: doc.data().createdAt?.toDate(),
       })) as Project[];
       setProjects(projectsData);
-    } catch (error) {
-      console.error('Error fetching projects:', error);
-    } finally {
       setLoading(false);
-    }
-  }
+    }, (error) => {
+      console.error('Error fetching projects:', error);
+      setLoading(false);
+    });
+
+    return () => unsubscribe();
+  }, [user]);
 
   function copyApiKey(apiKey: string, projectId: string) {
     navigator.clipboard.writeText(apiKey);

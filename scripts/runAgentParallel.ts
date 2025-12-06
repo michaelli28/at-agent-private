@@ -1,14 +1,14 @@
 import 'dotenv/config';
 import * as fs from 'fs';
 import * as path from 'path';
-import { BrowserClient } from '../browser/src/playwrightClient';
+import { BrowserClient } from '../virtual-screen-reader/src/playwrightClient';
 import { ScreenReaderDriver } from '../virtual-screen-reader/src/ScreenReaderDriver';
 import { Agent } from '../agent/src/Agent';
 import { buildOpenAIModel } from '../agent/src/OpenAIClient';
 import { buildGeminiModel } from '../agent/src/GeminiClient';
 import { Reporter } from '../evaluation/src/Reporter';
 import { Evaluator } from '../evaluation/src/Evaluator';
-import { AXNode } from '../browser/src/types';
+import { AXNode } from '../virtual-screen-reader/src/types';
 
 // --- Configuration ---
 

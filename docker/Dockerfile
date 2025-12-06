@@ -38,7 +38,7 @@ RUN mkdir -p /app /var/log/supervisor
 RUN ln -s /usr/share/novnc/vnc.html /usr/share/novnc/index.html
 
 # Supervisor configuration
-COPY supervisord.conf /etc/supervisor/conf.d/supervisord.conf
+COPY docker/supervisord.conf /etc/supervisor/conf.d/supervisord.conf
 
 # Expose ports
 # 5900 - VNC

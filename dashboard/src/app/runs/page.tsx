@@ -2,39 +2,76 @@
 
 import { useEffect, useState, useRef } from 'react';
 import Link from 'next/link';
-import { collection, query, orderBy, getDocs, limit, startAfter, DocumentData, QueryDocumentSnapshot, onSnapshot } from 'firebase/firestore';
+import { collection, query, limit, onSnapshot, where } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
+import { useAuth } from '@/contexts/AuthContext';
 import { TestRun, Project } from '@/types';
-import { History, ExternalLink, ChevronLeft, ChevronRight } from 'lucide-react';
+import { History, ExternalLink } from 'lucide-react';
 import { format } from 'date-fns';
 
-const RUNS_PER_PAGE = 20;
-
 export default function TestRunsPage() {
+  const { user } = useAuth();
   const [runs, setRuns] = useState<(TestRun & { projectName?: string })[]>([]);
   const [projects, setProjects] = useState<Project[]>([]);
   const [loading, setLoading] = useState(true);
-  const [lastDoc, setLastDoc] = useState<QueryDocumentSnapshot<DocumentData> | null>(null);
-  const [hasMore, setHasMore] = useState(true);
   const [filterProject, setFilterProject] = useState<string>('all');
   const [filterPlatform, setFilterPlatform] = useState<string>('all');
   const projectsRef = useRef<Project[]>([]);
+  const projectIdsRef = useRef<string[]>([]);
 
-  // Fetch projects first, then subscribe to runs
+  // Fetch user's projects first
   useEffect(() => {
-    fetchProjects();
-  }, []);
+    if (!user) {
+      setProjects([]);
+      projectsRef.current = [];
+      projectIdsRef.current = [];
+      setLoading(false);
+      return;
+    }
 
-  // Subscribe to real-time updates for runs after projects are loaded
+    const projectsQuery = query(
+      collection(db, 'projects'),
+      where('ownerId', '==', user.uid)
+    );
+
+    const unsubscribe = onSnapshot(projectsQuery, (snapshot) => {
+      const projectsData = snapshot.docs.map(doc => ({
+        id: doc.id,
+        ...doc.data(),
+      })) as Project[];
+
+      setProjects(projectsData);
+      projectsRef.current = projectsData;
+      projectIdsRef.current = projectsData.map(p => p.id);
+    });
+
+    return () => unsubscribe();
+  }, [user]);
+
+  // Subscribe to real-time updates for runs (filtered by user's projects)
   useEffect(() => {
-    if (projects.length === 0 && !loading) return;
+    if (!user || projects.length === 0) {
+      if (!user) {
+        setRuns([]);
+        setLoading(false);
+      } else if (projects.length === 0 && projectsRef.current.length === 0) {
+        setRuns([]);
+        setLoading(false);
+      }
+      return;
+    }
 
-    projectsRef.current = projects;
+    const projectIds = projectIdsRef.current;
+    if (projectIds.length === 0) return;
+
+    // Firestore 'in' query supports up to 30 items
+    // Query without orderBy to avoid composite index requirement, sort client-side
+    const projectIdsToQuery = projectIds.slice(0, 30);
 
     const q = query(
       collection(db, 'testRuns'),
-      orderBy('createdAt', 'desc'),
-      limit(RUNS_PER_PAGE)
+      where('projectId', 'in', projectIdsToQuery),
+      limit(100)
     );
 
     const unsubscribe = onSnapshot(q, (snapshot) => {
@@ -49,9 +86,14 @@ export default function TestRunsPage() {
         };
       }) as (TestRun & { projectName?: string })[];
 
+      // Sort client-side by createdAt descending
+      runsData.sort((a, b) => {
+        if (!a.createdAt) return 1;
+        if (!b.createdAt) return -1;
+        return b.createdAt.getTime() - a.createdAt.getTime();
+      });
+
       setRuns(runsData);
-      setLastDoc(snapshot.docs[snapshot.docs.length - 1] || null);
-      setHasMore(snapshot.docs.length === RUNS_PER_PAGE);
       setLoading(false);
     }, (error) => {
       console.error('Error subscribing to runs:', error);
@@ -59,43 +101,7 @@ export default function TestRunsPage() {
     });
 
     return () => unsubscribe();
-  }, [projects]);
-
-  async function fetchProjects() {
-    const snapshot = await getDocs(collection(db, 'projects'));
-    const projectsData = snapshot.docs.map(doc => ({
-      id: doc.id,
-      ...doc.data(),
-    })) as Project[];
-    setProjects(projectsData);
-  }
-
-  async function loadMore() {
-    if (!lastDoc || !hasMore) return;
-
-    const q = query(
-      collection(db, 'testRuns'),
-      orderBy('createdAt', 'desc'),
-      startAfter(lastDoc),
-      limit(RUNS_PER_PAGE)
-    );
-
-    const snapshot = await getDocs(q);
-    const runsData = snapshot.docs.map(doc => {
-      const data = doc.data();
-      return {
-        id: doc.id,
-        ...data,
-        createdAt: data.createdAt?.toDate(),
-        completedAt: data.completedAt?.toDate(),
-        projectName: projectsRef.current.find(p => p.id === data.projectId)?.name || 'Unknown Project'
-      };
-    }) as (TestRun & { projectName?: string })[];
-
-    setRuns(prev => [...prev, ...runsData]);
-    setLastDoc(snapshot.docs[snapshot.docs.length - 1] || null);
-    setHasMore(snapshot.docs.length === RUNS_PER_PAGE);
-  }
+  }, [user, projects]);
 
   const filteredRuns = runs.filter(run => {
     if (filterProject !== 'all' && run.projectId !== filterProject) return false;
@@ -142,6 +148,9 @@ export default function TestRunsPage() {
               <option value="all">All Platforms</option>
               <option value="jenkins">Jenkins</option>
               <option value="github-actions">GitHub Actions</option>
+              <option value="azure-devops">Azure DevOps</option>
+              <option value="gitlab-ci">GitLab CI</option>
+              <option value="dashboard">Dashboard Rerun</option>
             </select>
           </div>
         </div>
@@ -165,7 +174,6 @@ export default function TestRunsPage() {
                     <th>Branch</th>
                     <th>Tests</th>
                     <th>Pass Rate</th>
-                    <th>Violations</th>
                     <th>Duration</th>
                     <th>Date</th>
                     <th></th>
@@ -208,13 +216,6 @@ export default function TestRunsPage() {
                           {run.passRate.toFixed(1)}%
                         </span>
                       </td>
-                      <td>
-                        {run.totalViolations > 0 ? (
-                          <span className="badge badge-danger">{run.totalViolations}</span>
-                        ) : (
-                          <span className="badge badge-success">0</span>
-                        )}
-                      </td>
                       <td className="text-gray-600">{formatDuration(run.totalDuration)}</td>
                       <td className="text-gray-500 text-sm">
                         {run.createdAt ? format(run.createdAt, 'MMM d, HH:mm') : '-'}
@@ -232,17 +233,6 @@ export default function TestRunsPage() {
                 </tbody>
               </table>
 
-              {hasMore && (
-                <div className="p-4 text-center border-t">
-                  <button
-                    onClick={loadMore}
-                    disabled={loading}
-                    className="btn btn-secondary"
-                  >
-                    {loading ? 'Loading...' : 'Load More'}
-                  </button>
-                </div>
-              )}
             </>
           ) : (
             <div className="p-12 text-center text-gray-500">

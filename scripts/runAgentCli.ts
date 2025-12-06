@@ -4,7 +4,7 @@
  * CLI wrapper for the accessibility agent that outputs JSON results.
  * Used by the Jenkins plugin to run accessibility tests.
  *
- * Usage: pnpm start:agent-cli <url> "<goal>" [provider] [--json] [--live]
+ * Usage: npm run start:agent-cli <url> "<goal>" [provider] [--json] [--live]
  *
  * Live mode environment variables:
  *   DASHBOARD_URL - Dashboard API URL (e.g., https://dashboard.example.com)
@@ -14,7 +14,7 @@
  */
 
 import 'dotenv/config';
-import { BrowserClient } from '../browser/src/playwrightClient';
+import { BrowserClient } from '../virtual-screen-reader/src/playwrightClient';
 import { ScreenReaderDriver } from '../virtual-screen-reader/src/ScreenReaderDriver';
 import { Agent } from '../agent/src/Agent';
 import { buildOpenAIModel } from '../agent/src/OpenAIClient';
@@ -31,12 +31,6 @@ interface CliResult {
         action: string;
         observation: string;
         thought: string;
-    }>;
-    violations: Array<{
-        type: string;
-        message: string;
-        element: string;
-        severity: string;
     }>;
 }
 
@@ -94,7 +88,7 @@ async function main() {
     const testIndex = parseInt(process.env.TEST_INDEX || '0', 10);
 
     if (!url || !goal) {
-        console.error('Usage: pnpm start:agent-cli <url> "<goal>" [provider] [--json] [--live]');
+        console.error('Usage: npm run start:agent-cli <url> "<goal>" [provider] [--json] [--live]');
         process.exit(1);
     }
 
@@ -105,6 +99,7 @@ async function main() {
     }
 
     const headless = process.env.HEADLESS === 'true';
+    const cdpEndpoint = process.env.CDP_ENDPOINT; // Connect to remote browser via CDP
     const client = new BrowserClient();
 
     const result: CliResult = {
@@ -113,15 +108,23 @@ async function main() {
         success: false,
         reason: null,
         error: null,
-        steps: [],
-        violations: []
+        steps: []
     };
 
     try {
-        if (!jsonOutput) {
-            console.log('Launching browser...');
+        if (cdpEndpoint) {
+            // Connect to existing browser (e.g., browser-viewer container)
+            if (!jsonOutput) {
+                console.log('Connecting to browser via CDP:', cdpEndpoint);
+            }
+            await client.connectCDP(cdpEndpoint);
+        } else {
+            // Launch new browser instance
+            if (!jsonOutput) {
+                console.log('Launching browser...');
+            }
+            await client.launch(headless);
         }
-        await client.launch(headless);
 
         if (!jsonOutput) {
             console.log('Navigating to:', url);
@@ -200,8 +203,7 @@ main().catch(err => {
         console.log(JSON.stringify({
             success: false,
             error: err.message,
-            steps: [],
-            violations: []
+            steps: []
         }));
     }
     process.exit(1);

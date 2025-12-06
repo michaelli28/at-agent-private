@@ -1,0 +1,22 @@
+[
+  {
+    "url": "http://localhost:3001/login",
+    "goal": "Navigate to the login form, enter email and password using keyboard only, and submit the form. Verify error messages are announced by the screen reader when login fails."
+  },
+  {
+    "url": "http://localhost:3001/login",
+    "goal": "Switch between login and sign-up modes using keyboard navigation, ensuring all interactive elements are accessible and labeled correctly for screen readers."
+  },
+  {
+    "url": "http://localhost:3001/settings",
+    "goal": "Navigate through the settings form using keyboard only, modify settings, and save changes. Ensure screen reader announces form field labels and any error messages."
+  },
+  {
+    "url": "http://localhost:3001/settings",
+    "goal": "Verify that loading indicators and success messages are announced by the screen reader when settings are being fetched or saved."
+  },
+  {
+    "url": "http://localhost:3001/settings",
+    "goal": "Ensure that all toggle switches and checkboxes are accessible via keyboard and correctly announce their state (checked/unchecked) to screen readers."
+  }
+]

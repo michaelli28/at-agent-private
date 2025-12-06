@@ -3,6 +3,7 @@ import * as exec from '@actions/exec';
 import * as github from '@actions/github';
 import * as fs from 'fs';
 import * as path from 'path';
+import * as os from 'os';
 
 interface TestConfig {
   url: string;
@@ -257,10 +258,118 @@ async function runSingleTest(
   };
 }
 
+async function runDiscovery(
+  agentPath: string,
+  baseUrl: string,
+  discoveryFocus: string | null,
+  discoveryPrompt: string | null,
+  discoveryMaxTests: number | null,
+  discoveryExclude: string | null,
+  openaiApiKey: string
+): Promise<string> {
+  core.info('');
+  core.info('===========================================');
+  core.info('  Running Auto-Discovery');
+  core.info('===========================================');
+  core.info(`Base URL: ${baseUrl}`);
+  if (discoveryFocus) core.info(`Focus areas: ${discoveryFocus}`);
+  if (discoveryPrompt) core.info(`Custom prompt: ${discoveryPrompt.substring(0, 50)}...`);
+  if (discoveryMaxTests) core.info(`Max tests: ${discoveryMaxTests}`);
+  core.info('');
+
+  // Create output path for discovered tests
+  const outputPath = path.join(os.tmpdir(), `discovered-tests-${Date.now()}.json`);
+  const discoveryAgentPath = path.join(agentPath, 'discovery-agent');
+  const discoverScript = path.join(discoveryAgentPath, 'discover.py');
+
+  // Check if discovery agent exists
+  if (!fs.existsSync(discoverScript)) {
+    throw new Error(`Discovery agent not found at: ${discoverScript}. Make sure the discovery-agent directory is included.`);
+  }
+
+  // Build discovery command arguments
+  const args = [
+    discoverScript,
+    '--root-dir', process.cwd(),
+    '--base-url', baseUrl,
+    '--output', outputPath
+  ];
+
+  if (discoveryFocus) {
+    args.push('--focus', discoveryFocus);
+  }
+
+  if (discoveryPrompt) {
+    args.push('--prompt', discoveryPrompt);
+  }
+
+  if (discoveryMaxTests) {
+    args.push('--max-tests', discoveryMaxTests.toString());
+  }
+
+  if (discoveryExclude) {
+    args.push('--exclude', discoveryExclude);
+  }
+
+  // Always use verbose mode for CI logs
+  args.push('--verbose');
+
+  const env: Record<string, string> = {
+    ...process.env as Record<string, string>,
+    OPENAI_API_KEY: openaiApiKey
+  };
+
+  let stdout = '';
+  let stderr = '';
+
+  try {
+    // First, install discovery agent dependencies
+    core.info('Installing discovery agent dependencies...');
+    await exec.exec('pip', ['install', '-r', path.join(discoveryAgentPath, 'requirements.txt')], {
+      silent: false
+    });
+
+    core.info('Running discovery agent...');
+    await exec.exec('python', args, {
+      env,
+      silent: false,
+      listeners: {
+        stdout: (data: Buffer) => {
+          stdout += data.toString();
+        },
+        stderr: (data: Buffer) => {
+          stderr += data.toString();
+        }
+      }
+    });
+  } catch (error) {
+    core.error(`Discovery agent failed: ${stderr || error}`);
+    throw new Error(`Discovery agent failed: ${error}`);
+  }
+
+  // Verify output file was created
+  if (!fs.existsSync(outputPath)) {
+    throw new Error('Discovery agent did not generate test file');
+  }
+
+  // Validate the generated tests
+  const content = fs.readFileSync(outputPath, 'utf-8');
+  const tests = JSON.parse(content);
+
+  if (!Array.isArray(tests) || tests.length === 0) {
+    throw new Error('Discovery agent generated no tests');
+  }
+
+  core.info(`Discovery complete: ${tests.length} tests generated`);
+  core.info('');
+
+  return outputPath;
+}
+
 async function run(): Promise<void> {
   try {
     // Get inputs
-    const testConfigPath = core.getInput('test-config', { required: true });
+    let testConfigPath = core.getInput('test-config');
     const provider = core.getInput('provider') || 'openai';
     const openaiApiKey = core.getInput('openai-api-key');
     const geminiApiKey = core.getInput('gemini-api-key');
@@ -270,10 +379,53 @@ async function run(): Promise<void> {
     const dashboardApiKey = core.getInput('dashboard-api-key');
     const agentPathInput = core.getInput('agent-path', { required: true });
 
+    // Discovery mode inputs
+    const discoveryMode = core.getInput('discovery-mode') || 'off';
+    const baseUrl = core.getInput('base-url');
+    const discoveryFocus = core.getInput('discovery-focus') || null;
+    const discoveryPrompt = core.getInput('discovery-prompt') || null;
+    const discoveryMaxTestsStr = core.getInput('discovery-max-tests');
+    const discoveryMaxTests = discoveryMaxTestsStr ? parseInt(discoveryMaxTestsStr, 10) : null;
+    const discoveryExclude = core.getInput('discovery-exclude') || null;
+
+    // Use the agent path from input
+    const agentPath = path.resolve(agentPathInput);
+
     // Validate API key
     const apiKey = provider === 'openai' ? openaiApiKey : geminiApiKey;
     if (!apiKey) {
       throw new Error(`API key required for provider: ${provider}. Set ${provider}-api-key input.`);
+    }
+
+    // Handle discovery mode
+    let discoveredTestsPath: string | null = null;
+    if (discoveryMode !== 'off') {
+      // Validate discovery requirements
+      if (!baseUrl) {
+        throw new Error('base-url is required when discovery-mode is enabled');
+      }
+      if (!openaiApiKey) {
+        throw new Error('openai-api-key is required for auto-discovery (discovery agent uses OpenAI)');
+      }
+
+      // Run discovery
+      discoveredTestsPath = await runDiscovery(
+        agentPath,
+        baseUrl,
+        discoveryMode === 'guided' ? discoveryFocus : null,
+        discoveryPrompt,
+        discoveryMaxTests,
+        discoveryExclude,
+        openaiApiKey
+      );
+
+      // Use discovered tests as the config path
+      testConfigPath = discoveredTestsPath;
+    }
+
+    // Validate test config exists (either provided or discovered)
+    if (!testConfigPath) {
+      throw new Error('Either test-config or discovery-mode with base-url must be provided');
     }
 
     // Read and parse test config
@@ -310,11 +462,19 @@ async function run(): Promise<void> {
     core.info(`Tests to run: ${tests.length}`);
     core.info(`LLM Provider: ${provider}`);
     core.info(`Headless: ${headless}`);
+    if (discoveredTestsPath) {
+      core.info(`Discovery mode: ${discoveryMode}`);
+    }
     core.info('');
-
-    // Use the agent path from input
-    const agentPath = path.resolve(agentPathInput);
     core.info(`Agent path: ${agentPath}`);
+
+    // Build the agent if needed (ensures dist/injected.js exists)
+    const injectedPath = path.join(agentPath, 'virtual-screen-reader', 'dist', 'injected.js');
+    if (!fs.existsSync(injectedPath)) {
+      core.info('Building agent (first run)...');
+      await exec.exec('npm', ['run', 'build'], { cwd: agentPath, silent: true });
+      core.info('Build complete.');
+    }
 
     // Start live tracking if dashboard is configured
     let liveTestRunId: string | null = null;
@@ -412,6 +572,10 @@ async function run(): Promise<void> {
 
     if (dashboardResultsUrl) {
       core.setOutput('dashboard-url', dashboardResultsUrl);
+    }
+
+    if (discoveredTestsPath) {
+      core.setOutput('discovered-tests-path', discoveredTestsPath);
     }
 
     // Fail the action if any tests failed

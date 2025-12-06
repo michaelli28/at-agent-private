@@ -1,15 +1,19 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import { useParams } from 'next/navigation';
+import { useParams, useRouter } from 'next/navigation';
 import Link from 'next/link';
-import { doc, getDoc, collection, query, where, orderBy, getDocs, limit, onSnapshot } from 'firebase/firestore';
+import { doc, getDoc, collection, query, where, limit, onSnapshot } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
+import { useAuth } from '@/contexts/AuthContext';
 import { Project, TestRun } from '@/types';
-import { ArrowLeft, Copy, Check, ExternalLink, TrendingUp, TrendingDown, Minus } from 'lucide-react';
+import { ArrowLeft, Copy, Check, ExternalLink, TrendingUp, TrendingDown, Minus, Play } from 'lucide-react';
 import { format } from 'date-fns';
+import RunTestsModal from '@/components/RunTestsModal';
 
 export default function ProjectDetailPage() {
+  const { user } = useAuth();
+  const router = useRouter();
   const params = useParams();
   const projectId = params.id as string;
 
@@ -17,9 +21,16 @@ export default function ProjectDetailPage() {
   const [runs, setRuns] = useState<TestRun[]>([]);
   const [loading, setLoading] = useState(true);
   const [copiedKey, setCopiedKey] = useState(false);
+  const [unauthorized, setUnauthorized] = useState(false);
+  const [showRunTestsModal, setShowRunTestsModal] = useState(false);
 
-  // Fetch project details once
+  // Fetch project details once and verify ownership
   useEffect(() => {
+    if (!user) {
+      setLoading(false);
+      return;
+    }
+
     async function fetchProject() {
       try {
         const projectDoc = await getDoc(doc(db, 'projects', projectId));
@@ -27,11 +38,21 @@ export default function ProjectDetailPage() {
           setLoading(false);
           return;
         }
+
+        const projectData = projectDoc.data();
+
+        // Verify user owns this project
+        if (projectData.ownerId !== user!.uid) {
+          setUnauthorized(true);
+          setLoading(false);
+          return;
+        }
+
         setProject({
           id: projectDoc.id,
-          ...projectDoc.data(),
-          createdAt: projectDoc.data().createdAt?.toDate(),
-          updatedAt: projectDoc.data().updatedAt?.toDate(),
+          ...projectData,
+          createdAt: projectData.createdAt?.toDate(),
+          updatedAt: projectData.updatedAt?.toDate(),
         } as Project);
       } catch (error) {
         console.error('Error fetching project:', error);
@@ -39,14 +60,14 @@ export default function ProjectDetailPage() {
       }
     }
     fetchProject();
-  }, [projectId]);
+  }, [projectId, user]);
 
   // Subscribe to real-time updates for runs
   useEffect(() => {
+    // Query without orderBy to avoid index requirement, sort client-side
     const runsQuery = query(
       collection(db, 'testRuns'),
       where('projectId', '==', projectId),
-      orderBy('createdAt', 'desc'),
       limit(50)
     );
 
@@ -57,10 +78,16 @@ export default function ProjectDetailPage() {
         createdAt: doc.data().createdAt?.toDate(),
         completedAt: doc.data().completedAt?.toDate(),
       })) as TestRun[];
+      // Sort client-side by createdAt descending
+      runsData.sort((a, b) => {
+        if (!a.createdAt) return 1;
+        if (!b.createdAt) return -1;
+        return b.createdAt.getTime() - a.createdAt.getTime();
+      });
       setRuns(runsData);
       setLoading(false);
     }, (error) => {
-      console.error('Error fetching runs:', error);
+      console.error('Error fetching runs for project:', error);
       setLoading(false);
     });
 
@@ -89,6 +116,18 @@ export default function ProjectDetailPage() {
     );
   }
 
+  if (unauthorized) {
+    return (
+      <div className="text-center py-12">
+        <h2 className="text-xl font-semibold text-gray-900 mb-2">Access Denied</h2>
+        <p className="text-gray-600 mb-4">You don't have permission to view this project.</p>
+        <Link href="/projects" className="btn btn-primary">
+          Back to Projects
+        </Link>
+      </div>
+    );
+  }
+
   if (!project) {
     return (
       <div className="text-center py-12">
@@ -104,7 +143,6 @@ export default function ProjectDetailPage() {
   // Calculate stats
   const totalTests = runs.reduce((sum, r) => sum + r.totalTests, 0);
   const totalPassed = runs.reduce((sum, r) => sum + r.passedTests, 0);
-  const totalViolations = runs.reduce((sum, r) => sum + r.totalViolations, 0);
   const overallPassRate = totalTests > 0 ? (totalPassed / totalTests) * 100 : 0;
 
   // Calculate trend
@@ -134,6 +172,13 @@ export default function ProjectDetailPage() {
               <p className="text-gray-600 mt-1">{project.description}</p>
             )}
           </div>
+          <button
+            onClick={() => setShowRunTestsModal(true)}
+            className="btn btn-primary flex items-center space-x-2"
+          >
+            <Play className="w-4 h-4" />
+            <span>Run Tests</span>
+          </button>
         </div>
       </div>
 
@@ -165,7 +210,7 @@ export default function ProjectDetailPage() {
       </div>
 
       {/* Stats */}
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-6 mb-8">
+      <div className="grid grid-cols-2 md:grid-cols-3 gap-6 mb-8">
         <div className="stat-card">
           <div className="stat-value text-gray-700">{runs.length}</div>
           <div className="stat-label">Test Runs</div>
@@ -185,10 +230,6 @@ export default function ProjectDetailPage() {
           </div>
           <div className="stat-label">Pass Rate</div>
         </div>
-        <div className="stat-card">
-          <div className="stat-value text-danger-600">{totalViolations}</div>
-          <div className="stat-label">Violations</div>
-        </div>
       </div>
 
       {/* Recent Runs */}
@@ -205,7 +246,6 @@ export default function ProjectDetailPage() {
                   <th>Branch</th>
                   <th>Tests</th>
                   <th>Pass Rate</th>
-                  <th>Violations</th>
                   <th>Duration</th>
                   <th>Date</th>
                   <th></th>
@@ -239,13 +279,6 @@ export default function ProjectDetailPage() {
                         {run.passRate.toFixed(1)}%
                       </span>
                     </td>
-                    <td>
-                      {run.totalViolations > 0 ? (
-                        <span className="badge badge-danger">{run.totalViolations}</span>
-                      ) : (
-                        <span className="badge badge-success">0</span>
-                      )}
-                    </td>
                     <td className="text-gray-600">{formatDuration(run.totalDuration)}</td>
                     <td className="text-gray-500 text-sm">
                       {run.createdAt ? format(run.createdAt, 'MMM d, HH:mm') : '-'}
@@ -269,6 +302,18 @@ export default function ProjectDetailPage() {
           )}
         </div>
       </div>
+
+      {/* Run Tests Modal */}
+      <RunTestsModal
+        isOpen={showRunTestsModal}
+        onClose={() => setShowRunTestsModal(false)}
+        projectId={projectId}
+        projectName={project.name}
+        onRunStarted={(testRunId) => {
+          setShowRunTestsModal(false);
+          router.push(`/runs/${testRunId}`);
+        }}
+      />
     </div>
   );
 }

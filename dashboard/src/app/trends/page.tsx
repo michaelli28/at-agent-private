@@ -1,8 +1,9 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import { collection, query, orderBy, getDocs, limit, where } from 'firebase/firestore';
+import { collection, query, getDocs, limit, where, onSnapshot } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
+import { useAuth } from '@/contexts/AuthContext';
 import { TestRun, Project, TrendData } from '@/types';
 import { TrendingUp, TrendingDown, Minus } from 'lucide-react';
 import { format, subDays, startOfDay, endOfDay } from 'date-fns';
@@ -20,32 +21,73 @@ import {
 } from 'recharts';
 
 export default function TrendsPage() {
+  const { user } = useAuth();
   const [projects, setProjects] = useState<Project[]>([]);
   const [runs, setRuns] = useState<TestRun[]>([]);
   const [loading, setLoading] = useState(true);
   const [selectedProject, setSelectedProject] = useState<string>('all');
   const [timeRange, setTimeRange] = useState<number>(30); // days
 
+  // Fetch user's projects first
   useEffect(() => {
-    fetchData();
-  }, [timeRange]);
+    if (!user) {
+      setProjects([]);
+      setLoading(false);
+      return;
+    }
 
-  async function fetchData() {
-    setLoading(true);
-    try {
-      // Fetch projects
-      const projectsSnap = await getDocs(collection(db, 'projects'));
-      const projectsData = projectsSnap.docs.map(doc => ({
+    const projectsQuery = query(
+      collection(db, 'projects'),
+      where('ownerId', '==', user.uid)
+    );
+
+    const unsubscribe = onSnapshot(projectsQuery, (snapshot) => {
+      const projectsData = snapshot.docs.map(doc => ({
         id: doc.id,
         ...doc.data(),
       })) as Project[];
-      setProjects(projectsData);
 
-      // Fetch runs from the last N days
+      setProjects(projectsData);
+    });
+
+    return () => unsubscribe();
+  }, [user]);
+
+  // Fetch runs when projects are loaded
+  useEffect(() => {
+    if (!user) {
+      setRuns([]);
+      setLoading(false);
+      return;
+    }
+
+    if (projects.length === 0) {
+      setRuns([]);
+      setLoading(false);
+      return;
+    }
+
+    fetchRuns();
+  }, [user, projects, timeRange]);
+
+  async function fetchRuns() {
+    setLoading(true);
+    try {
+      const projectIds = projects.map(p => p.id);
+      if (projectIds.length === 0) {
+        setRuns([]);
+        setLoading(false);
+        return;
+      }
+
+      // Firestore 'in' query supports up to 30 items
+      const projectIdsToQuery = projectIds.slice(0, 30);
+
+      // Fetch runs for user's projects (no orderBy to avoid composite index requirement)
       const startDate = subDays(new Date(), timeRange);
       const runsQuery = query(
         collection(db, 'testRuns'),
-        orderBy('createdAt', 'desc'),
+        where('projectId', 'in', projectIdsToQuery),
         limit(500)
       );
       const runsSnap = await getDocs(runsQuery);
@@ -57,6 +99,13 @@ export default function TrendsPage() {
           completedAt: doc.data().completedAt?.toDate(),
         }))
         .filter(run => run.createdAt && run.createdAt >= startDate) as TestRun[];
+
+      // Sort client-side by createdAt descending
+      runsData.sort((a, b) => {
+        if (!a.createdAt) return 1;
+        if (!b.createdAt) return -1;
+        return b.createdAt.getTime() - a.createdAt.getTime();
+      });
 
       setRuns(runsData);
     } catch (error) {
@@ -73,16 +122,16 @@ export default function TrendsPage() {
 
   // Aggregate data by day for charts
   function aggregateByDay(): TrendData[] {
-    const byDay = new Map<string, { passes: number; total: number; violations: number }>();
+    const byDay = new Map<string, { passes: number; total: number; failed: number }>();
 
     filteredRuns.forEach(run => {
       if (!run.createdAt) return;
       const dateKey = format(run.createdAt, 'yyyy-MM-dd');
-      const existing = byDay.get(dateKey) || { passes: 0, total: 0, violations: 0 };
+      const existing = byDay.get(dateKey) || { passes: 0, total: 0, failed: 0 };
       byDay.set(dateKey, {
         passes: existing.passes + run.passedTests,
         total: existing.total + run.totalTests,
-        violations: existing.violations + run.totalViolations,
+        failed: existing.failed + run.failedTests,
       });
     });
 
@@ -95,7 +144,6 @@ export default function TrendsPage() {
         date: format(subDays(new Date(), i), 'MMM d'),
         passRate: data && data.total > 0 ? (data.passes / data.total) * 100 : 0,
         totalTests: data?.total || 0,
-        violations: data?.violations || 0,
       });
     }
 
@@ -107,7 +155,6 @@ export default function TrendsPage() {
   // Calculate summary stats
   const totalTests = filteredRuns.reduce((sum, r) => sum + r.totalTests, 0);
   const totalPassed = filteredRuns.reduce((sum, r) => sum + r.passedTests, 0);
-  const totalViolations = filteredRuns.reduce((sum, r) => sum + r.totalViolations, 0);
   const overallPassRate = totalTests > 0 ? (totalPassed / totalTests) * 100 : 0;
 
   // Calculate trend (compare first half to second half)
@@ -171,7 +218,7 @@ export default function TrendsPage() {
       </div>
 
       {/* Summary Stats */}
-      <div className="grid grid-cols-1 md:grid-cols-4 gap-6 mb-8">
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
         <div className="stat-card">
           <div className="stat-value text-gray-700">{filteredRuns.length}</div>
           <div className="stat-label">Test Runs</div>
@@ -190,10 +237,6 @@ export default function TrendsPage() {
             {Math.abs(trendDirection) <= 1 && <Minus className="w-6 h-6 text-gray-400 ml-2" />}
           </div>
           <div className="stat-label">Pass Rate</div>
-        </div>
-        <div className="stat-card">
-          <div className="stat-value text-danger-600">{totalViolations}</div>
-          <div className="stat-label">Violations</div>
         </div>
       </div>
 
@@ -227,10 +270,10 @@ export default function TrendsPage() {
         </div>
       </div>
 
-      {/* Tests and Violations Chart */}
+      {/* Tests Run Chart */}
       <div className="card">
         <div className="card-header">
-          <h2 className="text-lg font-semibold">Tests Run & Violations</h2>
+          <h2 className="text-lg font-semibold">Tests Run Over Time</h2>
         </div>
         <div className="card-body">
           <div className="h-80">
@@ -244,7 +287,6 @@ export default function TrendsPage() {
                 />
                 <Legend />
                 <Bar dataKey="totalTests" name="Tests Run" fill="#3b82f6" radius={[4, 4, 0, 0]} />
-                <Bar dataKey="violations" name="Violations" fill="#ef4444" radius={[4, 4, 0, 0]} />
               </BarChart>
             </ResponsiveContainer>
           </div>
