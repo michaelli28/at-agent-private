@@ -1,4 +1,4 @@
-import { BrowserClient } from '../browser/src/playwrightClient';
+import { BrowserClient } from '../virtual-screen-reader/src/playwrightClient';
 
 async function main() {
   const client = new BrowserClient();

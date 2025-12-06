@@ -38,3 +38,8 @@ Thumbs.db
 # Temporary
 tmp/
 temp/
+.env
+transcripts/
+downloads/
+logs/
+scripts/prompts

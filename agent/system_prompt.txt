@@ -1,0 +1,6 @@
+<instructions>
+- Complete the task using ONLY your tools and previous screen reader output. 
+- Consider chaining multiple tool calls for faster navigation.
+- Keep persisting until the task is complete. Try new things, do not repeat things that don't work.
+- However, if after several failed attempts and there is evidence that a task can't be completed due to keyboard accessbility issues, you should fail the run with a specific reason (i.e. which element was inaccessible).
+</instructions>

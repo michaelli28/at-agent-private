@@ -1,11 +1,11 @@
-import { BrowserClient } from '../browser/src/playwrightClient';
-import { ScreenReaderDriver } from '../drivers/src/ScreenReaderDriver';
+import { BrowserClient } from '../virtual-screen-reader/src/playwrightClient';
+import { ScreenReaderDriver } from '../virtual-screen-reader/src/ScreenReaderDriver';
 import * as readline from 'readline';
 
 async function main() {
   const url = process.argv[2];
   if (!url) {
-    console.error('Please provide a URL. Usage: pnpm dev:sr <url>');
+    console.error('Please provide a URL. Usage: npm run dev:sr <url>');
     process.exit(1);
   }
 
@@ -21,7 +21,7 @@ async function main() {
     await driver.enable();
 
     console.log('\n--- Interactive Mode ---');
-    console.log('Controls: [n] Next Item, [p] Previous Item, [q] Quit\n');
+    console.log('Controls: [n] Next Item, [p] Previous Item, [i] Instant Traverse, [h] Next Heading, [sh] Prev Heading, [q] Quit\n');
 
     // Initial state
     let snapshot = await driver.getPerceptualOutput();
@@ -32,7 +32,7 @@ async function main() {
       output: process.stdout
     });
 
-    rl.setPrompt('Action (n/p/q)> ');
+    rl.setPrompt('Action (n/p/i/h/sh/q)> ');
     rl.prompt();
 
     rl.on('line', async (line) => {
@@ -46,6 +46,9 @@ async function main() {
       let actionKey = '';
       if (input === 'n' || input === '') actionKey = 'ArrowDown';
       else if (input === 'p') actionKey = 'ArrowUp';
+      else if (input === 'i') actionKey = 'Shift+A';
+      else if (input === 'h') actionKey = 'H';
+      else if (input === 'sh') actionKey = 'Shift+H';
 
       if (actionKey) {
         const result = await driver.performAction({ type: 'KEY_PRESS', key: actionKey });
@@ -55,7 +58,7 @@ async function main() {
           console.error(`[Error] ${result.message}`);
         }
       } else {
-        console.log('Unknown command. Use n, p, or q.');
+        console.log('Unknown command. Use n, p, i, h, sh, or q.');
       }
 
       rl.prompt();

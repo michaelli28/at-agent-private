@@ -15,6 +15,12 @@
       "@adf/drivers/*": [
         "drivers/src/*"
       ],
+      "@adf/virtual-screen-reader": [
+        "virtual-screen-reader/src/index.ts"
+      ],
+      "@adf/virtual-screen-reader/*": [
+        "virtual-screen-reader/src/*"
+      ],
       "@adf/agent/*": [
         "agent/src/*"
       ],
@@ -23,6 +29,9 @@
       ],
       "@adf/ui/*": [
         "ui/src/*"
+      ],
+      "@langchain/core/*": [
+        "node_modules/@langchain/core/dist/*"
       ]
     }
   },

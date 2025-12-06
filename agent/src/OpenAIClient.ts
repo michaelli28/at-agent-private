@@ -1,36 +1,11 @@
-import OpenAI from 'openai';
-import { LLMClient, LLMResponse } from './types';
+import { ChatOpenAI } from '@langchain/openai';
 
-export class OpenAIClient implements LLMClient {
-  private client: OpenAI;
+export function buildOpenAIModel(modelName: string = 'gpt-5.1', apiKey?: string) {
+  const key = apiKey || process.env.OPENAI_API_KEY;
+  if (!key) throw new Error('OPENAI_API_KEY is required');
 
-  constructor(apiKey?: string) {
-    this.client = new OpenAI({
-      apiKey: apiKey || process.env.OPENAI_API_KEY,
-    });
-  }
-
-  async generate(prompt: string): Promise<LLMResponse> {
-    try {
-      const completion = await this.client.chat.completions.create({
-        messages: [{ role: 'user', content: prompt }],
-        model: 'gpt-5.1',
-        response_format: { type: 'json_object' },
-      });
-
-      const content = completion.choices[0].message.content;
-      if (!content) throw new Error('No content received from OpenAI');
-
-      return JSON.parse(content) as LLMResponse;
-    } catch (error) {
-      console.error('LLM Error:', error);
-      // Fallback response to prevent crash
-      return {
-        thought: "Error calling LLM. Stopping.",
-        action: { type: 'KEY_PRESS', key: '' }, // No-op
-        done: true,
-        success: false
-      };
-    }
-  }
+  return new ChatOpenAI({
+    apiKey: key,
+    model: modelName,
+  });
 }
