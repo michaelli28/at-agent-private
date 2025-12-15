@@ -11,11 +11,12 @@
  *   DASHBOARD_API_KEY - API key for the project
  *   TEST_RUN_ID - Test run ID (from /api/live/start)
  *   TEST_INDEX - Index of current test (0, 1, 2...)
+ *
+ * Note: This script uses the virtual screen reader in headed mode for visibility.
  */
 
 import 'dotenv/config';
-import { BrowserClient } from '../virtual-screen-reader/src/playwrightClient';
-import { ScreenReaderDriver } from '../virtual-screen-reader/src/ScreenReaderDriver';
+import { BrowserClient, ScreenReaderDriver } from '@adf/virtual-screen-reader';
 import { Agent } from '../agent/src/Agent';
 import { buildOpenAIModel } from '../agent/src/OpenAIClient';
 import { buildGeminiModel } from '../agent/src/GeminiClient';
@@ -98,10 +99,6 @@ async function main() {
         process.exit(1);
     }
 
-    const headless = process.env.HEADLESS === 'true';
-    const cdpEndpoint = process.env.CDP_ENDPOINT; // Connect to remote browser via CDP
-    const client = new BrowserClient();
-
     const result: CliResult = {
         url,
         goal,
@@ -111,27 +108,21 @@ async function main() {
         steps: []
     };
 
+    const client = new BrowserClient();
+
     try {
-        if (cdpEndpoint) {
-            // Connect to existing browser (e.g., browser-viewer container)
-            if (!jsonOutput) {
-                console.log('Connecting to browser via CDP:', cdpEndpoint);
-            }
-            await client.connectCDP(cdpEndpoint);
-        } else {
-            // Launch new browser instance
-            if (!jsonOutput) {
-                console.log('Launching browser...');
-            }
-            await client.launch(headless);
+        if (!jsonOutput) {
+            console.log('Launching browser...');
         }
+        await client.launch(false); // headed mode
+        await client.goto(url);
+
+        const driver = new ScreenReaderDriver(client);
+        await driver.enable();
 
         if (!jsonOutput) {
             console.log('Navigating to:', url);
         }
-        await client.goto(url);
-
-        const driver = new ScreenReaderDriver(client);
 
         const model = provider === 'gemini'
             ? buildGeminiModel()

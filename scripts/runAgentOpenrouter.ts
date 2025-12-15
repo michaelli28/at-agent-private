@@ -1,10 +1,6 @@
 import 'dotenv/config';
-import { BrowserClient } from '../virtual-screen-reader/src/playwrightClient';
-import { ScreenReaderDriver } from '../virtual-screen-reader/src/ScreenReaderDriver';
+import { BrowserClient, ScreenReaderDriver } from '@adf/virtual-screen-reader';
 import { AgentOpenrouter } from '../agent/src/AgentOpenrouter';
-import { Reporter } from '../evaluation/src/Reporter';
-import { Evaluator } from '../evaluation/src/Evaluator';
-import { AXNode } from '../virtual-screen-reader/src/types';
 import { AgentStep } from '../agent/src/types';
 
 // Simple ANSI color codes for cleaner output
@@ -47,29 +43,29 @@ async function main() {
   console.log(); // Spacer
 
   const client = new BrowserClient();
+  await client.launch(false); // headed mode
 
   logStep("🚀", "Launching Browser...");
-  await client.launch(false);
+  await client.goto(url);
+
+  const driver = new ScreenReaderDriver(client);
+  await driver.enable();
 
   try {
-    logStep("🌐", "Navigating to page...");
-    await client.goto(url);
-
-    const driver = new ScreenReaderDriver(client);
+    logStep("🌐", "Page loaded...");
 
     // Instantiate AgentOpenrouter
-    const agent = new AgentOpenrouter(
+    const agent = new AgentOpenrouter({
       driver,
-      (step: AgentStep) => {
+      onStep: (step: AgentStep) => {
         const thought = step.thought && step.thought.trim().length > 0
           ? step.thought
           : '(no model thought returned)';
         logStep("🧠", `Thought: ${thought}`);
         logStep("⚡", `Action: ${step.action.type} ${step.action.key || ''}`);
       },
-      undefined, // apiKey (defaults to env)
       model
-    );
+    });
 
     logStep("🤖", "Starting Agent Execution...");
     console.log(`${colors.dim}   (Press Ctrl+C to interrupt)\n${colors.reset}`);
@@ -80,28 +76,24 @@ async function main() {
 
     logStep("🏁", "Agent execution finished.");
 
-    logStep("📊", "Evaluating session...");
-    const evaluator = new Evaluator();
-    let axTree: AXNode[] = [];
-    try {
-      axTree = await client.getFullAXTree();
-    } catch (e) {
-      console.warn(`${colors.yellow}   Warning: Could not fetch AXTree for evaluation.${colors.reset}`);
+    // Print result summary
+    if (trace.success) {
+      console.log(`\n${colors.green}✓ Task completed successfully${colors.reset}`);
+      if (trace.reason) {
+        console.log(`   ${colors.dim}Reason: ${trace.reason}${colors.reset}`);
+      }
+    } else {
+      console.log(`\n${colors.red}✗ Task failed${colors.reset}`);
+      if (trace.error) {
+        console.log(`   ${colors.dim}Error: ${trace.error}${colors.reset}`);
+      }
     }
-
-    const violations = evaluator.evaluate(axTree, trace);
-
-    // Generate Report
-    const reporter = new Reporter();
-    const markdown = reporter.toMarkdown(violations, trace);
-
-    console.log('\n' + colors.dim + '='.repeat(60) + colors.reset);
-    console.log(markdown);
-    console.log(colors.dim + '='.repeat(60) + colors.reset + '\n');
+    console.log(`   ${colors.dim}Total steps: ${trace.steps.length}${colors.reset}`);
 
   } catch (error) {
     console.error(`\n${colors.red}❌ Fatal Error:${colors.reset}`, error);
   } finally {
+    await driver.disable();
     await client.close();
     logStep("👋", "Browser closed.");
   }

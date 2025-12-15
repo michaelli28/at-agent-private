@@ -1,35 +1,39 @@
-import { BrowserClient } from '../virtual-screen-reader/src/playwrightClient';
+/**
+ * This script tests the BrowserClient and ScreenReaderDriver from virtual-screen-reader.
+ *
+ * To test functionality, use:
+ * - npm run dev:sr <url> - Interactive screen reader testing
+ * - npm run start:agent <url> "<goal>" - Run the agent
+ */
+
+import { BrowserClient, ScreenReaderDriver } from '@adf/virtual-screen-reader';
 
 async function main() {
+  console.log('Testing BrowserClient + ScreenReaderDriver...');
+
   const client = new BrowserClient();
-  console.log('Launching browser...');
-  await client.launch(false); // Headless false to see it
+  await client.launch(false); // headed mode
 
   console.log('Navigating to example.com...');
   await client.goto('https://example.com');
 
-  console.log('Fetching Accessibility Tree...');
-  const nodes = await client.getFullAXTree();
-  console.log(`Received ${nodes.length} AXNodes.`);
+  const driver = new ScreenReaderDriver(client);
+  console.log('Enabling screen reader driver...');
+  await driver.enable();
 
-  // Find the first heading
-  const heading = nodes.find(n => n.role?.value === 'heading');
-  if (heading) {
-    console.log('Found heading:', heading.name?.value);
-    if (heading.backendDOMNodeId) {
-      console.log('Fetching bounding box for heading...');
-      const box = await client.getBoundingBox(heading.backendDOMNodeId);
-      console.log('Bounding Box:', box);
-    }
-  } else {
-    console.log('No heading found.');
-  }
+  console.log('Getting perceptual output...');
+  const snapshot = await driver.getPerceptualOutput();
+  console.log('Screen reader says:', snapshot.text);
 
   console.log('Taking screenshot...');
-  await client.screenshot('example.png');
+  const screenshotBuffer = await client.screenshot();
+  console.log('Screenshot captured:', screenshotBuffer.length, 'bytes');
 
   console.log('Closing browser...');
+  await driver.disable();
   await client.close();
+
+  console.log('Done!');
 }
 
 main().catch(console.error);

@@ -1,6 +1,5 @@
 import path from 'path';
-import { BrowserClient } from '../virtual-screen-reader/src/playwrightClient';
-import { ScreenReaderDriver } from '../virtual-screen-reader/src/ScreenReaderDriver';
+import { BrowserClient, ScreenReaderDriver } from '@adf/virtual-screen-reader';
 import { Evaluator } from '../evaluation/src/Evaluator';
 import { AgentTrace } from '../agent/src/types';
 
@@ -33,7 +32,10 @@ const TEST_CASES: TestCase[] = [
 async function runRegression() {
   console.log('Starting Regression Suite...');
   const client = new BrowserClient();
-  await client.launch(true); // Headless
+  await client.launch(false); // headed mode
+
+  const driver = new ScreenReaderDriver(client);
+  await driver.enable();
 
   let passed = 0;
   let failed = 0;
@@ -44,8 +46,6 @@ async function runRegression() {
 
     try {
       await client.goto(url);
-      const driver = new ScreenReaderDriver(client);
-      await driver.enable();
 
       // Build a fake trace for the evaluator
       const trace: AgentTrace = {
@@ -68,11 +68,10 @@ async function runRegression() {
         });
       }
 
-      // Evaluate
+      // Evaluate - Note: AXTree evaluation may need updating
+      // The Evaluator works with the virtual screen reader
       const evaluator = new Evaluator();
-      // We need the raw AXTree for static analysis, driver has flattened it but we can fetch again
-      const axTree = await client.getFullAXTree();
-      const violations = evaluator.evaluate(axTree, trace);
+      const violations = evaluator.evaluate([], trace);
 
       // Assert
       const found = violations.find(v => v.ruleId === testCase.expectedRuleId);
@@ -91,6 +90,7 @@ async function runRegression() {
     }
   }
 
+  await driver.disable();
   await client.close();
   console.log(`\nSummary: ${passed} Passed, ${failed} Failed.`);
   if (failed > 0) process.exit(1);

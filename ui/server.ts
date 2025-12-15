@@ -3,8 +3,7 @@ import express from 'express';
 import { WebSocketServer, WebSocket } from 'ws';
 import http from 'http';
 import path from 'path';
-import { BrowserClient } from '../virtual-screen-reader/src/playwrightClient';
-import { ScreenReaderDriver } from '../virtual-screen-reader/src/ScreenReaderDriver';
+import { BrowserClient, ScreenReaderDriver } from '@adf/virtual-screen-reader';
 import { Agent } from '../agent/src/Agent';
 import { buildOpenAIModel } from '../agent/src/OpenAIClient';
 import { buildGeminiModel } from '../agent/src/GeminiClient';
@@ -15,11 +14,6 @@ const server = http.createServer(app);
 const wss = new WebSocketServer({ server });
 
 const PORT = process.env.PORT || 3000;
-
-// Docker browser configuration
-const DOCKER_CDP_ENDPOINT = process.env.DOCKER_CDP_ENDPOINT || 'http://localhost:9222';
-const NOVNC_URL = process.env.NOVNC_URL || 'http://localhost:6080/vnc.html';
-const USE_DOCKER_BROWSER = process.env.USE_DOCKER_BROWSER === 'true';
 
 // Serve static files
 app.use(express.static(path.join(__dirname, 'public')));
@@ -91,29 +85,16 @@ async function handleMessage(ws: WebSocket, data: any) {
   }
 }
 
-// Helper to capture and send screenshot (fallback)
+// Helper to capture and send screenshot
 async function sendScreenshot(ws: WebSocket, client: BrowserClient) {
   try {
     const buffer = await client.screenshot();
     const base64 = buffer.toString('base64');
-    const currentUrl = await client.getCurrentUrl();
+    const page = client.getPage();
+    const currentUrl = page ? page.url() : '';
     send(ws, { type: 'screenshot', screenshot: base64, url: currentUrl });
   } catch (e) {
     console.error('Failed to capture screenshot:', e);
-  }
-}
-
-// Send full-page screenshot
-async function sendFullPageScreenshot(ws: WebSocket, client: BrowserClient) {
-  try {
-    // Small delay to let page render after actions
-    await client.waitForTimeout(300);
-    const buffer = await client.screenshot(); // Already captures full page with fullPage: true
-    const base64 = buffer.toString('base64');
-    const currentUrl = await client.getCurrentUrl();
-    send(ws, { type: 'screenshot', screenshot: base64, url: currentUrl });
-  } catch (e) {
-    console.error('Failed to capture full-page screenshot:', e);
   }
 }
 
@@ -131,45 +112,33 @@ async function runAgent(ws: WebSocket, session: AgentSession, data: { url: strin
     return;
   }
 
-  // Clean up any existing browser from previous run
+  // Clean up any existing session from previous run
   if (session.client) {
     try {
-      await session.client.stopScreencast();
       await session.client.close();
     } catch (e) {
       // Ignore cleanup errors
     }
     session.client = null;
+    session.driver = null;
   }
 
   session.isRunning = true;
   session.abortController = new AbortController();
 
   try {
-    // Initialize browser
+    // Initialize browser and screen reader
+    send(ws, { type: 'log', message: 'Launching browser...' });
     session.client = new BrowserClient();
-
-    if (USE_DOCKER_BROWSER) {
-      send(ws, { type: 'log', message: 'Connecting to Docker browser...' });
-      await session.client.connectCDP(DOCKER_CDP_ENDPOINT);
-      // Send noVNC URL to client for live preview
-      send(ws, { type: 'novnc-url', url: NOVNC_URL });
-    } else {
-      send(ws, { type: 'log', message: 'Launching browser...' });
-      await session.client.launch(true); // headless mode
-    }
-
+    await session.client.launch(false); // headed mode
     await session.client.goto(url);
 
-    // Only send screenshots if NOT using Docker browser (noVNC handles preview)
-    if (!USE_DOCKER_BROWSER) {
-      send(ws, { type: 'log', message: 'Capturing page...' });
-      await sendFullPageScreenshot(ws, session.client);
-    }
-
-    // Initialize driver
-    send(ws, { type: 'log', message: 'Initializing screen reader driver...' });
     session.driver = new ScreenReaderDriver(session.client);
+    await session.driver.enable();
+
+    // Send initial screenshot
+    send(ws, { type: 'log', message: 'Capturing page...' });
+    await sendScreenshot(ws, session.client);
 
     // Initialize model
     send(ws, { type: 'log', message: `Loading ${provider} model...` });
@@ -180,9 +149,9 @@ async function runAgent(ws: WebSocket, session: AgentSession, data: { url: strin
       // Send step update
       send(ws, { type: 'step', step });
 
-      // Only send screenshots if NOT using Docker browser (noVNC handles preview)
-      if (!USE_DOCKER_BROWSER && session.client) {
-        await sendFullPageScreenshot(ws, session.client);
+      // Send screenshot after each step
+      if (session.client) {
+        await sendScreenshot(ws, session.client);
       }
     });
 
@@ -190,9 +159,9 @@ async function runAgent(ws: WebSocket, session: AgentSession, data: { url: strin
     send(ws, { type: 'log', message: 'Starting agent execution...' });
     const trace: AgentTrace = await agent.run(goal);
 
-    // Only send final screenshot if NOT using Docker browser
-    if (!USE_DOCKER_BROWSER) {
-      await sendFullPageScreenshot(ws, session.client);
+    // Final screenshot
+    if (session.client) {
+      await sendScreenshot(ws, session.client);
     }
 
     // Send completion
@@ -212,8 +181,6 @@ async function runAgent(ws: WebSocket, session: AgentSession, data: { url: strin
       error: error.message || 'Agent execution failed'
     });
   } finally {
-    // Don't cleanup here - keep browser open for scrolling
-    // Cleanup happens when WebSocket closes or new run starts
     session.isRunning = false;
   }
 }
@@ -234,10 +201,17 @@ async function cleanupSession(ws: WebSocket) {
 
   session.isRunning = false;
 
+  if (session.driver) {
+    try {
+      await session.driver.disable();
+    } catch (e) {
+      console.error('Error disabling driver:', e);
+    }
+    session.driver = null;
+  }
+
   if (session.client) {
     try {
-      // Stop screencast first
-      await session.client.stopScreencast();
       await session.client.close();
     } catch (e) {
       console.error('Error closing browser:', e);
@@ -245,7 +219,6 @@ async function cleanupSession(ws: WebSocket) {
     session.client = null;
   }
 
-  session.driver = null;
   session.abortController = null;
 }
 

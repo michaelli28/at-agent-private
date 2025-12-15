@@ -1,0 +1,15 @@
+{
+  "testCases": [
+    {
+      "id": "bhs-leadership",
+      "name": "Find BHS Leadership Page",
+      "url": "https://www.bloomfield.org/",
+      "goal": "Find the BHS leadership page",
+      "maxSteps": -1,
+      "successCriteria": {
+        "type": "agent_success"
+      },
+      "tags": ["navigation", "school", "complex"]
+    }
+  ]
+}

@@ -1,12 +1,9 @@
 import 'dotenv/config';
 import * as fs from 'fs';
 import * as path from 'path';
-import { BrowserClient } from '../virtual-screen-reader/src/playwrightClient';
-import { ScreenReaderDriver } from '../virtual-screen-reader/src/ScreenReaderDriver';
+import { BrowserClient, ScreenReaderDriver } from '@adf/virtual-screen-reader';
 import { AgentOpenrouter } from '../agent/src/AgentOpenrouter';
-import { Reporter } from '../evaluation/src/Reporter';
-import { Evaluator } from '../evaluation/src/Evaluator';
-import { AXNode } from '../virtual-screen-reader/src/types';
+import { AgentStep } from '../agent/src/types';
 
 // --- Configuration ---
 
@@ -18,6 +15,7 @@ interface AgentTask {
 }
 
 // EDIT THIS ARRAY TO ADD YOUR TASKS
+// Note: With VoiceOver, tasks should run sequentially, not in parallel
 const TASKS: AgentTask[] = [
   {
     id: 'hacker',
@@ -69,68 +67,51 @@ async function runTask(task: AgentTask) {
 
   try {
     log(id, "🚀", `Starting task: "${goal}" on ${url}`);
-    await client.launch(false); // Headless false to show browser window
-
-    log(id, "🌐", "Navigating...");
+    await client.launch(false); // headed mode
     await client.goto(url);
 
     const driver = new ScreenReaderDriver(client, (msg) => log(id, "🔊", msg));
+    await driver.enable();
+
+    log(id, "🌐", "Page loaded...");
 
     // Instantiate AgentOpenrouter
-    const agent = new AgentOpenrouter(
+    const agent = new AgentOpenrouter({
       driver,
-      undefined, // No screenshots for parallel run to save resources
-      (step) => {
+      onStep: (step: AgentStep) => {
         const thought = step.thought && step.thought.trim().length > 0
           ? step.thought
           : '(no thought)';
-        // Truncate thought if too long for cleaner parallel logs
+        // Truncate thought if too long for cleaner logs
         const shortThought = thought.length > 100 ? thought.substring(0, 100) + '...' : thought;
 
         log(id, "🧠", `Thought: ${shortThought}`);
         log(id, "⚡", `Action: ${step.action.type} ${step.action.key || ''}`);
       },
-      undefined, // apiKey
-      model || DEFAULT_MODEL
-    );
+      model: model || DEFAULT_MODEL
+    });
 
     log(id, "🤖", `Running agent (OpenRouter: ${model || DEFAULT_MODEL})...`);
     const trace = await agent.run(goal);
 
-    // Save Transcript
-    const transcriptPath = path.join(process.cwd(), 'transcripts', `${id}.json`);
-    // Ensure directory exists
-    if (!fs.existsSync(path.join(process.cwd(), 'transcripts'))) {
-      fs.mkdirSync(path.join(process.cwd(), 'transcripts'));
+    // Ensure transcripts directory exists
+    const transcriptsDir = path.join(process.cwd(), 'transcripts');
+    if (!fs.existsSync(transcriptsDir)) {
+      fs.mkdirSync(transcriptsDir, { recursive: true });
     }
+
+    // Save Transcript
+    const transcriptPath = path.join(transcriptsDir, `${id}.json`);
     fs.writeFileSync(transcriptPath, JSON.stringify(trace, null, 2));
     log(id, "💾", `Transcript saved to ${transcriptPath}`);
 
     log(id, "🏁", `Finished. Success: ${trace.success}`);
 
-    // Evaluation
-    log(id, "📊", "Evaluating...");
-    const evaluator = new Evaluator();
-    let axTree: AXNode[] = [];
-    try {
-      axTree = await client.getFullAXTree();
-    } catch (e) {
-      log(id, "⚠️", "Could not fetch AXTree for evaluation.");
-    }
-    const violations = evaluator.evaluate(axTree, trace);
-
-    const score = Math.max(0, 100 - (violations.length * 10)); // Simple scoring
-    log(id, "📝", `Evaluation Score: ${score}/100. Violations: ${violations.length}`);
-
-    if (violations.length > 0) {
-      log(id, "❌", `Top violation: ${violations[0].reason}`);
-    }
-
-    return { id, success: trace.success, score, violations: violations.length, error: null };
+    return { id, success: trace.success, steps: trace.steps.length, error: null };
 
   } catch (error) {
     log(id, "💥", `Error: ${error}`);
-    return { id, success: false, score: 0, violations: 0, error: String(error) };
+    return { id, success: false, steps: 0, error: String(error) };
   } finally {
     await client.close();
     log(id, "👋", "Closed.");
@@ -138,28 +119,31 @@ async function runTask(task: AgentTask) {
 }
 
 async function main() {
-  console.log(`${colors.bright}=== Running ${TASKS.length} Agent Experiments in Parallel (OpenRouter) ===${colors.reset}\n`);
+  console.log(`${colors.bright}=== Running ${TASKS.length} Agent Tasks Sequentially (OpenRouter) ===${colors.reset}`);
+  console.log(`${colors.yellow}Note: Tasks run sequentially (one at a time)${colors.reset}\n`);
 
-  const results = await Promise.all(TASKS.map(task => runTask(task)));
+  const results = [];
+  for (const task of TASKS) {
+    const result = await runTask(task);
+    results.push(result);
+  }
 
   console.log(`\n${colors.bright}=== All Tasks Completed ===${colors.reset}`);
   console.log(`\n${colors.bright}=== Final Summary ===${colors.reset}`);
 
   // Print header
-  console.log(`${colors.dim}${'Task ID'.padEnd(15)} | ${'Success'.padEnd(10)} | ${'Score'.padEnd(6)} | ${'Violations'.padEnd(12)} | ${'Error'}${colors.reset}`);
-  console.log(`${colors.dim}${'-'.repeat(15 + 3 + 10 + 3 + 6 + 3 + 12 + 3 + 20)}${colors.reset}`);
+  console.log(`${colors.dim}${'Task ID'.padEnd(15)} | ${'Success'.padEnd(10)} | ${'Steps'.padEnd(6)} | ${'Error'}${colors.reset}`);
+  console.log(`${colors.dim}${'-'.repeat(60)}${colors.reset}`);
 
   // Print rows
   for (const res of results) {
     const successStr = res.success ? `${colors.green}true${colors.reset} ` : `${colors.red}false${colors.reset}`;
-    const scoreStr = res.score.toString();
     const errStr = res.error ? `${colors.red}${res.error.substring(0, 30)}...${colors.reset}` : '';
 
     console.log(
       `${res.id.padEnd(15)} | ` +
-      `${successStr.padEnd(19)} | ` + // padded with extra for color codes
-      `${scoreStr.padEnd(6)} | ` +
-      `${res.violations.toString().padEnd(12)} | ` +
+      `${successStr.padEnd(19)} | ` +
+      `${res.steps.toString().padEnd(6)} | ` +
       `${errStr}`
     );
   }

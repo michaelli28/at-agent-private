@@ -1,6 +1,32 @@
 import { chromium, Browser, Page, CDPSession, BrowserContext } from 'playwright';
 import { AXNode, Rect } from './types';
 
+/**
+ * Checks if an error is due to page navigation (execution context destroyed).
+ * These errors are expected during navigation and can usually be safely ignored or retried.
+ */
+function isNavigationError(error: any): boolean {
+    const message = error?.message || '';
+    return message.includes('Execution context was destroyed') ||
+           message.includes('Target closed') ||
+           message.includes('page has been closed');
+}
+
+/**
+ * Configuration for the injected MutationObserver.
+ * These values control how DOM mutations are batched and processed.
+ */
+const MUTATION_OBSERVER_CONFIG = {
+    /** Minimum interval between processing mutation batches (ms) */
+    rateLimitMs: 100,
+    /** Maximum mutations to process in a single batch */
+    maxMutationsPerBatch: 50,
+    /** Maximum pending mutations before oldest are dropped */
+    maxQueueSize: 500,
+    /** Window for suppressing duplicate live region announcements (ms) */
+    duplicateWindowMs: 1000,
+} as const;
+
 export class BrowserClient {
     private browser: Browser | null = null;
     private context: BrowserContext | null = null;
@@ -205,11 +231,12 @@ export class BrowserClient {
 
     /**
      * Highlights a bounding box on the page for visual debugging.
+     * Returns a promise that resolves when highlighting is complete.
      */
-    async highlightBox(rect: Rect | null): Promise<void> {
+    highlightBox(rect: Rect | null): void {
         if (!this.page) return;
 
-        await this.page.evaluate((rect) => {
+        this.page.evaluate((rect) => {
             let box = document.getElementById('adf-highlight-box');
             if (!box) {
                 box = document.createElement('div');
@@ -231,7 +258,32 @@ export class BrowserClient {
             } else {
                 box.style.display = 'none';
             }
-        }, rect);
+        }, rect).catch((error: Error) => {
+            if (!isNavigationError(error)) {
+                console.warn('[BrowserClient] Highlight error:', error.message);
+            }
+        });
+    }
+
+    /**
+     * Clears the highlight box.
+     */
+    clearHighlight(): void {
+        this.highlightBox(null);
+    }
+
+    /**
+     * Alias for getBoundingBox for AX tree operations.
+     */
+    async getNodeBoundingBox(backendNodeId: number): Promise<Rect | null> {
+        return this.getBoundingBox(backendNodeId);
+    }
+
+    /**
+     * Alias for focus for AX tree operations.
+     */
+    async focusNode(backendNodeId: number): Promise<void> {
+        return this.focus(backendNodeId);
     }
 
     /**
@@ -244,26 +296,82 @@ export class BrowserClient {
 
     /**
      * Gets the current page URL.
+     * Handles execution context destruction during navigation gracefully.
      */
     async getCurrentUrl(): Promise<string> {
         if (!this.page) throw new Error("Page not initialized.");
-        return this.page.url();
+        try {
+            return this.page.url();
+        } catch (error: any) {
+            if (isNavigationError(error)) {
+                await this.waitForNavigation();
+                return this.page.url();
+            }
+            throw error;
+        }
     }
 
     /**
      * Gets the current page title.
+     * Handles execution context destruction during navigation gracefully.
      */
     async getTitle(): Promise<string> {
         if (!this.page) throw new Error("Page not initialized.");
-        return this.page.title();
+        try {
+            return await this.page.title();
+        } catch (error: any) {
+            if (isNavigationError(error)) {
+                await this.waitForNavigation();
+                return await this.page.title();
+            }
+            throw error;
+        }
+    }
+
+    /**
+     * Waits for navigation to complete.
+     * Used internally to handle execution context destruction.
+     *
+     * Strategy:
+     * 1. Try waiting for 'domcontentloaded' (fast, usually sufficient)
+     * 2. On timeout, retry with 'load' state (waits for full page load)
+     * 3. On second failure, assume page is ready (SPA navigation may not trigger load events)
+     */
+    async waitForNavigation(timeout: number = 5000): Promise<void> {
+        if (!this.page) throw new Error("Page not initialized.");
+
+        try {
+            await this.page.waitForLoadState('domcontentloaded', { timeout });
+            return;
+        } catch {
+            // domcontentloaded timed out - try waiting for full load
+        }
+
+        try {
+            // Shorter timeout for 'load' since we already waited
+            await this.page.waitForLoadState('load', { timeout: Math.min(timeout, 2000) });
+        } catch {
+            // Both failed - page may be a SPA that doesn't trigger traditional load events
+            // This is expected behavior, not an error condition
+        }
     }
 
     /**
      * Re-injects a script into the current page (useful after navigation).
+     * Handles execution context destruction during navigation gracefully.
      */
     async reinjectScript(content: string): Promise<void> {
         if (!this.page) throw new Error("Page not initialized.");
-        await this.page.evaluate(content);
+        try {
+            await this.page.evaluate(content);
+        } catch (error: any) {
+            if (isNavigationError(error)) {
+                await this.waitForNavigation();
+                await this.page.evaluate(content);
+            } else {
+                throw error;
+            }
+        }
     }
 
     /**
@@ -389,4 +497,576 @@ export class BrowserClient {
             viewportHeight: window.innerHeight
         }));
     }
+
+    // =========================================================================
+    // AX Tree CDP Operations
+    // =========================================================================
+
+    /**
+     * Clicks a DOM node by its backend node ID.
+     * Uses multiple strategies to ensure the click works.
+     * Throws an error if all strategies fail.
+     */
+    async clickNode(backendNodeId: number): Promise<void> {
+        if (!this.cdpSession || !this.page) throw new Error("CDP Session not initialized.");
+
+        // First scroll into view
+        await this.scrollNodeIntoView(backendNodeId);
+
+        let programmaticClickSucceeded = false;
+        let programmaticError: Error | null = null;
+
+        // Strategy 1: Try programmatic click (most reliable for links/buttons)
+        try {
+            const { object } = await this.cdpSession.send('DOM.resolveNode', {
+                backendNodeId
+            });
+            if (object.objectId) {
+                // Dispatch a proper MouseEvent click (triggers event listeners)
+                await this.cdpSession.send('Runtime.callFunctionOn', {
+                    objectId: object.objectId,
+                    functionDeclaration: `function() {
+                        // Create and dispatch a proper click event
+                        const event = new MouseEvent('click', {
+                            bubbles: true,
+                            cancelable: true,
+                            view: window
+                        });
+                        this.dispatchEvent(event);
+
+                        // For links, also try direct click as backup
+                        if (this.tagName === 'A' || this.closest('a')) {
+                            const link = this.tagName === 'A' ? this : this.closest('a');
+                            if (link && link.href) {
+                                link.click();
+                            }
+                        }
+                    }`,
+                    silent: true
+                });
+                await this.cdpSession.send('Runtime.releaseObject', { objectId: object.objectId });
+                programmaticClickSucceeded = true;
+                return;
+            }
+        } catch (e: any) {
+            programmaticError = e;
+            // Fall through to mouse click
+        }
+
+        // Strategy 2: Mouse click at coordinates (fallback)
+        let mouseClickSucceeded = false;
+        let mouseError: Error | null = null;
+
+        try {
+            const rect = await this.getBoundingBox(backendNodeId);
+            if (rect) {
+                const centerX = rect.x + rect.width / 2;
+                const centerY = rect.y + rect.height / 2;
+                await this.page.mouse.click(centerX, centerY);
+                mouseClickSucceeded = true;
+                return;
+            } else {
+                mouseError = new Error('Node has no bounding box');
+            }
+        } catch (e: any) {
+            mouseError = e;
+        }
+
+        // If both strategies failed, throw an error
+        if (!programmaticClickSucceeded && !mouseClickSucceeded) {
+            const errorMsg = `Click failed: programmatic=${programmaticError?.message || 'no objectId'}, mouse=${mouseError?.message || 'unknown'}`;
+            throw new Error(errorMsg);
+        }
+    }
+
+    /**
+     * Scrolls a DOM node into view by its backend node ID.
+     */
+    async scrollNodeIntoView(backendNodeId: number): Promise<void> {
+        if (!this.cdpSession) throw new Error("CDP Session not initialized.");
+
+        try {
+            await this.cdpSession.send('DOM.scrollIntoViewIfNeeded', {
+                backendNodeId
+            });
+        } catch (error: any) {
+            // Fallback: resolve to object and call scrollIntoView
+            try {
+                const { object } = await this.cdpSession.send('DOM.resolveNode', {
+                    backendNodeId
+                });
+                if (object.objectId) {
+                    await this.cdpSession.send('Runtime.callFunctionOn', {
+                        objectId: object.objectId,
+                        functionDeclaration: 'function() { this.scrollIntoView({ behavior: "instant", block: "center" }); }',
+                        silent: true
+                    });
+                    await this.cdpSession.send('Runtime.releaseObject', { objectId: object.objectId });
+                }
+            } catch (e) {
+                // Ignore scroll failures - element might already be visible
+            }
+        }
+    }
+
+    /**
+     * Resolves a backend node ID to a CDP RemoteObject for JavaScript operations.
+     */
+    async resolveNodeToObject(backendNodeId: number): Promise<{ objectId?: string } | null> {
+        if (!this.cdpSession) throw new Error("CDP Session not initialized.");
+
+        try {
+            const { object } = await this.cdpSession.send('DOM.resolveNode', {
+                backendNodeId
+            });
+            return object;
+        } catch (error) {
+            return null;
+        }
+    }
+
+    /**
+     * Releases a RemoteObject by its object ID.
+     */
+    async releaseObject(objectId: string): Promise<void> {
+        if (!this.cdpSession) return;
+        try {
+            await this.cdpSession.send('Runtime.releaseObject', { objectId });
+        } catch (e) {
+            // Ignore - object might already be released
+        }
+    }
+
+    /**
+     * Gets an attribute value from a node by backend ID.
+     */
+    async getNodeAttribute(backendNodeId: number, attributeName: string): Promise<string | null> {
+        if (!this.cdpSession) throw new Error("CDP Session not initialized.");
+
+        try {
+            const { object } = await this.cdpSession.send('DOM.resolveNode', {
+                backendNodeId
+            });
+            if (!object.objectId) return null;
+
+            const result = await this.cdpSession.send('Runtime.callFunctionOn', {
+                objectId: object.objectId,
+                functionDeclaration: `function(attr) { return this.getAttribute(attr); }`,
+                arguments: [{ value: attributeName }],
+                returnByValue: true,
+                silent: true
+            });
+
+            await this.cdpSession.send('Runtime.releaseObject', { objectId: object.objectId });
+            return result.result.value ?? null;
+        } catch (error) {
+            return null;
+        }
+    }
+
+    /**
+     * Gets the inner text of a node by backend ID.
+     */
+    async getNodeInnerText(backendNodeId: number): Promise<string | null> {
+        if (!this.cdpSession) throw new Error("CDP Session not initialized.");
+
+        try {
+            const { object } = await this.cdpSession.send('DOM.resolveNode', {
+                backendNodeId
+            });
+            if (!object.objectId) return null;
+
+            const result = await this.cdpSession.send('Runtime.callFunctionOn', {
+                objectId: object.objectId,
+                functionDeclaration: 'function() { return this.innerText; }',
+                returnByValue: true,
+                silent: true
+            });
+
+            await this.cdpSession.send('Runtime.releaseObject', { objectId: object.objectId });
+            return result.result.value ?? null;
+        } catch (error) {
+            return null;
+        }
+    }
+
+    /**
+     * Sets the value of an input element by backend ID.
+     */
+    async setNodeValue(backendNodeId: number, value: string): Promise<void> {
+        if (!this.cdpSession) throw new Error("CDP Session not initialized.");
+
+        try {
+            const { object } = await this.cdpSession.send('DOM.resolveNode', {
+                backendNodeId
+            });
+            if (!object.objectId) return;
+
+            await this.cdpSession.send('Runtime.callFunctionOn', {
+                objectId: object.objectId,
+                functionDeclaration: `function(val) {
+                    this.value = val;
+                    this.dispatchEvent(new Event('input', { bubbles: true }));
+                    this.dispatchEvent(new Event('change', { bubbles: true }));
+                }`,
+                arguments: [{ value }],
+                silent: true
+            });
+
+            await this.cdpSession.send('Runtime.releaseObject', { objectId: object.objectId });
+        } catch (error) {
+            throw new Error(`Failed to set node value: ${error}`);
+        }
+    }
+
+    /**
+     * Dispatches a keyboard event to a specific node.
+     */
+    async dispatchKeyToNode(backendNodeId: number, key: string, type: 'keydown' | 'keyup' | 'keypress' = 'keydown'): Promise<void> {
+        if (!this.cdpSession) throw new Error("CDP Session not initialized.");
+
+        try {
+            const { object } = await this.cdpSession.send('DOM.resolveNode', {
+                backendNodeId
+            });
+            if (!object.objectId) return;
+
+            await this.cdpSession.send('Runtime.callFunctionOn', {
+                objectId: object.objectId,
+                functionDeclaration: `function(key, type) {
+                    this.dispatchEvent(new KeyboardEvent(type, {
+                        key,
+                        bubbles: true,
+                        cancelable: true
+                    }));
+                }`,
+                arguments: [{ value: key }, { value: type }],
+                silent: true
+            });
+
+            await this.cdpSession.send('Runtime.releaseObject', { objectId: object.objectId });
+        } catch (error) {
+            // Ignore dispatch failures
+        }
+    }
+
+    /**
+     * Gets the CDP session for direct access (for advanced operations).
+     */
+    getCDPSession(): CDPSession | null {
+        return this.cdpSession;
+    }
+
+    // =========================================================================
+    // Dynamic Content Detection (MutationObserver)
+    // =========================================================================
+
+    private mutationCallback: ((mutations: MutationSummary[]) => void) | null = null;
+    private consoleHandler: ((msg: any) => void) | null = null;
+    private mutationObserverActive: boolean = false;
+
+    /**
+     * Starts monitoring DOM mutations for dynamic content changes.
+     * Uses MutationObserver injected into the page for immediate detection.
+     */
+    async startMutationObserver(callback: (mutations: MutationSummary[]) => void): Promise<void> {
+        if (!this.page) throw new Error("Page not initialized.");
+
+        // Clean up any existing observer first
+        await this.stopMutationObserver();
+
+        this.mutationCallback = callback;
+        this.mutationObserverActive = true;
+
+        // Create a named handler so we can remove it later
+        this.consoleHandler = (msg: any) => {
+            if (!this.mutationObserverActive) return;
+
+            const text = msg.text();
+            if (text.startsWith('[SR-MUTATION]')) {
+                try {
+                    const data = JSON.parse(text.replace('[SR-MUTATION]', ''));
+                    if (this.mutationCallback) {
+                        this.mutationCallback(data);
+                    }
+                } catch (e) {
+                    // Ignore parse errors
+                }
+            }
+        };
+
+        // Listen for console messages from the mutation observer
+        this.page.on('console', this.consoleHandler);
+
+        // Inject the MutationObserver script
+        await this.injectMutationObserverScript();
+    }
+
+    /**
+     * Re-injects the MutationObserver after page navigation.
+     * Call this from onPageLoad callback if mutation observation is active.
+     */
+    async reinjectMutationObserver(): Promise<void> {
+        if (!this.mutationObserverActive || !this.page) return;
+        await this.injectMutationObserverScript();
+    }
+
+    /**
+     * Injects the MutationObserver script into the page.
+     */
+    private async injectMutationObserverScript(): Promise<void> {
+        if (!this.page) return;
+
+        // Note: Using a string to avoid TypeScript helper injection issues in browser context
+        // Config values are interpolated from MUTATION_OBSERVER_CONFIG
+        const mutationObserverScript = `
+            (function() {
+                // Skip if already installed
+                if (window.__srMutationObserver) return;
+
+                // Configuration (injected from MUTATION_OBSERVER_CONFIG)
+                var RATE_LIMIT_MS = ${MUTATION_OBSERVER_CONFIG.rateLimitMs};
+                var MAX_MUTATIONS_PER_BATCH = ${MUTATION_OBSERVER_CONFIG.maxMutationsPerBatch};
+                var MAX_QUEUE_SIZE = ${MUTATION_OBSERVER_CONFIG.maxQueueSize};
+                var DUPLICATE_WINDOW_MS = ${MUTATION_OBSERVER_CONFIG.duplicateWindowMs};
+
+                var pendingMutations = [];
+                var batchTimeout = null;
+                var recentLiveRegions = {};
+
+                // Cleanup function exposed for disconnect
+                function cleanup() {
+                    if (batchTimeout) {
+                        clearTimeout(batchTimeout);
+                        batchTimeout = null;
+                    }
+                    pendingMutations = [];
+                    recentLiveRegions = {};
+                }
+
+                function isDuplicateLiveRegion(nodeId, content) {
+                    var key = nodeId + '::' + content;
+                    var now = Date.now();
+
+                    // Clean old entries
+                    for (var k in recentLiveRegions) {
+                        if (now - recentLiveRegions[k] > DUPLICATE_WINDOW_MS) {
+                            delete recentLiveRegions[k];
+                        }
+                    }
+
+                    if (recentLiveRegions[key]) {
+                        return true;  // Duplicate
+                    }
+
+                    recentLiveRegions[key] = now;
+                    return false;
+                }
+
+                function processMutationBatch() {
+                    batchTimeout = null;
+                    if (pendingMutations.length === 0) return;
+
+                    var toProcess = pendingMutations.slice(0, MAX_MUTATIONS_PER_BATCH);
+                    pendingMutations = pendingMutations.slice(MAX_MUTATIONS_PER_BATCH);
+
+                    if (pendingMutations.length > 0 && !batchTimeout) {
+                        batchTimeout = setTimeout(processMutationBatch, RATE_LIMIT_MS);
+                    }
+
+                    var summary = [];
+
+                    for (var i = 0; i < toProcess.length; i++) {
+                        var mutation = toProcess[i];
+
+                        if (mutation.type === 'childList' || mutation.type === 'characterData') {
+                            var target = mutation.target;
+                            var liveRegion = target.closest && target.closest('[aria-live]');
+                            if (!liveRegion && target.nodeType === Node.ELEMENT_NODE) {
+                                liveRegion = target.getAttribute && target.getAttribute('aria-live') ? target : null;
+                            }
+
+                            if (liveRegion) {
+                                var el = liveRegion instanceof Element ? liveRegion : (target.closest ? target.closest('[aria-live]') : null);
+                                if (el) {
+                                    var live = el.getAttribute('aria-live');
+                                    var busy = el.getAttribute('aria-busy');
+                                    var atomic = el.getAttribute('aria-atomic');
+
+                                    if (busy === 'true') continue;
+
+                                    var content = (el.textContent || '').trim();
+                                    var nodeId = el.id || el.getAttribute('data-sr-id') || null;
+
+                                    // Skip duplicates
+                                    if (isDuplicateLiveRegion(nodeId || 'unknown', content)) continue;
+
+                                    summary.push({
+                                        type: 'liveRegion',
+                                        politeness: live === 'assertive' ? 'assertive' : 'polite',
+                                        atomic: atomic === 'true',
+                                        content: content,
+                                        nodeId: nodeId
+                                    });
+                                }
+                            }
+                        }
+
+                        if (mutation.type === 'childList') {
+                            var addedNodes = mutation.addedNodes;
+                            for (var j = 0; j < addedNodes.length; j++) {
+                                var node = addedNodes[j];
+                                if (node.nodeType === Node.ELEMENT_NODE) {
+                                    var addedEl = node;
+                                    if (addedEl.matches && addedEl.matches('[role="dialog"], [role="alertdialog"], dialog')) {
+                                        var labelEl = addedEl.querySelector('[aria-labelledby]');
+                                        summary.push({
+                                            type: 'dialogOpened',
+                                            name: addedEl.getAttribute('aria-label') || (labelEl ? labelEl.textContent : null) || 'Dialog'
+                                        });
+                                    }
+                                    if (addedEl.matches && addedEl.matches('[role="alert"]')) {
+                                        summary.push({
+                                            type: 'alert',
+                                            content: (addedEl.textContent || '').trim()
+                                        });
+                                    }
+                                }
+                            }
+
+                            var removedNodes = mutation.removedNodes;
+                            for (var k = 0; k < removedNodes.length; k++) {
+                                var removedNode = removedNodes[k];
+                                if (removedNode.nodeType === Node.ELEMENT_NODE) {
+                                    var removedEl = removedNode;
+                                    if (removedEl.matches && removedEl.matches('[role="dialog"], [role="alertdialog"], dialog')) {
+                                        summary.push({ type: 'dialogClosed' });
+                                    }
+                                }
+                            }
+                        }
+
+                        if (mutation.type === 'attributes') {
+                            var attr = mutation.attributeName;
+                            var attrTarget = mutation.target;
+                            // Track more aria attributes
+                            if (attr === 'aria-expanded' || attr === 'aria-selected' ||
+                                attr === 'aria-checked' || attr === 'aria-pressed' ||
+                                attr === 'aria-hidden' || attr === 'aria-disabled' ||
+                                attr === 'aria-invalid' || attr === 'aria-current') {
+                                var value = attrTarget.getAttribute(attr);
+                                var attrName = attrTarget.getAttribute('aria-label') || ((attrTarget.textContent || '').trim().slice(0, 50));
+                                summary.push({
+                                    type: 'stateChange',
+                                    attribute: attr,
+                                    value: value,
+                                    name: attrName
+                                });
+                            }
+                        }
+                    }
+
+                    if (summary.length > 0) {
+                        console.log('[SR-MUTATION]' + JSON.stringify(summary));
+                    }
+                }
+
+                var observer = new MutationObserver(function(mutations) {
+                    // Enforce queue size limit - drop oldest if full
+                    var available = MAX_QUEUE_SIZE - pendingMutations.length;
+                    if (available <= 0) {
+                        // Queue is full, drop oldest mutations
+                        pendingMutations = pendingMutations.slice(mutations.length);
+                    }
+
+                    pendingMutations.push.apply(pendingMutations, mutations);
+
+                    if (!batchTimeout) {
+                        batchTimeout = setTimeout(processMutationBatch, RATE_LIMIT_MS);
+                    }
+                });
+
+                observer.observe(document.body, {
+                    childList: true,
+                    subtree: true,
+                    characterData: true,
+                    attributes: true,
+                    attributeFilter: [
+                        'aria-live', 'aria-expanded', 'aria-selected', 'aria-checked',
+                        'aria-pressed', 'aria-busy', 'aria-hidden', 'aria-disabled',
+                        'aria-invalid', 'aria-current'
+                    ]
+                });
+
+                // Store reference and cleanup function
+                window.__srMutationObserver = observer;
+                window.__srMutationCleanup = cleanup;
+            })();
+        `;
+
+        try {
+            await this.page.evaluate(mutationObserverScript);
+        } catch (error: any) {
+            if (!isNavigationError(error)) {
+                console.warn('[BrowserClient] Failed to inject mutation observer:', error.message);
+            }
+        }
+    }
+
+    /**
+     * Stops mutation observation and cleans up all resources.
+     */
+    async stopMutationObserver(): Promise<void> {
+        this.mutationObserverActive = false;
+        this.mutationCallback = null;
+
+        // Remove console listener
+        if (this.page && this.consoleHandler) {
+            this.page.off('console', this.consoleHandler);
+            this.consoleHandler = null;
+        }
+
+        // Disconnect observer and clear timeout in page
+        if (this.page) {
+            try {
+                await this.page.evaluate(() => {
+                    // Call cleanup to clear pending timeout
+                    if ((window as any).__srMutationCleanup) {
+                        (window as any).__srMutationCleanup();
+                        (window as any).__srMutationCleanup = null;
+                    }
+                    // Disconnect observer
+                    if ((window as any).__srMutationObserver) {
+                        (window as any).__srMutationObserver.disconnect();
+                        (window as any).__srMutationObserver = null;
+                    }
+                });
+            } catch (error: any) {
+                if (!isNavigationError(error)) {
+                    console.warn('[BrowserClient] Error stopping mutation observer:', error.message);
+                }
+            }
+        }
+    }
+
+    /**
+     * Check if mutation observer is currently active.
+     */
+    isMutationObserverActive(): boolean {
+        return this.mutationObserverActive;
+    }
+}
+
+/**
+ * Summary of a DOM mutation for screen reader announcement.
+ */
+export interface MutationSummary {
+    type: 'liveRegion' | 'dialogOpened' | 'dialogClosed' | 'alert' | 'stateChange';
+    politeness?: 'polite' | 'assertive';
+    atomic?: boolean;
+    content?: string;
+    name?: string;
+    attribute?: string;
+    value?: string;
+    nodeId?: string | null;
 }
