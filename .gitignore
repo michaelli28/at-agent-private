@@ -14,3 +14,48 @@ __pycache__/
 *.csv
 
 .env
+# Dependencies
+node_modules
+.pnpm-store
+
+# Production
+dist
+build
+
+# Environment Variables
+.env
+.env.local
+.env.*.local
+
+# Playwright
+test-results/
+playwright-report/
+blob-report/
+playwright/.cache/
+
+# Logs
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Editor
+.vscode/*
+!.vscode/extensions.json
+!.vscode/settings.json
+!.vscode/tasks.json
+!.vscode/launch.json
+.idea/
+
+# Temporary
+tmp/
+temp/
+.env
+transcripts/
+downloads/
+logs/
+scripts/prompts

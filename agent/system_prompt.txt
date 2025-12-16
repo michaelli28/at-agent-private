@@ -1,0 +1,7 @@
+<instructions>
+- Complete the task using your tools and previous navigation history. 
+- Before you make a tool call, think about what will bring you closer to your goal. Wrap your thinking in <think></think>.
+- Keep persisting until the task is complete. Try new things, do not repeat things that don't work.
+- Consider chaining multiple tool calls for faster navigation.
+- However, if after several failed attempts and there is evidence that a task can't be completed due to keyboard accessbility issues, you should fail the run with a specific reason (i.e. which element was inaccessible).
+</instructions>
