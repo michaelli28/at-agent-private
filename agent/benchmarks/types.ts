@@ -1,11 +1,10 @@
 import { AgentTrace } from '../src/types';
 
-// Success criteria types
-export type SuccessCriteria =
-  | { type: 'agent_success' }  // Just check if agent reports success
-  | { type: 'contains_text'; text: string }  // Reason must contain text (case-insensitive)
-  | { type: 'regex'; pattern: string }  // Reason must match regex
-  | { type: 'manual' };  // Requires human review
+// Success criteria - define what constitutes a successful run
+export interface SuccessCriteria {
+  expectAgentSuccess: boolean;  // What value should trace.success be? (true or false)
+  containsText?: string;  // Optional: reason must contain this text (case-insensitive)
+}
 
 // Test case definition
 export interface TestCase {
@@ -29,7 +28,7 @@ export interface BenchmarkRun {
 
   // Results
   success: boolean;
-  criteriaResult: 'pass' | 'fail' | 'pending';  // pending = manual review needed
+  criteriaResult: 'pass' | 'fail';
   stepsCount: number;
   loopsCount: number;
 
@@ -58,7 +57,6 @@ export interface TestCaseResults {
     totalRuns: number;
     passCount: number;
     failCount: number;
-    pendingCount: number;
     passRate: number;
     avgSteps: number;
     avgDurationMs: number;
@@ -94,6 +92,9 @@ export interface BenchmarkReport {
     }>;
   };
 }
+
+// Agent type for benchmarks
+export type BenchmarkAgentType = 'full' | 'minimal';
 
 // Event for real-time updates
 export type BenchmarkEvent =

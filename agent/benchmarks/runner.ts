@@ -1,8 +1,10 @@
 import * as fs from 'fs';
 import * as path from 'path';
 import { v4 as uuidv4 } from 'uuid';
+import { chromium, Browser, Page } from 'playwright';
 import { BrowserClient, ScreenReaderDriver } from '@adf/virtual-screen-reader';
 import { AgentOpenrouter } from '../src/AgentOpenrouter';
+import { AgentMinimal, MinimalTrace } from '../src/AgentMinimal';
 import { AgentTrace } from '../src/types';
 import {
   TestCase,
@@ -11,6 +13,7 @@ import {
   TestCaseResults,
   BenchmarkEvent,
   SuccessCriteria,
+  BenchmarkAgentType,
 } from './types';
 
 // Load test cases from JSON
@@ -30,28 +33,20 @@ export function getTestCase(id: string): TestCase | undefined {
 export function evaluateSuccessCriteria(
   criteria: SuccessCriteria,
   trace: AgentTrace
-): 'pass' | 'fail' | 'pending' {
-  switch (criteria.type) {
-    case 'agent_success':
-      return trace.success ? 'pass' : 'fail';
-
-    case 'contains_text':
-      const reason = (trace.error || trace.reason || '').toLowerCase();
-      const searchText = criteria.text.toLowerCase();
-      if (!trace.success) return 'fail';
-      return reason.includes(searchText) ? 'pass' : 'fail';
-
-    case 'regex':
-      const pattern = new RegExp(criteria.pattern, 'i');
-      if (!trace.success) return 'fail';
-      return pattern.test(trace.error || trace.reason || '') ? 'pass' : 'fail';
-
-    case 'manual':
-      return 'pending';
-
-    default:
-      return 'fail';
+): 'pass' | 'fail' {
+  // Check if agent success matches expected value
+  if (trace.success !== criteria.expectAgentSuccess) {
+    return 'fail';
   }
+
+  // If containsText is specified, check for it
+  if (criteria.containsText !== undefined) {
+    const reason = (trace.error || trace.reason || '').toLowerCase();
+    const searchText = criteria.containsText.toLowerCase();
+    return reason.includes(searchText) ? 'pass' : 'fail';
+  }
+
+  return 'pass';
 }
 
 // Results directory
@@ -101,7 +96,6 @@ function calculateStats(runs: BenchmarkRun[]): TestCaseResults['stats'] {
       totalRuns: 0,
       passCount: 0,
       failCount: 0,
-      pendingCount: 0,
       passRate: 0,
       avgSteps: 0,
       avgDurationMs: 0,
@@ -112,7 +106,6 @@ function calculateStats(runs: BenchmarkRun[]): TestCaseResults['stats'] {
 
   const passCount = runs.filter(r => r.criteriaResult === 'pass').length;
   const failCount = runs.filter(r => r.criteriaResult === 'fail').length;
-  const pendingCount = runs.filter(r => r.criteriaResult === 'pending').length;
 
   const steps = runs.map(r => r.stepsCount);
   const durations = runs.map(r => r.durationMs);
@@ -121,7 +114,6 @@ function calculateStats(runs: BenchmarkRun[]): TestCaseResults['stats'] {
     totalRuns: runs.length,
     passCount,
     failCount,
-    pendingCount,
     passRate: passCount / runs.length,
     avgSteps: steps.reduce((a, b) => a + b, 0) / runs.length,
     avgDurationMs: durations.reduce((a, b) => a + b, 0) / runs.length,
@@ -138,6 +130,7 @@ export interface BenchmarkOptions {
   apiKey?: string;
   onEvent?: (event: BenchmarkEvent) => void;
   name?: string;
+  agentType?: BenchmarkAgentType;
 }
 
 // Run benchmark
@@ -149,6 +142,7 @@ export async function runBenchmark(options: BenchmarkOptions): Promise<Benchmark
     apiKey,
     onEvent,
     name,
+    agentType = 'full',
   } = options;
 
   const reportId = uuidv4();
@@ -204,7 +198,7 @@ export async function runBenchmark(options: BenchmarkOptions): Promise<Benchmark
           });
         };
 
-        const run = await runSingleTest(testCase, model, apiKey, onLog);
+        const run = await runSingleTest(testCase, model, apiKey, onLog, agentType);
         testCaseRuns.push(run);
         allRuns.push(run);
 
@@ -234,51 +228,107 @@ async function runSingleTest(
   testCase: TestCase,
   model: string,
   apiKey?: string,
-  onLog?: (message: string) => void
+  onLog?: (message: string) => void,
+  agentType: BenchmarkAgentType = 'full'
 ): Promise<BenchmarkRun> {
   const runId = uuidv4();
   const startTime = Date.now();
 
-  let client: BrowserClient | null = null;
-  let driver: ScreenReaderDriver | null = null;
   let trace: AgentTrace;
   let initialScreenshot: string | undefined;
   let finalScreenshot: string | undefined;
 
+  // Resources for full agent
+  let client: BrowserClient | null = null;
+  let driver: ScreenReaderDriver | null = null;
+
+  // Resources for minimal agent
+  let browser: Browser | null = null;
+  let page: Page | null = null;
+
   try {
-    // Initialize browser and screen reader
-    client = new BrowserClient();
-    await client.launch(false); // headed mode
-    await client.goto(testCase.url);
+    if (agentType === 'minimal') {
+      // ========== MINIMAL AGENT (Playwright only) ==========
+      browser = await chromium.launch({ headless: false });
+      page = await browser.newPage();
+      await page.goto(testCase.url, { waitUntil: 'domcontentloaded' });
 
-    driver = new ScreenReaderDriver(client, onLog);
-    await driver.enable();
+      // Capture initial screenshot
+      try {
+        const buffer = await page.screenshot();
+        initialScreenshot = buffer.toString('base64');
+      } catch {
+        // Ignore screenshot errors
+      }
 
-    // Capture initial screenshot
-    try {
-      const buffer = await client.screenshot();
-      initialScreenshot = buffer.toString('base64');
-    } catch {
-      // Ignore screenshot errors
-    }
+      // Create minimal agent
+      const agent = new AgentMinimal({
+        page,
+        apiKey: apiKey || process.env['OPENROUTER_API_KEY'],
+        model,
+        onLog,
+      });
 
-    // Create agent
-    const agent = new AgentOpenrouter({
-      driver,
-      apiKey: apiKey || process.env['OPENROUTER_API_KEY'],
-      model,
-      onLog,
-    });
+      // Run agent
+      const minimalTrace: MinimalTrace = await agent.run(testCase.goal);
 
-    // Run agent
-    trace = await agent.run(testCase.goal);
+      // Convert MinimalTrace to AgentTrace format
+      // Note: MinimalStep has simpler types than AgentStep, so we cast
+      trace = {
+        goal: minimalTrace.goal,
+        success: minimalTrace.success,
+        steps: minimalTrace.steps.map(s => ({
+          stepNumber: s.stepNumber,
+          thought: s.thought,
+          action: { type: s.action } as any,
+          observation: { text: s.observation } as any,
+          result: { success: s.success } as any,
+        })),
+        error: minimalTrace.error,
+      };
 
-    // Capture final screenshot
-    try {
-      const buffer = await client.screenshot();
-      finalScreenshot = buffer.toString('base64');
-    } catch {
-      // Ignore screenshot errors
+      // Capture final screenshot
+      try {
+        const buffer = await page.screenshot();
+        finalScreenshot = buffer.toString('base64');
+      } catch {
+        // Ignore screenshot errors
+      }
+    } else {
+      // ========== FULL AGENT (BrowserClient + ScreenReaderDriver) ==========
+      client = new BrowserClient();
+      await client.launch(false); // headed mode
+      await client.goto(testCase.url);
+
+      driver = new ScreenReaderDriver(client, onLog);
+      await driver.enable();
+
+      // Capture initial screenshot
+      try {
+        const buffer = await client.screenshot();
+        initialScreenshot = buffer.toString('base64');
+      } catch {
+        // Ignore screenshot errors
+      }
+
+      // Create agent
+      const agent = new AgentOpenrouter({
+        driver,
+        apiKey: apiKey || process.env['OPENROUTER_API_KEY'],
+        model,
+        onLog,
+      });
+
+      // Run agent
+      trace = await agent.run(testCase.goal);
+
+      // Capture final screenshot
+      try {
+        const buffer = await client.screenshot();
+        finalScreenshot = buffer.toString('base64');
+      } catch {
+        // Ignore screenshot errors
+      }
     }
   } catch (error: any) {
     trace = {
@@ -288,6 +338,7 @@ async function runSingleTest(
       error: error.message || 'Unknown error',
     };
   } finally {
+    // Clean up full agent resources
     if (driver) {
       try {
         await driver.disable();
@@ -298,6 +349,18 @@ async function runSingleTest(
     if (client) {
       try {
         await client.close();
+      } catch {
+        // Ignore cleanup errors
+      }
+    }
+
+    // Clean up minimal agent resources
+    if (page) {
+      page = null;
+    }
+    if (browser) {
+      try {
+        await browser.close();
       } catch {
         // Ignore cleanup errors
       }

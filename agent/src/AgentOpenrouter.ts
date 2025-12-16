@@ -100,6 +100,45 @@ const TOOLS = [
   {
     type: 'function' as const,
     function: {
+      name: 'press_shift_tab',
+      description: 'Jump to the previous interactive element. Use to go back if you passed an interactive element.',
+      parameters: {
+        type: 'object',
+        properties: {},
+      },
+    },
+  },
+  {
+    type: 'function' as const,
+    function: {
+      name: 'go_back',
+      description: 'Navigate back to the previous page. Use when you clicked the wrong link or need to return to the previous page.',
+      parameters: {
+        type: 'object',
+        properties: {},
+      },
+    },
+  },
+  {
+    type: 'function' as const,
+    function: {
+      name: 'type_text',
+      description: 'Type text into the currently focused input field. Navigate to a text field first, then use this to enter text.',
+      parameters: {
+        type: 'object',
+        properties: {
+          text: {
+            type: 'string',
+            description: 'The text to type into the input field',
+          },
+        },
+        required: ['text'],
+      },
+    },
+  },
+  {
+    type: 'function' as const,
+    function: {
       name: 'finish_run',
       description: 'Call when you have completed the goal or determined it cannot be done. Set success=true if goal achieved, false otherwise.',
       parameters: {
@@ -253,8 +292,8 @@ export class AgentOpenrouter {
 
         // Retry on network errors
         const isNetworkError = error.message?.includes('fetch') ||
-                               error.code === 'ECONNRESET' ||
-                               error.code === 'ETIMEDOUT';
+          error.code === 'ECONNRESET' ||
+          error.code === 'ETIMEDOUT';
 
         if (isNetworkError && attempt < maxRetries) {
           const delay = Math.min(1000 * Math.pow(2, attempt - 1), 10000);
@@ -283,8 +322,8 @@ export class AgentOpenrouter {
     try {
       const initialSnapshot = await this.driver.getPerceptualOutput();
 
-      const systemMessage = { role: 'system', content: SYSTEM_PROMPT };
-      const initialObservation = this.buildObservationMessage(goal, initialSnapshot);
+      const systemMessage = { role: 'system', content: `${SYSTEM_PROMPT}\n\n<goal>${goal}</goal>` };
+      const initialObservation = this.buildObservationMessage(initialSnapshot);
 
       const messages: any[] = [systemMessage, initialObservation];
 
@@ -412,7 +451,7 @@ export class AgentOpenrouter {
               break;
             }
 
-            const map = mapToolToAction(toolName);
+            const map = mapToolToAction(toolName, args);
 
             if (map.action) {
               const actionResult = await this.driver.performAction(map.action);
@@ -446,7 +485,7 @@ export class AgentOpenrouter {
               });
 
               // Interleaved Observation (User)
-              const observationMsg = this.buildObservationMessage(goal, actionResult.snapshot);
+              const observationMsg = this.buildObservationMessage(actionResult.snapshot);
               messages.push(observationMsg);
 
               // Emit observation
@@ -510,25 +549,12 @@ export class AgentOpenrouter {
     }
   }
 
-  private buildObservationMessage(goal: string, snapshot?: PerceptualSnapshot) {
+  private buildObservationMessage(snapshot?: PerceptualSnapshot) {
     const snapshotText = formatSnapshot(snapshot);
+    const url = snapshot?.pageUrl || '';
     return {
       role: 'user',
-      content: `
-<observation_context>
-  <user_goal>
-    ${goal}
-  </user_goal>
-
-  <screen_reader_status>
-    ${snapshotText}
-  </screen_reader_status>
-
-  <instructions>
-    Based on the screen reader output above, determine the next necessary action to progress towards the goal. Select the appropriate tool.
-  </instructions>
-</observation_context>
-`
+      content: `<url>${url}</url>\n<screen_reader_status>${snapshotText}</screen_reader_status>`
     };
   }
 }
@@ -546,7 +572,7 @@ function normalizeArgs(raw: unknown): Record<string, any> {
   return {};
 }
 
-function mapToolToAction(name: string | undefined): { action?: UserAction; message?: string } {
+function mapToolToAction(name: string | undefined, args: Record<string, any> = {}): { action?: UserAction; message?: string } {
   switch (name) {
     case 'press_arrow_down':
       return { action: { type: 'KEY_PRESS', key: 'ArrowDown' } };
@@ -560,6 +586,12 @@ function mapToolToAction(name: string | undefined): { action?: UserAction; messa
       return { action: { type: 'KEY_PRESS', key: 'Shift+H' } };
     case 'press_tab':
       return { action: { type: 'KEY_PRESS', key: 'Tab' } };
+    case 'press_shift_tab':
+      return { action: { type: 'KEY_PRESS', key: 'Shift+Tab' } };
+    case 'go_back':
+      return { action: { type: 'GO_BACK' } };
+    case 'type_text':
+      return { action: { type: 'TYPE', text: args.text || '' } };
     case 'instant_traverse':
       return { action: { type: 'KEY_PRESS', key: 'Shift+A' } };
     default:

@@ -4,12 +4,27 @@
       "id": "bhs-leadership",
       "name": "Find BHS Leadership Page",
       "url": "https://www.bloomfield.org/",
-      "goal": "Find the BHS leadership page",
+      "goal": "Navigate to the About BHS dropdown. Then within the dropdown click BHS Leadership. Then, find the job title of Samer Alsayed Suliman. Report success once you find the title, with your reason being the job title.",
       "maxSteps": -1,
       "successCriteria": {
-        "type": "agent_success"
+        "expectAgentSuccess": true,
+        "containsText": "Director of Technology"
       },
-      "tags": ["navigation", "school", "complex"]
+      "tags": [
+        "school"
+      ]
+    },
+    {
+      "id": "mich-gov-corrections",
+      "name": "Find Corrections Contact Page",
+      "url": "https://www.michigan.gov/som",
+      "goal": "Click the government dropdown. Then click the branches of government. Then click the Executive Branch. Then click the MDOC Organization link. Report success after reaching the Contact Us page.",
+      "successCriteria": {
+        "expectAgentSuccess": true
+      },
+      "tags": [
+        "government"
+      ]
     }
   ]
 }
