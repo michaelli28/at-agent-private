@@ -4,6 +4,8 @@
  * This driver uses the Chrome DevTools Protocol Accessibility API to navigate
  * the accessibility tree directly, providing accurate screen reader behavior
  * without relying on DOM heuristics.
+ *
+ * Dynamic content detection is handled by MutationObserver (not polling).
  */
 
 import { IAccessibilityDriver } from './IAccessibilityDriver';
@@ -18,7 +20,6 @@ import {
     FORMS_MODE_ROLES,
     NavigationCommand,
     NavigableAXNode,
-    LiveRegionAnnouncement,
     InteractionMode,
     Rect,
 } from './types';
@@ -47,10 +48,6 @@ export interface ScreenReaderDriverOptions {
     verbose?: boolean;
     /** Cache max age in milliseconds */
     cacheMaxAge?: number;
-    /** Live region poll interval in milliseconds */
-    liveRegionPollInterval?: number;
-    /** Enable live region monitoring */
-    enableLiveRegions?: boolean;
     /** Timing configuration for operations */
     timing?: TimingOptions;
 }
@@ -72,8 +69,6 @@ const DEFAULT_TIMING: Required<TimingOptions> = {
 const DEFAULT_OPTIONS: Required<Omit<ScreenReaderDriverOptions, 'timing'>> & { timing: Required<TimingOptions> } = {
     verbose: false,
     cacheMaxAge: 5000,
-    liveRegionPollInterval: 500,
-    enableLiveRegions: true,
     timing: DEFAULT_TIMING,
 };
 
@@ -94,7 +89,7 @@ export class ScreenReaderDriver implements IAccessibilityDriver {
     // State
     private currentUrl: string = "";
     private lastSpokenText: string = "";
-    private pendingLiveAnnouncements: LiveRegionAnnouncement[] = [];
+    private pendingLiveAnnouncements: string[] = [];
     private interactionMode: InteractionMode = 'browse';
 
     // Timing shortcuts for cleaner code
@@ -119,8 +114,6 @@ export class ScreenReaderDriver implements IAccessibilityDriver {
         this.announcer = new AXAnnouncementGenerator();
         this.cache = new AXTreeCache(client, this.navigator, {
             maxAge: this.options.cacheMaxAge,
-            pollInterval: this.options.liveRegionPollInterval,
-            enableLiveRegions: this.options.enableLiveRegions,
         });
     }
 
@@ -135,11 +128,6 @@ export class ScreenReaderDriver implements IAccessibilityDriver {
         // Store initial URL
         this.currentUrl = await this.client.getCurrentUrl();
 
-        // Set up live region callback (polling-based backup)
-        this.cache.onLiveRegion((announcement) => {
-            this.handleLiveRegionAnnouncement(announcement);
-        });
-
         // Set up page load handler
         this.client.onPageLoad(async () => {
             await this.handlePageLoad();
@@ -148,50 +136,36 @@ export class ScreenReaderDriver implements IAccessibilityDriver {
         // Initial tree load and move to first interesting node
         await this.initializeNavigation();
 
-        // Start MutationObserver for immediate dynamic content detection
+        // Start MutationObserver for dynamic content detection
         await this.client.startMutationObserver((mutations) => {
             this.handleMutations(mutations);
         });
-
-        // Start live region polling as backup (less frequent)
-        if (this.options.enableLiveRegions) {
-            this.cache.startLiveRegionPolling();
-        }
     }
 
     /**
      * Handles DOM mutations detected by MutationObserver.
+     * This is the ONLY source of dynamic content announcements.
      */
     private handleMutations(mutations: MutationSummary[]): void {
         for (const mutation of mutations) {
             switch (mutation.type) {
                 case 'liveRegion':
-                    // Immediate live region announcement
                     if (mutation.content) {
-                        const announcement = {
-                            message: mutation.content,
-                            politeness: mutation.politeness || 'polite',
-                            timestamp: Date.now(),
-                            nodeId: mutation.nodeId || '',
-                        };
-
-                        if (announcement.politeness === 'assertive') {
+                        if (mutation.politeness === 'assertive') {
                             // Assertive: interrupt immediately
-                            this.lastSpokenText = announcement.message;
-                            this.log(`[LiveRegion:assertive] ${announcement.message}`);
+                            this.lastSpokenText = mutation.content;
+                            this.log(`[LiveRegion:assertive] ${mutation.content}`);
                         } else {
                             // Polite: queue for next output
-                            this.pendingLiveAnnouncements.push(announcement as LiveRegionAnnouncement);
-                            this.log(`[LiveRegion:polite] ${announcement.message}`);
+                            this.pendingLiveAnnouncements.push(mutation.content);
+                            this.log(`[LiveRegion:polite] ${mutation.content}`);
                         }
                     }
                     break;
 
                 case 'dialogOpened':
-                    // Announce dialog and optionally move focus
                     this.lastSpokenText = `Dialog: ${mutation.name || 'opened'}`;
                     this.log(`[Dialog] Opened: ${mutation.name}`);
-                    // Invalidate cache to pick up new dialog content
                     this.cache.invalidate();
                     break;
 
@@ -208,10 +182,11 @@ export class ScreenReaderDriver implements IAccessibilityDriver {
                     break;
 
                 case 'stateChange':
-                    // State changes on current element
                     this.log(`[StateChange] ${mutation.attribute}=${mutation.value} on "${mutation.name}"`);
-                    // Don't announce every state change - too noisy
-                    // Only announce if it's the current element
+                    // Invalidate cache when expansion state changes so aria-controls relationships are re-resolved
+                    if (mutation.attribute === 'aria-expanded') {
+                        this.cache.invalidate();
+                    }
                     break;
             }
         }
@@ -219,7 +194,6 @@ export class ScreenReaderDriver implements IAccessibilityDriver {
 
     async disable(): Promise<void> {
         this.enabled = false;
-        this.cache.stopLiveRegionPolling();
         this.cache.dispose();
         await this.client.stopMutationObserver();
         this.interactionMode = 'browse';
@@ -246,6 +220,8 @@ export class ScreenReaderDriver implements IAccessibilityDriver {
                 await this.handleKeyPress(action.key);
             } else if (action.type === 'TYPE' && action.text) {
                 await this.handleType(action.text);
+            } else if (action.type === 'GO_BACK') {
+                await this.handleGoBack();
             }
 
             // Check for navigation after action
@@ -270,9 +246,7 @@ export class ScreenReaderDriver implements IAccessibilityDriver {
         // Include any pending live region announcements
         let text = this.lastSpokenText;
         if (this.pendingLiveAnnouncements.length > 0) {
-            const liveMessages = this.pendingLiveAnnouncements
-                .map(a => a.message)
-                .join(', ');
+            const liveMessages = this.pendingLiveAnnouncements.join(', ');
             text = liveMessages + (text ? ` | ${text}` : '');
             this.pendingLiveAnnouncements = [];
         }
@@ -544,16 +518,44 @@ export class ScreenReaderDriver implements IAccessibilityDriver {
                 await this.client.clickNode(currentNode.backendDOMNodeId);
                 await this.sleep(this.timing.clickDelay);
 
-                // Check if button state changed (expanded/collapsed)
+                // Check if button state changed and if focus moved (for dropdowns)
                 try {
                     await this.cache.refresh();
                     const updatedNode = this.cache.findByNodeId(currentNode.nodeId);
 
+                    // First check if focus moved to a different element (dropdown behavior)
+                    // This is how VoiceOver handles dropdowns - it follows DOM focus
+                    const focusedNode = await this.findFocusedNode();
+
+                    if (focusedNode && focusedNode.nodeId !== currentNode.nodeId) {
+                        // Focus moved to a different element - follow it (like VoiceOver)
+                        this.log(`[Activate] Focus moved from "${currentNode.computedName}" to "${focusedNode.computedName}" (${focusedNode.computedRole})`);
+
+                        // Update navigator position to the focused node
+                        const moved = this.navigator.setCurrentByNodeId(focusedNode.nodeId) ||
+                                      this.navigator.setCurrentByBackendNodeId(focusedNode.backendDOMNodeId!);
+
+                        if (moved) {
+                            // Announce the button state change followed by the focused element
+                            let announcement = '';
+                            if (updatedNode) {
+                                const stateChange = this.getStateChangeAnnouncement(currentNode, updatedNode);
+                                if (stateChange) {
+                                    announcement = `${currentNode.computedName}, ${stateChange}. `;
+                                }
+                            }
+                            announcement += this.announcer.generateAnnouncement(focusedNode);
+                            this.lastSpokenText = announcement;
+                            await this.highlightNode(focusedNode);
+                            return; // Skip normal button handling
+                        }
+                    }
+
+                    // Normal button handling (no focus change)
                     if (updatedNode) {
-                        if (updatedNode.states.expanded === true && currentNode.states.expanded === false) {
-                            this.lastSpokenText = this.announcer.generateActivationAnnouncement(updatedNode, 'expanded');
-                        } else if (updatedNode.states.expanded === false && currentNode.states.expanded === true) {
-                            this.lastSpokenText = this.announcer.generateActivationAnnouncement(updatedNode, 'collapsed');
+                        const stateAnnouncement = this.getStateChangeAnnouncement(currentNode, updatedNode);
+                        if (stateAnnouncement) {
+                            this.lastSpokenText = this.announcer.generateActivationAnnouncement(updatedNode, stateAnnouncement);
                         } else {
                             this.lastSpokenText = this.announcer.generateActivationAnnouncement(updatedNode, 'activated');
                         }
@@ -561,7 +563,6 @@ export class ScreenReaderDriver implements IAccessibilityDriver {
                         this.lastSpokenText = this.announcer.generateActivationAnnouncement(currentNode, 'activated');
                     }
                 } catch (refreshError) {
-                    // Cache refresh failed - use original node for announcement
                     this.log(`[Activate] Cache refresh failed: ${refreshError}`);
                     this.lastSpokenText = this.announcer.generateActivationAnnouncement(currentNode, 'activated');
                 }
@@ -617,6 +618,49 @@ export class ScreenReaderDriver implements IAccessibilityDriver {
         await this.highlightCurrentNode();
     }
 
+    /**
+     * Detects state changes between two nodes and returns an appropriate announcement.
+     * Handles: expanded, pressed, checked, selected
+     */
+    private getStateChangeAnnouncement(oldNode: NavigableAXNode, newNode: NavigableAXNode): string | null {
+        // Expanded state
+        if (newNode.states.expanded === true && oldNode.states.expanded !== true) {
+            return 'expanded';
+        }
+        if (newNode.states.expanded === false && oldNode.states.expanded === true) {
+            return 'collapsed';
+        }
+
+        // Pressed state (toggle buttons)
+        if (newNode.states.pressed === true && oldNode.states.pressed !== true) {
+            return 'pressed';
+        }
+        if (newNode.states.pressed === false && oldNode.states.pressed === true) {
+            return 'not pressed';
+        }
+
+        // Checked state
+        if (newNode.states.checked === true && oldNode.states.checked !== true) {
+            return 'checked';
+        }
+        if (newNode.states.checked === false && oldNode.states.checked === true) {
+            return 'unchecked';
+        }
+        if (newNode.states.checked === 'mixed') {
+            return 'partially checked';
+        }
+
+        // Selected state
+        if (newNode.states.selected === true && oldNode.states.selected !== true) {
+            return 'selected';
+        }
+        if (newNode.states.selected === false && oldNode.states.selected === true) {
+            return 'not selected';
+        }
+
+        return null;
+    }
+
     private async handleSpace(): Promise<void> {
         const currentNode = this.navigator.getCurrentNode();
         if (!currentNode?.backendDOMNodeId) {
@@ -650,6 +694,34 @@ export class ScreenReaderDriver implements IAccessibilityDriver {
         // Refresh tree to see updated state
         await this.cache.refresh();
         this.lastSpokenText = 'Escaped';
+    }
+
+    private async handleGoBack(): Promise<void> {
+        this.log('[GoBack] Navigating to previous page');
+
+        try {
+            await this.client.goBack();
+
+            // Wait for page to settle
+            await this.sleep(this.timing.navigationDelay);
+
+            // Reset state for new page
+            this.interactionMode = 'browse';
+            this.cache.invalidate();
+
+            // Re-initialize navigation on the new page
+            await this.initializeNavigation();
+
+            // Re-inject MutationObserver
+            await this.client.reinjectMutationObserver();
+
+            const pageTitle = await this.client.getTitle();
+            this.lastSpokenText = `Navigated back. ${pageTitle}`;
+
+        } catch (error: any) {
+            this.log(`[GoBack] Error: ${error.message}`);
+            this.lastSpokenText = 'Could not go back';
+        }
     }
 
     private async handleType(text: string): Promise<void> {
@@ -717,6 +789,9 @@ export class ScreenReaderDriver implements IAccessibilityDriver {
             this.log(`[ScreenReaderDriver] Page load detected: "${pageTitle}"`);
             this.currentUrl = newUrl;
 
+            // Reset interaction mode on page load
+            this.interactionMode = 'browse';
+
             // Invalidate cache
             this.cache.invalidate();
 
@@ -750,6 +825,9 @@ export class ScreenReaderDriver implements IAccessibilityDriver {
                     this.log(`[ScreenReaderDriver] Navigation detected: ${newUrl}`);
                     this.currentUrl = newUrl;
 
+                    // Reset interaction mode on navigation
+                    this.interactionMode = 'browse';
+
                     // Invalidate cache and reinitialize
                     this.cache.invalidate();
                     await this.sleep(this.timing.navigationDelay);
@@ -766,22 +844,6 @@ export class ScreenReaderDriver implements IAccessibilityDriver {
         }
 
         return false;
-    }
-
-    // =========================================================================
-    // Live Regions
-    // =========================================================================
-
-    private handleLiveRegionAnnouncement(announcement: LiveRegionAnnouncement): void {
-        this.log(`[LiveRegion] ${announcement.politeness}: ${announcement.message}`);
-
-        // Assertive announcements interrupt immediately
-        if (announcement.politeness === 'assertive') {
-            this.lastSpokenText = announcement.message;
-        } else {
-            // Polite announcements queue up
-            this.pendingLiveAnnouncements.push(announcement);
-        }
     }
 
     // =========================================================================
@@ -871,6 +933,121 @@ export class ScreenReaderDriver implements IAccessibilityDriver {
         const currentNode = this.navigator.getCurrentNode();
         if (currentNode) {
             await this.highlightNode(currentNode);
+        }
+    }
+
+    // =========================================================================
+    // Focus Detection
+    // =========================================================================
+
+    /**
+     * Finds the currently focused node in the AX tree.
+     * Uses multiple strategies:
+     * 1. Use CDP to get the backendNodeId of the focused element
+     * 2. Check focused property in AX tree nodes
+     * 3. Query DOM activeElement and match by properties
+     *
+     * This is crucial for following focus after activating dropdowns.
+     */
+    private async findFocusedNode(): Promise<NavigableAXNode | null> {
+        const tree = await this.cache.getTree();
+        if (!tree) return null;
+
+        // Strategy 1: Use CDP to get focused element's backendNodeId directly (most reliable)
+        try {
+            const focusedBackendId = await this.client.getFocusedBackendNodeId();
+            if (focusedBackendId) {
+                const node = this.cache.findByBackendNodeId(focusedBackendId);
+                if (node) {
+                    this.log(`[Focus] Found via CDP backendNodeId: "${node.computedName}" (${node.computedRole})`);
+                    return node;
+                }
+                // BackendNodeId found but not in interestingNodes - try to find nearest interesting parent
+                for (const interestingNode of tree.interestingNodes) {
+                    if (interestingNode.backendDOMNodeId === focusedBackendId) {
+                        this.log(`[Focus] Found in interestingNodes: "${interestingNode.computedName}" (${interestingNode.computedRole})`);
+                        return interestingNode;
+                    }
+                }
+            }
+        } catch (e) {
+            // Continue to other strategies
+        }
+
+        // Strategy 2: Check AX tree focused property
+        for (const node of tree.flatNodes) {
+            if (node.states.focused === true) {
+                this.log(`[Focus] Found via AX tree focused property: "${node.computedName}" (${node.computedRole})`);
+                return node;
+            }
+        }
+
+        // Strategy 3: Query DOM activeElement and match by properties
+        const page = this.client.getPage();
+        if (!page) return null;
+
+        try {
+            // Get the backend node ID of the focused element from the DOM
+            const focusedInfo = await page.evaluate(async () => {
+                const focused = document.activeElement;
+                if (!focused || focused === document.body || focused === document.documentElement) {
+                    return null;
+                }
+
+                return {
+                    tagName: focused.tagName.toLowerCase(),
+                    id: focused.id || null,
+                    className: focused.className || null,
+                    textContent: (focused.textContent || '').trim().substring(0, 100),
+                    href: (focused as HTMLAnchorElement).href || null,
+                };
+            });
+
+            if (!focusedInfo) {
+                this.log('[Focus] DOM activeElement is body or null');
+                return null;
+            }
+
+            this.log(`[Focus] DOM activeElement: ${focusedInfo.tagName}#${focusedInfo.id || ''} "${focusedInfo.textContent?.substring(0, 30)}..."`);
+
+            // Try to match by various properties
+            for (const node of tree.interestingNodes) {
+                // Match by ID first (most reliable)
+                if (focusedInfo.id && node.nodeId.includes(focusedInfo.id)) {
+                    return node;
+                }
+
+                // Match by name and role
+                const nameMatch = node.computedName &&
+                    focusedInfo.textContent &&
+                    (node.computedName.trim() === focusedInfo.textContent.trim() ||
+                     focusedInfo.textContent.includes(node.computedName.trim()));
+
+                const roleMatch =
+                    (focusedInfo.tagName === 'a' && node.computedRole === 'link') ||
+                    (focusedInfo.tagName === 'button' && node.computedRole === 'button') ||
+                    (focusedInfo.tagName === 'input' && (node.computedRole === 'textbox' || node.computedRole === 'searchbox'));
+
+                if (nameMatch && roleMatch) {
+                    this.log(`[Focus] Matched by name+role: "${node.computedName}" (${node.computedRole})`);
+                    return node;
+                }
+
+                // Match by href for links
+                if (focusedInfo.href && node.computedRole === 'link') {
+                    // Check if this link has similar text content
+                    if (node.computedName && focusedInfo.textContent?.includes(node.computedName)) {
+                        this.log(`[Focus] Matched link by text: "${node.computedName}"`);
+                        return node;
+                    }
+                }
+            }
+
+            this.log('[Focus] Could not match DOM activeElement to AX tree node');
+            return null;
+        } catch (error: any) {
+            this.log(`[Focus] Error finding focused node: ${error.message}`);
+            return null;
         }
     }
 

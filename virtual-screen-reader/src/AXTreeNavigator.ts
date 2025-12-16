@@ -448,10 +448,41 @@ export class AXTreeNavigator {
 
     /**
      * Moves to the next interesting node.
+     * If current node is expanded and has aria-controls, jump into controlled content.
      */
     moveNext(): NavigationResult {
         if (this.interestingNodes.length === 0) {
             return { node: null, message: 'No content', success: false };
+        }
+
+        const current = this.getCurrentNode();
+
+        // Debug: Log current state
+        console.log(`[Navigate] moveNext from "${current?.computedName}" (${current?.computedRole}), expanded=${current?.states.expanded}, controlledNodes=${current?.controlledNodes?.length || 0}`);
+
+        // If current node is expanded AND has controlled nodes, jump to controlled content
+        if (current?.states.expanded && current.controlledNodes && current.controlledNodes.length > 0) {
+            const controlledNode = current.controlledNodes[0];
+            console.log(`[Navigate] Has controlled node: "${controlledNode.computedName}" (${controlledNode.computedRole})`);
+
+            // Find the first interesting node within or equal to the controlled node
+            const targetNode = this.findFirstInterestingInSubtree(controlledNode);
+            console.log(`[Navigate] First interesting in subtree: ${targetNode ? `"${targetNode.computedName}" (${targetNode.computedRole})` : 'NONE'}`);
+
+            if (targetNode) {
+                const targetIndex = this.interestingNodes.indexOf(targetNode);
+                console.log(`[Navigate] Target index in interestingNodes: ${targetIndex}`);
+
+                if (targetIndex >= 0) {
+                    this.currentIndex = targetIndex;
+                    console.log(`[Navigate] ✓ Jumped into controlled content: "${targetNode.computedName}" (${targetNode.computedRole})`);
+                    return {
+                        node: targetNode,
+                        message: '',
+                        success: true,
+                    };
+                }
+            }
         }
 
         // Handle initial state (currentIndex = -1) or normal forward navigation
@@ -473,11 +504,59 @@ export class AXTreeNavigator {
     }
 
     /**
+     * Finds the first interesting node within a subtree (including the node itself).
+     */
+    private findFirstInterestingInSubtree(node: NavigableAXNode): NavigableAXNode | null {
+        // If this node is interesting, return it
+        if (node.isInteresting) {
+            return node;
+        }
+
+        // Otherwise, search children in order
+        for (const child of node.children) {
+            const found = this.findFirstInterestingInSubtree(child);
+            if (found) return found;
+        }
+
+        return null;
+    }
+
+    /**
      * Moves to the previous interesting node.
+     * If at the start of controlled content, return to the controller.
      */
     movePrev(): NavigationResult {
         if (this.interestingNodes.length === 0) {
             return { node: null, message: 'No content', success: false };
+        }
+
+        const current = this.getCurrentNode();
+
+        // If current node has a controller, check if we should jump back to it
+        if (current?.controllerNode) {
+            // Check if the previous node in the flat list is NOT controlled by the same controller
+            // This means we're at the "start" of the controlled content
+            const prevIndex = this.currentIndex - 1;
+            const prevNode = prevIndex >= 0 ? this.interestingNodes[prevIndex] : null;
+
+            // If prev node is the controller itself, or has a different/no controller,
+            // we're at the boundary - jump to controller
+            const isAtBoundary = !prevNode ||
+                prevNode === current.controllerNode ||
+                prevNode.controllerNode !== current.controllerNode;
+
+            if (isAtBoundary) {
+                const controllerIndex = this.interestingNodes.indexOf(current.controllerNode);
+                if (controllerIndex >= 0) {
+                    this.currentIndex = controllerIndex;
+                    console.log(`[Navigate] Returned to controller: "${current.controllerNode.computedName}"`);
+                    return {
+                        node: current.controllerNode,
+                        message: '',
+                        success: true,
+                    };
+                }
+            }
         }
 
         if (this.currentIndex > 0) {

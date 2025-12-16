@@ -97,6 +97,10 @@ export interface NavigableAXNode extends AXNode {
     computedName: string;
     /** Parsed state/property flags */
     states: AXStateFlags;
+    /** Nodes controlled by this element (from aria-controls) */
+    controlledNodes?: NavigableAXNode[];
+    /** Node that controls this element (reverse of aria-controls) */
+    controllerNode?: NavigableAXNode;
 }
 
 /**
@@ -263,16 +267,6 @@ export interface TableContext {
     currentCol: number;
     rowCount: number;
     colCount: number;
-}
-
-/**
- * Live region announcement.
- */
-export interface LiveRegionAnnouncement {
-    message: string;
-    politeness: 'polite' | 'assertive';
-    timestamp: number;
-    nodeId: string;
 }
 
 /**

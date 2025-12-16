@@ -212,6 +212,14 @@ export class BrowserClient {
     }
 
     /**
+     * Navigates back to the previous page in browser history.
+     */
+    async goBack(): Promise<void> {
+        if (!this.page) throw new Error("Page not initialized.");
+        await this.page.goBack({ waitUntil: 'domcontentloaded' });
+    }
+
+    /**
      * Closes the browser instance or disconnects from remote.
      */
     async close(): Promise<void> {
@@ -755,6 +763,81 @@ export class BrowserClient {
      */
     getCDPSession(): CDPSession | null {
         return this.cdpSession;
+    }
+
+    /**
+     * Gets the backendDOMNodeId of the currently focused element.
+     * Returns null if no element is focused (focus on body/document).
+     */
+    async getFocusedBackendNodeId(): Promise<number | null> {
+        if (!this.cdpSession || !this.page) return null;
+
+        try {
+            // Get the focused element from the page
+            const result = await this.page.evaluate(() => {
+                const focused = document.activeElement;
+                if (!focused || focused === document.body || focused === document.documentElement) {
+                    return null;
+                }
+                return true; // Element exists and is not body
+            });
+
+            if (!result) return null;
+
+            // Use CDP to get the focused node
+            const { root } = await this.cdpSession.send('DOM.getDocument', { depth: 0 });
+
+            // DOM.getFocusedElementFor is not available, but we can use querySelector on :focus
+            try {
+                const { nodeId } = await this.cdpSession.send('DOM.querySelector', {
+                    nodeId: root.nodeId,
+                    selector: ':focus'
+                });
+
+                if (!nodeId || nodeId === 0) return null;
+
+                const { node } = await this.cdpSession.send('DOM.describeNode', { nodeId });
+                return node.backendNodeId ?? null;
+            } catch (queryError) {
+                // :focus selector might fail, try alternative approach
+                return null;
+            }
+        } catch (error) {
+            return null;
+        }
+    }
+
+    /**
+     * Finds an element by its DOM ID attribute and returns its backendDOMNodeId.
+     * Used to resolve aria-controls targets.
+     */
+    async getBackendNodeIdByDomId(domId: string): Promise<number | null> {
+        if (!this.cdpSession || !this.page) return null;
+
+        try {
+            // Use Runtime.evaluate to find the element and get its reference
+            const result = await this.page.evaluate((id) => {
+                const el = document.getElementById(id);
+                return el ? true : false;
+            }, domId);
+
+            if (!result) return null;
+
+            // Use DOM.querySelector to get the node with backendDOMNodeId
+            const { root } = await this.cdpSession.send('DOM.getDocument', { depth: 0 });
+            const { nodeId } = await this.cdpSession.send('DOM.querySelector', {
+                nodeId: root.nodeId,
+                selector: `#${CSS.escape(domId)}`
+            });
+
+            if (!nodeId) return null;
+
+            // Get the backend node ID
+            const { node } = await this.cdpSession.send('DOM.describeNode', { nodeId });
+            return node.backendNodeId ?? null;
+        } catch (error) {
+            return null;
+        }
     }
 
     // =========================================================================

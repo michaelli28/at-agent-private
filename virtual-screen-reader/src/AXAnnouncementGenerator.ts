@@ -437,7 +437,7 @@ export class AXAnnouncementGenerator {
     /**
      * Generates announcement for activation result.
      */
-    generateActivationAnnouncement(node: NavigableAXNode, result: 'activated' | 'checked' | 'unchecked' | 'expanded' | 'collapsed'): string {
+    generateActivationAnnouncement(node: NavigableAXNode, result: string): string {
         const name = node.computedName || '';
         const role = this.formatRole(node) || 'element';
 
@@ -452,8 +452,18 @@ export class AXAnnouncementGenerator {
                 return `${role}, ${name}, expanded`;
             case 'collapsed':
                 return `${role}, ${name}, collapsed`;
+            case 'pressed':
+                return `${role}, ${name}, pressed`;
+            case 'not pressed':
+                return `${role}, ${name}, not pressed`;
+            case 'partially checked':
+                return `${role}, ${name}, partially checked`;
+            case 'selected':
+                return `${role}, ${name}, selected`;
+            case 'not selected':
+                return `${role}, ${name}, not selected`;
             default:
-                return `${role}, ${name}`;
+                return `${role}, ${name}, ${result}`;
         }
     }
 

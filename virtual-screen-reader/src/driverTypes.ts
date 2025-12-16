@@ -7,7 +7,7 @@ export interface PerceptualSnapshot {
     pageUrl?: string;
 }
 
-export type UserActionType = 'KEY_PRESS' | 'CLICK' | 'TYPE';
+export type UserActionType = 'KEY_PRESS' | 'CLICK' | 'TYPE' | 'GO_BACK';
 
 export interface UserAction {
     type: UserActionType;
