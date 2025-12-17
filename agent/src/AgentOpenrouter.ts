@@ -476,6 +476,12 @@ The suggested pages are shown in your observations. Consider them as shortcuts t
           let successResult = false;
           let errorResult: string | undefined;
 
+          // Collect all tool responses first, then add them all before any observation
+          // This is required because OpenAI API expects all tool responses to immediately follow
+          // the assistant message with tool_calls, before any user messages
+          const toolResponses: Array<{ role: 'tool'; tool_call_id: string; content: string }> = [];
+          let lastSnapshot: PerceptualSnapshot | undefined;
+
           // Process all tool calls in the batch
           for (const toolCall of toolCalls) {
             const toolName = toolCall.function.name;
@@ -498,7 +504,7 @@ The suggested pages are shown in your observations. Consider them as shortcuts t
               this.log(`[Finish]: Success=${successResult}, Reason=${errorResult}`);
 
               const toolResponse = { status: 'finished', success: successResult, reason: errorResult };
-              messages.push({
+              toolResponses.push({
                 role: 'tool',
                 tool_call_id: toolCall.id,
                 content: JSON.stringify(toolResponse)
@@ -521,11 +527,11 @@ The suggested pages are shown in your observations. Consider them as shortcuts t
               });
 
               finished = true;
-              break;
+              // Don't break - need to respond to all tool calls even when finishing
             }
 
             // Handle PageRank-specific tools
-            if (toolName === 'navigate_to_page' && this.pageFinder) {
+            else if (toolName === 'navigate_to_page' && this.pageFinder) {
               const pageNum = args.page_number as number;
               if (pageNum >= 1 && pageNum <= this.currentSuggestions.length) {
                 const targetPage = this.currentSuggestions[pageNum - 1];
@@ -533,14 +539,14 @@ The suggested pages are shown in your observations. Consider them as shortcuts t
 
                 // Navigate to the page using the driver
                 await this.driver.navigateTo(targetPage.url);
-                const snapshot = await this.driver.getPerceptualOutput();
+                lastSnapshot = await this.driver.getPerceptualOutput();
 
                 const toolResponse = {
                   status: 'ok',
                   message: `Navigated to: ${targetPage.title || targetPage.url}`,
                   url: targetPage.url,
                 };
-                messages.push({
+                toolResponses.push({
                   role: 'tool',
                   tool_call_id: toolCall.id,
                   content: JSON.stringify(toolResponse)
@@ -553,23 +559,17 @@ The suggested pages are shown in your observations. Consider them as shortcuts t
                   toolName,
                   result: toolResponse,
                 });
-
-                // Add observation
-                const observationMsg = this.buildObservationMessage(goal, snapshot);
-                messages.push(observationMsg);
-                this.emitDebug('observation', { type: 'step', loopCount, snapshot });
               } else {
                 const toolResponse = { status: 'error', message: `Invalid page number: ${pageNum}. Choose 1-${this.currentSuggestions.length}` };
-                messages.push({
+                toolResponses.push({
                   role: 'tool',
                   tool_call_id: toolCall.id,
                   content: JSON.stringify(toolResponse)
                 });
               }
-              continue;
             }
 
-            if (toolName === 'refresh_suggestions' && this.pageFinder) {
+            else if (toolName === 'refresh_suggestions' && this.pageFinder) {
               this.currentSuggestions = this.pageFinder.getSuggestedPages(goal, 5);
               this.log('[PageRank] Refreshed page suggestions:');
               this.currentSuggestions.forEach((s, i) => {
@@ -586,7 +586,7 @@ The suggested pages are shown in your observations. Consider them as shortcuts t
                   score: s.score,
                 })),
               };
-              messages.push({
+              toolResponses.push({
                 role: 'tool',
                 tool_call_id: toolCall.id,
                 content: JSON.stringify(toolResponse)
@@ -598,120 +598,120 @@ The suggested pages are shown in your observations. Consider them as shortcuts t
                 toolName,
                 result: toolResponse,
               });
-              continue;
             }
 
             // Handle type_text tool
-            if (toolName === 'type_text') {
+            else if (toolName === 'type_text') {
               this.log(`[type_text] Raw args: ${JSON.stringify(args)}`);
               const text = args.text as string;
               if (!text) {
                 this.log(`[type_text] No text provided, returning error`);
                 const toolResponse = { status: 'error', message: 'No text provided to type' };
-                messages.push({
+                toolResponses.push({
                   role: 'tool',
                   tool_call_id: toolCall.id,
                   content: JSON.stringify(toolResponse)
                 });
-                continue;
+              } else {
+                this.log(`[type_text] Typing: "${text}"`);
+
+                const action: UserAction = { type: 'TYPE', text };
+                const actionResult = await this.driver.performAction(action);
+                lastSnapshot = actionResult.snapshot;
+
+                const step: AgentStep = {
+                  stepNumber: steps.length + 1,
+                  observation: actionResult.snapshot,
+                  thought: reasoning || content || '',
+                  action,
+                  result: actionResult,
+                };
+
+                steps.push(step);
+                if (this.onStep) this.onStep(step);
+
+                const toolResponse = formatActionResult(action, actionResult);
+                toolResponses.push({
+                  role: 'tool',
+                  tool_call_id: toolCall.id,
+                  content: JSON.stringify(toolResponse)
+                });
+
+                this.emitDebug('tool_result', {
+                  loopCount,
+                  toolCallId: toolCall.id,
+                  toolName,
+                  action,
+                  result: toolResponse,
+                });
               }
-              this.log(`[type_text] Typing: "${text}"`);
-
-              const action: UserAction = { type: 'TYPE', text };
-              const actionResult = await this.driver.performAction(action);
-
-              const step: AgentStep = {
-                stepNumber: steps.length + 1,
-                observation: actionResult.snapshot,
-                thought: reasoning || content || '',
-                action,
-                result: actionResult,
-              };
-
-              steps.push(step);
-              if (this.onStep) this.onStep(step);
-
-              const toolResponse = formatActionResult(action, actionResult);
-              messages.push({
-                role: 'tool',
-                tool_call_id: toolCall.id,
-                content: JSON.stringify(toolResponse)
-              });
-
-              this.emitDebug('tool_result', {
-                loopCount,
-                toolCallId: toolCall.id,
-                toolName,
-                action,
-                result: toolResponse,
-              });
-
-              // Add observation
-              const observationMsg = this.buildObservationMessage(goal, actionResult.snapshot);
-              messages.push(observationMsg);
-              this.emitDebug('observation', { type: 'step', loopCount, snapshot: actionResult.snapshot });
-              continue;
             }
 
-            const map = mapToolToAction(toolName);
+            else {
+              const map = mapToolToAction(toolName);
 
-            if (map.action) {
-              const actionResult = await this.driver.performAction(map.action);
+              if (map.action) {
+                const actionResult = await this.driver.performAction(map.action);
+                lastSnapshot = actionResult.snapshot;
 
-              const step: AgentStep = {
-                stepNumber: steps.length + 1,
-                observation: actionResult.snapshot,
-                thought: reasoning || content || '',
-                action: map.action,
-                result: actionResult,
-              };
+                const step: AgentStep = {
+                  stepNumber: steps.length + 1,
+                  observation: actionResult.snapshot,
+                  thought: reasoning || content || '',
+                  action: map.action,
+                  result: actionResult,
+                };
 
-              steps.push(step);
-              if (this.onStep) this.onStep(step);
+                steps.push(step);
+                if (this.onStep) this.onStep(step);
 
-              // Tool Response
-              const toolResponse = formatActionResult(map.action, actionResult);
-              messages.push({
-                role: 'tool',
-                tool_call_id: toolCall.id,
-                content: JSON.stringify(toolResponse)
-              });
+                // Tool Response
+                const toolResponse = formatActionResult(map.action, actionResult);
+                toolResponses.push({
+                  role: 'tool',
+                  tool_call_id: toolCall.id,
+                  content: JSON.stringify(toolResponse)
+                });
 
-              // Emit tool result
-              this.emitDebug('tool_result', {
-                loopCount,
-                toolCallId: toolCall.id,
-                toolName,
-                action: map.action,
-                result: toolResponse,
-              });
+                // Emit tool result
+                this.emitDebug('tool_result', {
+                  loopCount,
+                  toolCallId: toolCall.id,
+                  toolName,
+                  action: map.action,
+                  result: toolResponse,
+                });
+              } else {
+                // Error or Unknown
+                const errorMessage = map.message || `Unknown tool ${toolName}`;
+                this.log(`[Error]: ${errorMessage}`);
+                const toolResponse = { status: 'error', message: errorMessage };
+                toolResponses.push({
+                  role: 'tool',
+                  tool_call_id: toolCall.id,
+                  content: JSON.stringify(toolResponse)
+                });
 
-              // Interleaved Observation (User)
-              const observationMsg = this.buildObservationMessage(goal, actionResult.snapshot);
-              messages.push(observationMsg);
-
-              // Emit observation
-              this.emitDebug('observation', { type: 'step', loopCount, snapshot: actionResult.snapshot });
-            } else {
-              // Error or Unknown
-              const errorMessage = map.message || `Unknown tool ${toolName}`;
-              this.log(`[Error]: ${errorMessage}`);
-              const toolResponse = { status: 'error', message: errorMessage };
-              messages.push({
-                role: 'tool',
-                tool_call_id: toolCall.id,
-                content: JSON.stringify(toolResponse)
-              });
-
-              // Emit tool error result
-              this.emitDebug('tool_result', {
-                loopCount,
-                toolCallId: toolCall.id,
-                toolName,
-                error: errorMessage,
-                result: toolResponse,
-              });
+                // Emit tool error result
+                this.emitDebug('tool_result', {
+                  loopCount,
+                  toolCallId: toolCall.id,
+                  toolName,
+                  error: errorMessage,
+                  result: toolResponse,
+                });
+              }
             }
+          }
+
+          // Add all tool responses first (required by OpenAI API format)
+          messages.push(...toolResponses);
+
+          // Then add a single observation at the end (only if not finished and we have a snapshot)
+          if (!finished && lastSnapshot) {
+            const observationMsg = this.buildObservationMessage(goal, lastSnapshot);
+            messages.push(observationMsg);
+            this.emitDebug('observation', { type: 'step', loopCount, snapshot: lastSnapshot });
           }
 
           if (finished) {

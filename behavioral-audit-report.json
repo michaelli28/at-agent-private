@@ -1,0 +1,2663 @@
+{
+  "url": "https://cmu.edu",
+  "timestamp": "2025-12-17T22:30:02.146Z",
+  "durationMs": 108070,
+  "configuration": {
+    "level": "AA",
+    "maxTasks": 3,
+    "parallel": 1,
+    "maxStepsPerTask": 50,
+    "model": "openai/gpt-4o",
+    "taskTimeout": 60000,
+    "verbose": false,
+    "pageRankWeight": 0.4,
+    "maxPagesToAnalyze": 5,
+    "crawlDepth": 2,
+    "taskDistribution": {
+      "simple": 30,
+      "moderate": 50,
+      "complex": 20
+    },
+    "waitForDynamicContent": true,
+    "dynamicContentTimeout": 5000,
+    "outputPath": "behavioral-audit-report.json"
+  },
+  "summary": {
+    "totalTasks": 3,
+    "generated": 3,
+    "executed": 3,
+    "passed": 2,
+    "failed": 1,
+    "passRate": 66.66666666666666,
+    "wcagCoverage": {
+      "totalCriteria": 19,
+      "testedCriteria": 7,
+      "passedCriteria": 0,
+      "failedCriteria": 4,
+      "coveragePercent": 36.84210526315789,
+      "byLevel": {
+        "A": {
+          "total": 11,
+          "tested": 5,
+          "passed": 2
+        },
+        "AA": {
+          "total": 8,
+          "tested": 2,
+          "passed": 1
+        }
+      }
+    }
+  },
+  "byCategory": [
+    {
+      "category": "workflow",
+      "totalTasks": 3,
+      "passed": 2,
+      "failed": 1,
+      "passRate": 66.66666666666666,
+      "avgSteps": 23
+    }
+  ],
+  "byWCAGCriterion": [
+    {
+      "criterion": {
+        "id": "2.4.1",
+        "name": "Bypass Blocks",
+        "level": "A",
+        "guideline": "2.4 Navigable",
+        "description": "A mechanism is available to bypass blocks of repeated content"
+      },
+      "tasksTested": 1,
+      "tasksPassed": 0,
+      "passRate": 0,
+      "violations": [
+        {
+          "criterionId": "2.4.1",
+          "criterionName": "Bypass Blocks",
+          "severity": "critical",
+          "description": "Task failed: Complete a navigation journey from Carnegie Mellon University | CMU to Alumni Association | Engage with CMU: 1) Use skip link if available, 2) Navigate to main content, 3) Use heading navigation to find relevant section, 4) Follow link to next page, 5) Verify you reached the destination.",
+          "evidence": "Unable to navigate to the relevant section of the Alumni Association page. Heading navigation repeatedly cycles through utility headings and lists without reaching destination content.",
+          "recommendation": "Review Bypass Blocks (WCAG 2.4.1) compliance"
+        }
+      ]
+    },
+    {
+      "criterion": {
+        "id": "2.4.4",
+        "name": "Link Purpose (In Context)",
+        "level": "A",
+        "guideline": "2.4 Navigable",
+        "description": "Link purpose can be determined from link text or context"
+      },
+      "tasksTested": 1,
+      "tasksPassed": 0,
+      "passRate": 0,
+      "violations": [
+        {
+          "criterionId": "2.4.4",
+          "criterionName": "Link Purpose (In Context)",
+          "severity": "critical",
+          "description": "Task failed: Complete a navigation journey from Carnegie Mellon University | CMU to Alumni Association | Engage with CMU: 1) Use skip link if available, 2) Navigate to main content, 3) Use heading navigation to find relevant section, 4) Follow link to next page, 5) Verify you reached the destination.",
+          "evidence": "Unable to navigate to the relevant section of the Alumni Association page. Heading navigation repeatedly cycles through utility headings and lists without reaching destination content.",
+          "recommendation": "Review Link Purpose (In Context) (WCAG 2.4.4) compliance"
+        }
+      ]
+    },
+    {
+      "criterion": {
+        "id": "2.4.6",
+        "name": "Headings and Labels",
+        "level": "AA",
+        "guideline": "2.4 Navigable",
+        "description": "Headings and labels describe topic or purpose"
+      },
+      "tasksTested": 1,
+      "tasksPassed": 0,
+      "passRate": 0,
+      "violations": [
+        {
+          "criterionId": "2.4.6",
+          "criterionName": "Headings and Labels",
+          "severity": "serious",
+          "description": "Task failed: Complete a navigation journey from Carnegie Mellon University | CMU to Alumni Association | Engage with CMU: 1) Use skip link if available, 2) Navigate to main content, 3) Use heading navigation to find relevant section, 4) Follow link to next page, 5) Verify you reached the destination.",
+          "evidence": "Unable to navigate to the relevant section of the Alumni Association page. Heading navigation repeatedly cycles through utility headings and lists without reaching destination content.",
+          "recommendation": "Review Headings and Labels (WCAG 2.4.6) compliance"
+        }
+      ]
+    },
+    {
+      "criterion": {
+        "id": "2.1.1",
+        "name": "Keyboard",
+        "level": "A",
+        "guideline": "2.1 Keyboard Accessible",
+        "description": "All functionality is operable through a keyboard"
+      },
+      "tasksTested": 2,
+      "tasksPassed": 1,
+      "passRate": 50,
+      "violations": [
+        {
+          "criterionId": "2.1.1",
+          "criterionName": "Keyboard",
+          "severity": "critical",
+          "description": "Task failed: Complete a navigation journey from Carnegie Mellon University | CMU to Alumni Association | Engage with CMU: 1) Use skip link if available, 2) Navigate to main content, 3) Use heading navigation to find relevant section, 4) Follow link to next page, 5) Verify you reached the destination.",
+          "evidence": "Unable to navigate to the relevant section of the Alumni Association page. Heading navigation repeatedly cycles through utility headings and lists without reaching destination content.",
+          "recommendation": "Review Keyboard (WCAG 2.1.1) compliance"
+        }
+      ]
+    },
+    {
+      "criterion": {
+        "id": "2.1.2",
+        "name": "No Keyboard Trap",
+        "level": "A",
+        "guideline": "2.1 Keyboard Accessible",
+        "description": "Keyboard focus can be moved away from any component"
+      },
+      "tasksTested": 1,
+      "tasksPassed": 1,
+      "passRate": 100,
+      "violations": []
+    },
+    {
+      "criterion": {
+        "id": "4.1.2",
+        "name": "Name, Role, Value",
+        "level": "A",
+        "guideline": "4.1 Compatible",
+        "description": "UI components have accessible name, role, and state"
+      },
+      "tasksTested": 1,
+      "tasksPassed": 1,
+      "passRate": 100,
+      "violations": []
+    },
+    {
+      "criterion": {
+        "id": "3.2.3",
+        "name": "Consistent Navigation",
+        "level": "AA",
+        "guideline": "3.2 Predictable",
+        "description": "Navigation mechanisms are consistent"
+      },
+      "tasksTested": 1,
+      "tasksPassed": 1,
+      "passRate": 100,
+      "violations": []
+    }
+  ],
+  "taskResults": [
+    {
+      "testCase": {
+        "id": "wcag-workflow-navigation-0c89lk",
+        "url": "https://www.cmu.edu/engage/alumni",
+        "goal": "Complete a navigation journey from Carnegie Mellon University | CMU to Alumni Association | Engage with CMU: 1) Use skip link if available, 2) Navigate to main content, 3) Use heading navigation to find relevant section, 4) Follow link to next page, 5) Verify you reached the destination.",
+        "wcagCriteria": [
+          "2.1.1",
+          "2.4.1",
+          "2.4.4",
+          "2.4.6"
+        ],
+        "level": "A",
+        "category": "workflow",
+        "complexity": "moderate",
+        "estimatedSteps": 20,
+        "pageRankScore": 17067002035695.594,
+        "successCriteria": {
+          "type": "agent_success"
+        },
+        "tags": [
+          "workflow",
+          "wcag-2.1.1",
+          "wcag-2.4.1",
+          "wcag-2.4.4",
+          "wcag-2.4.6"
+        ],
+        "templateId": "wcag-workflow-navigation",
+        "spaAware": false
+      },
+      "run": {
+        "runId": "run-1766010546020-li2pp2",
+        "testCaseId": "wcag-workflow-navigation-0c89lk",
+        "model": "openai/gpt-4o",
+        "timestamp": 1766010546020,
+        "durationMs": 20016,
+        "success": false,
+        "criteriaResult": "fail",
+        "stepsCount": 15,
+        "loopsCount": 15,
+        "agentSuccess": false,
+        "agentReason": "Unknown",
+        "trace": {
+          "goal": "Complete a navigation journey from Carnegie Mellon University | CMU to Alumni Association | Engage with CMU: 1) Use skip link if available, 2) Navigate to main content, 3) Use heading navigation to find relevant section, 4) Follow link to next page, 5) Verify you reached the destination.",
+          "success": false,
+          "steps": [
+            {
+              "stepNumber": 1,
+              "observation": {
+                "text": "Link, Current Students",
+                "cursorBox": {
+                  "x": 48,
+                  "y": 27.5,
+                  "width": 128,
+                  "height": 17
+                },
+                "pageTitle": "Alumni Association | Engage with CMU",
+                "pageUrl": "https://www.cmu.edu/engage/get-involved/alumni-association"
+              },
+              "thought": "",
+              "action": {
+                "type": "KEY_PRESS",
+                "key": "Tab"
+              },
+              "result": {
+                "success": true,
+                "snapshot": {
+                  "text": "Link, Current Students",
+                  "cursorBox": {
+                    "x": 48,
+                    "y": 27.5,
+                    "width": 128,
+                    "height": 17
+                  },
+                  "pageTitle": "Alumni Association | Engage with CMU",
+                  "pageUrl": "https://www.cmu.edu/engage/get-involved/alumni-association"
+                }
+              }
+            },
+            {
+              "stepNumber": 2,
+              "observation": {
+                "text": "Heading Level 2, Utility",
+                "cursorBox": {
+                  "x": 48,
+                  "y": 55.5,
+                  "width": 1,
+                  "height": 1
+                },
+                "pageTitle": "Alumni Association | Engage with CMU",
+                "pageUrl": "https://www.cmu.edu/engage/get-involved/alumni-association"
+              },
+              "thought": "",
+              "action": {
+                "type": "KEY_PRESS",
+                "key": "H"
+              },
+              "result": {
+                "success": true,
+                "snapshot": {
+                  "text": "Heading Level 2, Utility",
+                  "cursorBox": {
+                    "x": 48,
+                    "y": 55.5,
+                    "width": 1,
+                    "height": 1
+                  },
+                  "pageTitle": "Alumni Association | Engage with CMU",
+                  "pageUrl": "https://www.cmu.edu/engage/get-involved/alumni-association"
+                }
+              }
+            },
+            {
+              "stepNumber": 3,
+              "observation": {
+                "text": "No previous heading",
+                "cursorBox": {
+                  "x": 48,
+                  "y": 55.5,
+                  "width": 1,
+                  "height": 1
+                },
+                "pageTitle": "Alumni Association | Engage with CMU",
+                "pageUrl": "https://www.cmu.edu/engage/get-involved/alumni-association"
+              },
+              "thought": "",
+              "action": {
+                "type": "KEY_PRESS",
+                "key": "H"
+              },
+              "result": {
+                "success": true,
+                "snapshot": {
+                  "text": "No previous heading",
+                  "cursorBox": {
+                    "x": 48,
+                    "y": 55.5,
+                    "width": 1,
+                    "height": 1
+                  },
+                  "pageTitle": "Alumni Association | Engage with CMU",
+                  "pageUrl": "https://www.cmu.edu/engage/get-involved/alumni-association"
+                }
+              }
+            },
+            {
+              "stepNumber": 4,
+              "observation": {
+                "text": "No previous heading",
+                "cursorBox": {
+                  "x": 48,
+                  "y": 55.5,
+                  "width": 1,
+                  "height": 1
+                },
+                "pageTitle": "Alumni Association | Engage with CMU",
+                "pageUrl": "https://www.cmu.edu/engage/get-involved/alumni-association"
+              },
+              "thought": "",
+              "action": {
+                "type": "KEY_PRESS",
+                "key": "H"
+              },
+              "result": {
+                "success": true,
+                "snapshot": {
+                  "text": "No previous heading",
+                  "cursorBox": {
+                    "x": 48,
+                    "y": 55.5,
+                    "width": 1,
+                    "height": 1
+                  },
+                  "pageTitle": "Alumni Association | Engage with CMU",
+                  "pageUrl": "https://www.cmu.edu/engage/get-involved/alumni-association"
+                }
+              }
+            },
+            {
+              "stepNumber": 5,
+              "observation": {
+                "text": "List, 3 items",
+                "cursorBox": {
+                  "x": 48,
+                  "y": 27.5,
+                  "width": 461,
+                  "height": 17
+                },
+                "pageTitle": "Alumni Association | Engage with CMU",
+                "pageUrl": "https://www.cmu.edu/engage/get-involved/alumni-association"
+              },
+              "thought": "",
+              "action": {
+                "type": "KEY_PRESS",
+                "key": "ArrowDown"
+              },
+              "result": {
+                "success": true,
+                "snapshot": {
+                  "text": "List, 3 items",
+                  "cursorBox": {
+                    "x": 48,
+                    "y": 27.5,
+                    "width": 461,
+                    "height": 17
+                  },
+                  "pageTitle": "Alumni Association | Engage with CMU",
+                  "pageUrl": "https://www.cmu.edu/engage/get-involved/alumni-association"
+                }
+              }
+            },
+            {
+              "stepNumber": 6,
+              "observation": {
+                "text": "Heading Level 2, Utility",
+                "cursorBox": {
+                  "x": 48,
+                  "y": 55.5,
+                  "width": 1,
+                  "height": 1
+                },
+                "pageTitle": "Alumni Association | Engage with CMU",
+                "pageUrl": "https://www.cmu.edu/engage/get-involved/alumni-association"
+              },
+              "thought": "",
+              "action": {
+                "type": "KEY_PRESS",
+                "key": "H"
+              },
+              "result": {
+                "success": true,
+                "snapshot": {
+                  "text": "Heading Level 2, Utility",
+                  "cursorBox": {
+                    "x": 48,
+                    "y": 55.5,
+                    "width": 1,
+                    "height": 1
+                  },
+                  "pageTitle": "Alumni Association | Engage with CMU",
+                  "pageUrl": "https://www.cmu.edu/engage/get-involved/alumni-association"
+                }
+              }
+            },
+            {
+              "stepNumber": 7,
+              "observation": {
+                "text": "List, 3 items",
+                "cursorBox": {
+                  "x": 48,
+                  "y": 27.5,
+                  "width": 461,
+                  "height": 17
+                },
+                "pageTitle": "Alumni Association | Engage with CMU",
+                "pageUrl": "https://www.cmu.edu/engage/get-involved/alumni-association"
+              },
+              "thought": "",
+              "action": {
+                "type": "KEY_PRESS",
+                "key": "ArrowDown"
+              },
+              "result": {
+                "success": true,
+                "snapshot": {
+                  "text": "List, 3 items",
+                  "cursorBox": {
+                    "x": 48,
+                    "y": 27.5,
+                    "width": 461,
+                    "height": 17
+                  },
+                  "pageTitle": "Alumni Association | Engage with CMU",
+                  "pageUrl": "https://www.cmu.edu/engage/get-involved/alumni-association"
+                }
+              }
+            },
+            {
+              "stepNumber": 8,
+              "observation": {
+                "text": "List Item",
+                "cursorBox": {
+                  "x": 48,
+                  "y": 27.5,
+                  "width": 128,
+                  "height": 17
+                },
+                "pageTitle": "Alumni Association | Engage with CMU",
+                "pageUrl": "https://www.cmu.edu/engage/get-involved/alumni-association"
+              },
+              "thought": "",
+              "action": {
+                "type": "KEY_PRESS",
+                "key": "ArrowDown"
+              },
+              "result": {
+                "success": true,
+                "snapshot": {
+                  "text": "List Item",
+                  "cursorBox": {
+                    "x": 48,
+                    "y": 27.5,
+                    "width": 128,
+                    "height": 17
+                  },
+                  "pageTitle": "Alumni Association | Engage with CMU",
+                  "pageUrl": "https://www.cmu.edu/engage/get-involved/alumni-association"
+                }
+              }
+            },
+            {
+              "stepNumber": 9,
+              "observation": {
+                "text": "List Item, , activated",
+                "cursorBox": {
+                  "x": 48,
+                  "y": 27.5,
+                  "width": 128,
+                  "height": 17
+                },
+                "pageTitle": "Alumni Association | Engage with CMU",
+                "pageUrl": "https://www.cmu.edu/engage/get-involved/alumni-association"
+              },
+              "thought": "",
+              "action": {
+                "type": "KEY_PRESS",
+                "key": "Enter"
+              },
+              "result": {
+                "success": true,
+                "snapshot": {
+                  "text": "List Item, , activated",
+                  "cursorBox": {
+                    "x": 48,
+                    "y": 27.5,
+                    "width": 128,
+                    "height": 17
+                  },
+                  "pageTitle": "Alumni Association | Engage with CMU",
+                  "pageUrl": "https://www.cmu.edu/engage/get-involved/alumni-association"
+                }
+              }
+            },
+            {
+              "stepNumber": 10,
+              "observation": {
+                "text": "Link, Current Students",
+                "cursorBox": {
+                  "x": 48,
+                  "y": 27.5,
+                  "width": 128,
+                  "height": 17
+                },
+                "pageTitle": "Alumni Association | Engage with CMU",
+                "pageUrl": "https://www.cmu.edu/engage/get-involved/alumni-association"
+              },
+              "thought": "",
+              "action": {
+                "type": "KEY_PRESS",
+                "key": "Tab"
+              },
+              "result": {
+                "success": true,
+                "snapshot": {
+                  "text": "Link, Current Students",
+                  "cursorBox": {
+                    "x": 48,
+                    "y": 27.5,
+                    "width": 128,
+                    "height": 17
+                  },
+                  "pageTitle": "Alumni Association | Engage with CMU",
+                  "pageUrl": "https://www.cmu.edu/engage/get-involved/alumni-association"
+                }
+              }
+            },
+            {
+              "stepNumber": 11,
+              "observation": {
+                "text": "Link, Alumni Association",
+                "cursorBox": {
+                  "x": 199.71875,
+                  "y": 27.5,
+                  "width": 142,
+                  "height": 17
+                },
+                "pageTitle": "Alumni Association | Engage with CMU",
+                "pageUrl": "https://www.cmu.edu/engage/get-involved/alumni-association"
+              },
+              "thought": "",
+              "action": {
+                "type": "KEY_PRESS",
+                "key": "Tab"
+              },
+              "result": {
+                "success": true,
+                "snapshot": {
+                  "text": "Link, Alumni Association",
+                  "cursorBox": {
+                    "x": 199.71875,
+                    "y": 27.5,
+                    "width": 142,
+                    "height": 17
+                  },
+                  "pageTitle": "Alumni Association | Engage with CMU",
+                  "pageUrl": "https://www.cmu.edu/engage/get-involved/alumni-association"
+                }
+              }
+            },
+            {
+              "stepNumber": 12,
+              "observation": {
+                "text": "Link, Alumni Association, activated",
+                "cursorBox": null,
+                "pageTitle": "Alumni Association | Engage with CMU",
+                "pageUrl": "https://www.cmu.edu/engage/get-involved/alumni-association"
+              },
+              "thought": "",
+              "action": {
+                "type": "KEY_PRESS",
+                "key": "Enter"
+              },
+              "result": {
+                "success": true,
+                "snapshot": {
+                  "text": "Link, Alumni Association, activated",
+                  "cursorBox": null,
+                  "pageTitle": "Alumni Association | Engage with CMU",
+                  "pageUrl": "https://www.cmu.edu/engage/get-involved/alumni-association"
+                }
+              }
+            },
+            {
+              "stepNumber": 13,
+              "observation": {
+                "text": "Heading Level 2, Utility",
+                "cursorBox": {
+                  "x": 48,
+                  "y": 55.5,
+                  "width": 1,
+                  "height": 1
+                },
+                "pageTitle": "Alumni Association | Engage with CMU",
+                "pageUrl": "https://www.cmu.edu/engage/get-involved/alumni-association"
+              },
+              "thought": "",
+              "action": {
+                "type": "KEY_PRESS",
+                "key": "H"
+              },
+              "result": {
+                "success": true,
+                "snapshot": {
+                  "text": "Heading Level 2, Utility",
+                  "cursorBox": {
+                    "x": 48,
+                    "y": 55.5,
+                    "width": 1,
+                    "height": 1
+                  },
+                  "pageTitle": "Alumni Association | Engage with CMU",
+                  "pageUrl": "https://www.cmu.edu/engage/get-involved/alumni-association"
+                }
+              }
+            },
+            {
+              "stepNumber": 14,
+              "observation": {
+                "text": "List, 3 items",
+                "cursorBox": {
+                  "x": 48,
+                  "y": 27.5,
+                  "width": 461,
+                  "height": 17
+                },
+                "pageTitle": "Alumni Association | Engage with CMU",
+                "pageUrl": "https://www.cmu.edu/engage/get-involved/alumni-association"
+              },
+              "thought": "",
+              "action": {
+                "type": "KEY_PRESS",
+                "key": "ArrowDown"
+              },
+              "result": {
+                "success": true,
+                "snapshot": {
+                  "text": "List, 3 items",
+                  "cursorBox": {
+                    "x": 48,
+                    "y": 27.5,
+                    "width": 461,
+                    "height": 17
+                  },
+                  "pageTitle": "Alumni Association | Engage with CMU",
+                  "pageUrl": "https://www.cmu.edu/engage/get-involved/alumni-association"
+                }
+              }
+            },
+            {
+              "stepNumber": 15,
+              "observation": {
+                "text": "Heading Level 2, Utility",
+                "cursorBox": {
+                  "x": 48,
+                  "y": 55.5,
+                  "width": 1,
+                  "height": 1
+                },
+                "pageTitle": "Alumni Association | Engage with CMU",
+                "pageUrl": "https://www.cmu.edu/engage/get-involved/alumni-association"
+              },
+              "thought": "",
+              "action": {
+                "type": "KEY_PRESS",
+                "key": "H"
+              },
+              "result": {
+                "success": true,
+                "snapshot": {
+                  "text": "Heading Level 2, Utility",
+                  "cursorBox": {
+                    "x": 48,
+                    "y": 55.5,
+                    "width": 1,
+                    "height": 1
+                  },
+                  "pageTitle": "Alumni Association | Engage with CMU",
+                  "pageUrl": "https://www.cmu.edu/engage/get-involved/alumni-association"
+                }
+              }
+            }
+          ],
+          "error": "Unable to navigate to the relevant section of the Alumni Association page. Heading navigation repeatedly cycles through utility headings and lists without reaching destination content."
+        }
+      },
+      "wcagViolations": [
+        {
+          "criterionId": "2.1.1",
+          "criterionName": "Keyboard",
+          "severity": "critical",
+          "description": "Task failed: Complete a navigation journey from Carnegie Mellon University | CMU to Alumni Association | Engage with CMU: 1) Use skip link if available, 2) Navigate to main content, 3) Use heading navigation to find relevant section, 4) Follow link to next page, 5) Verify you reached the destination.",
+          "evidence": "Unable to navigate to the relevant section of the Alumni Association page. Heading navigation repeatedly cycles through utility headings and lists without reaching destination content.",
+          "recommendation": "Review Keyboard (WCAG 2.1.1) compliance"
+        },
+        {
+          "criterionId": "2.4.1",
+          "criterionName": "Bypass Blocks",
+          "severity": "critical",
+          "description": "Task failed: Complete a navigation journey from Carnegie Mellon University | CMU to Alumni Association | Engage with CMU: 1) Use skip link if available, 2) Navigate to main content, 3) Use heading navigation to find relevant section, 4) Follow link to next page, 5) Verify you reached the destination.",
+          "evidence": "Unable to navigate to the relevant section of the Alumni Association page. Heading navigation repeatedly cycles through utility headings and lists without reaching destination content.",
+          "recommendation": "Review Bypass Blocks (WCAG 2.4.1) compliance"
+        },
+        {
+          "criterionId": "2.4.4",
+          "criterionName": "Link Purpose (In Context)",
+          "severity": "critical",
+          "description": "Task failed: Complete a navigation journey from Carnegie Mellon University | CMU to Alumni Association | Engage with CMU: 1) Use skip link if available, 2) Navigate to main content, 3) Use heading navigation to find relevant section, 4) Follow link to next page, 5) Verify you reached the destination.",
+          "evidence": "Unable to navigate to the relevant section of the Alumni Association page. Heading navigation repeatedly cycles through utility headings and lists without reaching destination content.",
+          "recommendation": "Review Link Purpose (In Context) (WCAG 2.4.4) compliance"
+        },
+        {
+          "criterionId": "2.4.6",
+          "criterionName": "Headings and Labels",
+          "severity": "serious",
+          "description": "Task failed: Complete a navigation journey from Carnegie Mellon University | CMU to Alumni Association | Engage with CMU: 1) Use skip link if available, 2) Navigate to main content, 3) Use heading navigation to find relevant section, 4) Follow link to next page, 5) Verify you reached the destination.",
+          "evidence": "Unable to navigate to the relevant section of the Alumni Association page. Heading navigation repeatedly cycles through utility headings and lists without reaching destination content.",
+          "recommendation": "Review Headings and Labels (WCAG 2.4.6) compliance"
+        }
+      ],
+      "diagnostics": {
+        "stepsToCompletion": 15,
+        "keyboardTrapsDetected": 0,
+        "unlabeledElementsFound": 0,
+        "missingAltTextCount": 0,
+        "focusLostCount": 0,
+        "liveRegionAnnouncementsReceived": 0
+      }
+    },
+    {
+      "testCase": {
+        "id": "wcag-workflow-widgets-aiiit7",
+        "url": "https://www.cmu.edu/engage/alumni",
+        "goal": "Test all interactive widgets on the page: 1) Find each accordion/disclosure and toggle it, verifying state announcements, 2) Find any dropdown menus and navigate within them, 3) Verify you can escape from all widgets, 4) Confirm all widgets respond to keyboard.",
+        "wcagCriteria": [
+          "2.1.1",
+          "2.1.2",
+          "4.1.2"
+        ],
+        "level": "A",
+        "category": "workflow",
+        "complexity": "complex",
+        "estimatedSteps": 30,
+        "pageRankScore": 17067002035695.594,
+        "successCriteria": {
+          "type": "agent_success"
+        },
+        "tags": [
+          "workflow",
+          "wcag-2.1.1",
+          "wcag-2.1.2",
+          "wcag-4.1.2"
+        ],
+        "templateId": "wcag-workflow-widgets",
+        "spaAware": false
+      },
+      "run": {
+        "runId": "run-1766010588379-gcmdkh",
+        "testCaseId": "wcag-workflow-widgets-aiiit7",
+        "model": "openai/gpt-4o",
+        "timestamp": 1766010588379,
+        "durationMs": 42359,
+        "success": true,
+        "criteriaResult": "pass",
+        "stepsCount": 40,
+        "loopsCount": 40,
+        "agentSuccess": true,
+        "agentReason": "Unknown",
+        "trace": {
+          "goal": "Test all interactive widgets on the page: 1) Find each accordion/disclosure and toggle it, verifying state announcements, 2) Find any dropdown menus and navigate within them, 3) Verify you can escape from all widgets, 4) Confirm all widgets respond to keyboard.",
+          "success": true,
+          "steps": [
+            {
+              "stepNumber": 1,
+              "observation": {
+                "text": "Link, Current Students",
+                "cursorBox": {
+                  "x": 48,
+                  "y": 27.5,
+                  "width": 128,
+                  "height": 17
+                },
+                "pageTitle": "Alumni Association | Engage with CMU",
+                "pageUrl": "https://www.cmu.edu/engage/get-involved/alumni-association"
+              },
+              "thought": "",
+              "action": {
+                "type": "KEY_PRESS",
+                "key": "Tab"
+              },
+              "result": {
+                "success": true,
+                "snapshot": {
+                  "text": "Link, Current Students",
+                  "cursorBox": {
+                    "x": 48,
+                    "y": 27.5,
+                    "width": 128,
+                    "height": 17
+                  },
+                  "pageTitle": "Alumni Association | Engage with CMU",
+                  "pageUrl": "https://www.cmu.edu/engage/get-involved/alumni-association"
+                }
+              }
+            },
+            {
+              "stepNumber": 2,
+              "observation": {
+                "text": "List Item",
+                "cursorBox": {
+                  "x": 199.71875,
+                  "y": 27.5,
+                  "width": 142,
+                  "height": 17
+                },
+                "pageTitle": "Alumni Association | Engage with CMU",
+                "pageUrl": "https://www.cmu.edu/engage/get-involved/alumni-association"
+              },
+              "thought": "",
+              "action": {
+                "type": "KEY_PRESS",
+                "key": "ArrowDown"
+              },
+              "result": {
+                "success": true,
+                "snapshot": {
+                  "text": "List Item",
+                  "cursorBox": {
+                    "x": 199.71875,
+                    "y": 27.5,
+                    "width": 142,
+                    "height": 17
+                  },
+                  "pageTitle": "Alumni Association | Engage with CMU",
+                  "pageUrl": "https://www.cmu.edu/engage/get-involved/alumni-association"
+                }
+              }
+            },
+            {
+              "stepNumber": 3,
+              "observation": {
+                "text": "Link, Alumni Association",
+                "cursorBox": {
+                  "x": 199.71875,
+                  "y": 27.5,
+                  "width": 142,
+                  "height": 17
+                },
+                "pageTitle": "Alumni Association | Engage with CMU",
+                "pageUrl": "https://www.cmu.edu/engage/get-involved/alumni-association"
+              },
+              "thought": "",
+              "action": {
+                "type": "KEY_PRESS",
+                "key": "Tab"
+              },
+              "result": {
+                "success": true,
+                "snapshot": {
+                  "text": "Link, Alumni Association",
+                  "cursorBox": {
+                    "x": 199.71875,
+                    "y": 27.5,
+                    "width": 142,
+                    "height": 17
+                  },
+                  "pageTitle": "Alumni Association | Engage with CMU",
+                  "pageUrl": "https://www.cmu.edu/engage/get-involved/alumni-association"
+                }
+              }
+            },
+            {
+              "stepNumber": 4,
+              "observation": {
+                "text": "Link, Alumni Community",
+                "cursorBox": {
+                  "x": 365.421875,
+                  "y": 27.5,
+                  "width": 144,
+                  "height": 17
+                },
+                "pageTitle": "Alumni Association | Engage with CMU",
+                "pageUrl": "https://www.cmu.edu/engage/get-involved/alumni-association"
+              },
+              "thought": "",
+              "action": {
+                "type": "KEY_PRESS",
+                "key": "Tab"
+              },
+              "result": {
+                "success": true,
+                "snapshot": {
+                  "text": "Link, Alumni Community",
+                  "cursorBox": {
+                    "x": 365.421875,
+                    "y": 27.5,
+                    "width": 144,
+                    "height": 17
+                  },
+                  "pageTitle": "Alumni Association | Engage with CMU",
+                  "pageUrl": "https://www.cmu.edu/engage/get-involved/alumni-association"
+                }
+              }
+            },
+            {
+              "stepNumber": 5,
+              "observation": {
+                "text": "Link, Visit",
+                "cursorBox": {
+                  "x": 1066.78125,
+                  "y": 10.703125,
+                  "width": 70,
+                  "height": 43
+                },
+                "pageTitle": "Alumni Association | Engage with CMU",
+                "pageUrl": "https://www.cmu.edu/engage/get-involved/alumni-association"
+              },
+              "thought": "",
+              "action": {
+                "type": "KEY_PRESS",
+                "key": "Tab"
+              },
+              "result": {
+                "success": true,
+                "snapshot": {
+                  "text": "Link, Visit",
+                  "cursorBox": {
+                    "x": 1066.78125,
+                    "y": 10.703125,
+                    "width": 70,
+                    "height": 43
+                  },
+                  "pageTitle": "Alumni Association | Engage with CMU",
+                  "pageUrl": "https://www.cmu.edu/engage/get-involved/alumni-association"
+                }
+              }
+            },
+            {
+              "stepNumber": 6,
+              "observation": {
+                "text": "Heading Level 2, Actions Menu",
+                "cursorBox": {
+                  "x": 1042.78125,
+                  "y": 42.703125,
+                  "width": 1,
+                  "height": 1
+                },
+                "pageTitle": "Alumni Association | Engage with CMU",
+                "pageUrl": "https://www.cmu.edu/engage/get-involved/alumni-association"
+              },
+              "thought": "",
+              "action": {
+                "type": "KEY_PRESS",
+                "key": "H"
+              },
+              "result": {
+                "success": true,
+                "snapshot": {
+                  "text": "Heading Level 2, Actions Menu",
+                  "cursorBox": {
+                    "x": 1042.78125,
+                    "y": 42.703125,
+                    "width": 1,
+                    "height": 1
+                  },
+                  "pageTitle": "Alumni Association | Engage with CMU",
+                  "pageUrl": "https://www.cmu.edu/engage/get-involved/alumni-association"
+                }
+              }
+            },
+            {
+              "stepNumber": 7,
+              "observation": {
+                "text": "Link, Visit",
+                "cursorBox": {
+                  "x": 1066.78125,
+                  "y": 10.703125,
+                  "width": 70,
+                  "height": 43
+                },
+                "pageTitle": "Alumni Association | Engage with CMU",
+                "pageUrl": "https://www.cmu.edu/engage/get-involved/alumni-association"
+              },
+              "thought": "",
+              "action": {
+                "type": "KEY_PRESS",
+                "key": "Tab"
+              },
+              "result": {
+                "success": true,
+                "snapshot": {
+                  "text": "Link, Visit",
+                  "cursorBox": {
+                    "x": 1066.78125,
+                    "y": 10.703125,
+                    "width": 70,
+                    "height": 43
+                  },
+                  "pageTitle": "Alumni Association | Engage with CMU",
+                  "pageUrl": "https://www.cmu.edu/engage/get-involved/alumni-association"
+                }
+              }
+            },
+            {
+              "stepNumber": 8,
+              "observation": {
+                "text": "Link, Give",
+                "cursorBox": {
+                  "x": 1160.921875,
+                  "y": 10.703125,
+                  "width": 71,
+                  "height": 43
+                },
+                "pageTitle": "Alumni Association | Engage with CMU",
+                "pageUrl": "https://www.cmu.edu/engage/get-involved/alumni-association"
+              },
+              "thought": "",
+              "action": {
+                "type": "KEY_PRESS",
+                "key": "Tab"
+              },
+              "result": {
+                "success": true,
+                "snapshot": {
+                  "text": "Link, Give",
+                  "cursorBox": {
+                    "x": 1160.921875,
+                    "y": 10.703125,
+                    "width": 71,
+                    "height": 43
+                  },
+                  "pageTitle": "Alumni Association | Engage with CMU",
+                  "pageUrl": "https://www.cmu.edu/engage/get-involved/alumni-association"
+                }
+              }
+            },
+            {
+              "stepNumber": 9,
+              "observation": {
+                "text": "Heading Level 2, Actions Menu",
+                "cursorBox": {
+                  "x": 1042.78125,
+                  "y": 42.703125,
+                  "width": 1,
+                  "height": 1
+                },
+                "pageTitle": "Alumni Association | Engage with CMU",
+                "pageUrl": "https://www.cmu.edu/engage/get-involved/alumni-association"
+              },
+              "thought": "",
+              "action": {
+                "type": "KEY_PRESS",
+                "key": "H"
+              },
+              "result": {
+                "success": true,
+                "snapshot": {
+                  "text": "Heading Level 2, Actions Menu",
+                  "cursorBox": {
+                    "x": 1042.78125,
+                    "y": 42.703125,
+                    "width": 1,
+                    "height": 1
+                  },
+                  "pageTitle": "Alumni Association | Engage with CMU",
+                  "pageUrl": "https://www.cmu.edu/engage/get-involved/alumni-association"
+                }
+              }
+            },
+            {
+              "stepNumber": 10,
+              "observation": {
+                "text": "Link, Visit",
+                "cursorBox": {
+                  "x": 1066.78125,
+                  "y": 10.703125,
+                  "width": 70,
+                  "height": 43
+                },
+                "pageTitle": "Alumni Association | Engage with CMU",
+                "pageUrl": "https://www.cmu.edu/engage/get-involved/alumni-association"
+              },
+              "thought": "",
+              "action": {
+                "type": "KEY_PRESS",
+                "key": "Tab"
+              },
+              "result": {
+                "success": true,
+                "snapshot": {
+                  "text": "Link, Visit",
+                  "cursorBox": {
+                    "x": 1066.78125,
+                    "y": 10.703125,
+                    "width": 70,
+                    "height": 43
+                  },
+                  "pageTitle": "Alumni Association | Engage with CMU",
+                  "pageUrl": "https://www.cmu.edu/engage/get-involved/alumni-association"
+                }
+              }
+            },
+            {
+              "stepNumber": 11,
+              "observation": {
+                "text": "Heading Level 2, Actions Menu",
+                "cursorBox": {
+                  "x": 1042.78125,
+                  "y": 42.703125,
+                  "width": 1,
+                  "height": 1
+                },
+                "pageTitle": "Alumni Association | Engage with CMU",
+                "pageUrl": "https://www.cmu.edu/engage/get-involved/alumni-association"
+              },
+              "thought": "",
+              "action": {
+                "type": "KEY_PRESS",
+                "key": "H"
+              },
+              "result": {
+                "success": true,
+                "snapshot": {
+                  "text": "Heading Level 2, Actions Menu",
+                  "cursorBox": {
+                    "x": 1042.78125,
+                    "y": 42.703125,
+                    "width": 1,
+                    "height": 1
+                  },
+                  "pageTitle": "Alumni Association | Engage with CMU",
+                  "pageUrl": "https://www.cmu.edu/engage/get-involved/alumni-association"
+                }
+              }
+            },
+            {
+              "stepNumber": 12,
+              "observation": {
+                "text": "List, 2 items",
+                "cursorBox": {
+                  "x": 1042.78125,
+                  "y": 10.703125,
+                  "width": 189,
+                  "height": 43
+                },
+                "pageTitle": "Alumni Association | Engage with CMU",
+                "pageUrl": "https://www.cmu.edu/engage/get-involved/alumni-association"
+              },
+              "thought": "",
+              "action": {
+                "type": "KEY_PRESS",
+                "key": "ArrowDown"
+              },
+              "result": {
+                "success": true,
+                "snapshot": {
+                  "text": "List, 2 items",
+                  "cursorBox": {
+                    "x": 1042.78125,
+                    "y": 10.703125,
+                    "width": 189,
+                    "height": 43
+                  },
+                  "pageTitle": "Alumni Association | Engage with CMU",
+                  "pageUrl": "https://www.cmu.edu/engage/get-involved/alumni-association"
+                }
+              }
+            },
+            {
+              "stepNumber": 13,
+              "observation": {
+                "text": "Link, Visit",
+                "cursorBox": {
+                  "x": 1066.78125,
+                  "y": 10.703125,
+                  "width": 70,
+                  "height": 43
+                },
+                "pageTitle": "Alumni Association | Engage with CMU",
+                "pageUrl": "https://www.cmu.edu/engage/get-involved/alumni-association"
+              },
+              "thought": "",
+              "action": {
+                "type": "KEY_PRESS",
+                "key": "Tab"
+              },
+              "result": {
+                "success": true,
+                "snapshot": {
+                  "text": "Link, Visit",
+                  "cursorBox": {
+                    "x": 1066.78125,
+                    "y": 10.703125,
+                    "width": 70,
+                    "height": 43
+                  },
+                  "pageTitle": "Alumni Association | Engage with CMU",
+                  "pageUrl": "https://www.cmu.edu/engage/get-involved/alumni-association"
+                }
+              }
+            },
+            {
+              "stepNumber": 14,
+              "observation": {
+                "text": "List Item",
+                "cursorBox": {
+                  "x": 1160.921875,
+                  "y": 10.703125,
+                  "width": 71,
+                  "height": 43
+                },
+                "pageTitle": "Alumni Association | Engage with CMU",
+                "pageUrl": "https://www.cmu.edu/engage/get-involved/alumni-association"
+              },
+              "thought": "",
+              "action": {
+                "type": "KEY_PRESS",
+                "key": "ArrowDown"
+              },
+              "result": {
+                "success": true,
+                "snapshot": {
+                  "text": "List Item",
+                  "cursorBox": {
+                    "x": 1160.921875,
+                    "y": 10.703125,
+                    "width": 71,
+                    "height": 43
+                  },
+                  "pageTitle": "Alumni Association | Engage with CMU",
+                  "pageUrl": "https://www.cmu.edu/engage/get-involved/alumni-association"
+                }
+              }
+            },
+            {
+              "stepNumber": 15,
+              "observation": {
+                "text": "Link, Give",
+                "cursorBox": {
+                  "x": 1160.921875,
+                  "y": 10.703125,
+                  "width": 71,
+                  "height": 43
+                },
+                "pageTitle": "Alumni Association | Engage with CMU",
+                "pageUrl": "https://www.cmu.edu/engage/get-involved/alumni-association"
+              },
+              "thought": "",
+              "action": {
+                "type": "KEY_PRESS",
+                "key": "ArrowDown"
+              },
+              "result": {
+                "success": true,
+                "snapshot": {
+                  "text": "Link, Give",
+                  "cursorBox": {
+                    "x": 1160.921875,
+                    "y": 10.703125,
+                    "width": 71,
+                    "height": 43
+                  },
+                  "pageTitle": "Alumni Association | Engage with CMU",
+                  "pageUrl": "https://www.cmu.edu/engage/get-involved/alumni-association"
+                }
+              }
+            },
+            {
+              "stepNumber": 16,
+              "observation": {
+                "text": "Heading Level 2, Actions Menu",
+                "cursorBox": {
+                  "x": 1042.78125,
+                  "y": 42.703125,
+                  "width": 1,
+                  "height": 1
+                },
+                "pageTitle": "Alumni Association | Engage with CMU",
+                "pageUrl": "https://www.cmu.edu/engage/get-involved/alumni-association"
+              },
+              "thought": "",
+              "action": {
+                "type": "KEY_PRESS",
+                "key": "H"
+              },
+              "result": {
+                "success": true,
+                "snapshot": {
+                  "text": "Heading Level 2, Actions Menu",
+                  "cursorBox": {
+                    "x": 1042.78125,
+                    "y": 42.703125,
+                    "width": 1,
+                    "height": 1
+                  },
+                  "pageTitle": "Alumni Association | Engage with CMU",
+                  "pageUrl": "https://www.cmu.edu/engage/get-involved/alumni-association"
+                }
+              }
+            },
+            {
+              "stepNumber": 17,
+              "observation": {
+                "text": "Link, Visit",
+                "cursorBox": {
+                  "x": 1066.78125,
+                  "y": 10.703125,
+                  "width": 70,
+                  "height": 43
+                },
+                "pageTitle": "Alumni Association | Engage with CMU",
+                "pageUrl": "https://www.cmu.edu/engage/get-involved/alumni-association"
+              },
+              "thought": "",
+              "action": {
+                "type": "KEY_PRESS",
+                "key": "Tab"
+              },
+              "result": {
+                "success": true,
+                "snapshot": {
+                  "text": "Link, Visit",
+                  "cursorBox": {
+                    "x": 1066.78125,
+                    "y": 10.703125,
+                    "width": 70,
+                    "height": 43
+                  },
+                  "pageTitle": "Alumni Association | Engage with CMU",
+                  "pageUrl": "https://www.cmu.edu/engage/get-involved/alumni-association"
+                }
+              }
+            },
+            {
+              "stepNumber": 18,
+              "observation": {
+                "text": "List Item",
+                "cursorBox": {
+                  "x": 1160.921875,
+                  "y": 10.703125,
+                  "width": 71,
+                  "height": 43
+                },
+                "pageTitle": "Alumni Association | Engage with CMU",
+                "pageUrl": "https://www.cmu.edu/engage/get-involved/alumni-association"
+              },
+              "thought": "",
+              "action": {
+                "type": "KEY_PRESS",
+                "key": "ArrowDown"
+              },
+              "result": {
+                "success": true,
+                "snapshot": {
+                  "text": "List Item",
+                  "cursorBox": {
+                    "x": 1160.921875,
+                    "y": 10.703125,
+                    "width": 71,
+                    "height": 43
+                  },
+                  "pageTitle": "Alumni Association | Engage with CMU",
+                  "pageUrl": "https://www.cmu.edu/engage/get-involved/alumni-association"
+                }
+              }
+            },
+            {
+              "stepNumber": 19,
+              "observation": {
+                "text": "Link, Give",
+                "cursorBox": {
+                  "x": 1160.921875,
+                  "y": 10.703125,
+                  "width": 71,
+                  "height": 43
+                },
+                "pageTitle": "Alumni Association | Engage with CMU",
+                "pageUrl": "https://www.cmu.edu/engage/get-involved/alumni-association"
+              },
+              "thought": "",
+              "action": {
+                "type": "KEY_PRESS",
+                "key": "Tab"
+              },
+              "result": {
+                "success": true,
+                "snapshot": {
+                  "text": "Link, Give",
+                  "cursorBox": {
+                    "x": 1160.921875,
+                    "y": 10.703125,
+                    "width": 71,
+                    "height": 43
+                  },
+                  "pageTitle": "Alumni Association | Engage with CMU",
+                  "pageUrl": "https://www.cmu.edu/engage/get-involved/alumni-association"
+                }
+              }
+            },
+            {
+              "stepNumber": 20,
+              "observation": {
+                "text": "Link, Carnegie Mellon University",
+                "cursorBox": {
+                  "x": 48,
+                  "y": 64,
+                  "width": 132,
+                  "height": 200
+                },
+                "pageTitle": "Alumni Association | Engage with CMU",
+                "pageUrl": "https://www.cmu.edu/engage/get-involved/alumni-association"
+              },
+              "thought": "",
+              "action": {
+                "type": "KEY_PRESS",
+                "key": "ArrowDown"
+              },
+              "result": {
+                "success": true,
+                "snapshot": {
+                  "text": "Link, Carnegie Mellon University",
+                  "cursorBox": {
+                    "x": 48,
+                    "y": 64,
+                    "width": 132,
+                    "height": 200
+                  },
+                  "pageTitle": "Alumni Association | Engage with CMU",
+                  "pageUrl": "https://www.cmu.edu/engage/get-involved/alumni-association"
+                }
+              }
+            },
+            {
+              "stepNumber": 21,
+              "observation": {
+                "text": "Link, Engage with CMU ",
+                "cursorBox": {
+                  "x": 268.3999938964844,
+                  "y": 76.38359069824219,
+                  "width": 156,
+                  "height": 24
+                },
+                "pageTitle": "Alumni Association | Engage with CMU",
+                "pageUrl": "https://www.cmu.edu/engage/get-involved/alumni-association"
+              },
+              "thought": "",
+              "action": {
+                "type": "KEY_PRESS",
+                "key": "ArrowDown"
+              },
+              "result": {
+                "success": true,
+                "snapshot": {
+                  "text": "Link, Engage with CMU ",
+                  "cursorBox": {
+                    "x": 268.3999938964844,
+                    "y": 76.38359069824219,
+                    "width": 156,
+                    "height": 24
+                  },
+                  "pageTitle": "Alumni Association | Engage with CMU",
+                  "pageUrl": "https://www.cmu.edu/engage/get-involved/alumni-association"
+                }
+              }
+            },
+            {
+              "stepNumber": 22,
+              "observation": {
+                "text": "Button, Get Involved, collapsed",
+                "cursorBox": {
+                  "x": 629.890625,
+                  "y": 72.296875,
+                  "width": 103,
+                  "height": 15
+                },
+                "pageTitle": "Alumni Association | Engage with CMU",
+                "pageUrl": "https://www.cmu.edu/engage/get-involved/alumni-association"
+              },
+              "thought": "",
+              "action": {
+                "type": "KEY_PRESS",
+                "key": "Tab"
+              },
+              "result": {
+                "success": true,
+                "snapshot": {
+                  "text": "Button, Get Involved, collapsed",
+                  "cursorBox": {
+                    "x": 629.890625,
+                    "y": 72.296875,
+                    "width": 103,
+                    "height": 15
+                  },
+                  "pageTitle": "Alumni Association | Engage with CMU",
+                  "pageUrl": "https://www.cmu.edu/engage/get-involved/alumni-association"
+                }
+              }
+            },
+            {
+              "stepNumber": 23,
+              "observation": {
+                "text": "Button, Get Involved, expanded",
+                "cursorBox": {
+                  "x": 629.890625,
+                  "y": 72.296875,
+                  "width": 103,
+                  "height": 15
+                },
+                "pageTitle": "Alumni Association | Engage with CMU",
+                "pageUrl": "https://www.cmu.edu/engage/get-involved/alumni-association"
+              },
+              "thought": "",
+              "action": {
+                "type": "KEY_PRESS",
+                "key": "Enter"
+              },
+              "result": {
+                "success": true,
+                "snapshot": {
+                  "text": "Button, Get Involved, expanded",
+                  "cursorBox": {
+                    "x": 629.890625,
+                    "y": 72.296875,
+                    "width": 103,
+                    "height": 15
+                  },
+                  "pageTitle": "Alumni Association | Engage with CMU",
+                  "pageUrl": "https://www.cmu.edu/engage/get-involved/alumni-association"
+                }
+              }
+            },
+            {
+              "stepNumber": 24,
+              "observation": {
+                "text": "Button, Events, collapsed",
+                "cursorBox": {
+                  "x": 744.65625,
+                  "y": 72.296875,
+                  "width": 64,
+                  "height": 15
+                },
+                "pageTitle": "Alumni Association | Engage with CMU",
+                "pageUrl": "https://www.cmu.edu/engage/get-involved/alumni-association"
+              },
+              "thought": "",
+              "action": {
+                "type": "KEY_PRESS",
+                "key": "Tab"
+              },
+              "result": {
+                "success": true,
+                "snapshot": {
+                  "text": "Button, Events, collapsed",
+                  "cursorBox": {
+                    "x": 744.65625,
+                    "y": 72.296875,
+                    "width": 64,
+                    "height": 15
+                  },
+                  "pageTitle": "Alumni Association | Engage with CMU",
+                  "pageUrl": "https://www.cmu.edu/engage/get-involved/alumni-association"
+                }
+              }
+            },
+            {
+              "stepNumber": 25,
+              "observation": {
+                "text": "Button, Events, expanded",
+                "cursorBox": {
+                  "x": 744.65625,
+                  "y": 72.296875,
+                  "width": 64,
+                  "height": 15
+                },
+                "pageTitle": "Alumni Association | Engage with CMU",
+                "pageUrl": "https://www.cmu.edu/engage/get-involved/alumni-association"
+              },
+              "thought": "",
+              "action": {
+                "type": "KEY_PRESS",
+                "key": "Enter"
+              },
+              "result": {
+                "success": true,
+                "snapshot": {
+                  "text": "Button, Events, expanded",
+                  "cursorBox": {
+                    "x": 744.65625,
+                    "y": 72.296875,
+                    "width": 64,
+                    "height": 15
+                  },
+                  "pageTitle": "Alumni Association | Engage with CMU",
+                  "pageUrl": "https://www.cmu.edu/engage/get-involved/alumni-association"
+                }
+              }
+            },
+            {
+              "stepNumber": 26,
+              "observation": {
+                "text": "Events",
+                "cursorBox": {
+                  "x": 744.65625,
+                  "y": 70.296875,
+                  "width": 44,
+                  "height": 20
+                },
+                "pageTitle": "Alumni Association | Engage with CMU",
+                "pageUrl": "https://www.cmu.edu/engage/get-involved/alumni-association"
+              },
+              "thought": "",
+              "action": {
+                "type": "KEY_PRESS",
+                "key": "ArrowDown"
+              },
+              "result": {
+                "success": true,
+                "snapshot": {
+                  "text": "Events",
+                  "cursorBox": {
+                    "x": 744.65625,
+                    "y": 70.296875,
+                    "width": 44,
+                    "height": 20
+                  },
+                  "pageTitle": "Alumni Association | Engage with CMU",
+                  "pageUrl": "https://www.cmu.edu/engage/get-involved/alumni-association"
+                }
+              }
+            },
+            {
+              "stepNumber": 27,
+              "observation": {
+                "text": "List Item",
+                "cursorBox": {
+                  "x": 820.734375,
+                  "y": 72.296875,
+                  "width": 50,
+                  "height": 15
+                },
+                "pageTitle": "Alumni Association | Engage with CMU",
+                "pageUrl": "https://www.cmu.edu/engage/get-involved/alumni-association"
+              },
+              "thought": "",
+              "action": {
+                "type": "KEY_PRESS",
+                "key": "ArrowDown"
+              },
+              "result": {
+                "success": true,
+                "snapshot": {
+                  "text": "List Item",
+                  "cursorBox": {
+                    "x": 820.734375,
+                    "y": 72.296875,
+                    "width": 50,
+                    "height": 15
+                  },
+                  "pageTitle": "Alumni Association | Engage with CMU",
+                  "pageUrl": "https://www.cmu.edu/engage/get-involved/alumni-association"
+                }
+              }
+            },
+            {
+              "stepNumber": 28,
+              "observation": {
+                "text": "Button, Give, collapsed",
+                "cursorBox": {
+                  "x": 820.734375,
+                  "y": 72.296875,
+                  "width": 50,
+                  "height": 15
+                },
+                "pageTitle": "Alumni Association | Engage with CMU",
+                "pageUrl": "https://www.cmu.edu/engage/get-involved/alumni-association"
+              },
+              "thought": "",
+              "action": {
+                "type": "KEY_PRESS",
+                "key": "Tab"
+              },
+              "result": {
+                "success": true,
+                "snapshot": {
+                  "text": "Button, Give, collapsed",
+                  "cursorBox": {
+                    "x": 820.734375,
+                    "y": 72.296875,
+                    "width": 50,
+                    "height": 15
+                  },
+                  "pageTitle": "Alumni Association | Engage with CMU",
+                  "pageUrl": "https://www.cmu.edu/engage/get-involved/alumni-association"
+                }
+              }
+            },
+            {
+              "stepNumber": 29,
+              "observation": {
+                "text": "Give",
+                "cursorBox": {
+                  "x": 820.734375,
+                  "y": 70.296875,
+                  "width": 30,
+                  "height": 20
+                },
+                "pageTitle": "Alumni Association | Engage with CMU",
+                "pageUrl": "https://www.cmu.edu/engage/get-involved/alumni-association"
+              },
+              "thought": "",
+              "action": {
+                "type": "KEY_PRESS",
+                "key": "ArrowDown"
+              },
+              "result": {
+                "success": true,
+                "snapshot": {
+                  "text": "Give",
+                  "cursorBox": {
+                    "x": 820.734375,
+                    "y": 70.296875,
+                    "width": 30,
+                    "height": 20
+                  },
+                  "pageTitle": "Alumni Association | Engage with CMU",
+                  "pageUrl": "https://www.cmu.edu/engage/get-involved/alumni-association"
+                }
+              }
+            },
+            {
+              "stepNumber": 30,
+              "observation": {
+                "text": "Button, Give, collapsed",
+                "cursorBox": {
+                  "x": 820.734375,
+                  "y": 72.296875,
+                  "width": 50,
+                  "height": 15
+                },
+                "pageTitle": "Alumni Association | Engage with CMU",
+                "pageUrl": "https://www.cmu.edu/engage/get-involved/alumni-association"
+              },
+              "thought": "",
+              "action": {
+                "type": "KEY_PRESS",
+                "key": "ArrowUp"
+              },
+              "result": {
+                "success": true,
+                "snapshot": {
+                  "text": "Button, Give, collapsed",
+                  "cursorBox": {
+                    "x": 820.734375,
+                    "y": 72.296875,
+                    "width": 50,
+                    "height": 15
+                  },
+                  "pageTitle": "Alumni Association | Engage with CMU",
+                  "pageUrl": "https://www.cmu.edu/engage/get-involved/alumni-association"
+                }
+              }
+            },
+            {
+              "stepNumber": 31,
+              "observation": {
+                "text": "Button, Give, expanded",
+                "cursorBox": {
+                  "x": 820.734375,
+                  "y": 72.296875,
+                  "width": 50,
+                  "height": 15
+                },
+                "pageTitle": "Alumni Association | Engage with CMU",
+                "pageUrl": "https://www.cmu.edu/engage/get-involved/alumni-association"
+              },
+              "thought": "",
+              "action": {
+                "type": "KEY_PRESS",
+                "key": "Enter"
+              },
+              "result": {
+                "success": true,
+                "snapshot": {
+                  "text": "Button, Give, expanded",
+                  "cursorBox": {
+                    "x": 820.734375,
+                    "y": 72.296875,
+                    "width": 50,
+                    "height": 15
+                  },
+                  "pageTitle": "Alumni Association | Engage with CMU",
+                  "pageUrl": "https://www.cmu.edu/engage/get-involved/alumni-association"
+                }
+              }
+            },
+            {
+              "stepNumber": 32,
+              "observation": {
+                "text": "Give",
+                "cursorBox": {
+                  "x": 820.734375,
+                  "y": 70.296875,
+                  "width": 30,
+                  "height": 20
+                },
+                "pageTitle": "Alumni Association | Engage with CMU",
+                "pageUrl": "https://www.cmu.edu/engage/get-involved/alumni-association"
+              },
+              "thought": "",
+              "action": {
+                "type": "KEY_PRESS",
+                "key": "ArrowDown"
+              },
+              "result": {
+                "success": true,
+                "snapshot": {
+                  "text": "Give",
+                  "cursorBox": {
+                    "x": 820.734375,
+                    "y": 70.296875,
+                    "width": 30,
+                    "height": 20
+                  },
+                  "pageTitle": "Alumni Association | Engage with CMU",
+                  "pageUrl": "https://www.cmu.edu/engage/get-involved/alumni-association"
+                }
+              }
+            },
+            {
+              "stepNumber": 33,
+              "observation": {
+                "text": "Button, Give, expanded",
+                "cursorBox": {
+                  "x": 820.734375,
+                  "y": 72.296875,
+                  "width": 50,
+                  "height": 15
+                },
+                "pageTitle": "Alumni Association | Engage with CMU",
+                "pageUrl": "https://www.cmu.edu/engage/get-involved/alumni-association"
+              },
+              "thought": "",
+              "action": {
+                "type": "KEY_PRESS",
+                "key": "ArrowUp"
+              },
+              "result": {
+                "success": true,
+                "snapshot": {
+                  "text": "Button, Give, expanded",
+                  "cursorBox": {
+                    "x": 820.734375,
+                    "y": 72.296875,
+                    "width": 50,
+                    "height": 15
+                  },
+                  "pageTitle": "Alumni Association | Engage with CMU",
+                  "pageUrl": "https://www.cmu.edu/engage/get-involved/alumni-association"
+                }
+              }
+            },
+            {
+              "stepNumber": 34,
+              "observation": {
+                "text": "Give",
+                "cursorBox": {
+                  "x": 820.734375,
+                  "y": 70.296875,
+                  "width": 30,
+                  "height": 20
+                },
+                "pageTitle": "Alumni Association | Engage with CMU",
+                "pageUrl": "https://www.cmu.edu/engage/get-involved/alumni-association"
+              },
+              "thought": "",
+              "action": {
+                "type": "KEY_PRESS",
+                "key": "ArrowDown"
+              },
+              "result": {
+                "success": true,
+                "snapshot": {
+                  "text": "Give",
+                  "cursorBox": {
+                    "x": 820.734375,
+                    "y": 70.296875,
+                    "width": 30,
+                    "height": 20
+                  },
+                  "pageTitle": "Alumni Association | Engage with CMU",
+                  "pageUrl": "https://www.cmu.edu/engage/get-involved/alumni-association"
+                }
+              }
+            },
+            {
+              "stepNumber": 35,
+              "observation": {
+                "text": "Button, Give, expanded",
+                "cursorBox": {
+                  "x": 820.734375,
+                  "y": 72.296875,
+                  "width": 50,
+                  "height": 15
+                },
+                "pageTitle": "Alumni Association | Engage with CMU",
+                "pageUrl": "https://www.cmu.edu/engage/get-involved/alumni-association"
+              },
+              "thought": "",
+              "action": {
+                "type": "KEY_PRESS",
+                "key": "ArrowUp"
+              },
+              "result": {
+                "success": true,
+                "snapshot": {
+                  "text": "Button, Give, expanded",
+                  "cursorBox": {
+                    "x": 820.734375,
+                    "y": 72.296875,
+                    "width": 50,
+                    "height": 15
+                  },
+                  "pageTitle": "Alumni Association | Engage with CMU",
+                  "pageUrl": "https://www.cmu.edu/engage/get-involved/alumni-association"
+                }
+              }
+            },
+            {
+              "stepNumber": 36,
+              "observation": {
+                "text": "Button, News & Stories, collapsed",
+                "cursorBox": {
+                  "x": 882.375,
+                  "y": 72.296875,
+                  "width": 119,
+                  "height": 15
+                },
+                "pageTitle": "Alumni Association | Engage with CMU",
+                "pageUrl": "https://www.cmu.edu/engage/get-involved/alumni-association"
+              },
+              "thought": "",
+              "action": {
+                "type": "KEY_PRESS",
+                "key": "Tab"
+              },
+              "result": {
+                "success": true,
+                "snapshot": {
+                  "text": "Button, News & Stories, collapsed",
+                  "cursorBox": {
+                    "x": 882.375,
+                    "y": 72.296875,
+                    "width": 119,
+                    "height": 15
+                  },
+                  "pageTitle": "Alumni Association | Engage with CMU",
+                  "pageUrl": "https://www.cmu.edu/engage/get-involved/alumni-association"
+                }
+              }
+            },
+            {
+              "stepNumber": 37,
+              "observation": {
+                "text": "News & Stories",
+                "cursorBox": {
+                  "x": 882.375,
+                  "y": 70.296875,
+                  "width": 99,
+                  "height": 20
+                },
+                "pageTitle": "Alumni Association | Engage with CMU",
+                "pageUrl": "https://www.cmu.edu/engage/get-involved/alumni-association"
+              },
+              "thought": "",
+              "action": {
+                "type": "KEY_PRESS",
+                "key": "ArrowDown"
+              },
+              "result": {
+                "success": true,
+                "snapshot": {
+                  "text": "News & Stories",
+                  "cursorBox": {
+                    "x": 882.375,
+                    "y": 70.296875,
+                    "width": 99,
+                    "height": 20
+                  },
+                  "pageTitle": "Alumni Association | Engage with CMU",
+                  "pageUrl": "https://www.cmu.edu/engage/get-involved/alumni-association"
+                }
+              }
+            },
+            {
+              "stepNumber": 38,
+              "observation": {
+                "text": "Button, News & Stories, collapsed",
+                "cursorBox": {
+                  "x": 882.375,
+                  "y": 72.296875,
+                  "width": 119,
+                  "height": 15
+                },
+                "pageTitle": "Alumni Association | Engage with CMU",
+                "pageUrl": "https://www.cmu.edu/engage/get-involved/alumni-association"
+              },
+              "thought": "",
+              "action": {
+                "type": "KEY_PRESS",
+                "key": "ArrowUp"
+              },
+              "result": {
+                "success": true,
+                "snapshot": {
+                  "text": "Button, News & Stories, collapsed",
+                  "cursorBox": {
+                    "x": 882.375,
+                    "y": 72.296875,
+                    "width": 119,
+                    "height": 15
+                  },
+                  "pageTitle": "Alumni Association | Engage with CMU",
+                  "pageUrl": "https://www.cmu.edu/engage/get-involved/alumni-association"
+                }
+              }
+            },
+            {
+              "stepNumber": 39,
+              "observation": {
+                "text": "Button, News & Stories, expanded",
+                "cursorBox": {
+                  "x": 882.375,
+                  "y": 72.296875,
+                  "width": 119,
+                  "height": 15
+                },
+                "pageTitle": "Alumni Association | Engage with CMU",
+                "pageUrl": "https://www.cmu.edu/engage/get-involved/alumni-association"
+              },
+              "thought": "",
+              "action": {
+                "type": "KEY_PRESS",
+                "key": "Enter"
+              },
+              "result": {
+                "success": true,
+                "snapshot": {
+                  "text": "Button, News & Stories, expanded",
+                  "cursorBox": {
+                    "x": 882.375,
+                    "y": 72.296875,
+                    "width": 119,
+                    "height": 15
+                  },
+                  "pageTitle": "Alumni Association | Engage with CMU",
+                  "pageUrl": "https://www.cmu.edu/engage/get-involved/alumni-association"
+                }
+              }
+            },
+            {
+              "stepNumber": 40,
+              "observation": {
+                "text": "Button, About Advancement, collapsed",
+                "cursorBox": {
+                  "x": 1013.375,
+                  "y": 72.296875,
+                  "width": 155,
+                  "height": 15
+                },
+                "pageTitle": "Alumni Association | Engage with CMU",
+                "pageUrl": "https://www.cmu.edu/engage/get-involved/alumni-association"
+              },
+              "thought": "",
+              "action": {
+                "type": "KEY_PRESS",
+                "key": "Tab"
+              },
+              "result": {
+                "success": true,
+                "snapshot": {
+                  "text": "Button, About Advancement, collapsed",
+                  "cursorBox": {
+                    "x": 1013.375,
+                    "y": 72.296875,
+                    "width": 155,
+                    "height": 15
+                  },
+                  "pageTitle": "Alumni Association | Engage with CMU",
+                  "pageUrl": "https://www.cmu.edu/engage/get-involved/alumni-association"
+                }
+              }
+            }
+          ]
+        }
+      },
+      "wcagViolations": [],
+      "diagnostics": {
+        "stepsToCompletion": 40,
+        "keyboardTrapsDetected": 0,
+        "unlabeledElementsFound": 0,
+        "missingAltTextCount": 0,
+        "focusLostCount": 0,
+        "liveRegionAnnouncementsReceived": 0
+      }
+    },
+    {
+      "testCase": {
+        "id": "wcag-3.2.3-consistent-nav-5m6h07",
+        "url": "https://www.cmu.edu/engage/alumni",
+        "goal": "Navigate from Carnegie Mellon University | CMU to Alumni Association | Engage with CMU using the main navigation. Note the order and structure of navigation items. Then navigate to a different page and verify the navigation maintains the same structure and order.",
+        "wcagCriteria": [
+          "3.2.3"
+        ],
+        "level": "AA",
+        "category": "workflow",
+        "complexity": "complex",
+        "estimatedSteps": 25,
+        "pageRankScore": 17067002035695.594,
+        "successCriteria": {
+          "type": "agent_success"
+        },
+        "tags": [
+          "workflow",
+          "wcag-3.2.3"
+        ],
+        "templateId": "wcag-3.2.3-consistent-nav",
+        "spaAware": false
+      },
+      "run": {
+        "runId": "run-1766010602146-xiz2vc",
+        "testCaseId": "wcag-3.2.3-consistent-nav-5m6h07",
+        "model": "openai/gpt-4o",
+        "timestamp": 1766010602146,
+        "durationMs": 13767,
+        "success": true,
+        "criteriaResult": "pass",
+        "stepsCount": 14,
+        "loopsCount": 14,
+        "agentSuccess": true,
+        "agentReason": "Unknown",
+        "trace": {
+          "goal": "Navigate from Carnegie Mellon University | CMU to Alumni Association | Engage with CMU using the main navigation. Note the order and structure of navigation items. Then navigate to a different page and verify the navigation maintains the same structure and order.",
+          "success": true,
+          "steps": [
+            {
+              "stepNumber": 1,
+              "observation": {
+                "text": "Link, Current Students",
+                "cursorBox": {
+                  "x": 48,
+                  "y": 27.5,
+                  "width": 128,
+                  "height": 17
+                },
+                "pageTitle": "Alumni Association | Engage with CMU",
+                "pageUrl": "https://www.cmu.edu/engage/get-involved/alumni-association"
+              },
+              "thought": "",
+              "action": {
+                "type": "KEY_PRESS",
+                "key": "Tab"
+              },
+              "result": {
+                "success": true,
+                "snapshot": {
+                  "text": "Link, Current Students",
+                  "cursorBox": {
+                    "x": 48,
+                    "y": 27.5,
+                    "width": 128,
+                    "height": 17
+                  },
+                  "pageTitle": "Alumni Association | Engage with CMU",
+                  "pageUrl": "https://www.cmu.edu/engage/get-involved/alumni-association"
+                }
+              }
+            },
+            {
+              "stepNumber": 2,
+              "observation": {
+                "text": "Link, Alumni Association",
+                "cursorBox": {
+                  "x": 199.71875,
+                  "y": 27.5,
+                  "width": 142,
+                  "height": 17
+                },
+                "pageTitle": "Alumni Association | Engage with CMU",
+                "pageUrl": "https://www.cmu.edu/engage/get-involved/alumni-association"
+              },
+              "thought": "",
+              "action": {
+                "type": "KEY_PRESS",
+                "key": "Tab"
+              },
+              "result": {
+                "success": true,
+                "snapshot": {
+                  "text": "Link, Alumni Association",
+                  "cursorBox": {
+                    "x": 199.71875,
+                    "y": 27.5,
+                    "width": 142,
+                    "height": 17
+                  },
+                  "pageTitle": "Alumni Association | Engage with CMU",
+                  "pageUrl": "https://www.cmu.edu/engage/get-involved/alumni-association"
+                }
+              }
+            },
+            {
+              "stepNumber": 3,
+              "observation": {
+                "text": "Heading Level 2, Utility",
+                "cursorBox": {
+                  "x": 48,
+                  "y": 55.5,
+                  "width": 1,
+                  "height": 1
+                },
+                "pageTitle": "Alumni Association | Engage with CMU",
+                "pageUrl": "https://www.cmu.edu/engage/get-involved/alumni-association"
+              },
+              "thought": "",
+              "action": {
+                "type": "KEY_PRESS",
+                "key": "H"
+              },
+              "result": {
+                "success": true,
+                "snapshot": {
+                  "text": "Heading Level 2, Utility",
+                  "cursorBox": {
+                    "x": 48,
+                    "y": 55.5,
+                    "width": 1,
+                    "height": 1
+                  },
+                  "pageTitle": "Alumni Association | Engage with CMU",
+                  "pageUrl": "https://www.cmu.edu/engage/get-involved/alumni-association"
+                }
+              }
+            },
+            {
+              "stepNumber": 4,
+              "observation": {
+                "text": "List, 3 items",
+                "cursorBox": {
+                  "x": 48,
+                  "y": 27.5,
+                  "width": 461,
+                  "height": 17
+                },
+                "pageTitle": "Alumni Association | Engage with CMU",
+                "pageUrl": "https://www.cmu.edu/engage/get-involved/alumni-association"
+              },
+              "thought": "",
+              "action": {
+                "type": "KEY_PRESS",
+                "key": "ArrowDown"
+              },
+              "result": {
+                "success": true,
+                "snapshot": {
+                  "text": "List, 3 items",
+                  "cursorBox": {
+                    "x": 48,
+                    "y": 27.5,
+                    "width": 461,
+                    "height": 17
+                  },
+                  "pageTitle": "Alumni Association | Engage with CMU",
+                  "pageUrl": "https://www.cmu.edu/engage/get-involved/alumni-association"
+                }
+              }
+            },
+            {
+              "stepNumber": 5,
+              "observation": {
+                "text": "Link, Current Students",
+                "cursorBox": {
+                  "x": 48,
+                  "y": 27.5,
+                  "width": 128,
+                  "height": 17
+                },
+                "pageTitle": "Alumni Association | Engage with CMU",
+                "pageUrl": "https://www.cmu.edu/engage/get-involved/alumni-association"
+              },
+              "thought": "",
+              "action": {
+                "type": "KEY_PRESS",
+                "key": "Tab"
+              },
+              "result": {
+                "success": true,
+                "snapshot": {
+                  "text": "Link, Current Students",
+                  "cursorBox": {
+                    "x": 48,
+                    "y": 27.5,
+                    "width": 128,
+                    "height": 17
+                  },
+                  "pageTitle": "Alumni Association | Engage with CMU",
+                  "pageUrl": "https://www.cmu.edu/engage/get-involved/alumni-association"
+                }
+              }
+            },
+            {
+              "stepNumber": 6,
+              "observation": {
+                "text": "List Item",
+                "cursorBox": {
+                  "x": 199.71875,
+                  "y": 27.5,
+                  "width": 142,
+                  "height": 17
+                },
+                "pageTitle": "Alumni Association | Engage with CMU",
+                "pageUrl": "https://www.cmu.edu/engage/get-involved/alumni-association"
+              },
+              "thought": "",
+              "action": {
+                "type": "KEY_PRESS",
+                "key": "ArrowDown"
+              },
+              "result": {
+                "success": true,
+                "snapshot": {
+                  "text": "List Item",
+                  "cursorBox": {
+                    "x": 199.71875,
+                    "y": 27.5,
+                    "width": 142,
+                    "height": 17
+                  },
+                  "pageTitle": "Alumni Association | Engage with CMU",
+                  "pageUrl": "https://www.cmu.edu/engage/get-involved/alumni-association"
+                }
+              }
+            },
+            {
+              "stepNumber": 7,
+              "observation": {
+                "text": "Link, Alumni Association",
+                "cursorBox": {
+                  "x": 199.71875,
+                  "y": 27.5,
+                  "width": 142,
+                  "height": 17
+                },
+                "pageTitle": "Alumni Association | Engage with CMU",
+                "pageUrl": "https://www.cmu.edu/engage/get-involved/alumni-association"
+              },
+              "thought": "",
+              "action": {
+                "type": "KEY_PRESS",
+                "key": "ArrowDown"
+              },
+              "result": {
+                "success": true,
+                "snapshot": {
+                  "text": "Link, Alumni Association",
+                  "cursorBox": {
+                    "x": 199.71875,
+                    "y": 27.5,
+                    "width": 142,
+                    "height": 17
+                  },
+                  "pageTitle": "Alumni Association | Engage with CMU",
+                  "pageUrl": "https://www.cmu.edu/engage/get-involved/alumni-association"
+                }
+              }
+            },
+            {
+              "stepNumber": 8,
+              "observation": {
+                "text": "Link, Alumni Association, activated",
+                "cursorBox": null,
+                "pageTitle": "Alumni Association | Engage with CMU",
+                "pageUrl": "https://www.cmu.edu/engage/get-involved/alumni-association"
+              },
+              "thought": "",
+              "action": {
+                "type": "KEY_PRESS",
+                "key": "Enter"
+              },
+              "result": {
+                "success": true,
+                "snapshot": {
+                  "text": "Link, Alumni Association, activated",
+                  "cursorBox": null,
+                  "pageTitle": "Alumni Association | Engage with CMU",
+                  "pageUrl": "https://www.cmu.edu/engage/get-involved/alumni-association"
+                }
+              }
+            },
+            {
+              "stepNumber": 9,
+              "observation": {
+                "text": "Heading Level 2, Utility",
+                "cursorBox": {
+                  "x": 48,
+                  "y": 55.5,
+                  "width": 1,
+                  "height": 1
+                },
+                "pageTitle": "Alumni Association | Engage with CMU",
+                "pageUrl": "https://www.cmu.edu/engage/get-involved/alumni-association"
+              },
+              "thought": "",
+              "action": {
+                "type": "KEY_PRESS",
+                "key": "H"
+              },
+              "result": {
+                "success": true,
+                "snapshot": {
+                  "text": "Heading Level 2, Utility",
+                  "cursorBox": {
+                    "x": 48,
+                    "y": 55.5,
+                    "width": 1,
+                    "height": 1
+                  },
+                  "pageTitle": "Alumni Association | Engage with CMU",
+                  "pageUrl": "https://www.cmu.edu/engage/get-involved/alumni-association"
+                }
+              }
+            },
+            {
+              "stepNumber": 10,
+              "observation": {
+                "text": "List, 3 items",
+                "cursorBox": {
+                  "x": 48,
+                  "y": 27.5,
+                  "width": 461,
+                  "height": 17
+                },
+                "pageTitle": "Alumni Association | Engage with CMU",
+                "pageUrl": "https://www.cmu.edu/engage/get-involved/alumni-association"
+              },
+              "thought": "",
+              "action": {
+                "type": "KEY_PRESS",
+                "key": "ArrowDown"
+              },
+              "result": {
+                "success": true,
+                "snapshot": {
+                  "text": "List, 3 items",
+                  "cursorBox": {
+                    "x": 48,
+                    "y": 27.5,
+                    "width": 461,
+                    "height": 17
+                  },
+                  "pageTitle": "Alumni Association | Engage with CMU",
+                  "pageUrl": "https://www.cmu.edu/engage/get-involved/alumni-association"
+                }
+              }
+            },
+            {
+              "stepNumber": 11,
+              "observation": {
+                "text": "List Item",
+                "cursorBox": {
+                  "x": 48,
+                  "y": 27.5,
+                  "width": 128,
+                  "height": 17
+                },
+                "pageTitle": "Alumni Association | Engage with CMU",
+                "pageUrl": "https://www.cmu.edu/engage/get-involved/alumni-association"
+              },
+              "thought": "",
+              "action": {
+                "type": "KEY_PRESS",
+                "key": "ArrowDown"
+              },
+              "result": {
+                "success": true,
+                "snapshot": {
+                  "text": "List Item",
+                  "cursorBox": {
+                    "x": 48,
+                    "y": 27.5,
+                    "width": 128,
+                    "height": 17
+                  },
+                  "pageTitle": "Alumni Association | Engage with CMU",
+                  "pageUrl": "https://www.cmu.edu/engage/get-involved/alumni-association"
+                }
+              }
+            },
+            {
+              "stepNumber": 12,
+              "observation": {
+                "text": "Link, Current Students",
+                "cursorBox": {
+                  "x": 48,
+                  "y": 27.5,
+                  "width": 128,
+                  "height": 17
+                },
+                "pageTitle": "Alumni Association | Engage with CMU",
+                "pageUrl": "https://www.cmu.edu/engage/get-involved/alumni-association"
+              },
+              "thought": "",
+              "action": {
+                "type": "KEY_PRESS",
+                "key": "Tab"
+              },
+              "result": {
+                "success": true,
+                "snapshot": {
+                  "text": "Link, Current Students",
+                  "cursorBox": {
+                    "x": 48,
+                    "y": 27.5,
+                    "width": 128,
+                    "height": 17
+                  },
+                  "pageTitle": "Alumni Association | Engage with CMU",
+                  "pageUrl": "https://www.cmu.edu/engage/get-involved/alumni-association"
+                }
+              }
+            },
+            {
+              "stepNumber": 13,
+              "observation": {
+                "text": "List Item",
+                "cursorBox": {
+                  "x": 199.71875,
+                  "y": 27.5,
+                  "width": 142,
+                  "height": 17
+                },
+                "pageTitle": "Alumni Association | Engage with CMU",
+                "pageUrl": "https://www.cmu.edu/engage/get-involved/alumni-association"
+              },
+              "thought": "",
+              "action": {
+                "type": "KEY_PRESS",
+                "key": "ArrowDown"
+              },
+              "result": {
+                "success": true,
+                "snapshot": {
+                  "text": "List Item",
+                  "cursorBox": {
+                    "x": 199.71875,
+                    "y": 27.5,
+                    "width": 142,
+                    "height": 17
+                  },
+                  "pageTitle": "Alumni Association | Engage with CMU",
+                  "pageUrl": "https://www.cmu.edu/engage/get-involved/alumni-association"
+                }
+              }
+            },
+            {
+              "stepNumber": 14,
+              "observation": {
+                "text": "Link, Alumni Association",
+                "cursorBox": {
+                  "x": 199.71875,
+                  "y": 27.5,
+                  "width": 142,
+                  "height": 17
+                },
+                "pageTitle": "Alumni Association | Engage with CMU",
+                "pageUrl": "https://www.cmu.edu/engage/get-involved/alumni-association"
+              },
+              "thought": "",
+              "action": {
+                "type": "KEY_PRESS",
+                "key": "Tab"
+              },
+              "result": {
+                "success": true,
+                "snapshot": {
+                  "text": "Link, Alumni Association",
+                  "cursorBox": {
+                    "x": 199.71875,
+                    "y": 27.5,
+                    "width": 142,
+                    "height": 17
+                  },
+                  "pageTitle": "Alumni Association | Engage with CMU",
+                  "pageUrl": "https://www.cmu.edu/engage/get-involved/alumni-association"
+                }
+              }
+            }
+          ]
+        }
+      },
+      "wcagViolations": [],
+      "diagnostics": {
+        "stepsToCompletion": 14,
+        "keyboardTrapsDetected": 0,
+        "unlabeledElementsFound": 0,
+        "missingAltTextCount": 0,
+        "focusLostCount": 0,
+        "liveRegionAnnouncementsReceived": 0
+      }
+    }
+  ],
+  "recommendations": [
+    "Level A violations: 3 Level A criteria failed. These are minimum requirements for accessibility.",
+    "WCAG 2.1.1 (Keyboard): Failed 1 times. All functionality is operable through a keyboard",
+    "WCAG 2.4.1 (Bypass Blocks): Failed 1 times. A mechanism is available to bypass blocks of repeated content",
+    "WCAG 2.4.4 (Link Purpose (In Context)): Failed 1 times. Link purpose can be determined from link text or context"
+  ],
+  "pagesAnalyzed": 5,
+  "workflowsGenerated": 3,
+  "pageRankStats": {
+    "min": 6400125763385.973,
+    "max": 17067002035695.594,
+    "avg": 8533501017847.896
+  }
+}
