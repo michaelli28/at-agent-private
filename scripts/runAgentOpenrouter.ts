@@ -1,6 +1,6 @@
 import 'dotenv/config';
 import { BrowserClient, ScreenReaderDriver } from '@adf/virtual-screen-reader';
-import { AgentOpenrouter } from '../agent/src/AgentOpenrouter';
+import { AgentOpenrouter, NavigationMode } from '../agent/src/AgentOpenrouter';
 import { AgentStep } from '../agent/src/types';
 
 // Simple ANSI color codes for cleaner output
@@ -12,6 +12,7 @@ const colors = {
   cyan: "\x1b[36m",
   yellow: "\x1b[33m",
   red: "\x1b[31m",
+  magenta: "\x1b[35m",
 };
 
 function logStep(emoji: string, message: string) {
@@ -22,14 +23,54 @@ function logInfo(key: string, value: string) {
   console.log(`   ${colors.dim}${key}:${colors.reset} ${colors.cyan}${value}${colors.reset}`);
 }
 
+function parseArgs(args: string[]): {
+  url: string;
+  goal: string;
+  model: string;
+  navigationMode: NavigationMode;
+} {
+  let url = '';
+  let goal = '';
+  let model = 'google/gemini-2.0-flash-001';
+  let navigationMode: NavigationMode = 'default';
+
+  const positional: string[] = [];
+
+  for (let i = 0; i < args.length; i++) {
+    const arg = args[i];
+    if (arg === '--pagerank' || arg === '-p') {
+      navigationMode = 'pagerank';
+    } else if (arg === '--model' || arg === '-m') {
+      model = args[++i] || model;
+    } else if (!arg.startsWith('-')) {
+      positional.push(arg);
+    }
+  }
+
+  url = positional[0] || '';
+  goal = positional[1] || '';
+  // Allow model as third positional arg for backward compatibility
+  if (positional[2]) {
+    model = positional[2];
+  }
+
+  return { url, goal, model, navigationMode };
+}
+
 async function main() {
   const args = getCliArgs();
-  const url = args[0];
-  const goal = args[1];
-  const model = args[2] || 'google/gemini-3-pro'; // Allow model override via args
+  const { url, goal, model, navigationMode } = parseArgs(args);
 
   if (!url || !goal) {
-    console.error('Usage: npx ts-node scripts/runAgentOpenrouter.ts <url> "<goal>" [model]');
+    console.error('Usage: npx ts-node scripts/runAgentOpenrouter.ts <url> "<goal>" [model] [options]');
+    console.error('');
+    console.error('Options:');
+    console.error('  --pagerank, -p    Use PageRank-based navigation (crawls site first)');
+    console.error('  --model, -m       Specify the LLM model to use');
+    console.error('');
+    console.error('Examples:');
+    console.error('  npx ts-node scripts/runAgentOpenrouter.ts https://example.com "find contact page"');
+    console.error('  npx ts-node scripts/runAgentOpenrouter.ts https://example.com "find pricing" --pagerank');
     process.exit(1);
   }
 
@@ -40,6 +81,7 @@ async function main() {
   logInfo("Target URL", url);
   logInfo("Goal", goal);
   logInfo("Model", model);
+  logInfo("Navigation Mode", navigationMode === 'pagerank' ? 'PageRank (crawl + rank)' : 'Default (LLM-only)');
   console.log(); // Spacer
 
   const client = new BrowserClient();
@@ -54,7 +96,7 @@ async function main() {
   try {
     logStep("🌐", "Page loaded...");
 
-    // Instantiate AgentOpenrouter
+    // Instantiate AgentOpenrouter with navigation mode
     const agent = new AgentOpenrouter({
       driver,
       onStep: (step: AgentStep) => {
@@ -62,10 +104,25 @@ async function main() {
           ? step.thought
           : '(no model thought returned)';
         logStep("🧠", `Thought: ${thought}`);
-        logStep("⚡", `Action: ${step.action.type} ${step.action.key || ''}`);
+        const actionDetail = step.action.text
+          ? `"${step.action.text}"`
+          : step.action.key || '';
+        logStep("⚡", `Action: ${step.action.type} ${actionDetail}`);
       },
-      model
+      model,
+      navigationMode,
+      entryUrl: url, // Required for PageRank mode
+      onLog: (message: string) => {
+        // Show PageRank-related logs in magenta
+        if (message.includes('[PageRank]')) {
+          console.log(`${colors.magenta}${message}${colors.reset}`);
+        }
+      },
     });
+
+    if (navigationMode === 'pagerank') {
+      logStep("📊", "PageRank mode enabled - will crawl site before navigation...");
+    }
 
     logStep("🤖", "Starting Agent Execution...");
     console.log(`${colors.dim}   (Press Ctrl+C to interrupt)\n${colors.reset}`);

@@ -2,6 +2,9 @@ import { IAccessibilityDriver, ActionResult, PerceptualSnapshot, UserAction } fr
 import * as fs from 'fs';
 import * as path from 'path';
 import { AgentStep, AgentTrace, DebugEvent, DebugEventCallback, BeforeLlmRequestCallback, LogCallback } from './types';
+import { PageFinder, PageRankResult } from './PageFinder';
+
+export type NavigationMode = 'default' | 'pagerank';
 
 // Raw OpenRouter response types (more lenient than SDK)
 interface OpenRouterToolCall {
@@ -100,6 +103,23 @@ const TOOLS = [
   {
     type: 'function' as const,
     function: {
+      name: 'type_text',
+      description: 'Type text into the currently focused input field (textbox, searchbox, etc.). Use after navigating to a form field.',
+      parameters: {
+        type: 'object',
+        properties: {
+          text: {
+            type: 'string',
+            description: 'The text to type into the input field',
+          },
+        },
+        required: ['text'],
+      },
+    },
+  },
+  {
+    type: 'function' as const,
+    function: {
       name: 'finish_run',
       description: 'Call when you have completed the goal or determined it cannot be done. Set success=true if goal achieved, false otherwise.',
       parameters: {
@@ -114,6 +134,38 @@ const TOOLS = [
   },
 ];
 
+// Additional tool for PageRank mode - navigate directly to a suggested page
+const PAGERANK_TOOLS = [
+  {
+    type: 'function' as const,
+    function: {
+      name: 'navigate_to_page',
+      description: 'Navigate directly to one of the suggested pages. Use the page number from the suggested pages list (1-indexed).',
+      parameters: {
+        type: 'object',
+        properties: {
+          page_number: {
+            type: 'number',
+            description: 'The number of the suggested page to navigate to (1 = first suggestion, 2 = second, etc.)',
+          },
+        },
+        required: ['page_number'],
+      },
+    },
+  },
+  {
+    type: 'function' as const,
+    function: {
+      name: 'refresh_suggestions',
+      description: 'Get new page suggestions based on current goal understanding. Use if current suggestions are not helpful.',
+      parameters: {
+        type: 'object',
+        properties: {},
+      },
+    },
+  },
+];
+
 export interface AgentOpenrouterOptions {
   driver: IAccessibilityDriver;
   onStep?: (step: AgentStep) => void;
@@ -122,6 +174,12 @@ export interface AgentOpenrouterOptions {
   onDebug?: DebugEventCallback;
   beforeLlmRequest?: BeforeLlmRequestCallback;
   onLog?: LogCallback;
+  /** Navigation mode: 'default' uses LLM-only navigation, 'pagerank' adds PageRank-based page suggestions */
+  navigationMode?: NavigationMode;
+  /** Entry URL for PageRank crawling (required if navigationMode is 'pagerank') */
+  entryUrl?: string;
+  /** Weight for PageRank vs semantic similarity (0-1, default 0.2) */
+  pagerankWeight?: number;
 }
 
 export class AgentOpenrouter {
@@ -132,6 +190,11 @@ export class AgentOpenrouter {
   private onDebug?: DebugEventCallback;
   private beforeLlmRequest?: BeforeLlmRequestCallback;
   private onLog?: LogCallback;
+  private navigationMode: NavigationMode;
+  private pageFinder?: PageFinder;
+  private entryUrl?: string;
+  private pagerankWeight: number;
+  private currentSuggestions: PageRankResult[] = [];
 
   constructor(options: AgentOpenrouterOptions);
   constructor(
@@ -156,6 +219,9 @@ export class AgentOpenrouter {
     let resolvedOnDebug: DebugEventCallback | undefined;
     let resolvedBeforeLlmRequest: BeforeLlmRequestCallback | undefined;
     let resolvedOnLog: LogCallback | undefined;
+    let resolvedNavigationMode: NavigationMode = 'default';
+    let resolvedEntryUrl: string | undefined;
+    let resolvedPagerankWeight = 0.2;
 
     if ('driver' in driverOrOptions) {
       // Options object
@@ -166,6 +232,9 @@ export class AgentOpenrouter {
       resolvedOnDebug = driverOrOptions.onDebug;
       resolvedBeforeLlmRequest = driverOrOptions.beforeLlmRequest;
       resolvedOnLog = driverOrOptions.onLog;
+      resolvedNavigationMode = driverOrOptions.navigationMode || 'default';
+      resolvedEntryUrl = driverOrOptions.entryUrl;
+      resolvedPagerankWeight = driverOrOptions.pagerankWeight ?? 0.2;
     } else {
       // Legacy positional arguments
       driver = driverOrOptions;
@@ -182,6 +251,9 @@ export class AgentOpenrouter {
     this.onLog = resolvedOnLog;
     this.apiKey = resolvedApiKey || process.env['OPENROUTER_API_KEY'] || '';
     this.model = resolvedModel || 'google/gemini-2.0-flash-001';
+    this.navigationMode = resolvedNavigationMode;
+    this.entryUrl = resolvedEntryUrl;
+    this.pagerankWeight = resolvedPagerankWeight;
   }
 
   private log(message: string) {
@@ -196,7 +268,7 @@ export class AgentOpenrouter {
     }
   }
 
-  private async callLLMWithRetry(messages: any[], maxRetries = 3): Promise<OpenRouterResponse> {
+  private async callLLMWithRetry(messages: any[], tools: any[], maxRetries = 3): Promise<OpenRouterResponse> {
     let lastError: Error | null = null;
 
     for (let attempt = 1; attempt <= maxRetries; attempt++) {
@@ -211,7 +283,7 @@ export class AgentOpenrouter {
           },
           body: JSON.stringify({
             model: this.model,
-            tools: TOOLS,
+            tools,
             messages,
             stream: false,
             parallel_tool_calls: true,
@@ -281,19 +353,59 @@ export class AgentOpenrouter {
     await this.driver.enable();
 
     try {
+      // Initialize PageFinder if in pagerank mode
+      if (this.navigationMode === 'pagerank' && this.entryUrl) {
+        this.log('[PageRank] Initializing PageFinder - crawling website...');
+        this.pageFinder = new PageFinder(this.entryUrl, this.pagerankWeight);
+        await this.pageFinder.initialize({
+          maxDepth: 2,
+          maxPages: 50,
+          onProgress: (crawled, queued) => {
+            this.log(`[PageRank] Crawled ${crawled} pages, ${queued} queued...`);
+          },
+        });
+        this.log(`[PageRank] Crawl complete. Found ${this.pageFinder.getPageCount()} pages.`);
+
+        // Get initial suggestions
+        this.currentSuggestions = this.pageFinder.getSuggestedPages(goal, 5);
+        this.log('[PageRank] Initial page suggestions:');
+        this.currentSuggestions.forEach((s, i) => {
+          this.log(`  ${i + 1}. ${s.title || s.url} (score: ${s.score.toFixed(4)})`);
+        });
+      }
+
       const initialSnapshot = await this.driver.getPerceptualOutput();
 
-      const systemMessage = { role: 'system', content: SYSTEM_PROMPT };
+      // Build system prompt with PageRank additions if needed
+      let systemPrompt = SYSTEM_PROMPT;
+      if (this.navigationMode === 'pagerank') {
+        systemPrompt += `\n\n## PageRank Navigation Mode
+You have access to PageRank-based page suggestions. The system has crawled the website and ranked pages by relevance to the user's goal.
+
+Use the 'navigate_to_page' tool to jump directly to a suggested page when it seems relevant.
+Use 'refresh_suggestions' if the current suggestions don't seem helpful.
+
+The suggested pages are shown in your observations. Consider them as shortcuts to potentially relevant content.`;
+      }
+
+      const systemMessage = { role: 'system', content: systemPrompt };
       const initialObservation = this.buildObservationMessage(goal, initialSnapshot);
 
       const messages: any[] = [systemMessage, initialObservation];
+
+      // Select tools based on navigation mode
+      const activeTools = this.navigationMode === 'pagerank'
+        ? [...TOOLS, ...PAGERANK_TOOLS]
+        : TOOLS;
 
       // Emit init event with all initial data
       this.emitDebug('init', {
         goal,
         model: this.model,
-        systemPrompt: SYSTEM_PROMPT,
-        tools: TOOLS,
+        systemPrompt: systemPrompt,
+        tools: activeTools,
+        navigationMode: this.navigationMode,
+        pageSuggestions: this.currentSuggestions,
       });
 
       this.emitDebug('observation', { type: 'initial', snapshot: initialSnapshot });
@@ -302,7 +414,7 @@ export class AgentOpenrouter {
       let loopCount = 0;
       const maxLoops = 50;
 
-      this.log(`\n--- Starting Agent Goal: ${goal} ---\n`);
+      this.log(`\n--- Starting Agent Goal: ${goal} (mode: ${this.navigationMode}) ---\n`);
 
       while (loopCount < maxLoops) {
         loopCount++;
@@ -310,7 +422,7 @@ export class AgentOpenrouter {
         // Emit LLM request with full context
         const llmRequest = {
           model: this.model,
-          tools: TOOLS,
+          tools: activeTools,
           messages: [...messages], // Copy to avoid mutation
           stream: false,
           parallel_tool_calls: true,
@@ -323,7 +435,7 @@ export class AgentOpenrouter {
         }
 
         // 1. Call LLM with retry logic
-        const result = await this.callLLMWithRetry(messages);
+        const result = await this.callLLMWithRetry(messages, activeTools);
 
         const rawMessage = result.choices[0].message;
 
@@ -410,6 +522,135 @@ export class AgentOpenrouter {
 
               finished = true;
               break;
+            }
+
+            // Handle PageRank-specific tools
+            if (toolName === 'navigate_to_page' && this.pageFinder) {
+              const pageNum = args.page_number as number;
+              if (pageNum >= 1 && pageNum <= this.currentSuggestions.length) {
+                const targetPage = this.currentSuggestions[pageNum - 1];
+                this.log(`[PageRank] Navigating to suggested page ${pageNum}: ${targetPage.url}`);
+
+                // Navigate to the page using the driver
+                await this.driver.navigateTo(targetPage.url);
+                const snapshot = await this.driver.getPerceptualOutput();
+
+                const toolResponse = {
+                  status: 'ok',
+                  message: `Navigated to: ${targetPage.title || targetPage.url}`,
+                  url: targetPage.url,
+                };
+                messages.push({
+                  role: 'tool',
+                  tool_call_id: toolCall.id,
+                  content: JSON.stringify(toolResponse)
+                });
+
+                // Emit tool result
+                this.emitDebug('tool_result', {
+                  loopCount,
+                  toolCallId: toolCall.id,
+                  toolName,
+                  result: toolResponse,
+                });
+
+                // Add observation
+                const observationMsg = this.buildObservationMessage(goal, snapshot);
+                messages.push(observationMsg);
+                this.emitDebug('observation', { type: 'step', loopCount, snapshot });
+              } else {
+                const toolResponse = { status: 'error', message: `Invalid page number: ${pageNum}. Choose 1-${this.currentSuggestions.length}` };
+                messages.push({
+                  role: 'tool',
+                  tool_call_id: toolCall.id,
+                  content: JSON.stringify(toolResponse)
+                });
+              }
+              continue;
+            }
+
+            if (toolName === 'refresh_suggestions' && this.pageFinder) {
+              this.currentSuggestions = this.pageFinder.getSuggestedPages(goal, 5);
+              this.log('[PageRank] Refreshed page suggestions:');
+              this.currentSuggestions.forEach((s, i) => {
+                this.log(`  ${i + 1}. ${s.title || s.url} (score: ${s.score.toFixed(4)})`);
+              });
+
+              const toolResponse = {
+                status: 'ok',
+                message: 'Suggestions refreshed',
+                suggestions: this.currentSuggestions.map((s, i) => ({
+                  number: i + 1,
+                  title: s.title,
+                  url: s.url,
+                  score: s.score,
+                })),
+              };
+              messages.push({
+                role: 'tool',
+                tool_call_id: toolCall.id,
+                content: JSON.stringify(toolResponse)
+              });
+
+              this.emitDebug('tool_result', {
+                loopCount,
+                toolCallId: toolCall.id,
+                toolName,
+                result: toolResponse,
+              });
+              continue;
+            }
+
+            // Handle type_text tool
+            if (toolName === 'type_text') {
+              this.log(`[type_text] Raw args: ${JSON.stringify(args)}`);
+              const text = args.text as string;
+              if (!text) {
+                this.log(`[type_text] No text provided, returning error`);
+                const toolResponse = { status: 'error', message: 'No text provided to type' };
+                messages.push({
+                  role: 'tool',
+                  tool_call_id: toolCall.id,
+                  content: JSON.stringify(toolResponse)
+                });
+                continue;
+              }
+              this.log(`[type_text] Typing: "${text}"`);
+
+              const action: UserAction = { type: 'TYPE', text };
+              const actionResult = await this.driver.performAction(action);
+
+              const step: AgentStep = {
+                stepNumber: steps.length + 1,
+                observation: actionResult.snapshot,
+                thought: reasoning || content || '',
+                action,
+                result: actionResult,
+              };
+
+              steps.push(step);
+              if (this.onStep) this.onStep(step);
+
+              const toolResponse = formatActionResult(action, actionResult);
+              messages.push({
+                role: 'tool',
+                tool_call_id: toolCall.id,
+                content: JSON.stringify(toolResponse)
+              });
+
+              this.emitDebug('tool_result', {
+                loopCount,
+                toolCallId: toolCall.id,
+                toolName,
+                action,
+                result: toolResponse,
+              });
+
+              // Add observation
+              const observationMsg = this.buildObservationMessage(goal, actionResult.snapshot);
+              messages.push(observationMsg);
+              this.emitDebug('observation', { type: 'step', loopCount, snapshot: actionResult.snapshot });
+              continue;
             }
 
             const map = mapToolToAction(toolName);
@@ -512,6 +753,22 @@ export class AgentOpenrouter {
 
   private buildObservationMessage(goal: string, snapshot?: PerceptualSnapshot) {
     const snapshotText = formatSnapshot(snapshot);
+
+    // Build page suggestions section if in PageRank mode
+    let suggestionsSection = '';
+    if (this.navigationMode === 'pagerank' && this.currentSuggestions.length > 0) {
+      const suggestionsList = this.currentSuggestions
+        .map((s, i) => `    ${i + 1}. "${s.title || 'Untitled'}" - ${s.url} (relevance: ${(s.score * 100).toFixed(1)}%)`)
+        .join('\n');
+      suggestionsSection = `
+
+  <suggested_pages>
+    These pages were ranked by PageRank + semantic relevance to your goal.
+    Use navigate_to_page with the page number to jump directly to one.
+${suggestionsList}
+  </suggested_pages>`;
+    }
+
     return {
       role: 'user',
       content: `
@@ -522,10 +779,10 @@ export class AgentOpenrouter {
 
   <screen_reader_status>
     ${snapshotText}
-  </screen_reader_status>
+  </screen_reader_status>${suggestionsSection}
 
   <instructions>
-    Based on the screen reader output above, determine the next necessary action to progress towards the goal. Select the appropriate tool.
+    Based on the screen reader output above, determine the next necessary action to progress towards the goal. Select the appropriate tool.${this.navigationMode === 'pagerank' ? ' Consider using navigate_to_page if a suggested page looks relevant.' : ''}
   </instructions>
 </observation_context>
 `

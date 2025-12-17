@@ -58,13 +58,13 @@ export interface ScreenReaderDriverOptions {
 /**
  * Default timing values with rationale:
  * - keyPressDelay: 50ms - Minimum time for browser to process keyboard event
- * - clickDelay: 100ms - Time for click handlers and state updates to complete
+ * - clickDelay: 300ms - Time for click handlers, animations, and aria-hidden state updates to complete
  * - navigationDelay: 500ms - Time for navigation to initiate (network latency varies)
  * - pageSettleDelay: 300ms - Time for page JS to initialize after load
  */
 const DEFAULT_TIMING: Required<TimingOptions> = {
     keyPressDelay: 50,
-    clickDelay: 100,
+    clickDelay: 300,
     navigationDelay: 500,
     pageSettleDelay: 300,
 };
@@ -224,6 +224,23 @@ export class ScreenReaderDriver implements IAccessibilityDriver {
         await this.client.stopMutationObserver();
         this.interactionMode = 'browse';
         this.log("Screen Reader Disabled");
+    }
+
+    async navigateTo(url: string): Promise<void> {
+        this.log(`[ScreenReaderDriver] Navigating to: ${url}`);
+        await this.client.goto(url);
+        this.currentUrl = url;
+
+        // Reset navigation state - invalidate cache and refresh
+        // The cache handles rebuilding the navigator's tree via refresh()
+        this.cache.invalidate();
+        await this.cache.getTree();
+
+        // Navigate to first interesting node
+        const firstNode = this.navigator.getCurrentNode();
+        if (firstNode) {
+            this.log(`[ScreenReaderDriver] Navigation complete, at: ${firstNode.name || firstNode.role}`);
+        }
     }
 
     async performAction(action: UserAction): Promise<ActionResult> {
@@ -549,6 +566,14 @@ export class ScreenReaderDriver implements IAccessibilityDriver {
                     await this.cache.refresh();
                     const updatedNode = this.cache.findByNodeId(currentNode.nodeId);
 
+                    // If expanded, send ArrowDown to enter the dropdown and refresh
+                    if (updatedNode?.states.expanded === true && currentNode.states.expanded === false) {
+                        this.log('[Activate] Button expanded - sending ArrowDown to enter dropdown...');
+                        await this.client.pressKey('ArrowDown'); // Move focus into dropdown
+                        await this.sleep(300); // Wait for focus to move
+                        await this.cache.refresh(); // Refresh to get dropdown content
+                    }
+
                     if (updatedNode) {
                         if (updatedNode.states.expanded === true && currentNode.states.expanded === false) {
                             this.lastSpokenText = this.announcer.generateActivationAnnouncement(updatedNode, 'expanded');
@@ -663,13 +688,19 @@ export class ScreenReaderDriver implements IAccessibilityDriver {
                 await this.client.focusNode(currentNode.backendDOMNodeId);
                 await this.client.typeText(text);
                 this.lastSpokenText = `typed: ${text}`;
+                // Switch to forms mode so Enter submits the form
+                if (this.interactionMode !== 'forms') {
+                    this.interactionMode = 'forms';
+                    this.log('[Mode] Auto-switched to forms mode after typing');
+                }
                 return;
             }
         }
 
-        // Otherwise, just type (browser will handle it)
-        await this.client.typeText(text);
-        this.lastSpokenText = `typed: ${text}`;
+        // Not on a form field - provide feedback
+        const currentRole = currentNode?.computedRole || 'unknown';
+        this.log(`[Type] Warning: Not on a form field (current: ${currentRole}). Navigate to a textbox first.`);
+        this.lastSpokenText = `Cannot type here. Current element is ${currentRole}, not a text input. Use Tab to find a search box or text field first.`;
     }
 
     // =========================================================================
@@ -716,6 +747,15 @@ export class ScreenReaderDriver implements IAccessibilityDriver {
             const pageTitle = await this.client.getTitle();
             this.log(`[ScreenReaderDriver] Page load detected: "${pageTitle}"`);
             this.currentUrl = newUrl;
+
+            // Reset to browse mode on page navigation
+            if (this.interactionMode !== 'browse') {
+                this.interactionMode = 'browse';
+                this.log('[Mode] Reset to browse mode after page load');
+            }
+
+            // Reset navigator position for fresh start on new page
+            this.navigator.reset();
 
             // Invalidate cache
             this.cache.invalidate();

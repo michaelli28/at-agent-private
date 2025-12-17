@@ -22,4 +22,9 @@ export interface IAccessibilityDriver {
      * Gets the current perceptual output (what the user "sees" or "hears").
      */
     getPerceptualOutput(): Promise<PerceptualSnapshot>;
+
+    /**
+     * Navigate to a specific URL.
+     */
+    navigateTo(url: string): Promise<void>;
 }

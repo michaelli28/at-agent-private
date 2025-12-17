@@ -216,10 +216,14 @@ function extractStates(properties?: AXProperty[]): AXStateFlags {
  */
 function calculateIsInteresting(node: NavigableAXNode): boolean {
     // Never interesting if ignored by the browser
-    if (node.ignored) return false;
+    if (node.ignored) {
+        return false;
+    }
 
     // Never interesting if hidden
-    if (node.states.hidden) return false;
+    if (node.states.hidden) {
+        return false;
+    }
 
     // Never interesting for internal/structural roles
     if (NEVER_INTERESTING_ROLES.has(node.computedRole)) {
