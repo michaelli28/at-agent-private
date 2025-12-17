@@ -861,10 +861,6 @@
             font-weight: 600;
         }
 
-        .result-pending {
-            color: var(--warning);
-            font-weight: 600;
-        }
 
         .reports-list {
             padding: 12px;
@@ -944,8 +940,17 @@
                     <label>Model</label>
                     <select id="modelSelect">
                         <option value="google/gemini-2.5-flash">Gemini 2.5 Flash</option>
+                        <option value="google/gemini-3-pro-preview">Gemini 3 Pro Preview</option>
                         <option value="anthropic/claude-sonnet-4">Claude 4 Sonnet</option>
                         <option value="openai/gpt-5">GPT 5</option>
+                        <option value="openai/gpt-5.2">GPT 5.2</option>
+                    </select>
+                </div>
+                <div class="input-group">
+                    <label>Agent Type</label>
+                    <select id="agentTypeSelect">
+                        <option value="full">Full (Screen Reader)</option>
+                        <option value="minimal">Minimal (Tab Only)</option>
                     </select>
                 </div>
             </div>
@@ -1010,13 +1015,22 @@
                                 <label>Models</label>
                                 <div class="checkbox-group" id="modelCheckboxes">
                                     <div class="checkbox-item selected" data-model="google/gemini-2.5-flash">Gemini 2.5 Flash</div>
+                                    <div class="checkbox-item" data-model="google/gemini-3-pro-preview">Gemini 3 Pro Preview</div>
                                     <div class="checkbox-item" data-model="anthropic/claude-sonnet-4">Claude 4 Sonnet</div>
                                     <div class="checkbox-item" data-model="openai/gpt-5">GPT 5</div>
+                                    <div class="checkbox-item" data-model="openai/gpt-5.2">GPT 5.2</div>
                                 </div>
                             </div>
                             <div class="input-group">
                                 <label>Runs per Test Case</label>
                                 <input type="number" id="runsPerTestCase" value="1" min="1" max="10">
+                            </div>
+                            <div class="input-group">
+                                <label>Agent Type</label>
+                                <div class="checkbox-group" id="benchmarkAgentType">
+                                    <div class="checkbox-item selected" data-agenttype="full">Full (Screen Reader)</div>
+                                    <div class="checkbox-item" data-agenttype="minimal">Minimal (Tab Only)</div>
+                                </div>
                             </div>
                             <div class="benchmark-actions">
                                 <button class="btn btn-primary" id="runBenchmarkBtn">Run Benchmark</button>
@@ -1113,6 +1127,7 @@
         let testCases = [];
         let selectedTestCases = new Set();
         let selectedModels = new Set(['google/gemini-2.5-flash']);
+        let selectedBenchmarkAgentType = 'full';
         let benchmarkReports = [];
         let currentReport = null;
         let benchmarkRunning = false;
@@ -1122,6 +1137,7 @@
         const urlInput = document.getElementById('urlInput');
         const goalInput = document.getElementById('goalInput');
         const modelSelect = document.getElementById('modelSelect');
+        const agentTypeSelect = document.getElementById('agentTypeSelect');
         const runBtn = document.getElementById('runBtn');
         const stopBtn = document.getElementById('stopBtn');
         const clearBtn = document.getElementById('clearBtn');
@@ -1140,6 +1156,7 @@
         // Benchmark DOM elements
         const testCaseCheckboxes = document.getElementById('testCaseCheckboxes');
         const modelCheckboxes = document.getElementById('modelCheckboxes');
+        const benchmarkAgentTypeEl = document.getElementById('benchmarkAgentType');
         const runsPerTestCaseInput = document.getElementById('runsPerTestCase');
         const runBenchmarkBtn = document.getElementById('runBenchmarkBtn');
         const loadReportsBtn = document.getElementById('loadReportsBtn');
@@ -1313,8 +1330,15 @@
                 div.classList.toggle('expanded');
             };
 
+            // Check if user is near bottom before adding (within 100px)
+            const isNearBottom = eventStream.scrollHeight - eventStream.scrollTop - eventStream.clientHeight < 100;
+
             eventStream.appendChild(div);
-            eventStream.scrollTop = eventStream.scrollHeight;
+
+            // Only auto-scroll if user was already near bottom
+            if (isNearBottom) {
+                eventStream.scrollTop = eventStream.scrollHeight;
+            }
         }
 
         // Get event summary
@@ -1389,6 +1413,9 @@
 
         // Update messages view
         function updateMessagesView() {
+            // Check if user is near bottom before update (within 100px)
+            const isNearBottom = messagesView.scrollHeight - messagesView.scrollTop - messagesView.clientHeight < 100;
+
             messagesView.innerHTML = '';
             messages.forEach((msg, idx) => {
                 const div = document.createElement('div');
@@ -1410,7 +1437,11 @@
                 `;
                 messagesView.appendChild(div);
             });
-            messagesView.scrollTop = messagesView.scrollHeight;
+
+            // Only auto-scroll if user was already near bottom
+            if (isNearBottom) {
+                messagesView.scrollTop = messagesView.scrollHeight;
+            }
         }
 
         // Escape HTML
@@ -1425,15 +1456,17 @@
             const url = urlInput.value.trim();
             const goal = goalInput.value.trim();
             const model = modelSelect.value;
+            const agentType = agentTypeSelect.value;
 
             if (!url || !goal) {
                 alert('Please enter both URL and goal');
                 return;
             }
 
-            ws.send(JSON.stringify({ type: 'run', url, goal, model, manualOversight }));
+            ws.send(JSON.stringify({ type: 'run', url, goal, model, manualOversight, agentType }));
             statusDot.classList.add('running');
-            statusText.textContent = manualOversight ? 'Starting (manual oversight enabled)...' : 'Running...';
+            const agentLabel = agentType === 'minimal' ? 'minimal' : 'full';
+            statusText.textContent = manualOversight ? `Starting ${agentLabel} agent (manual oversight enabled)...` : `Running ${agentLabel} agent...`;
             runBtn.style.display = 'none';
             stopBtn.style.display = '';
         }
@@ -1539,6 +1572,19 @@
             });
         }
 
+        // Setup benchmark agent type selector (single selection)
+        function setupBenchmarkAgentType() {
+            benchmarkAgentTypeEl.querySelectorAll('.checkbox-item').forEach(item => {
+                item.onclick = () => {
+                    // Deselect all
+                    benchmarkAgentTypeEl.querySelectorAll('.checkbox-item').forEach(i => i.classList.remove('selected'));
+                    // Select clicked one
+                    item.classList.add('selected');
+                    selectedBenchmarkAgentType = item.dataset.agenttype;
+                };
+            });
+        }
+
         // Render report selector dropdown
         function renderReportSelector() {
             reportSelector.innerHTML = '<option value="">Select a report...</option>';
@@ -1585,7 +1631,8 @@
                 testCaseIds: Array.from(selectedTestCases),
                 models: Array.from(selectedModels),
                 runsPerTestCase,
-                name
+                name,
+                agentType: selectedBenchmarkAgentType
             }));
         }
 
@@ -1760,8 +1807,7 @@
 
             for (const testResult of currentReport.results) {
                 for (const run of testResult.runs) {
-                    const resultClass = run.criteriaResult === 'pass' ? 'result-pass' :
-                                       run.criteriaResult === 'fail' ? 'result-fail' : 'result-pending';
+                    const resultClass = run.criteriaResult === 'pass' ? 'result-pass' : 'result-fail';
                     html += `
                         <tr>
                             <td>${escapeHtml(testResult.testCase.name)}</td>
@@ -1807,6 +1853,9 @@
 
         // Setup model checkboxes
         setupModelCheckboxes();
+
+        // Setup benchmark agent type selector
+        setupBenchmarkAgentType();
 
         // Start connection
         connect();

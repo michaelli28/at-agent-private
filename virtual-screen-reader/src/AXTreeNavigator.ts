@@ -353,7 +353,6 @@ export class AXTreeNavigator {
 
         // Try to restore previous position
         let restored = false;
-        let restorationMethod = 'none';
 
         if (previousBackendNodeId) {
             // First try by backendNodeId (most reliable across refreshes)
@@ -361,7 +360,6 @@ export class AXTreeNavigator {
             if (idx >= 0) {
                 this.currentIndex = idx;
                 restored = true;
-                restorationMethod = 'backendNodeId';
             }
         }
 
@@ -371,7 +369,6 @@ export class AXTreeNavigator {
             if (idx >= 0) {
                 this.currentIndex = idx;
                 restored = true;
-                restorationMethod = 'nodeId';
             }
         }
 
@@ -385,7 +382,6 @@ export class AXTreeNavigator {
             if (idx >= 0) {
                 this.currentIndex = idx;
                 restored = true;
-                restorationMethod = 'role+name';
             }
         }
 
@@ -407,16 +403,12 @@ export class AXTreeNavigator {
             if (closestIdx >= 0) {
                 this.currentIndex = closestIdx;
                 restored = true;
-                restorationMethod = 'closest-by-order';
             }
         }
 
         if (!restored) {
             this.currentIndex = -1; // Will be set to 0 on first navigation
         }
-
-        // Debug: log tree info
-        console.log(`[AXTreeNavigator] Built tree: ${this.flatNodes.length} total, ${this.interestingNodes.length} interesting, position ${restored ? `restored (${restorationMethod})` : 'reset'} to ${this.currentIndex}`);
 
         return root;
     }
@@ -457,25 +449,15 @@ export class AXTreeNavigator {
 
         const current = this.getCurrentNode();
 
-        // Debug: Log current state
-        console.log(`[Navigate] moveNext from "${current?.computedName}" (${current?.computedRole}), expanded=${current?.states.expanded}, controlledNodes=${current?.controlledNodes?.length || 0}`);
-
-        // If current node is expanded AND has controlled nodes, jump to controlled content
+        // If current node is expanded AND has controlled nodes (via aria-controls), jump to controlled content
         if (current?.states.expanded && current.controlledNodes && current.controlledNodes.length > 0) {
             const controlledNode = current.controlledNodes[0];
-            console.log(`[Navigate] Has controlled node: "${controlledNode.computedName}" (${controlledNode.computedRole})`);
-
-            // Find the first interesting node within or equal to the controlled node
             const targetNode = this.findFirstInterestingInSubtree(controlledNode);
-            console.log(`[Navigate] First interesting in subtree: ${targetNode ? `"${targetNode.computedName}" (${targetNode.computedRole})` : 'NONE'}`);
 
             if (targetNode) {
                 const targetIndex = this.interestingNodes.indexOf(targetNode);
-                console.log(`[Navigate] Target index in interestingNodes: ${targetIndex}`);
-
                 if (targetIndex >= 0) {
                     this.currentIndex = targetIndex;
-                    console.log(`[Navigate] ✓ Jumped into controlled content: "${targetNode.computedName}" (${targetNode.computedRole})`);
                     return {
                         node: targetNode,
                         message: '',
@@ -549,7 +531,6 @@ export class AXTreeNavigator {
                 const controllerIndex = this.interestingNodes.indexOf(current.controllerNode);
                 if (controllerIndex >= 0) {
                     this.currentIndex = controllerIndex;
-                    console.log(`[Navigate] Returned to controller: "${current.controllerNode.computedName}"`);
                     return {
                         node: current.controllerNode,
                         message: '',

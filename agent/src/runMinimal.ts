@@ -13,7 +13,7 @@
  *   MODEL - Optional model override (default: google/gemini-2.0-flash-001)
  */
 
-import { chromium } from 'playwright';
+import { firefox } from 'playwright';
 import { AgentMinimal } from './AgentMinimal';
 
 async function main() {
@@ -39,7 +39,7 @@ async function main() {
   console.log(`   Goal: ${goal}`);
   console.log(`   Model: ${model || 'google/gemini-2.0-flash-001'}\n`);
 
-  const browser = await chromium.launch({ headless: false });
+  const browser = await firefox.launch({ headless: false });
   const page = await browser.newPage();
 
   try {

@@ -1,7 +1,7 @@
 import * as fs from 'fs';
 import * as path from 'path';
 import { v4 as uuidv4 } from 'uuid';
-import { chromium, Browser, Page } from 'playwright';
+import { firefox, Browser, Page } from 'playwright';
 import { BrowserClient, ScreenReaderDriver } from '@adf/virtual-screen-reader';
 import { AgentOpenrouter } from '../src/AgentOpenrouter';
 import { AgentMinimal, MinimalTrace } from '../src/AgentMinimal';
@@ -249,7 +249,7 @@ async function runSingleTest(
   try {
     if (agentType === 'minimal') {
       // ========== MINIMAL AGENT (Playwright only) ==========
-      browser = await chromium.launch({ headless: false });
+      browser = await firefox.launch({ headless: false });
       page = await browser.newPage();
       await page.goto(testCase.url, { waitUntil: 'domcontentloaded' });
 

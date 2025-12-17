@@ -189,6 +189,29 @@ export class AgentMinimal {
     });
   }
 
+  private async getFocusedElementInfoWithRetry(maxRetries = 3): Promise<string> {
+    for (let attempt = 1; attempt <= maxRetries; attempt++) {
+      try {
+        return await this.getFocusedElementInfo();
+      } catch (error: any) {
+        const isNavigationError =
+          error.message?.includes('Execution context was destroyed') ||
+          error.message?.includes('navigation') ||
+          error.message?.includes('Target closed') ||
+          error.message?.includes('frame was detached');
+
+        if (isNavigationError && attempt < maxRetries) {
+          // Wait for page to stabilize after navigation
+          await this.page.waitForLoadState('domcontentloaded').catch(() => {});
+          await new Promise(resolve => setTimeout(resolve, 300));
+          continue;
+        }
+        throw error;
+      }
+    }
+    return 'No element focused';
+  }
+
   private async callLLMWithRetry(messages: any[], maxRetries = 3): Promise<OpenRouterResponse> {
     let lastError: Error | null = null;
 
@@ -254,7 +277,7 @@ export class AgentMinimal {
   }
 
   async run(goal: string): Promise<MinimalTrace> {
-    const initialObservation = await this.getFocusedElementInfo();
+    const initialObservation = await this.getFocusedElementInfoWithRetry();
     const initialUrl = this.page.url();
 
     const systemMessage = { role: 'system', content: `${SYSTEM_PROMPT}\n\n<goal>${goal}</goal>` };
@@ -401,7 +424,7 @@ export class AgentMinimal {
             if (actionSuccess) {
               // Small delay for UI to settle
               await new Promise(resolve => setTimeout(resolve, 100));
-              observation = await this.getFocusedElementInfo();
+              observation = await this.getFocusedElementInfoWithRetry();
             }
           } catch (error: any) {
             actionSuccess = false;

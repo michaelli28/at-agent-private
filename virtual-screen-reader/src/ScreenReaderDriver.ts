@@ -91,6 +91,7 @@ export class ScreenReaderDriver implements IAccessibilityDriver {
     private lastSpokenText: string = "";
     private pendingLiveAnnouncements: string[] = [];
     private interactionMode: InteractionMode = 'browse';
+    private pageJustLoaded: boolean = false; // Forces tree refresh on first action after page load
 
     // Timing shortcuts for cleaner code
     private get timing(): Required<TimingOptions> {
@@ -135,6 +136,10 @@ export class ScreenReaderDriver implements IAccessibilityDriver {
 
         // Initial tree load and move to first interesting node
         await this.initializeNavigation();
+
+        // Mark that page just loaded - forces tree refresh on first navigation action
+        // This handles cases where JS renders content after initial page load
+        this.pageJustLoaded = true;
 
         // Start MutationObserver for dynamic content detection
         await this.client.startMutationObserver((mutations) => {
@@ -376,9 +381,20 @@ export class ScreenReaderDriver implements IAccessibilityDriver {
 
     private async handleNavigationCommand(command: NavigationCommand): Promise<void> {
         try {
-            // Refresh tree if stale
-            const wasStale = this.cache.isStale();
-            if (wasStale) {
+            // Force refresh if page just loaded - JS may have rendered more content
+            if (this.pageJustLoaded) {
+                this.log(`[Navigate] Page just loaded, forcing tree refresh...`);
+                this.pageJustLoaded = false; // Clear flag before refresh
+                try {
+                    await this.cache.refresh();
+                    // Reset navigator to start after refresh since tree may have changed significantly
+                    this.navigator.reset();
+                } catch (refreshError: any) {
+                    this.log(`[Navigate] Page load refresh failed: ${refreshError.message}`);
+                }
+            }
+            // Also refresh tree if stale
+            else if (this.cache.isStale()) {
                 this.log(`[Navigate] Cache was stale, refreshing...`);
                 try {
                     await this.cache.refresh();
@@ -702,14 +718,11 @@ export class ScreenReaderDriver implements IAccessibilityDriver {
         try {
             await this.client.goBack();
 
-            // Wait for page to settle
-            await this.sleep(this.timing.navigationDelay);
-
             // Reset state for new page
             this.interactionMode = 'browse';
             this.cache.invalidate();
 
-            // Re-initialize navigation on the new page
+            // Re-initialize navigation on the new page (waits for network idle internally)
             await this.initializeNavigation();
 
             // Re-inject MutationObserver
@@ -717,6 +730,9 @@ export class ScreenReaderDriver implements IAccessibilityDriver {
 
             const pageTitle = await this.client.getTitle();
             this.lastSpokenText = `Navigated back. ${pageTitle}`;
+
+            // Mark that page just loaded - forces tree refresh on first action
+            this.pageJustLoaded = true;
 
         } catch (error: any) {
             this.log(`[GoBack] Error: ${error.message}`);
@@ -749,6 +765,13 @@ export class ScreenReaderDriver implements IAccessibilityDriver {
     // =========================================================================
 
     private async initializeNavigation(): Promise<void> {
+        // Reset navigator to start fresh - prevents restoring position from previous page
+        this.navigator.reset();
+
+        // Wait for network to settle before fetching tree
+        // This helps ensure JS has finished rendering dynamic content
+        await this.client.waitForNetworkIdle(2000);
+
         // Build tree
         const tree = await this.cache.refresh();
 
@@ -795,10 +818,7 @@ export class ScreenReaderDriver implements IAccessibilityDriver {
             // Invalidate cache
             this.cache.invalidate();
 
-            // Wait for page to settle
-            await this.sleep(this.timing.pageSettleDelay);
-
-            // Re-initialize navigation
+            // Re-initialize navigation (waits for network idle internally)
             await this.initializeNavigation();
 
             // Re-inject MutationObserver (destroyed during navigation)
@@ -806,6 +826,10 @@ export class ScreenReaderDriver implements IAccessibilityDriver {
 
             // Announce navigation
             this.lastSpokenText = this.announcer.generateNavigationAnnouncement(pageTitle);
+
+            // Mark that page just loaded - forces tree refresh on first action
+            // This handles cases where JS renders content after initial page load
+            this.pageJustLoaded = true;
 
         } catch (error: any) {
             this.log(`[ScreenReaderDriver] Page load error: ${error.message}`);
@@ -828,12 +852,14 @@ export class ScreenReaderDriver implements IAccessibilityDriver {
                     // Reset interaction mode on navigation
                     this.interactionMode = 'browse';
 
-                    // Invalidate cache and reinitialize
+                    // Invalidate cache and reinitialize (waits for network idle internally)
                     this.cache.invalidate();
-                    await this.sleep(this.timing.navigationDelay);
                     await this.initializeNavigation();
 
                     this.lastSpokenText = this.announcer.generateNavigationAnnouncement(pageTitle);
+
+                    // Mark that page just loaded - forces tree refresh on first action
+                    this.pageJustLoaded = true;
                     return true;
                 }
             } catch (error: any) {

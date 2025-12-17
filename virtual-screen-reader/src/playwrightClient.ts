@@ -1,4 +1,4 @@
-import { chromium, Browser, Page, CDPSession, BrowserContext } from 'playwright';
+import { firefox, chromium, Browser, Page, CDPSession, BrowserContext } from 'playwright';
 import { AXNode, Rect } from './types';
 
 /**
@@ -42,7 +42,7 @@ export class BrowserClient {
      * Launches a new browser instance.
      */
     async launch(headless: boolean = true): Promise<void> {
-        this.browser = await chromium.launch({ headless });
+        this.browser = await firefox.launch({ headless });
         this.context = await this.browser.newContext();
         this.page = await this.context.newPage();
         this.cdpSession = await this.context.newCDPSession(this.page);
@@ -361,6 +361,21 @@ export class BrowserClient {
         } catch {
             // Both failed - page may be a SPA that doesn't trigger traditional load events
             // This is expected behavior, not an error condition
+        }
+    }
+
+    /**
+     * Waits for network to be idle (no requests for 500ms).
+     * This is useful after page load to ensure JS has finished rendering.
+     * Has a short timeout since some pages have persistent connections.
+     */
+    async waitForNetworkIdle(timeout: number = 2000): Promise<void> {
+        if (!this.page) return;
+        try {
+            await this.page.waitForLoadState('networkidle', { timeout });
+        } catch {
+            // Timeout is expected for pages with persistent connections (websockets, polling)
+            // This is not an error - we just use whatever content is available
         }
     }
 

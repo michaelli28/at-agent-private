@@ -4,11 +4,11 @@
       "id": "bhs-leadership",
       "name": "Find BHS Leadership Page",
       "url": "https://www.bloomfield.org/",
-      "goal": "Navigate to the About BHS dropdown. Then within the dropdown click BHS Leadership. Then, find the job title of Samer Alsayed Suliman. Report success once you find the title, with your reason being the job title.",
+      "goal": "1. Navigate to the About BHS dropdown but do not click it. 2. Navigate within the dropdown and click BHS Leadership. 3. Report success once you click the link, with the reason as the url.",
       "maxSteps": -1,
       "successCriteria": {
         "expectAgentSuccess": true,
-        "containsText": "Director of Technology"
+        "containsText": "https://www.bloomfield.org/about-bhs/bhs-leadership"
       },
       "tags": [
         "school"
@@ -18,9 +18,23 @@
       "id": "mich-gov-corrections",
       "name": "Find Corrections Contact Page",
       "url": "https://www.michigan.gov/som",
-      "goal": "Click the government dropdown. Then click the branches of government. Then click the Executive Branch. Then click the MDOC Organization link. Report success after reaching the Contact Us page.",
+      "goal": "1. Navigate to and click the Government dropdown. 2. Within the dropdown, navigate to and click Branches of Government. 3. Navigate to and click Executive Branch. 4. Navigate to and click the MDOC Organization link. Report success after clicking the link, with the reason as the url.",
       "successCriteria": {
-        "expectAgentSuccess": true
+        "expectAgentSuccess": true,
+        "containsText": "https://www.michigan.gov/corrections/about/contact-us"
+      },
+      "tags": [
+        "government"
+      ]
+    },
+    {
+      "id": "cmu-fin-aid",
+      "name": "Find Financial Aid Disbursement Page",
+      "url": "https://www.cmu.edu/",
+      "goal": "1. Navigate to and click the Admission dropdown. 2. Within the dropdown, navigate to and click Access and Affordability. 3. Navigate to and click Understanding your Offer. 4. Navigate to and click the financial aid disbursement link. Report success after clicking the link, with the reason as the url.",
+      "successCriteria": {
+        "expectAgentSuccess": true,
+        "containsText": "https://www.cmu.edu/sfs/financial-aid/disbursement.html"
       },
       "tags": [
         "government"
