@@ -16,6 +16,11 @@ export interface AgentTrace {
   steps: AgentStep[];
   error?: string;
   reason?: string;
+  totalTokens?: {
+    prompt: number;
+    completion: number;
+    total: number;
+  };
 }
 
 export interface AgentGraphState {

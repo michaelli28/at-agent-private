@@ -101,6 +101,7 @@ function calculateStats(runs: BenchmarkRun[]): TestCaseResults['stats'] {
       avgDurationMs: 0,
       minSteps: 0,
       maxSteps: 0,
+      avgTokens: 0,
     };
   }
 
@@ -109,6 +110,7 @@ function calculateStats(runs: BenchmarkRun[]): TestCaseResults['stats'] {
 
   const steps = runs.map(r => r.stepsCount);
   const durations = runs.map(r => r.durationMs);
+  const tokens = runs.map(r => r.totalTokens?.total || 0);
 
   return {
     totalRuns: runs.length,
@@ -119,6 +121,7 @@ function calculateStats(runs: BenchmarkRun[]): TestCaseResults['stats'] {
     avgDurationMs: durations.reduce((a, b) => a + b, 0) / runs.length,
     minSteps: Math.min(...steps),
     maxSteps: Math.max(...steps),
+    avgTokens: tokens.reduce((a, b) => a + b, 0) / runs.length,
   };
 }
 
@@ -384,6 +387,7 @@ async function runSingleTest(
     agentReason: trace.error || trace.reason || '',
     error: trace.error,
     trace,
+    totalTokens: trace.totalTokens,
     screenshots: {
       initial: initialScreenshot,
       final: finalScreenshot,
@@ -410,7 +414,7 @@ function calculateSummary(
 ): BenchmarkReport['summary'] {
   const passCount = runs.filter(r => r.criteriaResult === 'pass').length;
 
-  const byModel: Record<string, { passRate: number; avgSteps: number; avgDurationMs: number }> = {};
+  const byModel: Record<string, { passRate: number; avgSteps: number; avgDurationMs: number; avgTokens: number }> = {};
 
   for (const model of models) {
     const modelRuns = runs.filter(r => r.model === model);
@@ -420,6 +424,7 @@ function calculateSummary(
         passRate: modelPassCount / modelRuns.length,
         avgSteps: modelRuns.reduce((a, r) => a + r.stepsCount, 0) / modelRuns.length,
         avgDurationMs: modelRuns.reduce((a, r) => a + r.durationMs, 0) / modelRuns.length,
+        avgTokens: modelRuns.reduce((a, r) => a + (r.totalTokens?.total || 0), 0) / modelRuns.length,
       };
     }
   }

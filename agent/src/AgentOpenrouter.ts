@@ -20,12 +20,19 @@ interface OpenRouterMessage {
   tool_calls?: OpenRouterToolCall[];
 }
 
+interface OpenRouterUsage {
+  prompt_tokens: number;
+  completion_tokens: number;
+  total_tokens: number;
+}
+
 interface OpenRouterResponse {
   id: string;
   choices: Array<{
     message: OpenRouterMessage;
     finish_reason: string;
   }>;
+  usage?: OpenRouterUsage;
 }
 
 const SYSTEM_PROMPT = fs.readFileSync(path.join(__dirname, '../system_prompt.txt'), 'utf-8').trim();
@@ -341,6 +348,10 @@ export class AgentOpenrouter {
       let loopCount = 0;
       const maxLoops = 50;
 
+      // Token tracking
+      let totalPromptTokens = 0;
+      let totalCompletionTokens = 0;
+
       this.log(`\n--- Starting Agent Goal: ${goal} ---\n`);
 
       while (loopCount < maxLoops) {
@@ -363,6 +374,12 @@ export class AgentOpenrouter {
 
         // 1. Call LLM with retry logic
         const result = await this.callLLMWithRetry(messages);
+
+        // Accumulate token usage
+        if (result.usage) {
+          totalPromptTokens += result.usage.prompt_tokens;
+          totalCompletionTokens += result.usage.completion_tokens;
+        }
 
         const rawMessage = result.choices[0].message;
 
@@ -439,12 +456,19 @@ export class AgentOpenrouter {
                 result: toolResponse,
               });
 
+              const tokenUsage = {
+                prompt: totalPromptTokens,
+                completion: totalCompletionTokens,
+                total: totalPromptTokens + totalCompletionTokens,
+              };
+
               // Emit finish event
               this.emitDebug('finish', {
                 success: successResult,
                 reason: errorResult,
                 totalSteps: steps.length,
                 totalLoops: loopCount,
+                totalTokens: tokenUsage,
               });
 
               finished = true;
@@ -517,7 +541,12 @@ export class AgentOpenrouter {
               goal,
               success: successResult,
               steps,
-              error: !successResult ? errorResult : undefined
+              error: !successResult ? errorResult : undefined,
+              totalTokens: {
+                prompt: totalPromptTokens,
+                completion: totalCompletionTokens,
+                total: totalPromptTokens + totalCompletionTokens,
+              },
             };
           }
 
@@ -529,19 +558,27 @@ export class AgentOpenrouter {
       }
 
       // Max loops reached
+      const tokenUsage = {
+        prompt: totalPromptTokens,
+        completion: totalCompletionTokens,
+        total: totalPromptTokens + totalCompletionTokens,
+      };
+
       this.log(`[Finish]: Success=false, Reason=Max loops reached (${loopCount} loops)`);
       this.emitDebug('finish', {
         success: false,
         reason: 'Max loops reached',
         totalSteps: steps.length,
         totalLoops: loopCount,
+        totalTokens: tokenUsage,
       });
 
       return {
         goal,
         success: false,
         steps,
-        error: 'Max loops reached'
+        error: 'Max loops reached',
+        totalTokens: tokenUsage,
       };
 
     } finally {

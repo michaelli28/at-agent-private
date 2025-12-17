@@ -40,6 +40,13 @@ export interface BenchmarkRun {
   // Full trace for debugging
   trace: AgentTrace;
 
+  // Token usage
+  totalTokens?: {
+    prompt: number;
+    completion: number;
+    total: number;
+  };
+
   // Screenshots at key moments
   screenshots?: {
     initial?: string;  // base64
@@ -62,6 +69,7 @@ export interface TestCaseResults {
     avgDurationMs: number;
     minSteps: number;
     maxSteps: number;
+    avgTokens: number;
   };
 }
 
@@ -89,6 +97,7 @@ export interface BenchmarkReport {
       passRate: number;
       avgSteps: number;
       avgDurationMs: number;
+      avgTokens: number;
     }>;
   };
 }

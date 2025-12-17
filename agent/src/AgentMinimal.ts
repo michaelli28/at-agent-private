@@ -19,12 +19,19 @@ interface OpenRouterMessage {
   tool_calls?: OpenRouterToolCall[];
 }
 
+interface OpenRouterUsage {
+  prompt_tokens: number;
+  completion_tokens: number;
+  total_tokens: number;
+}
+
 interface OpenRouterResponse {
   id: string;
   choices: Array<{
     message: OpenRouterMessage;
     finish_reason: string;
   }>;
+  usage?: OpenRouterUsage;
 }
 
 // Minimal types (no virtual-screen-reader dependency)
@@ -36,11 +43,23 @@ export interface MinimalStep {
   success: boolean;
 }
 
+// Page element for tab map
+interface PageElement {
+  position: number;
+  name: string;
+  role: string;
+}
+
 export interface MinimalTrace {
   goal: string;
   success: boolean;
   steps: MinimalStep[];
   error?: string;
+  totalTokens?: {
+    prompt: number;
+    completion: number;
+    total: number;
+  };
 }
 
 export type LogCallback = (message: string) => void;
@@ -73,17 +92,15 @@ const TOOLS = [
   {
     type: 'function' as const,
     function: {
-      name: 'press_tab',
-      description: 'Move to the next interactive element (link, button, form field).',
-      parameters: { type: 'object', properties: {} },
-    },
-  },
-  {
-    type: 'function' as const,
-    function: {
-      name: 'press_shift_tab',
-      description: 'Move to the previous interactive element.',
-      parameters: { type: 'object', properties: {} },
+      name: 'move_to_position',
+      description: 'Move to a specific position in the tab order. Use the position number from the page_elements list.',
+      parameters: {
+        type: 'object',
+        properties: {
+          position: { type: 'integer', description: 'Target position (1-indexed) from page_elements' },
+        },
+        required: ['position'],
+      },
     },
   },
   {
@@ -150,6 +167,11 @@ export class AgentMinimal {
   private onDebug?: DebugEventCallback;
   private beforeLlmRequest?: BeforeLlmRequestCallback;
 
+  // Page element scanning state
+  private currentPageElements: PageElement[] = [];
+  private currentPosition: number = 0;
+  private lastUrl: string = '';
+
   constructor(options: AgentMinimalOptions) {
     this.page = options.page;
     this.apiKey = options.apiKey || process.env['OPENROUTER_API_KEY'] || '';
@@ -212,6 +234,207 @@ export class AgentMinimal {
     return 'No element focused';
   }
 
+  /**
+   * Wait for the DOM to stabilize (no mutations for a period of time).
+   * This ensures dynamic content has finished rendering before we scan.
+   */
+  private async waitForDOMStable(timeout = 2000, stableTime = 100): Promise<void> {
+    // Use string evaluation to avoid bundler transformations that inject __name
+    await this.page.evaluate(`
+      new Promise(function(resolve) {
+        var TIMEOUT = ${timeout};
+        var STABLE_TIME = ${stableTime};
+        var lastMutationTime = Date.now();
+        var resolved = false;
+
+        var observer = new MutationObserver(function() {
+          lastMutationTime = Date.now();
+        });
+
+        observer.observe(document.body, {
+          childList: true,
+          subtree: true,
+          attributes: true
+        });
+
+        function checkStable() {
+          if (resolved) return;
+
+          var timeSinceLastMutation = Date.now() - lastMutationTime;
+          if (timeSinceLastMutation >= STABLE_TIME) {
+            resolved = true;
+            observer.disconnect();
+            resolve();
+          } else {
+            setTimeout(checkStable, 20);
+          }
+        }
+
+        setTimeout(checkStable, 20);
+
+        setTimeout(function() {
+          if (!resolved) {
+            resolved = true;
+            observer.disconnect();
+            resolve();
+          }
+        }, TIMEOUT);
+      })
+    `);
+  }
+
+  /**
+   * Scan all interactive elements on the page using DOM queries.
+   * This doesn't move focus, so it won't disrupt dropdowns/modals.
+   */
+  private async scanPageElements(): Promise<PageElement[]> {
+    const elements = await this.page.evaluate(() => {
+      // Selector for interactive elements
+      const selector = [
+        'a[href]',
+        'button',
+        'input:not([type="hidden"])',
+        'select',
+        'textarea',
+        '[tabindex]:not([tabindex="-1"])',
+        '[role="button"]',
+        '[role="link"]',
+        '[role="menuitem"]',
+        '[role="option"]',
+        '[role="checkbox"]',
+        '[role="radio"]',
+        '[role="tab"]',
+        '[role="combobox"]',
+        '[role="listbox"]',
+        '[role="menu"]',
+        '[contenteditable="true"]',
+      ].join(', ');
+
+      const allElements = Array.from(document.querySelectorAll(selector));
+
+      // Filter to visible, enabled elements
+      const visible = allElements.filter(el => {
+        const style = window.getComputedStyle(el);
+        const rect = el.getBoundingClientRect();
+        const isVisible = style.display !== 'none' &&
+          style.visibility !== 'hidden' &&
+          style.opacity !== '0' &&
+          rect.width > 0 &&
+          rect.height > 0;
+        const isDisabled = (el as HTMLButtonElement).disabled ||
+          el.getAttribute('aria-disabled') === 'true';
+        return isVisible && !isDisabled;
+      });
+
+      // Sort by tab order: positive tabindex first (ascending), then tabindex=0/none in DOM order
+      const withTabIndex: Element[] = [];
+      const withoutTabIndex: Element[] = [];
+
+      visible.forEach(el => {
+        const tabindex = parseInt(el.getAttribute('tabindex') || '0', 10);
+        if (tabindex > 0) {
+          withTabIndex.push(el);
+        } else {
+          withoutTabIndex.push(el);
+        }
+      });
+
+      // Sort positive tabindex elements
+      withTabIndex.sort((a, b) => {
+        const aIdx = parseInt(a.getAttribute('tabindex') || '0', 10);
+        const bIdx = parseInt(b.getAttribute('tabindex') || '0', 10);
+        return aIdx - bIdx;
+      });
+
+      // Combine: positive tabindex first, then DOM order
+      const sorted = [...withTabIndex, ...withoutTabIndex];
+
+      // Map to element info
+      return sorted.map((el, i) => {
+        const role = el.getAttribute('role') || el.tagName.toLowerCase();
+        const name = el.getAttribute('aria-label') ||
+          el.getAttribute('title') ||
+          el.getAttribute('placeholder') ||
+          (el as HTMLElement).innerText?.trim().slice(0, 100) ||
+          el.getAttribute('name') ||
+          '';
+        return { position: i + 1, name: name.replace(/\n+/g, ' ').trim(), role };
+      });
+    });
+
+    this.log(`[Scan]: Found ${elements.length} interactive elements`);
+    return elements;
+  }
+
+  /**
+   * Format page elements as a string for the system prompt.
+   */
+  private formatPageElements(): string {
+    if (this.currentPageElements.length === 0) {
+      return '<page_elements count="0">No interactive elements found</page_elements>';
+    }
+
+    const lines = this.currentPageElements.map(el => {
+      const display = el.name ? `${el.name}, ${el.role}` : el.role;
+      return `${el.position}. ${display}`;
+    });
+
+    return `<page_elements count="${this.currentPageElements.length}">\n${lines.join('\n')}\n</page_elements>`;
+  }
+
+  /**
+   * Build the system message with goal and current page elements.
+   */
+  private buildSystemMessage(goal: string): { role: string; content: string } {
+    const elements = this.formatPageElements();
+    return {
+      role: 'system',
+      content: `${SYSTEM_PROMPT}\n\n<goal>${goal}</goal>\n\n${elements}`,
+    };
+  }
+
+  /**
+   * Move to a specific position using Tab/Shift+Tab key presses.
+   */
+  private async moveToPosition(targetPosition: number): Promise<{ success: boolean; error?: string }> {
+    const maxPosition = this.currentPageElements.length;
+
+    if (targetPosition < 1 || targetPosition > maxPosition) {
+      return { success: false, error: `Invalid position ${targetPosition}. Valid range: 1-${maxPosition}` };
+    }
+
+    // If not positioned yet (position 0), start from body and tab to target
+    if (this.currentPosition === 0) {
+      await this.page.evaluate(() => {
+        (document.activeElement as HTMLElement)?.blur();
+        document.body.focus();
+      });
+      for (let i = 0; i < targetPosition; i++) {
+        await this.page.keyboard.press('Tab');
+      }
+      this.currentPosition = targetPosition;
+      return { success: true };
+    }
+
+    // Already at target
+    if (targetPosition === this.currentPosition) {
+      return { success: true };
+    }
+
+    // Calculate direction and number of presses
+    const diff = targetPosition - this.currentPosition;
+    const key = diff > 0 ? 'Tab' : 'Shift+Tab';
+    const presses = Math.abs(diff);
+
+    // Execute the key presses
+    for (let i = 0; i < presses; i++) {
+      await this.page.keyboard.press(key);
+    }
+
+    this.currentPosition = targetPosition;
+    return { success: true };
+  }
+
   private async callLLMWithRetry(messages: any[], maxRetries = 3): Promise<OpenRouterResponse> {
     let lastError: Error | null = null;
 
@@ -230,7 +453,7 @@ export class AgentMinimal {
             tools: TOOLS,
             messages,
             stream: false,
-            parallel_tool_calls: false,
+            parallel_tool_calls: true,
           }),
         });
 
@@ -277,16 +500,26 @@ export class AgentMinimal {
   }
 
   async run(goal: string): Promise<MinimalTrace> {
-    const initialObservation = await this.getFocusedElementInfoWithRetry();
-    const initialUrl = this.page.url();
+    // Initialize page state
+    this.lastUrl = this.page.url();
+    this.currentPageElements = await this.scanPageElements();
+    this.currentPosition = 0; // Not positioned yet
 
-    const systemMessage = { role: 'system', content: `${SYSTEM_PROMPT}\n\n<goal>${goal}</goal>` };
-    const initialMessage = { role: 'user', content: `<url>${initialUrl}</url>\n<focused_element>${initialObservation}</focused_element>` };
+    // Build system message with page elements
+    const systemMessage = this.buildSystemMessage(goal);
+    const initialMessage = {
+      role: 'user',
+      content: `<url>${this.lastUrl}</url>\n<focused_element>No element focused yet. Use move_to_position to focus an element.</focused_element>`,
+    };
 
     const messages: any[] = [systemMessage, initialMessage];
     const steps: MinimalStep[] = [];
     let loopCount = 0;
     const maxLoops = 50;
+
+    // Token tracking
+    let totalPromptTokens = 0;
+    let totalCompletionTokens = 0;
 
     // Emit init event
     this.emitDebug('init', {
@@ -294,9 +527,10 @@ export class AgentMinimal {
       model: this.model,
       systemPrompt: SYSTEM_PROMPT,
       tools: TOOLS,
+      pageElements: this.currentPageElements,
     });
 
-    this.emitDebug('observation', { type: 'initial', observation: initialObservation });
+    this.emitDebug('observation', { type: 'initial', observation: 'No element focused yet' });
 
     this.log(`\n--- Starting Minimal Agent Goal: ${goal} ---\n`);
 
@@ -315,6 +549,13 @@ export class AgentMinimal {
       });
 
       const result = await this.callLLMWithRetry(messages);
+
+      // Accumulate token usage
+      if (result.usage) {
+        totalPromptTokens += result.usage.prompt_tokens;
+        totalCompletionTokens += result.usage.completion_tokens;
+      }
+
       const rawMessage = result.choices[0].message;
 
       const toolCalls = rawMessage.tool_calls?.map(tc => ({
@@ -343,6 +584,10 @@ export class AgentMinimal {
       if (content) this.log(`[Content]: ${content}`);
 
       if (toolCalls && toolCalls.length > 0) {
+        let lastObservation = '';
+        let alreadyRescanned = false;
+
+        // Process all tool calls, collecting tool responses
         for (const toolCall of toolCalls) {
           const toolName = toolCall.function.name;
           const args = this.parseArgs(toolCall.function.arguments);
@@ -363,113 +608,180 @@ export class AgentMinimal {
             const reason = args.reason || '';
             this.log(`[Finish]: Success=${success}, Reason=${reason}`);
 
-            const toolResponse = { status: 'finished', success, reason };
             messages.push({
               role: 'tool',
               tool_call_id: toolCall.id,
-              content: JSON.stringify(toolResponse)
+              content: success ? 'done' : `failed: ${reason}`,
             });
 
-            // Emit tool result and finish
             this.emitDebug('tool_result', {
               loopCount,
               toolCallId: toolCall.id,
               toolName,
-              result: toolResponse,
+              result: { success, reason },
             });
+
+            const tokenUsage = {
+              prompt: totalPromptTokens,
+              completion: totalCompletionTokens,
+              total: totalPromptTokens + totalCompletionTokens,
+            };
 
             this.emitDebug('finish', {
               success,
               reason,
               totalSteps: steps.length,
               totalLoops: loopCount,
+              totalTokens: tokenUsage,
             });
 
             return {
               goal,
               success,
               steps,
-              error: !success ? reason : undefined
+              error: !success ? reason : undefined,
+              totalTokens: tokenUsage,
             };
           }
 
           // Execute action
           let actionSuccess = true;
-          let observation = '';
+          let toolResultMsg = 'ok';
 
           try {
             switch (toolName) {
-              case 'press_tab':
-                await this.page.keyboard.press('Tab');
+              case 'move_to_position': {
+                const targetPos = parseInt(args.position, 10);
+                const result = await this.moveToPosition(targetPos);
+                if (!result.success) {
+                  actionSuccess = false;
+                  toolResultMsg = result.error || 'failed';
+                } else {
+                  toolResultMsg = `moved to ${targetPos}`;
+                }
                 break;
-              case 'press_shift_tab':
-                await this.page.keyboard.press('Shift+Tab');
-                break;
-              case 'press_enter':
+              }
+              case 'press_enter': {
                 await this.page.keyboard.press('Enter');
                 await this.page.waitForLoadState('domcontentloaded').catch(() => {});
+
+                // Check for page navigation
+                const newUrl = this.page.url();
+                if (newUrl !== this.lastUrl) {
+                  await this.page.waitForLoadState('load').catch(() => {});
+                  await this.page.waitForLoadState('networkidle').catch(() => {});
+                  this.lastUrl = newUrl;
+                  this.currentPosition = 0;
+                  this.log(`[Navigation]: New page detected`);
+                }
+
+                // Wait for DOM to stabilize, then rescan immediately
+                await this.waitForDOMStable();
+                this.currentPageElements = await this.scanPageElements();
+                messages[0] = this.buildSystemMessage(goal);
+                alreadyRescanned = true;
+                this.log(`[Rescan after Enter]: ${this.currentPageElements.length} elements`);
+
+                toolResultMsg = 'ok';
                 break;
+              }
               case 'type_text':
                 await this.page.keyboard.type(args.text || '');
+                toolResultMsg = 'typed';
                 break;
-              case 'go_back':
+              case 'go_back': {
                 await this.page.goBack();
                 await this.page.waitForLoadState('domcontentloaded').catch(() => {});
+                await this.page.waitForLoadState('load').catch(() => {});
+                await this.page.waitForLoadState('networkidle').catch(() => {});
+
+                this.lastUrl = this.page.url();
+                this.currentPosition = 0;
+                this.log(`[Navigation]: Went back`);
+
+                // Wait for DOM to stabilize, then rescan immediately
+                await this.waitForDOMStable();
+                this.currentPageElements = await this.scanPageElements();
+                messages[0] = this.buildSystemMessage(goal);
+                alreadyRescanned = true;
+                this.log(`[Rescan after Back]: ${this.currentPageElements.length} elements`);
+
+                toolResultMsg = 'ok';
                 break;
+              }
               default:
                 actionSuccess = false;
-                observation = `Unknown tool: ${toolName}`;
-            }
-
-            if (actionSuccess) {
-              // Small delay for UI to settle
-              await new Promise(resolve => setTimeout(resolve, 100));
-              observation = await this.getFocusedElementInfoWithRetry();
+                toolResultMsg = `unknown tool: ${toolName}`;
             }
           } catch (error: any) {
             actionSuccess = false;
-            observation = `Error: ${error.message}`;
+            toolResultMsg = `error: ${error.message}`;
           }
 
-          steps.push({
-            stepNumber: steps.length + 1,
-            observation,
-            thought: reasoning || content || '',
-            action: toolName,
-            success: actionSuccess,
-          });
-
-          const toolResponse = { status: actionSuccess ? 'ok' : 'error', message: observation };
+          // Minimal tool response
           messages.push({
             role: 'tool',
             tool_call_id: toolCall.id,
-            content: JSON.stringify(toolResponse)
+            content: toolResultMsg,
           });
 
-          // Emit tool result
           this.emitDebug('tool_result', {
             loopCount,
             toolCallId: toolCall.id,
             toolName,
-            result: toolResponse,
+            result: toolResultMsg,
           });
 
-          const currentUrl = this.page.url();
-          messages.push({
-            role: 'user',
-            content: `<url>${currentUrl}</url>\n<focused_element>${observation}</focused_element>`
+          steps.push({
+            stepNumber: steps.length + 1,
+            observation: toolResultMsg,
+            thought: reasoning || content || '',
+            action: toolName,
+            success: actionSuccess,
           });
-
-          // Emit observation
-          this.emitDebug('observation', { type: 'step', loopCount, observation, url: currentUrl });
-
-          this.log(`[Observation]: ${observation}`);
         }
+
+        // If we haven't rescanned yet (e.g., after type_text), do it now
+        if (!alreadyRescanned) {
+          await this.waitForDOMStable();
+          const previousCount = this.currentPageElements.length;
+          this.currentPageElements = await this.scanPageElements();
+          messages[0] = this.buildSystemMessage(goal);
+
+          if (this.currentPageElements.length !== previousCount) {
+            this.log(`[Rescan]: Elements changed ${previousCount} -> ${this.currentPageElements.length}`);
+          }
+        }
+
+        const currentUrl = this.page.url();
+        lastObservation = await this.getFocusedElementInfoWithRetry();
+
+        // Single observation message after all tool calls
+        messages.push({
+          role: 'user',
+          content: `<url>${currentUrl}</url>\n<focused_element position="${this.currentPosition}">${lastObservation}</focused_element>`,
+        });
+
+        this.emitDebug('observation', {
+          type: 'step',
+          loopCount,
+          observation: lastObservation,
+          url: currentUrl,
+          position: this.currentPosition,
+        });
+
+        this.log(`[Observation]: pos=${this.currentPosition}, ${lastObservation}`);
       } else {
         this.log(`[Warning]: No tool calls. Reminding model.`);
         messages.push({ role: 'user', content: 'No tool calls returned. Use the available tools or call finish_run when done.' });
       }
     }
+
+    const tokenUsage = {
+      prompt: totalPromptTokens,
+      completion: totalCompletionTokens,
+      total: totalPromptTokens + totalCompletionTokens,
+    };
 
     this.log(`[Finish]: Success=false, Reason=Max loops reached`);
     this.emitDebug('finish', {
@@ -477,13 +789,15 @@ export class AgentMinimal {
       reason: 'Max loops reached',
       totalSteps: steps.length,
       totalLoops: loopCount,
+      totalTokens: tokenUsage,
     });
 
     return {
       goal,
       success: false,
       steps,
-      error: 'Max loops reached'
+      error: 'Max loops reached',
+      totalTokens: tokenUsage,
     };
   }
 

@@ -70,10 +70,10 @@
         .header {
             background: var(--bg-secondary);
             border-bottom: 1px solid var(--border-light);
-            padding: 12px 24px;
+            padding: 16px 28px;
             display: flex;
             align-items: center;
-            gap: 16px;
+            gap: 24px;
         }
 
         .header h1 {
@@ -83,6 +83,7 @@
             display: flex;
             align-items: center;
             gap: 8px;
+            white-space: nowrap;
         }
 
         .header h1 svg {
@@ -92,14 +93,14 @@
 
         .controls {
             display: flex;
-            gap: 12px;
+            gap: 16px;
             flex: 1;
         }
 
         .input-group {
             display: flex;
             flex-direction: column;
-            gap: 4px;
+            gap: 6px;
         }
 
         .input-group label {
@@ -116,7 +117,7 @@
             color: var(--text-primary);
             font-family: inherit;
             font-size: 13px;
-            min-width: 200px;
+            min-width: 160px;
             transition: all 0.15s;
         }
 
@@ -929,6 +930,12 @@
             </h1>
             <div class="controls">
                 <div class="input-group">
+                    <label>Test Case</label>
+                    <select id="testCaseSelect">
+                        <option value="">-- Custom --</option>
+                    </select>
+                </div>
+                <div class="input-group">
                     <label>URL</label>
                     <input type="url" id="urlInput" placeholder="https://example.com" value="https://example.com">
                 </div>
@@ -942,8 +949,11 @@
                         <option value="google/gemini-2.5-flash">Gemini 2.5 Flash</option>
                         <option value="google/gemini-3-pro-preview">Gemini 3 Pro Preview</option>
                         <option value="anthropic/claude-sonnet-4">Claude 4 Sonnet</option>
+                        <option value="anthropic/claude-sonnet-4.5">Claude 4.5 Sonnet</option>
+                        <option value="anthropic/claude-opus-4.5">Claude 4.5 Opus</option>
                         <option value="openai/gpt-5">GPT 5</option>
                         <option value="openai/gpt-5.2">GPT 5.2</option>
+                        <option value="openai/gpt-oss-120b">GPT OSS 120B</option>
                     </select>
                 </div>
                 <div class="input-group">
@@ -1017,8 +1027,11 @@
                                     <div class="checkbox-item selected" data-model="google/gemini-2.5-flash">Gemini 2.5 Flash</div>
                                     <div class="checkbox-item" data-model="google/gemini-3-pro-preview">Gemini 3 Pro Preview</div>
                                     <div class="checkbox-item" data-model="anthropic/claude-sonnet-4">Claude 4 Sonnet</div>
+                                    <div class="checkbox-item" data-model="anthropic/claude-sonnet-4.5">Claude 4.5 Sonnet</div>
+                                    <div class="checkbox-item" data-model="anthropic/claude-opus-4.5">Claude 4.5 Opus</div>
                                     <div class="checkbox-item" data-model="openai/gpt-5">GPT 5</div>
                                     <div class="checkbox-item" data-model="openai/gpt-5.2">GPT 5.2</div>
+                                    <div class="checkbox-item" data-model="openai/gpt-oss-120b">GPT OSS 120B</div>
                                 </div>
                             </div>
                             <div class="input-group">
@@ -1093,6 +1106,10 @@
                     <span class="stat-label">Tools:</span>
                     <span class="stat-value" id="toolCount">0</span>
                 </div>
+                <div class="stat-item">
+                    <span class="stat-label">Tokens:</span>
+                    <span class="stat-value" id="tokenCount">0</span>
+                </div>
             </div>
         </div>
 
@@ -1119,7 +1136,7 @@
         let ws = null;
         let events = [];
         let messages = [];
-        let stats = { events: 0, observations: 0, loops: 0, tools: 0 };
+        let stats = { events: 0, observations: 0, loops: 0, tools: 0, tokens: 0 };
         let currentFilter = 'all';
         let manualOversight = false;
 
@@ -1134,6 +1151,7 @@
         let benchmarkProgress = { completed: 0, total: 0 };
 
         // DOM Elements
+        const testCaseSelect = document.getElementById('testCaseSelect');
         const urlInput = document.getElementById('urlInput');
         const goalInput = document.getElementById('goalInput');
         const modelSelect = document.getElementById('modelSelect');
@@ -1232,6 +1250,7 @@
                 case 'test_cases':
                     testCases = data.testCases;
                     renderTestCaseCheckboxes();
+                    renderTestCaseDropdown();
                     break;
                 case 'benchmark_reports':
                     benchmarkReports = data.reports;
@@ -1287,6 +1306,7 @@
             if (event.type === 'observation') stats.observations++;
             if (event.type === 'tool_call') stats.tools++;
             if (event.type === 'llm_request') stats.loops = event.data?.loopCount || stats.loops;
+            if (event.type === 'finish' && event.data?.totalTokens) stats.tokens = event.data.totalTokens.total || 0;
 
             updateStats();
 
@@ -1358,7 +1378,8 @@
                 case 'observation':
                     return data?.snapshot?.text?.substring(0, 60) || 'No text';
                 case 'finish':
-                    return `Success: ${data?.success} | Reason: ${data?.reason?.substring(0, 40)}`;
+                    const tokenInfo = data?.totalTokens ? ` | Tokens: ${data.totalTokens.total?.toLocaleString()}` : '';
+                    return `Success: ${data?.success} | Reason: ${data?.reason?.substring(0, 40)}${tokenInfo}`;
                 case 'error':
                     return data?.message || 'Unknown error';
                 default:
@@ -1403,6 +1424,7 @@
             document.getElementById('obsCount').textContent = stats.observations;
             document.getElementById('loopCount').textContent = stats.loops;
             document.getElementById('toolCount').textContent = stats.tools;
+            document.getElementById('tokenCount').textContent = stats.tokens.toLocaleString();
         }
 
         // Update screenshot
@@ -1486,7 +1508,7 @@
         function clearEvents() {
             events = [];
             messages = [];
-            stats = { events: 0, observations: 0, loops: 0, tools: 0 };
+            stats = { events: 0, observations: 0, loops: 0, tools: 0, tokens: 0 };
             eventStream.innerHTML = '';
             messagesView.innerHTML = '';
             previewContent.innerHTML = `<div class="preview-placeholder">
@@ -1549,6 +1571,30 @@
                     }
                 };
             });
+        }
+
+        // Render test case dropdown in header
+        function renderTestCaseDropdown() {
+            testCaseSelect.innerHTML = '<option value="">-- Custom --</option>';
+            testCases.forEach(tc => {
+                const option = document.createElement('option');
+                option.value = tc.id;
+                option.textContent = tc.name || tc.id;
+                option.title = tc.goal;
+                testCaseSelect.appendChild(option);
+            });
+        }
+
+        // Handle test case selection from dropdown
+        function handleTestCaseSelect() {
+            const selectedId = testCaseSelect.value;
+            if (!selectedId) return; // Custom selected, don't change anything
+
+            const tc = testCases.find(t => t.id === selectedId);
+            if (tc) {
+                urlInput.value = tc.url;
+                goalInput.value = tc.goal;
+            }
         }
 
         // Setup model checkbox handlers
@@ -1776,12 +1822,13 @@
 
             for (const [model, stats] of Object.entries(summary.byModel)) {
                 const modelPassRate = (stats.passRate * 100).toFixed(1);
+                const tokenDisplay = stats.avgTokens ? `, ${Math.round(stats.avgTokens).toLocaleString()} tokens` : '';
                 html += `
                     <div style="padding: 12px; background: var(--bg-tertiary); border-radius: var(--radius-sm); min-width: 150px;">
                         <div style="font-size: 11px; color: var(--text-muted); margin-bottom: 4px;">${escapeHtml(model.split('/').pop())}</div>
                         <div style="font-size: 18px; font-weight: 600; color: ${stats.passRate >= 0.5 ? 'var(--success)' : 'var(--error)'};">${modelPassRate}%</div>
                         <div style="font-size: 10px; color: var(--text-muted); margin-top: 4px;">
-                            Avg: ${stats.avgSteps.toFixed(1)} steps, ${(stats.avgDurationMs / 1000).toFixed(1)}s
+                            Avg: ${stats.avgSteps.toFixed(1)} steps, ${(stats.avgDurationMs / 1000).toFixed(1)}s${tokenDisplay}
                         </div>
                     </div>
                 `;
@@ -1798,6 +1845,7 @@
                             <th>Model</th>
                             <th>Result</th>
                             <th>Steps</th>
+                            <th>Tokens</th>
                             <th>Duration</th>
                             <th>Reason</th>
                         </tr>
@@ -1808,12 +1856,14 @@
             for (const testResult of currentReport.results) {
                 for (const run of testResult.runs) {
                     const resultClass = run.criteriaResult === 'pass' ? 'result-pass' : 'result-fail';
+                    const tokenCount = run.totalTokens?.total ? run.totalTokens.total.toLocaleString() : '-';
                     html += `
                         <tr>
                             <td>${escapeHtml(testResult.testCase.name)}</td>
                             <td style="font-size: 11px;">${escapeHtml(run.model.split('/').pop())}</td>
                             <td class="${resultClass}">${run.criteriaResult.toUpperCase()}</td>
                             <td>${run.stepsCount}</td>
+                            <td>${tokenCount}</td>
                             <td>${(run.durationMs / 1000).toFixed(1)}s</td>
                             <td style="font-size: 11px; max-width: 200px; overflow: hidden; text-overflow: ellipsis;" title="${escapeHtml(run.agentReason)}">${escapeHtml(run.agentReason?.substring(0, 50) || '-')}</td>
                         </tr>
@@ -1836,6 +1886,7 @@
         oversightToggle.onclick = toggleOversight;
         confirmBtn.onclick = confirm;
         rejectBtn.onclick = reject;
+        testCaseSelect.onchange = handleTestCaseSelect;
 
         document.querySelectorAll('.filter-btn').forEach(btn => {
             btn.onclick = () => setFilter(btn.dataset.filter);
