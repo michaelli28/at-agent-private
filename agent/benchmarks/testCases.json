@@ -62,7 +62,20 @@
         "expectAgentSuccess": true
       },
       "tags": [
-        "school"
+        "government"
+      ]
+    },
+    {
+      "id": "usa-gov-w9",
+      "name": "Find W9 Tax Form",
+      "url": "https://www.usa.gov/",
+      "goal": "1. Navigate to and click Taxes link. 2. Navigate to and click Learn how to get tax forms link. 3. Navigate to and click Get federal tax return forms and file by mail link. 4. Navigate to and click Download them from IRS.gov. 5. Navigate to and click Form W-9 PDF link. 6. Report success after clicking the link, with the reason as the url.",
+      "successCriteria": {
+        "expectAgentSuccess": true,
+        "containsText": "https://www.irs.gov/pub/irs-pdf/fw9.pdf"
+      },
+      "tags": [
+        "government"
       ]
     }
   ]

@@ -57,6 +57,7 @@ export interface MinimalTrace {
   goal: string;
   success: boolean;
   steps: MinimalStep[];
+  reason?: string;
   error?: string;
   totalTokens?: {
     prompt: number;
@@ -776,6 +777,7 @@ export class AgentMinimal {
               goal,
               success,
               steps,
+              reason,  // Always include the reason for containsText checks
               error: !success ? reason : undefined,
               totalTokens: tokenUsage,
             };

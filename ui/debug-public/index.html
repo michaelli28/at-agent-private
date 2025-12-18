@@ -1069,7 +1069,39 @@
                         <div class="progress-bar-container">
                             <div class="progress-bar" id="progressBar"></div>
                         </div>
-                        <div class="progress-details" id="progressDetails">Initializing...</div>
+                        <div id="progressDetails" style="font-size: 12px; color: var(--text-muted); margin-top: 8px;"></div>
+
+                        <!-- Live Summary Stats -->
+                        <div class="live-stats" id="liveStats" style="display: flex; gap: 16px; margin: 12px 0; padding: 10px; background: var(--bg-tertiary); border-radius: 6px; font-size: 12px;">
+                            <div><span style="color: var(--text-muted);">Completed:</span> <span id="liveCompleted">0</span>/<span id="liveTotal">0</span></div>
+                            <div><span style="color: #4ade80;">✓ Pass:</span> <span id="livePass">0</span></div>
+                            <div><span style="color: #f87171;">✗ Fail:</span> <span id="liveFail">0</span></div>
+                            <div><span style="color: var(--text-muted);">Pass Rate:</span> <span id="livePassRate">-</span></div>
+                        </div>
+
+                        <!-- Current Test Indicator -->
+                        <div class="current-test" id="currentTest" style="display: none; padding: 12px; background: var(--bg-tertiary); border-radius: 6px; margin-bottom: 12px; border-left: 3px solid var(--accent);">
+                            <div style="display: flex; align-items: center; gap: 8px; margin-bottom: 6px;">
+                                <div class="running-indicator" style="width: 8px; height: 8px; background: var(--accent); border-radius: 50%; animation: pulse 1.5s infinite;"></div>
+                                <span style="font-weight: 500; color: var(--text-primary);">Currently Running</span>
+                            </div>
+                            <div style="font-size: 13px;">
+                                <span style="color: var(--text-muted);">Test:</span> <span id="currentTestId" style="color: var(--text-primary); font-weight: 500;">-</span>
+                            </div>
+                            <div style="font-size: 13px;">
+                                <span style="color: var(--text-muted);">Model:</span> <span id="currentModel" style="color: var(--accent);">-</span>
+                            </div>
+                            <div style="font-size: 12px; color: var(--text-muted); margin-top: 4px;" id="currentRunInfo">Run 1</div>
+                        </div>
+
+                        <!-- Live Results Table -->
+                        <div class="live-results" id="liveResults" style="margin-bottom: 12px;">
+                            <div style="font-size: 12px; font-weight: 500; color: var(--text-secondary); margin-bottom: 8px;">Completed Runs</div>
+                            <div class="live-results-table" id="liveResultsTable" style="max-height: 200px; overflow-y: auto; background: var(--bg-tertiary); border-radius: 6px;">
+                                <div style="padding: 12px; text-align: center; color: var(--text-muted); font-size: 12px;">No completed runs yet</div>
+                            </div>
+                        </div>
+
                         <div class="benchmark-terminal" id="benchmarkTerminal">
                             <div class="terminal-header">
                                 <span>Agent Output</span>
@@ -1078,6 +1110,46 @@
                             <div class="terminal-content" id="terminalContent"></div>
                         </div>
                     </div>
+
+                    <style>
+                        @keyframes pulse {
+                            0%, 100% { opacity: 1; }
+                            50% { opacity: 0.4; }
+                        }
+                        .live-result-row {
+                            display: grid;
+                            grid-template-columns: 1fr 1fr 80px 60px 80px;
+                            padding: 8px 12px;
+                            font-size: 11px;
+                            border-bottom: 1px solid var(--border);
+                            align-items: center;
+                        }
+                        .live-result-row:last-child {
+                            border-bottom: none;
+                        }
+                        .live-result-row.header {
+                            font-weight: 500;
+                            color: var(--text-muted);
+                            background: var(--bg-secondary);
+                            position: sticky;
+                            top: 0;
+                        }
+                        .result-badge {
+                            padding: 2px 8px;
+                            border-radius: 4px;
+                            font-size: 10px;
+                            font-weight: 600;
+                            text-transform: uppercase;
+                        }
+                        .result-badge.pass {
+                            background: rgba(74, 222, 128, 0.2);
+                            color: #4ade80;
+                        }
+                        .result-badge.fail {
+                            background: rgba(248, 113, 113, 0.2);
+                            color: #f87171;
+                        }
+                    </style>
 
                     <div class="benchmark-results" id="benchmarkResults">
                         <div class="results-header">
@@ -1159,6 +1231,7 @@
         let currentReport = null;
         let benchmarkRunning = false;
         let benchmarkProgress = { completed: 0, total: 0 };
+        let liveStats = { pass: 0, fail: 0 };
 
         // DOM Elements
         const testCaseSelect = document.getElementById('testCaseSelect');
@@ -1198,6 +1271,18 @@
         const clearTerminalBtn = document.getElementById('clearTerminalBtn');
         const reportSelector = document.getElementById('reportSelector');
         const resultsContent = document.getElementById('resultsContent');
+
+        // Live stats DOM elements
+        const liveCompleted = document.getElementById('liveCompleted');
+        const liveTotal = document.getElementById('liveTotal');
+        const livePass = document.getElementById('livePass');
+        const liveFail = document.getElementById('liveFail');
+        const livePassRate = document.getElementById('livePassRate');
+        const currentTest = document.getElementById('currentTest');
+        const currentTestId = document.getElementById('currentTestId');
+        const currentModel = document.getElementById('currentModel');
+        const currentRunInfo = document.getElementById('currentRunInfo');
+        const liveResultsTable = document.getElementById('liveResultsTable');
 
         // Connect WebSocket
         function connect() {
@@ -1720,24 +1805,87 @@
                 case 'benchmark_started':
                     benchmarkProgress.total = event.totalRuns;
                     benchmarkProgress.completed = 0;
+                    liveStats = { pass: 0, fail: 0 };
                     progressDetails.textContent = 'Starting benchmark...';
                     clearTerminal();
+
+                    // Initialize live stats display
+                    liveCompleted.textContent = '0';
+                    liveTotal.textContent = event.totalRuns;
+                    livePass.textContent = '0';
+                    liveFail.textContent = '0';
+                    livePassRate.textContent = '-';
+
+                    // Reset results table with header
+                    liveResultsTable.innerHTML = `
+                        <div class="live-result-row header">
+                            <div>Test Case</div>
+                            <div>Model</div>
+                            <div>Result</div>
+                            <div>Steps</div>
+                            <div>Duration</div>
+                        </div>
+                    `;
                     break;
+
                 case 'run_started':
                     progressDetails.textContent = `Running: ${event.testCaseId} with ${event.model} (run ${event.runNumber})`;
                     appendTerminalLine(`\n=== ${event.testCaseId} | ${event.model} | Run ${event.runNumber} ===`, 'start');
+
+                    // Show and update current test indicator
+                    currentTest.style.display = 'block';
+                    currentTestId.textContent = event.testCaseId;
+                    currentModel.textContent = event.model.split('/').pop();
+                    currentRunInfo.textContent = `Run ${event.runNumber}`;
                     break;
+
                 case 'run_completed':
                     benchmarkProgress.completed++;
                     updateBenchmarkProgress();
                     const run = event.run;
+
+                    // Update live stats
+                    if (run.criteriaResult === 'pass') {
+                        liveStats.pass++;
+                    } else {
+                        liveStats.fail++;
+                    }
+
+                    liveCompleted.textContent = benchmarkProgress.completed;
+                    livePass.textContent = liveStats.pass;
+                    liveFail.textContent = liveStats.fail;
+                    const passRate = benchmarkProgress.completed > 0
+                        ? Math.round((liveStats.pass / benchmarkProgress.completed) * 100)
+                        : 0;
+                    livePassRate.textContent = passRate + '%';
+
+                    // Add row to results table
+                    const resultRow = document.createElement('div');
+                    resultRow.className = 'live-result-row';
+                    const durationSec = (run.durationMs / 1000).toFixed(1);
+                    resultRow.innerHTML = `
+                        <div style="color: var(--text-primary);">${escapeHtml(run.testCaseId)}</div>
+                        <div style="color: var(--text-secondary);">${escapeHtml(run.model.split('/').pop())}</div>
+                        <div><span class="result-badge ${run.criteriaResult}">${run.criteriaResult}</span></div>
+                        <div style="color: var(--text-muted);">${run.stepsCount}</div>
+                        <div style="color: var(--text-muted);">${durationSec}s</div>
+                    `;
+                    liveResultsTable.appendChild(resultRow);
+                    liveResultsTable.scrollTop = liveResultsTable.scrollHeight;
+
                     progressDetails.textContent = `Completed: ${run.testCaseId} - ${run.criteriaResult.toUpperCase()} (${run.stepsCount} steps)`;
+
+                    // Hide current test indicator briefly before next run
+                    currentTest.style.display = 'none';
                     break;
+
                 case 'agent_log':
                     appendTerminalLine(event.message);
                     break;
+
                 case 'benchmark_completed':
-                    // Will be handled by benchmark_complete message
+                    // Hide current test indicator
+                    currentTest.style.display = 'none';
                     break;
             }
         }
@@ -1790,6 +1938,7 @@
             benchmarkRunning = false;
             benchmarkProgressEl.style.display = 'none';
             runBenchmarkBtn.disabled = false;
+            currentTest.style.display = 'none';
 
             currentReport = report;
             renderBenchmarkResults();
@@ -1808,6 +1957,7 @@
             benchmarkRunning = false;
             benchmarkProgressEl.style.display = 'none';
             runBenchmarkBtn.disabled = false;
+            currentTest.style.display = 'none';
             progressDetails.textContent = 'Error: ' + error;
             alert('Benchmark error: ' + error);
         }
@@ -1817,6 +1967,7 @@
             benchmarkRunning = false;
             benchmarkProgressEl.style.display = 'none';
             runBenchmarkBtn.disabled = false;
+            currentTest.style.display = 'none';
             appendTerminalLine('\n[Benchmark stopped by user]', 'warning');
 
             if (report) {

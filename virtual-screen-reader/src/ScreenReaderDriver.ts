@@ -567,114 +567,60 @@ export class ScreenReaderDriver implements IAccessibilityDriver {
             // Handle different roles - pass full node instead of backendDOMNodeId
             if (role === 'link') {
                 // For links: focus first, then click (more reliable)
-                console.log(`[DEBUG-LINK] Starting link activation for: "${currentNode.computedName}"`);
                 await this.client.focusNode(currentNode);
                 await this.sleep(this.timing.keyPressDelay);
 
                 const urlBefore = await this.client.getCurrentUrl();
-                console.log(`[DEBUG-LINK] URL before click: ${urlBefore}`);
-
                 await this.client.clickNode(currentNode);
-                console.log(`[DEBUG-LINK] Link clicked, waiting ${this.timing.navigationDelay}ms...`);
                 await this.sleep(this.timing.navigationDelay);
 
                 // First check if navigation occurred in same tab
                 let urlAfter: string;
                 try {
                     urlAfter = await this.client.getCurrentUrl();
-                    console.log(`[DEBUG-LINK] URL after click: ${urlAfter}`);
                 } catch (e: any) {
-                    console.log(`[DEBUG-LINK] Error getting URL after click: ${e.message}`);
                     // Page might be navigating - wait and retry
                     await this.client.waitForNavigation();
                     urlAfter = await this.client.getCurrentUrl();
-                    console.log(`[DEBUG-LINK] URL after waiting: ${urlAfter}`);
                 }
 
                 if (urlAfter !== urlBefore) {
-                    // Same-tab navigation happened - reinitialize the screen reader for new page
-                    console.log(`[DEBUG-LINK] Navigation detected: ${urlBefore} -> ${urlAfter}`);
+                    // Same-tab navigation happened - reinitialize the screen reader
                     this.currentUrl = urlAfter;
-
-                    // Wait for page to be ready
-                    console.log(`[DEBUG-LINK] Waiting for page to be ready...`);
                     await this.client.waitForNavigation();
-                    console.log(`[DEBUG-LINK] Page ready, reinitializing...`);
 
-                    // Reinitialize for new page
                     this.cache.invalidate();
-                    try {
-                        await this.initializeNavigation();
-                        console.log(`[DEBUG-LINK] Navigation initialized`);
-                    } catch (e: any) {
-                        console.log(`[DEBUG-LINK] initializeNavigation failed: ${e.message}`);
-                    }
+                    await this.initializeNavigation();
+                    await this.client.reinjectMutationObserver();
 
-                    try {
-                        await this.client.reinjectMutationObserver();
-                        console.log(`[DEBUG-LINK] MutationObserver reinjected`);
-                    } catch (e: any) {
-                        console.log(`[DEBUG-LINK] reinjectMutationObserver failed: ${e.message}`);
-                    }
-
-                    // Announce the new page
                     const pageTitle = await this.client.getTitle();
-                    console.log(`[DEBUG-LINK] New page title: "${pageTitle}"`);
                     this.lastSpokenText = this.announcer.generateNavigationAnnouncement(pageTitle);
                     this.pageJustLoaded = true;
                 } else {
                     // No same-tab navigation - check if a new tab was opened (target="_blank" links)
-                    // Wait a bit more for the new tab event to fire
-                    console.log(`[DEBUG-LINK] No same-tab navigation, checking for new tab...`);
                     await this.sleep(200); // Give time for context.on('page') to fire
 
-                    console.log(`[DEBUG-LINK] hasPendingNewTab: ${this.client.hasPendingNewTab()}`);
-
                     if (this.client.hasPendingNewTab()) {
-                        console.log(`[DEBUG-LINK] New tab detected! Switching to it...`);
-
                         // Switch to the new tab
                         const switched = await this.client.switchToNewTab();
                         if (switched) {
-                            console.log(`[DEBUG-LINK] Successfully switched to new tab`);
-
-                            // Update current URL
                             this.currentUrl = await this.client.getCurrentUrl();
-                            console.log(`[DEBUG-LINK] New tab URL: ${this.currentUrl}`);
 
-                            // Reinitialize for new page
                             this.cache.invalidate();
-                            try {
-                                await this.initializeNavigation();
-                                console.log(`[DEBUG-LINK] Navigation initialized on new tab`);
-                            } catch (e: any) {
-                                console.log(`[DEBUG-LINK] initializeNavigation failed: ${e.message}`);
-                            }
+                            await this.initializeNavigation();
+                            await this.client.reinjectMutationObserver();
 
-                            try {
-                                await this.client.reinjectMutationObserver();
-                                console.log(`[DEBUG-LINK] MutationObserver reinjected on new tab`);
-                            } catch (e: any) {
-                                console.log(`[DEBUG-LINK] reinjectMutationObserver failed: ${e.message}`);
-                            }
-
-                            // Announce the new page
                             const pageTitle = await this.client.getTitle();
-                            console.log(`[DEBUG-LINK] New tab page title: "${pageTitle}"`);
                             this.lastSpokenText = this.announcer.generateNavigationAnnouncement(pageTitle);
                             this.pageJustLoaded = true;
                         } else {
-                            console.log(`[DEBUG-LINK] Failed to switch to new tab`);
                             this.lastSpokenText = this.announcer.generateActivationAnnouncement(currentNode, 'opened in new tab');
                         }
                     } else {
                         // No navigation at all - was a JS action or anchor link
-                        console.log(`[DEBUG-LINK] No navigation and no new tab detected`);
                         this.lastSpokenText = this.announcer.generateActivationAnnouncement(currentNode, 'activated');
                     }
                 }
-
-                console.log(`[DEBUG-LINK] Link activation complete. lastSpokenText: "${this.lastSpokenText}"`);
 
             } else if (role === 'button') {
                 // Click the button
@@ -945,19 +891,15 @@ export class ScreenReaderDriver implements IAccessibilityDriver {
     }
 
     private async handlePageLoad(): Promise<void> {
-        console.log(`[DEBUG-PAGELOAD] handlePageLoad called`);
         try {
             const newUrl = await this.client.getCurrentUrl();
-            console.log(`[DEBUG-PAGELOAD] New URL: ${newUrl}, Current URL: ${this.currentUrl}`);
 
             // Skip if same URL
             if (newUrl === this.currentUrl) {
-                console.log(`[DEBUG-PAGELOAD] Same URL, skipping`);
                 return;
             }
 
             const pageTitle = await this.client.getTitle();
-            console.log(`[DEBUG-PAGELOAD] Page load detected: "${pageTitle}"`);
             this.log(`[ScreenReaderDriver] Page load detected: "${pageTitle}"`);
             this.currentUrl = newUrl;
 

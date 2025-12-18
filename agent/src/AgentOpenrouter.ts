@@ -749,6 +749,7 @@ export class AgentOpenrouter {
               goal,
               success: successResult,
               steps,
+              reason: errorResult,  // Always include the reason for containsText checks
               error: !successResult ? errorResult : undefined,
               totalTokens: {
                 prompt: totalPromptTokens,
