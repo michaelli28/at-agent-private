@@ -134,6 +134,7 @@ export interface BenchmarkOptions {
   onEvent?: (event: BenchmarkEvent) => void;
   name?: string;
   agentType?: BenchmarkAgentType;
+  abortSignal?: AbortSignal;
 }
 
 // Run benchmark
@@ -146,6 +147,7 @@ export async function runBenchmark(options: BenchmarkOptions): Promise<Benchmark
     onEvent,
     name,
     agentType = 'full',
+    abortSignal,
   } = options;
 
   const reportId = uuidv4();
@@ -179,11 +181,27 @@ export async function runBenchmark(options: BenchmarkOptions): Promise<Benchmark
   const allRuns: BenchmarkRun[] = [];
 
   // Run each test case
+  let aborted = false;
   for (const testCase of testCases) {
+    if (abortSignal?.aborted) {
+      aborted = true;
+      break;
+    }
+
     const testCaseRuns: BenchmarkRun[] = [];
 
     for (const model of models) {
+      if (abortSignal?.aborted) {
+        aborted = true;
+        break;
+      }
+
       for (let runNum = 1; runNum <= runsPerTestCase; runNum++) {
+        if (abortSignal?.aborted) {
+          aborted = true;
+          break;
+        }
+
         onEvent?.({
           type: 'run_started',
           testCaseId: testCase.id,
@@ -212,7 +230,9 @@ export async function runBenchmark(options: BenchmarkOptions): Promise<Benchmark
         report.summary = calculateSummary(allRuns, models);
         saveBenchmarkReport(report);
       }
+      if (aborted) break;
     }
+    if (aborted) break;
   }
 
   // Finalize report
@@ -221,7 +241,11 @@ export async function runBenchmark(options: BenchmarkOptions): Promise<Benchmark
   report.summary = calculateSummary(allRuns, models);
   saveBenchmarkReport(report);
 
-  onEvent?.({ type: 'benchmark_completed', report });
+  if (aborted) {
+    onEvent?.({ type: 'benchmark_stopped', report });
+  } else {
+    onEvent?.({ type: 'benchmark_completed', report });
+  }
 
   return report;
 }
@@ -342,13 +366,7 @@ async function runSingleTest(
     };
   } finally {
     // Clean up full agent resources
-    if (driver) {
-      try {
-        await driver.disable();
-      } catch {
-        // Ignore cleanup errors
-      }
-    }
+    // Note: driver.disable() is already called by the agent in its finally block
     if (client) {
       try {
         await client.close();
@@ -358,9 +376,6 @@ async function runSingleTest(
     }
 
     // Clean up minimal agent resources
-    if (page) {
-      page = null;
-    }
     if (browser) {
       try {
         await browser.close();

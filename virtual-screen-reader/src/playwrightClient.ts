@@ -1,5 +1,8 @@
-import { firefox, chromium, Browser, Page, CDPSession, BrowserContext } from 'playwright';
-import { AXNode, Rect } from './types';
+import { firefox, chromium, webkit, Browser, Page, CDPSession, BrowserContext } from 'playwright';
+import { AXNode, NavigableAXNode, Rect } from './types';
+import { AccessibilityProvider, BrowserType } from './AccessibilityProvider';
+import { CDPAccessibilityProvider } from './CDPAccessibilityProvider';
+import { PlaywrightAccessibilityProvider } from './PlaywrightAccessibilityProvider';
 
 /**
  * Checks if an error is due to page navigation (execution context destroyed).
@@ -37,18 +40,81 @@ export class BrowserClient {
     private screencastCallback: ((frame: { data: string; metadata: any }) => void) | null = null;
     private isScreencasting: boolean = false;
     private isRemote: boolean = false;
+    private browserType: BrowserType = 'chrome';
+    private provider: AccessibilityProvider | null = null;
+    private screenshotInterval: NodeJS.Timeout | null = null;
 
     /**
      * Launches a new browser instance.
+     * @param headless Whether to run in headless mode
+     * @param browserType Which browser to use: 'chrome', 'chromium', 'firefox', or 'webkit'
+     *                    'chrome' uses your installed Chrome browser (recommended for CDP)
+     *                    'chromium' uses Playwright's bundled Chromium
      */
-    async launch(headless: boolean = true): Promise<void> {
-        this.browser = await firefox.launch({ headless });
-        this.context = await this.browser.newContext();
+    async launch(headless: boolean = true, browserType: BrowserType = 'chrome'): Promise<void> {
+        this.browserType = browserType;
+
+        // Launch browser based on type
+        if (browserType === 'chrome') {
+            this.browser = await chromium.launch({
+                headless,
+                channel: 'chrome',
+                ignoreDefaultArgs: ['--enable-automation'],
+                args: ['--start-maximized'],
+            });
+        } else if (browserType === 'chromium') {
+            this.browser = await chromium.launch({
+                headless,
+                ignoreDefaultArgs: ['--enable-automation'],
+                args: ['--start-maximized'],
+            });
+        } else if (browserType === 'firefox') {
+            this.browser = await firefox.launch({ headless });
+        } else if (browserType === 'webkit') {
+            this.browser = await webkit.launch({ headless });
+        } else {
+            throw new Error(`Unsupported browser type: ${browserType}`);
+        }
+
+        // Create context with viewport: null to let window size dictate viewport
+        if (browserType === 'chrome' || browserType === 'chromium') {
+            this.context = await this.browser.newContext({
+                viewport: null,
+                hasTouch: false,
+            });
+        } else {
+            this.context = await this.browser.newContext();
+        }
         this.page = await this.context.newPage();
-        this.cdpSession = await this.context.newCDPSession(this.page);
         this.isRemote = false;
 
+        // Create provider based on browser type
+        // Chrome and Chromium both support CDP - use it for better performance
+        if (browserType === 'chrome' || browserType === 'chromium') {
+            this.cdpSession = await this.context.newCDPSession(this.page);
+            await this.cdpSession.send('DOM.enable');
+            this.provider = new CDPAccessibilityProvider(this.cdpSession, this.page);
+        } else {
+            // Firefox/WebKit - use Playwright's cross-browser APIs
+            this.cdpSession = null;
+            this.provider = new PlaywrightAccessibilityProvider(this.page);
+        }
+
         await this.setupPage();
+    }
+
+    /**
+     * Get the current browser type.
+     */
+    getBrowserType(): BrowserType {
+        return this.browserType;
+    }
+
+    /**
+     * Get the accessibility provider.
+     */
+    getProvider(): AccessibilityProvider | null {
+        return this.provider;
     }
 
     /**
@@ -81,10 +147,12 @@ export class BrowserClient {
      * Common page setup for both launch and connect.
      */
     private async setupPage(): Promise<void> {
-        if (!this.cdpSession || !this.page) return;
+        if (!this.page) return;
 
-        // Enable DOM domain to ensure we can get box models
-        await this.cdpSession.send('DOM.enable');
+        // Enable DOM domain for CDP if available
+        if (this.cdpSession) {
+            await this.cdpSession.send('DOM.enable');
+        }
 
         // Listen for page load events to detect full page navigations
         this.page.on('load', async () => {
@@ -130,53 +198,61 @@ export class BrowserClient {
     }
 
     /**
-     * Fetches the full Accessibility Tree from CDP.
+     * Fetches the full Accessibility Tree.
+     * Uses CDP for Chromium, ariaSnapshot for Firefox/WebKit.
      */
     async getFullAXTree(): Promise<AXNode[]> {
-        if (!this.cdpSession) throw new Error("CDP Session not initialized.");
-
-        // We don't need to explicitly enable Accessibility domain for getFullAXTree,
-        // but it's good practice if we were listening to events.
-        const response = await this.cdpSession.send('Accessibility.getFullAXTree');
-        return response.nodes as AXNode[];
+        if (!this.provider) throw new Error("Provider not initialized.");
+        return this.provider.getAccessibilityTree();
     }
 
     /**
-     * Gets the bounding box for a specific backend DOM node ID.
-     * Returns null if the node has no visual representation (e.g. hidden).
+     * Gets the bounding box for a node.
+     * @param nodeOrId NavigableAXNode or backend DOM node ID (legacy)
      */
-    async getBoundingBox(backendDOMNodeId: number): Promise<Rect | null> {
-        if (!this.cdpSession) throw new Error("CDP Session not initialized.");
-
-        try {
-            const { model } = await this.cdpSession.send('DOM.getBoxModel', {
-                backendNodeId: backendDOMNodeId
-            });
-
-            // model.border is [x1, y1, x2, y2, x3, y3, x4, y4]
-            // We assume a rectangular shape for simplicity here.
-            const x = model.border[0];
-            const y = model.border[1];
-            const width = model.width;
-            const height = model.height;
-
-            return { x, y, width, height };
-        } catch (error) {
-            // Node might be hidden or have no box model
-            return null;
+    async getBoundingBox(nodeOrId: NavigableAXNode | number): Promise<Rect | null> {
+        if (typeof nodeOrId === 'number') {
+            // Legacy: backend node ID (CDP only)
+            if (!this.cdpSession) throw new Error("CDP Session not initialized for backendNodeId.");
+            try {
+                const { model } = await this.cdpSession.send('DOM.getBoxModel', {
+                    backendNodeId: nodeOrId
+                });
+                return {
+                    x: model.border[0],
+                    y: model.border[1],
+                    width: model.width,
+                    height: model.height
+                };
+            } catch (error) {
+                return null;
+            }
         }
+
+        // New: NavigableAXNode
+        if (!this.provider) throw new Error("Provider not initialized.");
+        return this.provider.getBoundingBox(nodeOrId);
     }
 
     /**
-     * Focuses a specific backend DOM node.
+     * Focuses a node.
+     * @param nodeOrId NavigableAXNode or backend DOM node ID (legacy)
      */
-    async focus(backendDOMNodeId: number): Promise<void> {
-        if (!this.cdpSession) throw new Error("CDP Session not initialized.");
-        try {
-            await this.cdpSession.send('DOM.focus', { backendNodeId: backendDOMNodeId });
-        } catch (e) {
-            // Ignore if not focusable
+    async focus(nodeOrId: NavigableAXNode | number): Promise<void> {
+        if (typeof nodeOrId === 'number') {
+            // Legacy: backend node ID (CDP only)
+            if (!this.cdpSession) throw new Error("CDP Session not initialized for backendNodeId.");
+            try {
+                await this.cdpSession.send('DOM.focus', { backendNodeId: nodeOrId });
+            } catch (e) {
+                // Ignore if not focusable
+            }
+            return;
         }
+
+        // New: NavigableAXNode
+        if (!this.provider) throw new Error("Provider not initialized.");
+        await this.provider.focusElement(nodeOrId);
     }
 
     /**
@@ -223,6 +299,15 @@ export class BrowserClient {
      * Closes the browser instance or disconnects from remote.
      */
     async close(): Promise<void> {
+        // Stop screencast if active
+        await this.stopScreencast();
+
+        // Clear screenshot interval
+        if (this.screenshotInterval) {
+            clearInterval(this.screenshotInterval);
+            this.screenshotInterval = null;
+        }
+
         if (this.browser) {
             if (this.isRemote) {
                 // For remote browsers, just disconnect (don't close)
@@ -234,6 +319,7 @@ export class BrowserClient {
             this.context = null;
             this.page = null;
             this.cdpSession = null;
+            this.provider = null;
         }
     }
 
@@ -281,17 +367,19 @@ export class BrowserClient {
     }
 
     /**
-     * Alias for getBoundingBox for AX tree operations.
+     * Gets bounding box for AX tree operations.
+     * @param nodeOrId NavigableAXNode or backend DOM node ID (legacy)
      */
-    async getNodeBoundingBox(backendNodeId: number): Promise<Rect | null> {
-        return this.getBoundingBox(backendNodeId);
+    async getNodeBoundingBox(nodeOrId: NavigableAXNode | number): Promise<Rect | null> {
+        return this.getBoundingBox(nodeOrId);
     }
 
     /**
-     * Alias for focus for AX tree operations.
+     * Focuses a node for AX tree operations.
+     * @param nodeOrId NavigableAXNode or backend DOM node ID (legacy)
      */
-    async focusNode(backendNodeId: number): Promise<void> {
-        return this.focus(backendNodeId);
+    async focusNode(nodeOrId: NavigableAXNode | number): Promise<void> {
+        return this.focus(nodeOrId);
     }
 
     /**
@@ -421,60 +509,89 @@ export class BrowserClient {
     }
 
     /**
-     * Starts CDP screencast - streams browser frames in real-time.
-     * This is more efficient than taking screenshots for live preview.
+     * Starts screencast - streams browser frames in real-time.
+     * Uses CDP for Chromium, falls back to periodic screenshots for Firefox/WebKit.
      */
     async startScreencast(
         callback: (frame: { data: string; metadata: any }) => void,
         options?: { format?: 'jpeg' | 'png'; quality?: number; maxWidth?: number; maxHeight?: number }
     ): Promise<void> {
-        if (!this.cdpSession) throw new Error("CDP Session not initialized.");
         if (this.isScreencasting) return;
 
         this.screencastCallback = callback;
         this.isScreencasting = true;
 
-        // Listen for screencast frames
-        this.cdpSession.on('Page.screencastFrame', async (params) => {
-            if (this.screencastCallback) {
-                this.screencastCallback({
-                    data: params.data,
-                    metadata: params.metadata
-                });
-            }
-            // Acknowledge the frame to continue receiving frames
-            if (this.cdpSession && this.isScreencasting) {
-                try {
-                    await this.cdpSession.send('Page.screencastFrameAck', {
-                        sessionId: params.sessionId
+        if (this.cdpSession) {
+            // CDP available (Chromium) - use native screencast
+            this.cdpSession.on('Page.screencastFrame', async (params) => {
+                if (this.screencastCallback) {
+                    this.screencastCallback({
+                        data: params.data,
+                        metadata: params.metadata
                     });
-                } catch (e) {
-                    // Session might be closed
                 }
-            }
-        });
+                if (this.cdpSession && this.isScreencasting) {
+                    try {
+                        await this.cdpSession.send('Page.screencastFrameAck', {
+                            sessionId: params.sessionId
+                        });
+                    } catch (e) {
+                        // Session might be closed
+                    }
+                }
+            });
 
-        // Start the screencast
-        await this.cdpSession.send('Page.startScreencast', {
-            format: options?.format || 'jpeg',
-            quality: options?.quality || 80,
-            maxWidth: options?.maxWidth || 1280,
-            maxHeight: options?.maxHeight || 720,
-            everyNthFrame: 1
-        });
+            await this.cdpSession.send('Page.startScreencast', {
+                format: options?.format || 'jpeg',
+                quality: options?.quality || 80,
+                maxWidth: options?.maxWidth || 1280,
+                maxHeight: options?.maxHeight || 720,
+                everyNthFrame: 1
+            });
+        } else if (this.page) {
+            // Firefox/WebKit - fallback to periodic screenshots
+            const fps = 10; // ~10fps for reasonable performance
+            this.screenshotInterval = setInterval(async () => {
+                if (!this.page || !this.isScreencasting) return;
+                try {
+                    const buffer = await this.page.screenshot({
+                        type: options?.format || 'jpeg',
+                        quality: options?.quality || 80
+                    });
+                    if (this.screencastCallback) {
+                        this.screencastCallback({
+                            data: buffer.toString('base64'),
+                            metadata: { timestamp: Date.now() }
+                        });
+                    }
+                } catch (e) {
+                    // Page might be navigating
+                }
+            }, 1000 / fps);
+        }
     }
 
     /**
-     * Stops the CDP screencast.
+     * Stops the screencast.
      */
     async stopScreencast(): Promise<void> {
-        if (!this.cdpSession || !this.isScreencasting) return;
+        if (!this.isScreencasting) return;
 
-        try {
-            await this.cdpSession.send('Page.stopScreencast');
-        } catch (e) {
-            // Session might already be closed
+        // Stop CDP screencast if active
+        if (this.cdpSession) {
+            try {
+                await this.cdpSession.send('Page.stopScreencast');
+            } catch (e) {
+                // Session might already be closed
+            }
         }
+
+        // Clear screenshot interval if active
+        if (this.screenshotInterval) {
+            clearInterval(this.screenshotInterval);
+            this.screenshotInterval = null;
+        }
+
         this.isScreencasting = false;
         this.screencastCallback = null;
     }
@@ -522,16 +639,25 @@ export class BrowserClient {
     }
 
     // =========================================================================
-    // AX Tree CDP Operations
+    // AX Tree Operations (Cross-browser)
     // =========================================================================
 
     /**
-     * Clicks a DOM node by its backend node ID.
-     * Uses multiple strategies to ensure the click works.
-     * Throws an error if all strategies fail.
+     * Clicks a node.
+     * @param nodeOrId NavigableAXNode or backend DOM node ID (legacy)
      */
-    async clickNode(backendNodeId: number): Promise<void> {
+    async clickNode(nodeOrId: NavigableAXNode | number): Promise<void> {
+        if (typeof nodeOrId !== 'number') {
+            // New: NavigableAXNode
+            if (!this.provider) throw new Error("Provider not initialized.");
+            await this.provider.clickElement(nodeOrId);
+            return;
+        }
+
+        // Legacy: backend node ID (CDP only)
         if (!this.cdpSession || !this.page) throw new Error("CDP Session not initialized.");
+
+        const backendNodeId = nodeOrId;
 
         // First scroll into view
         await this.scrollNodeIntoView(backendNodeId);
@@ -603,10 +729,21 @@ export class BrowserClient {
     }
 
     /**
-     * Scrolls a DOM node into view by its backend node ID.
+     * Scrolls a node into view.
+     * @param nodeOrId NavigableAXNode or backend DOM node ID (legacy)
      */
-    async scrollNodeIntoView(backendNodeId: number): Promise<void> {
+    async scrollNodeIntoView(nodeOrId: NavigableAXNode | number): Promise<void> {
+        if (typeof nodeOrId !== 'number') {
+            // New: NavigableAXNode
+            if (!this.provider) throw new Error("Provider not initialized.");
+            await this.provider.scrollIntoView(nodeOrId);
+            return;
+        }
+
+        // Legacy: backend node ID (CDP only)
         if (!this.cdpSession) throw new Error("CDP Session not initialized.");
+
+        const backendNodeId = nodeOrId;
 
         try {
             await this.cdpSession.send('DOM.scrollIntoViewIfNeeded', {
@@ -661,10 +798,20 @@ export class BrowserClient {
     }
 
     /**
-     * Gets an attribute value from a node by backend ID.
+     * Gets an attribute value from a node.
+     * @param nodeOrId NavigableAXNode or backend DOM node ID (legacy)
      */
-    async getNodeAttribute(backendNodeId: number, attributeName: string): Promise<string | null> {
+    async getNodeAttribute(nodeOrId: NavigableAXNode | number, attributeName: string): Promise<string | null> {
+        if (typeof nodeOrId !== 'number') {
+            // New: NavigableAXNode
+            if (!this.provider) throw new Error("Provider not initialized.");
+            return this.provider.getAttribute(nodeOrId, attributeName);
+        }
+
+        // Legacy: backend node ID (CDP only)
         if (!this.cdpSession) throw new Error("CDP Session not initialized.");
+
+        const backendNodeId = nodeOrId;
 
         try {
             const { object } = await this.cdpSession.send('DOM.resolveNode', {
@@ -688,10 +835,20 @@ export class BrowserClient {
     }
 
     /**
-     * Gets the inner text of a node by backend ID.
+     * Gets the inner text of a node.
+     * @param nodeOrId NavigableAXNode or backend DOM node ID (legacy)
      */
-    async getNodeInnerText(backendNodeId: number): Promise<string | null> {
+    async getNodeInnerText(nodeOrId: NavigableAXNode | number): Promise<string | null> {
+        if (typeof nodeOrId !== 'number') {
+            // New: NavigableAXNode
+            if (!this.provider) throw new Error("Provider not initialized.");
+            return this.provider.getInnerText(nodeOrId);
+        }
+
+        // Legacy: backend node ID (CDP only)
         if (!this.cdpSession) throw new Error("CDP Session not initialized.");
+
+        const backendNodeId = nodeOrId;
 
         try {
             const { object } = await this.cdpSession.send('DOM.resolveNode', {
@@ -714,10 +871,21 @@ export class BrowserClient {
     }
 
     /**
-     * Sets the value of an input element by backend ID.
+     * Sets the value of an input element.
+     * @param nodeOrId NavigableAXNode or backend DOM node ID (legacy)
      */
-    async setNodeValue(backendNodeId: number, value: string): Promise<void> {
+    async setNodeValue(nodeOrId: NavigableAXNode | number, value: string): Promise<void> {
+        if (typeof nodeOrId !== 'number') {
+            // New: NavigableAXNode
+            if (!this.provider) throw new Error("Provider not initialized.");
+            await this.provider.setValue(nodeOrId, value);
+            return;
+        }
+
+        // Legacy: backend node ID (CDP only)
         if (!this.cdpSession) throw new Error("CDP Session not initialized.");
+
+        const backendNodeId = nodeOrId;
 
         try {
             const { object } = await this.cdpSession.send('DOM.resolveNode', {
@@ -744,9 +912,20 @@ export class BrowserClient {
 
     /**
      * Dispatches a keyboard event to a specific node.
+     * @param nodeOrId NavigableAXNode or backend DOM node ID (legacy)
      */
-    async dispatchKeyToNode(backendNodeId: number, key: string, type: 'keydown' | 'keyup' | 'keypress' = 'keydown'): Promise<void> {
+    async dispatchKeyToNode(nodeOrId: NavigableAXNode | number, key: string, type: 'keydown' | 'keyup' | 'keypress' = 'keydown'): Promise<void> {
+        if (typeof nodeOrId !== 'number') {
+            // New: NavigableAXNode
+            if (!this.provider) throw new Error("Provider not initialized.");
+            await this.provider.dispatchKeyToElement(nodeOrId, key, type);
+            return;
+        }
+
+        // Legacy: backend node ID (CDP only)
         if (!this.cdpSession) throw new Error("CDP Session not initialized.");
+
+        const backendNodeId = nodeOrId;
 
         try {
             const { object } = await this.cdpSession.send('DOM.resolveNode', {
@@ -782,27 +961,31 @@ export class BrowserClient {
 
     /**
      * Gets the backendDOMNodeId of the currently focused element.
-     * Returns null if no element is focused (focus on body/document).
+     * Returns null if no element is focused, using Firefox, or focus is on body/document.
+     * Note: Only works with CDP (Chromium). Returns null for Firefox/WebKit.
      */
     async getFocusedBackendNodeId(): Promise<number | null> {
+        // Use provider if available
+        if (this.provider) {
+            return this.provider.getFocusedNodeId();
+        }
+
+        // Fallback to CDP (shouldn't happen if provider is set)
         if (!this.cdpSession || !this.page) return null;
 
         try {
-            // Get the focused element from the page
             const result = await this.page.evaluate(() => {
                 const focused = document.activeElement;
                 if (!focused || focused === document.body || focused === document.documentElement) {
                     return null;
                 }
-                return true; // Element exists and is not body
+                return true;
             });
 
             if (!result) return null;
 
-            // Use CDP to get the focused node
             const { root } = await this.cdpSession.send('DOM.getDocument', { depth: 0 });
 
-            // DOM.getFocusedElementFor is not available, but we can use querySelector on :focus
             try {
                 const { nodeId } = await this.cdpSession.send('DOM.querySelector', {
                     nodeId: root.nodeId,
@@ -814,7 +997,6 @@ export class BrowserClient {
                 const { node } = await this.cdpSession.send('DOM.describeNode', { nodeId });
                 return node.backendNodeId ?? null;
             } catch (queryError) {
-                // :focus selector might fail, try alternative approach
                 return null;
             }
         } catch (error) {
@@ -825,12 +1007,18 @@ export class BrowserClient {
     /**
      * Finds an element by its DOM ID attribute and returns its backendDOMNodeId.
      * Used to resolve aria-controls targets.
+     * Note: Only works with CDP (Chromium). Returns null for Firefox/WebKit.
      */
     async getBackendNodeIdByDomId(domId: string): Promise<number | null> {
+        // Use provider if available
+        if (this.provider) {
+            return this.provider.getNodeIdByDomId(domId);
+        }
+
+        // Fallback to CDP
         if (!this.cdpSession || !this.page) return null;
 
         try {
-            // Use Runtime.evaluate to find the element and get its reference
             const result = await this.page.evaluate((id) => {
                 const el = document.getElementById(id);
                 return el ? true : false;
@@ -838,7 +1026,6 @@ export class BrowserClient {
 
             if (!result) return null;
 
-            // Use DOM.querySelector to get the node with backendDOMNodeId
             const { root } = await this.cdpSession.send('DOM.getDocument', { depth: 0 });
             const { nodeId } = await this.cdpSession.send('DOM.querySelector', {
                 nodeId: root.nodeId,
@@ -847,7 +1034,6 @@ export class BrowserClient {
 
             if (!nodeId) return null;
 
-            // Get the backend node ID
             const { node } = await this.cdpSession.send('DOM.describeNode', { nodeId });
             return node.backendNodeId ?? null;
         } catch (error) {

@@ -40,6 +40,8 @@ interface DebugSession {
     resolve: () => void;
     reject: (err: Error) => void;
   } | null;
+  // Benchmark cancellation
+  benchmarkAbortController: AbortController | null;
 }
 
 const sessions = new Map<WebSocket, DebugSession>();
@@ -62,7 +64,8 @@ wss.on('connection', (ws) => {
     page: null,
     isRunning: false,
     manualOversight: false,
-    pendingConfirmation: null
+    pendingConfirmation: null,
+    benchmarkAbortController: null
   });
 
   ws.on('message', async (message) => {
@@ -135,6 +138,10 @@ async function handleMessage(ws: WebSocket, data: any) {
       await handleRunBenchmark(ws, session, data);
       break;
 
+    case 'stop_benchmark':
+      await handleStopBenchmark(ws, session);
+      break;
+
     default:
       send(ws, { type: 'error', message: `Unknown command: ${data.type}` });
   }
@@ -144,14 +151,14 @@ async function handleMessage(ws: WebSocket, data: any) {
 async function runAgent(
   ws: WebSocket,
   session: DebugSession,
-  data: { url: string; goal: string; model?: string; apiKey?: string; manualOversight?: boolean; agentType?: 'full' | 'minimal' }
+  data: { url: string; goal: string; model?: string; apiKey?: string; manualOversight?: boolean; agentType?: 'full' | 'minimal'; navigationMode?: 'default' | 'pagerank' }
 ) {
   if (session.isRunning) {
     send(ws, { type: 'error', message: 'Agent is already running' });
     return;
   }
 
-  const { url, goal, model, apiKey, manualOversight, agentType = 'full' } = data;
+  const { url, goal, model, apiKey, manualOversight, agentType = 'full', navigationMode = 'default' } = data;
 
   if (!url || !goal) {
     send(ws, { type: 'error', message: 'URL and goal are required' });
@@ -208,6 +215,8 @@ async function runAgent(
         onLog: (msg) => console.log(msg),
         onDebug,
         beforeLlmRequest,
+        navigationMode,
+        entryUrl: url,
       });
 
       // Run the agent
@@ -290,7 +299,9 @@ async function runAgent(
         apiKey: apiKey || process.env['OPENROUTER_API_KEY'],
         model: model || 'google/gemini-2.0-flash-001',
         onDebug,
-        beforeLlmRequest
+        beforeLlmRequest,
+        navigationMode,
+        entryUrl: url,
       });
 
       // Run the agent
@@ -364,6 +375,7 @@ async function handleRunBenchmark(
   }
 
   session.isRunning = true;
+  session.benchmarkAbortController = new AbortController();
 
   try {
     const report = await runBenchmark({
@@ -373,20 +385,44 @@ async function handleRunBenchmark(
       apiKey: apiKey || process.env['OPENROUTER_API_KEY'],
       name,
       agentType,
+      abortSignal: session.benchmarkAbortController.signal,
       onEvent: (event: BenchmarkEvent) => {
         send(ws, { type: 'benchmark_event', event });
       },
     });
 
-    send(ws, { type: 'benchmark_complete', report });
+    // Check if we were aborted
+    if (session.benchmarkAbortController?.signal.aborted) {
+      send(ws, { type: 'benchmark_stopped', report });
+    } else {
+      send(ws, { type: 'benchmark_complete', report });
+    }
   } catch (error: any) {
-    console.error('Benchmark error:', error);
-    send(ws, {
-      type: 'benchmark_error',
-      error: error.message || 'Benchmark failed',
-    });
+    // Check if this was an abort
+    if (error.name === 'AbortError' || session.benchmarkAbortController?.signal.aborted) {
+      console.log('Benchmark stopped by user');
+      send(ws, { type: 'benchmark_stopped', report: null });
+    } else {
+      console.error('Benchmark error:', error);
+      send(ws, {
+        type: 'benchmark_error',
+        error: error.message || 'Benchmark failed',
+      });
+    }
   } finally {
     session.isRunning = false;
+    session.benchmarkAbortController = null;
+  }
+}
+
+// Stop benchmark
+async function handleStopBenchmark(ws: WebSocket, session: DebugSession) {
+  if (session.benchmarkAbortController) {
+    console.log('Stopping benchmark...');
+    session.benchmarkAbortController.abort();
+    send(ws, { type: 'status', message: 'Stopping benchmark...' });
+  } else {
+    send(ws, { type: 'error', message: 'No benchmark is running' });
   }
 }
 

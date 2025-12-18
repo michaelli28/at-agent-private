@@ -111,5 +111,6 @@ export type BenchmarkEvent =
   | { type: 'run_started'; testCaseId: string; model: string; runNumber: number }
   | { type: 'run_completed'; run: BenchmarkRun }
   | { type: 'benchmark_completed'; report: BenchmarkReport }
+  | { type: 'benchmark_stopped'; report: BenchmarkReport }
   | { type: 'benchmark_error'; error: string }
   | { type: 'agent_log'; testCaseId: string; model: string; message: string };

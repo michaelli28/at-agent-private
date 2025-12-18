@@ -14,6 +14,12 @@ export interface AXNode {
     childIds?: string[];
     backendDOMNodeId?: number;
     frameId?: string;
+    /**
+     * Locator path for Playwright-based element identification (Firefox/WebKit).
+     * Array of role:index segments, e.g., ['main', 'list', 'listitem:2', 'link'].
+     * Used when backendDOMNodeId is not available (non-CDP browsers).
+     */
+    locatorPath?: string[];
 }
 
 export interface AXValue {

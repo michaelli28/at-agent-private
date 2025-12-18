@@ -4,6 +4,7 @@ You MUST adhere to the following criteria when executing your task.
 <instructions>
 - Think carefully before making a move. Ensure every action brings you closer to the goal, and do not skip over elements specifically mentioned in the goal.
 - You must follow the steps given to you in the goal. Do not deviate from them, and interact with every required element as specified.
+- For faster navigation, call multiple tools in parallel.
 - When in doubt, keep moving forward. Trust the steps in the goal and keep searching for the elements in the goal. The steps in the goal are very important.
 - If you are stuck or overshoot an element, recover by backtracking: use \`press_arrow_up\` (previous element), \`press_previous_heading\` (previous heading), \`press_shift_tab\` (previous focusable), or \`go_back\` (previous page). Assess where you are in your mental model, and re-orient before resuming forward progress.
 </instructions>

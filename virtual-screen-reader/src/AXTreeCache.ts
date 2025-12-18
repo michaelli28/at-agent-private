@@ -73,43 +73,85 @@ export class AXTreeCache {
             return this.cache;
         } catch (error) {
             console.error('[AXTreeCache] Failed to refresh tree:', error);
-            return this.cache; // Return stale cache on error
+            if (!this.cache) {
+                // No fallback cache - this is a real error, propagate it
+                throw error;
+            }
+            // Has fallback - use stale cache but warn
+            console.warn('[AXTreeCache] Using stale cache due to refresh error');
+            return this.cache;
         }
     }
 
     /**
      * Resolves aria-controls relationships for elements that can expand/control other content.
-     * This provides a fallback for sites that properly use aria-controls.
-     * Note: Focus following (in ScreenReaderDriver) handles most dropdown cases.
+     * This links controller nodes to their controlled content (e.g., dropdown button → listbox).
+     * Critical for navigating into expanded dropdowns.
      */
     private async resolveAriaControlsRelationships(): Promise<void> {
         if (!this.cache) return;
 
-        // Find elements with hasPopup or expanded states that might control other content
+        // Find elements that might control other content:
+        // - Elements that are currently expanded (most important - these have active content)
+        // - Elements with hasPopup property
+        // - Comboboxes and listboxes (common dropdown patterns)
         for (const node of this.cache.interestingNodes) {
-            if ((node.states.hasPopup || node.states.expanded !== undefined) && node.backendDOMNodeId) {
-                try {
-                    const ariaControls = await this.client.getNodeAttribute(node.backendDOMNodeId, 'aria-controls');
-                    if (ariaControls && ariaControls !== 'null') {
-                        // aria-controls can be space-separated IDs
-                        const controlledIds = ariaControls.split(/\s+/);
+            // Check if node can be queried for attributes (has either backendDOMNodeId or locatorPath)
+            if (!(node.backendDOMNodeId || node.locatorPath)) continue;
 
-                        for (const domId of controlledIds) {
-                            const backendNodeId = await this.client.getBackendNodeIdByDomId(domId);
-                            if (backendNodeId) {
-                                const controlledNode = this.findByBackendNodeId(backendNodeId);
-                                if (controlledNode) {
-                                    // Link the relationships
-                                    if (!node.controlledNodes) node.controlledNodes = [];
+            // Prioritize currently expanded elements - they have active dropdown content
+            const shouldCheck = node.states.expanded === true ||
+                node.states.hasPopup ||
+                node.computedRole === 'combobox' ||
+                node.computedRole === 'listbox' ||
+                (node.computedRole === 'button' && node.states.expanded !== undefined);
+
+            if (!shouldCheck) continue;
+
+            try {
+                const ariaControls = await this.client.getNodeAttribute(node, 'aria-controls');
+                if (ariaControls && ariaControls !== 'null' && ariaControls.trim()) {
+                    // aria-controls can be space-separated IDs
+                    const controlledIds = ariaControls.split(/\s+/).filter(id => id);
+
+                    for (const domId of controlledIds) {
+                        const backendNodeId = await this.client.getBackendNodeIdByDomId(domId);
+                        if (backendNodeId) {
+                            const controlledNode = this.findByBackendNodeId(backendNodeId);
+                            if (controlledNode) {
+                                // Link the relationships
+                                if (!node.controlledNodes) node.controlledNodes = [];
+                                // Avoid duplicates
+                                if (!node.controlledNodes.includes(controlledNode)) {
                                     node.controlledNodes.push(controlledNode);
                                     controlledNode.controllerNode = node;
                                 }
                             }
                         }
                     }
-                } catch (e) {
-                    // Ignore errors for individual nodes
                 }
+
+                // Also check aria-owns for parent-child relationships (used by some comboboxes)
+                const ariaOwns = await this.client.getNodeAttribute(node, 'aria-owns');
+                if (ariaOwns && ariaOwns !== 'null' && ariaOwns.trim()) {
+                    const ownedIds = ariaOwns.split(/\s+/).filter(id => id);
+
+                    for (const domId of ownedIds) {
+                        const backendNodeId = await this.client.getBackendNodeIdByDomId(domId);
+                        if (backendNodeId) {
+                            const ownedNode = this.findByBackendNodeId(backendNodeId);
+                            if (ownedNode) {
+                                if (!node.controlledNodes) node.controlledNodes = [];
+                                if (!node.controlledNodes.includes(ownedNode)) {
+                                    node.controlledNodes.push(ownedNode);
+                                    ownedNode.controllerNode = node;
+                                }
+                            }
+                        }
+                    }
+                }
+            } catch (e) {
+                // Ignore errors for individual nodes - element might have been removed
             }
         }
     }
@@ -174,6 +216,45 @@ export class AXTreeCache {
         if (!this.cache) return null;
 
         return this.cache.flatNodes.find(n => n.nodeId === nodeId) || null;
+    }
+
+    /**
+     * Finds a node by its locator path (for Firefox/WebKit support).
+     */
+    findByLocatorPath(path: string[]): NavigableAXNode | null {
+        if (!this.cache || !path || path.length === 0) return null;
+
+        const pathStr = path.join('/');
+        return this.cache.flatNodes.find(n =>
+            n.locatorPath && n.locatorPath.join('/') === pathStr
+        ) || null;
+    }
+
+    /**
+     * Finds a node by any available identifier (backendNodeId, nodeId, or locatorPath).
+     */
+    findByIdentifier(node: NavigableAXNode): NavigableAXNode | null {
+        if (!this.cache) return null;
+
+        // Try backendDOMNodeId first (most reliable for CDP)
+        if (node.backendDOMNodeId !== undefined) {
+            const found = this.findByBackendNodeId(node.backendDOMNodeId);
+            if (found) return found;
+        }
+
+        // Try nodeId
+        if (node.nodeId) {
+            const found = this.findByNodeId(node.nodeId);
+            if (found) return found;
+        }
+
+        // Try locatorPath (for Firefox/WebKit)
+        if (node.locatorPath) {
+            const found = this.findByLocatorPath(node.locatorPath);
+            if (found) return found;
+        }
+
+        return null;
     }
 
     /**

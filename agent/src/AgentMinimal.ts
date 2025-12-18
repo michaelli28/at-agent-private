@@ -1,6 +1,9 @@
 import { Page } from 'playwright';
 import * as fs from 'fs';
 import * as path from 'path';
+import { PageFinder, PageRankResult } from './PageFinder';
+
+export type NavigationMode = 'default' | 'pagerank';
 
 // OpenRouter response types
 interface OpenRouterToolCall {
@@ -87,6 +90,7 @@ export type DebugEventCallback = (event: DebugEvent) => void;
 export type BeforeLlmRequestCallback = (loopCount: number, messages: unknown[]) => Promise<void>;
 
 const SYSTEM_PROMPT = fs.readFileSync(path.join(__dirname, '../minimal_system_prompt.txt'), 'utf-8').trim();
+const PAGERANK_SYSTEM_PROMPT = fs.readFileSync(path.join(__dirname, '../pagerank_minimal_system_prompt.txt'), 'utf-8').trim();
 
 const TOOLS = [
   {
@@ -150,6 +154,69 @@ const TOOLS = [
   },
 ];
 
+// Tools for PageRank navigation mode (no element list, just page-level navigation)
+const PAGERANK_TOOLS = [
+  {
+    type: 'function' as const,
+    function: {
+      name: 'navigate_to_page',
+      description: 'Navigate directly to one of the suggested pages. Use the page number from the suggested pages list (1-indexed).',
+      parameters: {
+        type: 'object',
+        properties: {
+          page_number: {
+            type: 'number',
+            description: 'The number of the suggested page to navigate to (1 = first suggestion, 2 = second, etc.)',
+          },
+        },
+        required: ['page_number'],
+      },
+    },
+  },
+  {
+    type: 'function' as const,
+    function: {
+      name: 'refresh_suggestions',
+      description: 'Get new page suggestions based on current goal understanding. Use if current suggestions are not helpful.',
+      parameters: {
+        type: 'object',
+        properties: {},
+      },
+    },
+  },
+  {
+    type: 'function' as const,
+    function: {
+      name: 'press_enter',
+      description: 'Click or activate the currently focused element.',
+      parameters: { type: 'object', properties: {} },
+    },
+  },
+  {
+    type: 'function' as const,
+    function: {
+      name: 'go_back',
+      description: 'Navigate back to the previous page.',
+      parameters: { type: 'object', properties: {} },
+    },
+  },
+  {
+    type: 'function' as const,
+    function: {
+      name: 'finish_run',
+      description: 'Call when you have completed the goal or determined it cannot be done.',
+      parameters: {
+        type: 'object',
+        properties: {
+          success: { type: 'boolean' },
+          reason: { type: 'string' },
+        },
+        required: ['success', 'reason'],
+      },
+    },
+  },
+];
+
 export interface AgentMinimalOptions {
   page: Page;
   apiKey?: string;
@@ -157,6 +224,8 @@ export interface AgentMinimalOptions {
   onLog?: LogCallback;
   onDebug?: DebugEventCallback;
   beforeLlmRequest?: BeforeLlmRequestCallback;
+  /** Navigation mode: 'default' uses position-based navigation, 'pagerank' discovers reachable pages */
+  navigationMode?: NavigationMode;
 }
 
 export class AgentMinimal {
@@ -172,6 +241,11 @@ export class AgentMinimal {
   private currentPosition: number = 0;
   private lastUrl: string = '';
 
+  // PageRank navigation properties
+  private navigationMode: NavigationMode;
+  private pageFinder?: PageFinder;
+  private currentSuggestions: PageRankResult[] = [];
+
   constructor(options: AgentMinimalOptions) {
     this.page = options.page;
     this.apiKey = options.apiKey || process.env['OPENROUTER_API_KEY'] || '';
@@ -179,6 +253,7 @@ export class AgentMinimal {
     this.onLog = options.onLog;
     this.onDebug = options.onDebug;
     this.beforeLlmRequest = options.beforeLlmRequest;
+    this.navigationMode = options.navigationMode || 'default';
   }
 
   private log(message: string) {
@@ -386,10 +461,27 @@ export class AgentMinimal {
    * Build the system message with goal and current page elements.
    */
   private buildSystemMessage(goal: string): { role: string; content: string } {
-    const elements = this.formatPageElements();
+    const activePrompt = this.navigationMode === 'pagerank' ? PAGERANK_SYSTEM_PROMPT : SYSTEM_PROMPT;
+
+    let content = `${activePrompt}\n\n<goal>${goal}</goal>`;
+
+    // In PageRank mode, only show suggested pages (no element list)
+    // In default mode, show the element list
+    if (this.navigationMode === 'pagerank') {
+      if (this.currentSuggestions.length > 0) {
+        const suggestionsText = this.currentSuggestions
+          .map((s, i) => `${i + 1}. ${s.title} - ${s.url}`)
+          .join('\n');
+        content += `\n\n<suggested_pages>\n${suggestionsText}\n</suggested_pages>`;
+      }
+    } else {
+      const elements = this.formatPageElements();
+      content += `\n\n${elements}`;
+    }
+
     return {
       role: 'system',
-      content: `${SYSTEM_PROMPT}\n\n<goal>${goal}</goal>\n\n${elements}`,
+      content,
     };
   }
 
@@ -435,7 +527,7 @@ export class AgentMinimal {
     return { success: true };
   }
 
-  private async callLLMWithRetry(messages: any[], maxRetries = 3): Promise<OpenRouterResponse> {
+  private async callLLMWithRetry(messages: any[], tools: any[], maxRetries = 3): Promise<OpenRouterResponse> {
     let lastError: Error | null = null;
 
     for (let attempt = 1; attempt <= maxRetries; attempt++) {
@@ -450,7 +542,7 @@ export class AgentMinimal {
           },
           body: JSON.stringify({
             model: this.model,
-            tools: TOOLS,
+            tools,
             messages,
             stream: false,
             parallel_tool_calls: true,
@@ -500,6 +592,37 @@ export class AgentMinimal {
   }
 
   async run(goal: string): Promise<MinimalTrace> {
+    // Initialize PageFinder if in pagerank mode
+    if (this.navigationMode === 'pagerank') {
+      this.log('[PageRank] Initializing PageFinder...');
+      this.pageFinder = new PageFinder(this.page, this.log.bind(this));
+      this.pageFinder.setGoal(goal);
+
+      this.log('[PageRank] Discovering reachable pages (clicking links)...');
+      await this.pageFinder.discoverPages({
+        maxPages: 100,
+        timeout: 5000,
+        onProgress: (discovered) => {
+          this.log(`[PageRank] Discovered ${discovered} pages...`);
+        },
+      });
+      this.log(`[PageRank] Discovery complete. Found ${this.pageFinder.getPageCount()} pages.`);
+
+      // Get initial suggestions ranked by similarity to first step
+      this.currentSuggestions = this.pageFinder.getSuggestedPages(100);
+      const currentStep = this.pageFinder.getCurrentStep();
+      this.log(`[PageRank] Suggestions for step ${currentStep.index + 1}: "${currentStep.text}":`);
+      this.currentSuggestions.slice(0, 10).forEach((s, i) => {
+        this.log(`  ${i + 1}. ${s.title} (score: ${s.score.toFixed(3)})`);
+      });
+    }
+
+    // Select active tools based on navigation mode
+    // PageRank mode uses a simpler toolset (no element positioning)
+    const activeTools = this.navigationMode === 'pagerank'
+      ? PAGERANK_TOOLS
+      : TOOLS;
+
     // Initialize page state
     this.lastUrl = this.page.url();
     this.currentPageElements = await this.scanPageElements();
@@ -507,27 +630,41 @@ export class AgentMinimal {
 
     // Build system message with page elements
     const systemMessage = this.buildSystemMessage(goal);
+
+    // Initial message differs by navigation mode
+    let initialContent: string;
+    if (this.navigationMode === 'pagerank') {
+      initialContent = `<url>${this.lastUrl}</url>\n<status>Ready. Use navigate_to_page to go to a suggested page.</status>`;
+    } else {
+      initialContent = `<url>${this.lastUrl}</url>\n<focused_element>No element focused yet. Use move_to_position to focus an element.</focused_element>`;
+    }
     const initialMessage = {
       role: 'user',
-      content: `<url>${this.lastUrl}</url>\n<focused_element>No element focused yet. Use move_to_position to focus an element.</focused_element>`,
+      content: initialContent,
     };
 
     const messages: any[] = [systemMessage, initialMessage];
     const steps: MinimalStep[] = [];
     let loopCount = 0;
-    const maxLoops = 50;
+    const maxLoops = 100;
 
     // Token tracking
     let totalPromptTokens = 0;
     let totalCompletionTokens = 0;
 
+    // Get the active system prompt for debugging
+    const activeSystemPrompt = this.navigationMode === 'pagerank' ? PAGERANK_SYSTEM_PROMPT : SYSTEM_PROMPT;
+
     // Emit init event
     this.emitDebug('init', {
       goal,
       model: this.model,
-      systemPrompt: SYSTEM_PROMPT,
-      tools: TOOLS,
+      systemPrompt: activeSystemPrompt,
+      tools: activeTools,
       pageElements: this.currentPageElements,
+      navigationMode: this.navigationMode,
+      pageFinderInitialized: this.pageFinder?.isInitialized() || false,
+      suggestedPages: this.currentSuggestions,
     });
 
     this.emitDebug('observation', { type: 'initial', observation: 'No element focused yet' });
@@ -545,10 +682,10 @@ export class AgentMinimal {
       // Emit LLM request
       this.emitDebug('llm_request', {
         loopCount,
-        request: { model: this.model, tools: TOOLS, messages: [...messages] },
+        request: { model: this.model, tools: activeTools, messages: [...messages] },
       });
 
-      const result = await this.callLLMWithRetry(messages);
+      const result = await this.callLLMWithRetry(messages, activeTools);
 
       // Accumulate token usage
       if (result.usage) {
@@ -642,6 +779,132 @@ export class AgentMinimal {
               error: !success ? reason : undefined,
               totalTokens: tokenUsage,
             };
+          }
+
+          // Handle PageRank-specific tools
+          if (toolName === 'navigate_to_page') {
+            const pageNumber = args.page_number || 1;
+            const pageIndex = pageNumber - 1;
+
+            if (pageIndex >= 0 && pageIndex < this.currentSuggestions.length) {
+              const targetPage = this.currentSuggestions[pageIndex];
+              this.log(`[PageRank] Navigating to page ${pageNumber}: ${targetPage.url}`);
+
+              // Navigate to the page
+              await this.page.goto(targetPage.url, { waitUntil: 'domcontentloaded' });
+              await this.page.waitForLoadState('load').catch(() => {});
+              await this.page.waitForLoadState('networkidle').catch(() => {});
+
+              this.lastUrl = targetPage.url;
+              this.currentPosition = 0;
+
+              // Advance to next goal step and refresh suggestions
+              if (this.pageFinder) {
+                this.pageFinder.advanceStep();
+                this.currentSuggestions = this.pageFinder.getSuggestedPages(100);
+                const currentStep = this.pageFinder.getCurrentStep();
+                this.log(`[PageRank] Now on step ${currentStep.index + 1}: "${currentStep.text}"`);
+              }
+
+              // Rescan page elements
+              await this.waitForDOMStable();
+              this.currentPageElements = await this.scanPageElements();
+              messages[0] = this.buildSystemMessage(goal);
+
+              const toolResponse = {
+                status: 'ok',
+                message: `Navigated to: ${targetPage.title}`,
+                url: targetPage.url,
+              };
+              messages.push({
+                role: 'tool',
+                tool_call_id: toolCall.id,
+                content: JSON.stringify(toolResponse),
+              });
+
+              this.emitDebug('tool_result', {
+                loopCount,
+                toolCallId: toolCall.id,
+                toolName,
+                result: toolResponse,
+              });
+
+              this.log(`[Rescan after navigate]: ${this.currentPageElements.length} elements`);
+            } else {
+              const toolResponse = {
+                status: 'error',
+                message: `Invalid page number. Available: 1-${this.currentSuggestions.length}`,
+              };
+              messages.push({
+                role: 'tool',
+                tool_call_id: toolCall.id,
+                content: JSON.stringify(toolResponse),
+              });
+
+              this.emitDebug('tool_result', {
+                loopCount,
+                toolCallId: toolCall.id,
+                toolName,
+                error: toolResponse.message,
+                result: toolResponse,
+              });
+            }
+            continue;
+          }
+
+          if (toolName === 'refresh_suggestions') {
+            if (this.pageFinder) {
+              this.currentSuggestions = this.pageFinder.getSuggestedPages(100);
+              const currentStep = this.pageFinder.getCurrentStep();
+              this.log(`[PageRank] Refreshed suggestions for step ${currentStep.index + 1}:`);
+              this.currentSuggestions.slice(0, 10).forEach((s, i) => {
+                this.log(`  ${i + 1}. ${s.title} (score: ${s.score.toFixed(3)})`);
+              });
+
+              // Update system message with new suggestions
+              messages[0] = this.buildSystemMessage(goal);
+
+              const toolResponse = {
+                status: 'ok',
+                message: 'Suggestions refreshed',
+                suggestions: this.currentSuggestions.map((s, i) => ({
+                  number: i + 1,
+                  title: s.title,
+                  url: s.url,
+                })),
+              };
+              messages.push({
+                role: 'tool',
+                tool_call_id: toolCall.id,
+                content: JSON.stringify(toolResponse),
+              });
+
+              this.emitDebug('tool_result', {
+                loopCount,
+                toolCallId: toolCall.id,
+                toolName,
+                result: toolResponse,
+              });
+            } else {
+              const toolResponse = {
+                status: 'error',
+                message: 'PageFinder not initialized',
+              };
+              messages.push({
+                role: 'tool',
+                tool_call_id: toolCall.id,
+                content: JSON.stringify(toolResponse),
+              });
+
+              this.emitDebug('tool_result', {
+                loopCount,
+                toolCallId: toolCall.id,
+                toolName,
+                error: toolResponse.message,
+                result: toolResponse,
+              });
+            }
+            continue;
           }
 
           // Execute action
@@ -757,9 +1020,16 @@ export class AgentMinimal {
         lastObservation = await this.getFocusedElementInfoWithRetry();
 
         // Single observation message after all tool calls
+        // PageRank mode uses simplified format without position reference
+        let observationContent: string;
+        if (this.navigationMode === 'pagerank') {
+          observationContent = `<url>${currentUrl}</url>\n<status>${lastObservation}</status>`;
+        } else {
+          observationContent = `<url>${currentUrl}</url>\n<focused_element position="${this.currentPosition}">${lastObservation}</focused_element>`;
+        }
         messages.push({
           role: 'user',
-          content: `<url>${currentUrl}</url>\n<focused_element position="${this.currentPosition}">${lastObservation}</focused_element>`,
+          content: observationContent,
         });
 
         this.emitDebug('observation', {
@@ -767,7 +1037,7 @@ export class AgentMinimal {
           loopCount,
           observation: lastObservation,
           url: currentUrl,
-          position: this.currentPosition,
+          position: this.navigationMode === 'pagerank' ? undefined : this.currentPosition,
         });
 
         this.log(`[Observation]: pos=${this.currentPosition}, ${lastObservation}`);

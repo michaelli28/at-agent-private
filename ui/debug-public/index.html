@@ -948,6 +948,7 @@
                     <select id="modelSelect">
                         <option value="google/gemini-2.5-flash">Gemini 2.5 Flash</option>
                         <option value="google/gemini-3-pro-preview">Gemini 3 Pro Preview</option>
+                        <option value="google/gemini-3-flash-preview">Gemini 3 Flash Preview</option>
                         <option value="anthropic/claude-sonnet-4">Claude 4 Sonnet</option>
                         <option value="anthropic/claude-sonnet-4.5">Claude 4.5 Sonnet</option>
                         <option value="anthropic/claude-opus-4.5">Claude 4.5 Opus</option>
@@ -967,6 +968,10 @@
             <div class="toggle-group">
                 <span class="toggle-label">Manual Oversight</span>
                 <div class="toggle" id="oversightToggle" title="Pause before each LLM request for manual approval"></div>
+            </div>
+            <div class="toggle-group">
+                <span class="toggle-label">PageRank Mode</span>
+                <div class="toggle" id="pagerankToggle" title="Enable PageRank-based navigation (crawls site first)"></div>
             </div>
             <button class="btn btn-primary" id="runBtn">Run Agent</button>
             <button class="btn btn-danger" id="stopBtn" style="display:none;">Stop</button>
@@ -1026,6 +1031,7 @@
                                 <div class="checkbox-group" id="modelCheckboxes">
                                     <div class="checkbox-item selected" data-model="google/gemini-2.5-flash">Gemini 2.5 Flash</div>
                                     <div class="checkbox-item" data-model="google/gemini-3-pro-preview">Gemini 3 Pro Preview</div>
+                                    <div class="checkbox-item" data-model="google/gemini-3-flash-preview">Gemini 3 Flash Preview</div>
                                     <div class="checkbox-item" data-model="anthropic/claude-sonnet-4">Claude 4 Sonnet</div>
                                     <div class="checkbox-item" data-model="anthropic/claude-sonnet-4.5">Claude 4.5 Sonnet</div>
                                     <div class="checkbox-item" data-model="anthropic/claude-opus-4.5">Claude 4.5 Opus</div>
@@ -1055,7 +1061,10 @@
                     <div class="benchmark-progress" id="benchmarkProgress" style="display: none;">
                         <div class="progress-header">
                             <h3>Running Benchmark...</h3>
-                            <span id="progressPercent">0%</span>
+                            <div style="display: flex; align-items: center; gap: 12px;">
+                                <span id="progressPercent">0%</span>
+                                <button class="btn btn-danger" id="stopBenchmarkBtn" style="padding: 4px 12px; font-size: 11px;">Stop</button>
+                            </div>
                         </div>
                         <div class="progress-bar-container">
                             <div class="progress-bar" id="progressBar"></div>
@@ -1139,6 +1148,7 @@
         let stats = { events: 0, observations: 0, loops: 0, tools: 0, tokens: 0 };
         let currentFilter = 'all';
         let manualOversight = false;
+        let pagerankMode = false;
 
         // Benchmark state
         let testCases = [];
@@ -1166,6 +1176,7 @@
         const previewContent = document.getElementById('previewContent');
         const previewUrl = document.getElementById('previewUrl');
         const oversightToggle = document.getElementById('oversightToggle');
+        const pagerankToggle = document.getElementById('pagerankToggle');
         const confirmationBanner = document.getElementById('confirmationBanner');
         const confirmationText = document.getElementById('confirmationText');
         const confirmBtn = document.getElementById('confirmBtn');
@@ -1177,6 +1188,7 @@
         const benchmarkAgentTypeEl = document.getElementById('benchmarkAgentType');
         const runsPerTestCaseInput = document.getElementById('runsPerTestCase');
         const runBenchmarkBtn = document.getElementById('runBenchmarkBtn');
+        const stopBenchmarkBtn = document.getElementById('stopBenchmarkBtn');
         const loadReportsBtn = document.getElementById('loadReportsBtn');
         const benchmarkProgressEl = document.getElementById('benchmarkProgress');
         const progressBar = document.getElementById('progressBar');
@@ -1265,6 +1277,9 @@
                     break;
                 case 'benchmark_complete':
                     handleBenchmarkComplete(data.report);
+                    break;
+                case 'benchmark_stopped':
+                    handleBenchmarkStopped(data.report);
                     break;
                 case 'benchmark_error':
                     handleBenchmarkError(data.error);
@@ -1485,10 +1500,12 @@
                 return;
             }
 
-            ws.send(JSON.stringify({ type: 'run', url, goal, model, manualOversight, agentType }));
+            const navigationMode = pagerankMode ? 'pagerank' : 'default';
+            ws.send(JSON.stringify({ type: 'run', url, goal, model, manualOversight, agentType, navigationMode }));
             statusDot.classList.add('running');
             const agentLabel = agentType === 'minimal' ? 'minimal' : 'full';
-            statusText.textContent = manualOversight ? `Starting ${agentLabel} agent (manual oversight enabled)...` : `Running ${agentLabel} agent...`;
+            const pagerankLabel = pagerankMode ? ' (PageRank)' : '';
+            statusText.textContent = manualOversight ? `Starting ${agentLabel} agent${pagerankLabel} (manual oversight enabled)...` : `Running ${agentLabel} agent${pagerankLabel}...`;
             runBtn.style.display = 'none';
             stopBtn.style.display = '';
         }
@@ -1497,6 +1514,12 @@
         function toggleOversight() {
             manualOversight = !manualOversight;
             oversightToggle.classList.toggle('active', manualOversight);
+        }
+
+        // Toggle pagerank mode
+        function togglePagerank() {
+            pagerankMode = !pagerankMode;
+            pagerankToggle.classList.toggle('active', pagerankMode);
         }
 
         // Stop agent
@@ -1682,6 +1705,15 @@
             }));
         }
 
+        // Stop benchmark
+        function stopBenchmark() {
+            if (!benchmarkRunning) return;
+
+            ws.send(JSON.stringify({ type: 'stop_benchmark' }));
+            progressDetails.textContent = 'Stopping benchmark...';
+            appendTerminalLine('\n[Stopping benchmark...]', 'warning');
+        }
+
         // Handle benchmark events
         function handleBenchmarkEvent(event) {
             switch (event.type) {
@@ -1778,6 +1810,27 @@
             runBenchmarkBtn.disabled = false;
             progressDetails.textContent = 'Error: ' + error;
             alert('Benchmark error: ' + error);
+        }
+
+        // Handle benchmark stopped
+        function handleBenchmarkStopped(report) {
+            benchmarkRunning = false;
+            benchmarkProgressEl.style.display = 'none';
+            runBenchmarkBtn.disabled = false;
+            appendTerminalLine('\n[Benchmark stopped by user]', 'warning');
+
+            if (report) {
+                currentReport = report;
+                renderBenchmarkResults();
+
+                // Refresh reports list
+                ws.send(JSON.stringify({ type: 'get_reports' }));
+
+                // Select the report in dropdown
+                setTimeout(() => {
+                    reportSelector.value = report.id;
+                }, 100);
+            }
         }
 
         // Render benchmark results
@@ -1884,6 +1937,7 @@
         stopBtn.onclick = stop;
         clearBtn.onclick = clearEvents;
         oversightToggle.onclick = toggleOversight;
+        pagerankToggle.onclick = togglePagerank;
         confirmBtn.onclick = confirm;
         rejectBtn.onclick = reject;
         testCaseSelect.onchange = handleTestCaseSelect;
@@ -1898,6 +1952,7 @@
 
         // Benchmark event listeners
         runBenchmarkBtn.onclick = runBenchmark;
+        stopBenchmarkBtn.onclick = stopBenchmark;
         loadReportsBtn.onclick = () => ws.send(JSON.stringify({ type: 'get_reports' }));
         reportSelector.onchange = () => loadReport(reportSelector.value);
         clearTerminalBtn.onclick = clearTerminal;

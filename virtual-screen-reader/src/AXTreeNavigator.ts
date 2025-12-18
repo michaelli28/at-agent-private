@@ -444,7 +444,11 @@ export class AXTreeNavigator {
      */
     moveNext(): NavigationResult {
         if (this.interestingNodes.length === 0) {
-            return { node: null, message: 'No content', success: false };
+            const totalNodes = this.flatNodes.length;
+            const message = totalNodes === 0
+                ? 'No accessibility tree available'
+                : `No navigable content (${totalNodes} nodes in tree, none are interesting)`;
+            return { node: null, message, success: false };
         }
 
         const current = this.getCurrentNode();

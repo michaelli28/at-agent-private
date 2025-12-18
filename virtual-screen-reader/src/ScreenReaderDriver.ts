@@ -8,6 +8,7 @@
  * Dynamic content detection is handled by MutationObserver (not polling).
  */
 
+import { Page } from 'playwright';
 import { IAccessibilityDriver } from './IAccessibilityDriver';
 import { UserAction, ActionResult, PerceptualSnapshot } from './driverTypes';
 import { BrowserClient, MutationSummary } from './playwrightClient';
@@ -17,10 +18,8 @@ import { AXTreeCache } from './AXTreeCache';
 import {
     KEY_TO_COMMAND,
     TABLE_NAV_COMMANDS,
-    FORMS_MODE_ROLES,
     NavigationCommand,
     NavigableAXNode,
-    InteractionMode,
     Rect,
 } from './types';
 import { FOCUSABLE_ROLES } from './AXTreeNavigator';
@@ -36,8 +35,6 @@ export interface TimingOptions {
     clickDelay?: number;
     /** Delay after link click for navigation to start (ms). Default: 500 */
     navigationDelay?: number;
-    /** Delay for page to settle after load (ms). Default: 300 */
-    pageSettleDelay?: number;
 }
 
 /**
@@ -57,13 +54,11 @@ export interface ScreenReaderDriverOptions {
  * - keyPressDelay: 50ms - Minimum time for browser to process keyboard event
  * - clickDelay: 100ms - Time for click handlers and state updates to complete
  * - navigationDelay: 500ms - Time for navigation to initiate (network latency varies)
- * - pageSettleDelay: 300ms - Time for page JS to initialize after load
  */
 const DEFAULT_TIMING: Required<TimingOptions> = {
     keyPressDelay: 50,
     clickDelay: 100,
     navigationDelay: 500,
-    pageSettleDelay: 300,
 };
 
 const DEFAULT_OPTIONS: Required<Omit<ScreenReaderDriverOptions, 'timing'>> & { timing: Required<TimingOptions> } = {
@@ -90,8 +85,12 @@ export class ScreenReaderDriver implements IAccessibilityDriver {
     private currentUrl: string = "";
     private lastSpokenText: string = "";
     private pendingLiveAnnouncements: string[] = [];
-    private interactionMode: InteractionMode = 'browse';
     private pageJustLoaded: boolean = false; // Forces tree refresh on first action after page load
+
+    // Popup/dropdown handling - ensures tree refresh after focusing expandable elements
+    private pendingPopupRefresh: boolean = false;
+    private popupFocusTimestamp: number = 0;
+    private readonly POPUP_RENDER_DELAY = 250; // ms to wait for popup content to render
 
     // Timing shortcuts for cleaner code
     private get timing(): Required<TimingOptions> {
@@ -188,9 +187,12 @@ export class ScreenReaderDriver implements IAccessibilityDriver {
 
                 case 'stateChange':
                     this.log(`[StateChange] ${mutation.attribute}=${mutation.value} on "${mutation.name}"`);
-                    // Invalidate cache when expansion state changes so aria-controls relationships are re-resolved
-                    if (mutation.attribute === 'aria-expanded') {
+                    // Invalidate cache when visibility/expansion state changes
+                    // aria-expanded: traditional dropdown toggle
+                    // aria-hidden: some sites use this to show/hide dropdown content
+                    if (mutation.attribute === 'aria-expanded' || mutation.attribute === 'aria-hidden') {
                         this.cache.invalidate();
+                        this.log(`[StateChange] Cache invalidated due to ${mutation.attribute} change`);
                     }
                     break;
             }
@@ -201,8 +203,34 @@ export class ScreenReaderDriver implements IAccessibilityDriver {
         this.enabled = false;
         this.cache.dispose();
         await this.client.stopMutationObserver();
-        this.interactionMode = 'browse';
         this.log("Screen Reader Disabled");
+    }
+
+    async navigateTo(url: string): Promise<void> {
+        this.log(`[ScreenReaderDriver] Navigating to: ${url}`);
+        await this.client.goto(url);
+        this.currentUrl = url;
+
+        // Reset navigation state
+        this.cache.invalidate();
+
+        // Re-initialize navigation (waits for network idle internally)
+        await this.initializeNavigation();
+
+        // Re-inject MutationObserver
+        await this.client.reinjectMutationObserver();
+
+        // Mark that page just loaded - forces tree refresh on first action
+        this.pageJustLoaded = true;
+
+        const firstNode = this.navigator.getCurrentNode();
+        if (firstNode) {
+            this.log(`[ScreenReaderDriver] Navigation complete, at: ${firstNode.computedName || firstNode.computedRole}`);
+        }
+    }
+
+    getPage(): Page | null {
+        return this.client.getPage();
     }
 
     async performAction(action: UserAction): Promise<ActionResult> {
@@ -271,9 +299,10 @@ export class ScreenReaderDriver implements IAccessibilityDriver {
         // Get cursor box from current node
         let cursorBox: Rect | null = null;
         const currentNode = this.navigator.getCurrentNode();
-        if (currentNode?.backendDOMNodeId) {
+        // Check if node can provide a bounding box
+        if (currentNode && (currentNode.backendDOMNodeId || currentNode.locatorPath)) {
             try {
-                cursorBox = await this.client.getNodeBoundingBox(currentNode.backendDOMNodeId);
+                cursorBox = await this.client.getNodeBoundingBox(currentNode);
             } catch {
                 // Ignore - node might not be visible
             }
@@ -295,22 +324,7 @@ export class ScreenReaderDriver implements IAccessibilityDriver {
         // Normalize key names
         const normalizedKey = this.normalizeKey(key);
 
-        // Forms mode: pass most keys directly to the input
-        if (this.interactionMode === 'forms') {
-            if (normalizedKey === 'Escape') {
-                // Exit forms mode
-                this.interactionMode = 'browse';
-                this.lastSpokenText = 'Browse mode';
-                this.log('[Mode] Switched to browse mode');
-                return;
-            }
-            // In forms mode, pass keys through to the browser
-            await this.client.pressKey(normalizedKey);
-            await this.sleep(this.timing.keyPressDelay);
-            return;
-        }
-
-        // Browse mode: check for table navigation commands (Ctrl+Alt+Arrow)
+        // Check for table navigation commands (Ctrl+Alt+Arrow)
         const tableCommand = TABLE_NAV_COMMANDS[normalizedKey];
         if (tableCommand) {
             await this.handleTableNavigation(tableCommand.type);
@@ -381,8 +395,21 @@ export class ScreenReaderDriver implements IAccessibilityDriver {
 
     private async handleNavigationCommand(command: NavigationCommand): Promise<void> {
         try {
+            // FIRST: Handle pending popup refresh (highest priority)
+            // This ensures we catch dropdown content even if user navigates very fast
+            if (this.pendingPopupRefresh) {
+                const elapsed = Date.now() - this.popupFocusTimestamp;
+                const remainingWait = Math.max(0, this.POPUP_RENDER_DELAY - elapsed);
+
+                if (remainingWait > 0) {
+                    await this.sleep(remainingWait);
+                }
+
+                this.pendingPopupRefresh = false;
+                await this.refreshWithRetryForDropdown();
+            }
             // Force refresh if page just loaded - JS may have rendered more content
-            if (this.pageJustLoaded) {
+            else if (this.pageJustLoaded) {
                 this.log(`[Navigate] Page just loaded, forcing tree refresh...`);
                 this.pageJustLoaded = false; // Clear flag before refresh
                 try {
@@ -403,6 +430,30 @@ export class ScreenReaderDriver implements IAccessibilityDriver {
                     // Continue with stale cache rather than failing completely
                 }
             }
+            // Check if current node might have dynamic content (expanded popup, combobox, etc.)
+            // This catches cases where focus triggered a dropdown but cache wasn't invalidated
+            else {
+                const currentNode = this.navigator.getCurrentNode();
+                const mightHaveDynamicContent = currentNode && (
+                    currentNode.states.hasPopup ||
+                    currentNode.computedRole === 'combobox' ||
+                    currentNode.computedRole === 'listbox' ||
+                    (currentNode.computedRole === 'button' && currentNode.states.expanded !== undefined)
+                );
+
+                if (mightHaveDynamicContent && (currentNode.backendDOMNodeId || currentNode.locatorPath)) {
+                    // Check if the DOM element is actually expanded (might differ from cached state)
+                    try {
+                        const actualExpanded = await this.client.getNodeAttribute(currentNode, 'aria-expanded');
+                        if (actualExpanded === 'true') {
+                            this.log(`[Navigate] Current element is expanded (DOM check), refreshing tree to include dropdown content...`);
+                            await this.cache.refresh();
+                        }
+                    } catch (e) {
+                        // Ignore - element might not support aria-expanded
+                    }
+                }
+            }
 
             const currentBefore = this.navigator.getCurrentNode();
             this.log(`[Navigate] Before: index=${this.navigator.getCurrentPosition()}, node=${currentBefore?.computedRole || 'null'}`);
@@ -421,13 +472,6 @@ export class ScreenReaderDriver implements IAccessibilityDriver {
                 // **KEY: Actually focus the element like a real screen reader**
                 // This triggers focus events, opens dropdowns, etc.
                 await this.focusAndHighlightNode(result.node);
-
-                // Auto-switch to forms mode for form fields
-                if (FORMS_MODE_ROLES.has(result.node.computedRole) && this.interactionMode === 'browse') {
-                    this.interactionMode = 'forms';
-                    announcement += ', Forms mode';
-                    this.log('[Mode] Auto-switched to forms mode');
-                }
 
                 this.lastSpokenText = announcement;
                 this.log(`[Navigate] -> ${result.node.computedRole}: "${result.node.computedName}"`);
@@ -510,7 +554,8 @@ export class ScreenReaderDriver implements IAccessibilityDriver {
 
     private async handleActivate(): Promise<void> {
         const currentNode = this.navigator.getCurrentNode();
-        if (!currentNode?.backendDOMNodeId) {
+        // Check if node can be interacted with (has either backendDOMNodeId or locatorPath)
+        if (!currentNode || (!currentNode.backendDOMNodeId && !currentNode.locatorPath)) {
             this.lastSpokenText = "Nothing to activate";
             return;
         }
@@ -519,19 +564,19 @@ export class ScreenReaderDriver implements IAccessibilityDriver {
         this.log(`[Activate] Activating ${role}: "${currentNode.computedName}"`);
 
         try {
-            // Handle different roles
+            // Handle different roles - pass full node instead of backendDOMNodeId
             if (role === 'link') {
                 // For links: focus first, then click (more reliable)
-                await this.client.focusNode(currentNode.backendDOMNodeId);
+                await this.client.focusNode(currentNode);
                 await this.sleep(this.timing.keyPressDelay);
-                await this.client.clickNode(currentNode.backendDOMNodeId);
+                await this.client.clickNode(currentNode);
                 this.log(`[Activate] Link clicked, waiting for navigation...`);
                 await this.sleep(this.timing.navigationDelay);
                 this.lastSpokenText = this.announcer.generateActivationAnnouncement(currentNode, 'activated');
 
             } else if (role === 'button') {
                 // Click the button
-                await this.client.clickNode(currentNode.backendDOMNodeId);
+                await this.client.clickNode(currentNode);
                 await this.sleep(this.timing.clickDelay);
 
                 // Check if button state changed and if focus moved (for dropdowns)
@@ -549,7 +594,7 @@ export class ScreenReaderDriver implements IAccessibilityDriver {
 
                         // Update navigator position to the focused node
                         const moved = this.navigator.setCurrentByNodeId(focusedNode.nodeId) ||
-                                      this.navigator.setCurrentByBackendNodeId(focusedNode.backendDOMNodeId!);
+                                      (focusedNode.backendDOMNodeId ? this.navigator.setCurrentByBackendNodeId(focusedNode.backendDOMNodeId) : false);
 
                         if (moved) {
                             // Announce the button state change followed by the focused element
@@ -585,7 +630,7 @@ export class ScreenReaderDriver implements IAccessibilityDriver {
 
             } else if (role === 'checkbox' || role === 'switch') {
                 // Toggle checkbox/switch
-                await this.client.clickNode(currentNode.backendDOMNodeId);
+                await this.client.clickNode(currentNode);
                 await this.sleep(this.timing.clickDelay);
 
                 // Refresh to get new state
@@ -606,21 +651,19 @@ export class ScreenReaderDriver implements IAccessibilityDriver {
                 }
 
             } else if (role === 'textbox' || role === 'searchbox' || role === 'combobox' || role === 'spinbutton' || role === 'listbox') {
-                // Focus the input and switch to forms mode
-                await this.client.focusNode(currentNode.backendDOMNodeId);
-                this.interactionMode = 'forms';
-                this.lastSpokenText = `${currentNode.computedName || role}, focused, Forms mode`;
-                this.log('[Mode] Switched to forms mode via activation');
+                // Focus the input
+                await this.client.focusNode(currentNode);
+                this.lastSpokenText = `${currentNode.computedName || role}, focused`;
 
             } else if (role === 'menuitem' || role === 'option' || role === 'treeitem' || role === 'tab') {
                 // Activate menu/list item
-                await this.client.clickNode(currentNode.backendDOMNodeId);
+                await this.client.clickNode(currentNode);
                 await this.sleep(this.timing.clickDelay);
                 this.lastSpokenText = this.announcer.generateActivationAnnouncement(currentNode, 'activated');
 
             } else {
                 // Generic click
-                await this.client.clickNode(currentNode.backendDOMNodeId);
+                await this.client.clickNode(currentNode);
                 await this.sleep(this.timing.clickDelay);
                 this.lastSpokenText = this.announcer.generateActivationAnnouncement(currentNode, 'activated');
             }
@@ -679,7 +722,8 @@ export class ScreenReaderDriver implements IAccessibilityDriver {
 
     private async handleSpace(): Promise<void> {
         const currentNode = this.navigator.getCurrentNode();
-        if (!currentNode?.backendDOMNodeId) {
+        // Check if node can be interacted with
+        if (!currentNode || (!currentNode.backendDOMNodeId && !currentNode.locatorPath)) {
             this.lastSpokenText = "Nothing to interact with";
             return;
         }
@@ -719,7 +763,6 @@ export class ScreenReaderDriver implements IAccessibilityDriver {
             await this.client.goBack();
 
             // Reset state for new page
-            this.interactionMode = 'browse';
             this.cache.invalidate();
 
             // Re-initialize navigation on the new page (waits for network idle internally)
@@ -744,11 +787,11 @@ export class ScreenReaderDriver implements IAccessibilityDriver {
         const currentNode = this.navigator.getCurrentNode();
 
         // If current node is an input, type into it
-        if (currentNode?.backendDOMNodeId) {
+        if (currentNode && (currentNode.backendDOMNodeId || currentNode.locatorPath)) {
             const role = currentNode.computedRole;
             if (role === 'textbox' || role === 'searchbox' || role === 'spinbutton' || role === 'combobox') {
-                // Focus first, then type
-                await this.client.focusNode(currentNode.backendDOMNodeId);
+                // Focus first, then type - pass full node
+                await this.client.focusNode(currentNode);
                 await this.client.typeText(text);
                 this.lastSpokenText = `typed: ${text}`;
                 return;
@@ -812,9 +855,6 @@ export class ScreenReaderDriver implements IAccessibilityDriver {
             this.log(`[ScreenReaderDriver] Page load detected: "${pageTitle}"`);
             this.currentUrl = newUrl;
 
-            // Reset interaction mode on page load
-            this.interactionMode = 'browse';
-
             // Invalidate cache
             this.cache.invalidate();
 
@@ -849,9 +889,6 @@ export class ScreenReaderDriver implements IAccessibilityDriver {
                     this.log(`[ScreenReaderDriver] Navigation detected: ${newUrl}`);
                     this.currentUrl = newUrl;
 
-                    // Reset interaction mode on navigation
-                    this.interactionMode = 'browse';
-
                     // Invalidate cache and reinitialize (waits for network idle internally)
                     this.cache.invalidate();
                     await this.initializeNavigation();
@@ -884,7 +921,8 @@ export class ScreenReaderDriver implements IAccessibilityDriver {
      * - Visual focus indicator
      */
     private async focusAndHighlightNode(node: NavigableAXNode): Promise<void> {
-        if (!node.backendDOMNodeId) {
+        // Check if node can be interacted with (has either backendDOMNodeId or locatorPath)
+        if (!node.backendDOMNodeId && !node.locatorPath) {
             this.client.clearHighlight();
             return;
         }
@@ -893,9 +931,19 @@ export class ScreenReaderDriver implements IAccessibilityDriver {
         let focusSuccess = false;
         let highlightSuccess = false;
 
+        // Track if this element might trigger dynamic content (dropdowns, menus, etc.)
+        // Be aggressive - many buttons open dropdowns without proper ARIA attributes
+        const mightTriggerPopup = node.states.hasPopup ||
+            node.computedRole === 'combobox' ||
+            node.computedRole === 'menubutton' ||
+            node.computedRole === 'button' || // ALL buttons might trigger popups
+            node.computedRole === 'listbox' ||
+            node.computedRole === 'tab' ||
+            (node.computedRole === 'link' && node.states.expanded !== undefined);
+
         try {
-            // 1. Scroll into view first
-            await this.client.scrollNodeIntoView(node.backendDOMNodeId);
+            // 1. Scroll into view first - pass full node
+            await this.client.scrollNodeIntoView(node);
             scrollSuccess = true;
         } catch (scrollError: any) {
             this.log(`[Focus] Scroll failed for ${node.computedRole}: ${scrollError.message}`);
@@ -905,16 +953,24 @@ export class ScreenReaderDriver implements IAccessibilityDriver {
             // 2. Actually focus the element (like a real screen reader)
             // This triggers focus events which may open dropdowns, menus, etc.
             if (FOCUSABLE_ROLES.has(node.computedRole)) {
-                await this.client.focusNode(node.backendDOMNodeId);
+                await this.client.focusNode(node);
                 focusSuccess = true;
             }
         } catch (focusError: any) {
             this.log(`[Focus] Focus failed for ${node.computedRole}: ${focusError.message}`);
         }
 
+        // 3. If this element might trigger a popup, mark for refresh on next navigation
+        // This is more robust than waiting - it guarantees refresh regardless of navigation speed
+        if (mightTriggerPopup && focusSuccess) {
+            this.pendingPopupRefresh = true;
+            this.popupFocusTimestamp = Date.now();
+            this.log(`[Focus] Element has popup potential, marked for refresh on next navigation`);
+        }
+
         try {
-            // 3. Get bounding box and highlight
-            const box = await this.client.getNodeBoundingBox(node.backendDOMNodeId);
+            // 4. Get bounding box and highlight - pass full node
+            const box = await this.client.getNodeBoundingBox(node);
             if (box) {
                 this.client.highlightBox(box);
                 highlightSuccess = true;
@@ -937,14 +993,15 @@ export class ScreenReaderDriver implements IAccessibilityDriver {
      * Just highlight without focusing (for re-highlighting after actions).
      */
     private async highlightNode(node: NavigableAXNode): Promise<void> {
-        if (!node.backendDOMNodeId) {
+        // Check if node can be interacted with
+        if (!node.backendDOMNodeId && !node.locatorPath) {
             this.client.clearHighlight();
             return;
         }
 
         try {
-            await this.client.scrollNodeIntoView(node.backendDOMNodeId);
-            const box = await this.client.getNodeBoundingBox(node.backendDOMNodeId);
+            await this.client.scrollNodeIntoView(node);
+            const box = await this.client.getNodeBoundingBox(node);
             if (box) {
                 this.client.highlightBox(box);
             } else {
@@ -987,13 +1044,6 @@ export class ScreenReaderDriver implements IAccessibilityDriver {
                 if (node) {
                     this.log(`[Focus] Found via CDP backendNodeId: "${node.computedName}" (${node.computedRole})`);
                     return node;
-                }
-                // BackendNodeId found but not in interestingNodes - try to find nearest interesting parent
-                for (const interestingNode of tree.interestingNodes) {
-                    if (interestingNode.backendDOMNodeId === focusedBackendId) {
-                        this.log(`[Focus] Found in interestingNodes: "${interestingNode.computedName}" (${interestingNode.computedRole})`);
-                        return interestingNode;
-                    }
                 }
             }
         } catch (e) {
@@ -1081,6 +1131,88 @@ export class ScreenReaderDriver implements IAccessibilityDriver {
     // Utilities
     // =========================================================================
 
+    /**
+     * Refreshes the tree with retry logic for dropdown content.
+     * If the focused element is expanded but no dropdown content is found, retries.
+     */
+    private async refreshWithRetryForDropdown(maxRetries = 3): Promise<void> {
+        const DROPDOWN_CONTENT_ROLES = new Set([
+            'option', 'menuitem', 'menuitemcheckbox', 'menuitemradio',
+            'listitem', 'treeitem', 'tab', 'listbox', 'menu', 'tree',
+            'link', 'button' // Also consider links/buttons as potential dropdown content
+        ]);
+
+        // Remember what nodes we had before refresh to detect new content
+        const nodeCountBefore = this.navigator.getAllInterestingNodes().length;
+
+        for (let attempt = 1; attempt <= maxRetries; attempt++) {
+            try {
+                await this.cache.refresh();
+            } catch (refreshError: any) {
+                this.log(`[Navigate] Refresh attempt ${attempt} failed: ${refreshError.message}`);
+                if (attempt === maxRetries) return;
+                await this.sleep(100);
+                continue;
+            }
+
+            const allNodes = this.navigator.getAllInterestingNodes();
+            const nodeCountAfter = allNodes.length;
+            const currentNode = this.navigator.getCurrentNode();
+
+            this.log(`[Navigate] Refresh attempt ${attempt}: nodes before=${nodeCountBefore}, after=${nodeCountAfter}, current=${currentNode?.computedRole}:"${currentNode?.computedName?.substring(0, 20)}"`);
+
+            if (!currentNode) {
+                this.log(`[Navigate] No current node after refresh`);
+                return;
+            }
+
+            // SUCCESS CONDITION 1: New nodes appeared in the tree
+            if (nodeCountAfter > nodeCountBefore) {
+                this.log(`[Navigate] New content detected (${nodeCountAfter - nodeCountBefore} new nodes)`);
+                return; // New content appeared, we're good
+            }
+
+            // SUCCESS CONDITION 2: Has controlled nodes via aria-controls
+            if (currentNode.controlledNodes && currentNode.controlledNodes.length > 0) {
+                this.log(`[Navigate] Found controlled nodes via aria-controls`);
+                return;
+            }
+
+            // SUCCESS CONDITION 3: Next node looks like dropdown content
+            const currentIndex = allNodes.indexOf(currentNode);
+            if (currentIndex >= 0 && currentIndex < allNodes.length - 1) {
+                const nextNode = allNodes[currentIndex + 1];
+                // Check if next node is dropdown-like content
+                if (DROPDOWN_CONTENT_ROLES.has(nextNode.computedRole)) {
+                    this.log(`[Navigate] Next node looks like dropdown content: ${nextNode.computedRole}`);
+                    return;
+                }
+
+                // Check children for dropdown content
+                const checkChildren = (node: NavigableAXNode): boolean => {
+                    for (const child of node.children) {
+                        if (DROPDOWN_CONTENT_ROLES.has(child.computedRole)) return true;
+                        if (checkChildren(child)) return true;
+                    }
+                    return false;
+                };
+                if (checkChildren(currentNode)) {
+                    this.log(`[Navigate] Found dropdown content in children`);
+                    return;
+                }
+            }
+
+            // No success conditions met - retry if we have attempts left
+            if (attempt < maxRetries) {
+                this.log(`[Navigate] Retrying (${attempt}/${maxRetries})...`);
+                await this.sleep(150);
+            } else {
+                // Final attempt - just accept whatever we have
+                this.log(`[Navigate] Max retries reached, proceeding with current tree state`);
+            }
+        }
+    }
+
     private normalizeKey(key: string): string {
         // Key translations for common variations
         const translations: Record<string, string> = {
@@ -1124,20 +1256,12 @@ export class ScreenReaderDriver implements IAccessibilityDriver {
     /**
      * Gets current navigator state for debugging.
      */
-    getNavigatorState(): { currentNode: NavigableAXNode | null; cacheStats: any; mode: InteractionMode; tableContext: any } {
+    getNavigatorState(): { currentNode: NavigableAXNode | null; cacheStats: any; tableContext: any } {
         return {
             currentNode: this.navigator.getCurrentNode(),
             cacheStats: this.cache.getStats(),
-            mode: this.interactionMode,
             tableContext: this.navigator.getTableContext(),
         };
-    }
-
-    /**
-     * Gets the current interaction mode.
-     */
-    getMode(): InteractionMode {
-        return this.interactionMode;
     }
 
     /**

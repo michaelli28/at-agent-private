@@ -1,3 +1,4 @@
+import { Page } from 'playwright';
 import { UserAction, ActionResult, PerceptualSnapshot } from './driverTypes';
 
 export interface IAccessibilityDriver {
@@ -22,4 +23,14 @@ export interface IAccessibilityDriver {
      * Gets the current perceptual output (what the user "sees" or "hears").
      */
     getPerceptualOutput(): Promise<PerceptualSnapshot>;
+
+    /**
+     * Navigate to a specific URL.
+     */
+    navigateTo(url: string): Promise<void>;
+
+    /**
+     * Get the underlying Playwright Page object for browser-based operations.
+     */
+    getPage(): Page | null;
 }
