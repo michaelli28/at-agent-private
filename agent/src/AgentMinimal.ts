@@ -646,7 +646,7 @@ export class AgentMinimal {
     const messages: any[] = [systemMessage, initialMessage];
     const steps: MinimalStep[] = [];
     let loopCount = 0;
-    const maxLoops = 100;
+    const maxLoops = 200;
 
     // Token tracking
     let totalPromptTokens = 0;

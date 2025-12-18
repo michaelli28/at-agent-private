@@ -432,7 +432,7 @@ export class AgentOpenrouter {
 
       const steps: AgentStep[] = [];
       let loopCount = 0;
-      const maxLoops = 100;
+      const maxLoops = 200;
 
       // Token tracking
       let totalPromptTokens = 0;

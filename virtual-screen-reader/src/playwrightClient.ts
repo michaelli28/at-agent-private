@@ -43,6 +43,8 @@ export class BrowserClient {
     private browserType: BrowserType = 'chrome';
     private provider: AccessibilityProvider | null = null;
     private screenshotInterval: NodeJS.Timeout | null = null;
+    private newTabCallback: ((newPage: Page) => Promise<void>) | null = null;
+    private pendingNewTab: Page | null = null;
 
     /**
      * Launches a new browser instance.
@@ -147,20 +149,36 @@ export class BrowserClient {
      * Common page setup for both launch and connect.
      */
     private async setupPage(): Promise<void> {
-        if (!this.page) return;
+        if (!this.page || !this.context) return;
 
         // Enable DOM domain for CDP if available
         if (this.cdpSession) {
             await this.cdpSession.send('DOM.enable');
         }
 
+        // Listen for new tabs (popups, target="_blank" links)
+        this.context.on('page', async (newPage: Page) => {
+            console.log(`[DEBUG-NEWTAB] New page/tab opened: ${newPage.url()}`);
+            // Store the new tab so the caller can switch to it
+            this.pendingNewTab = newPage;
+        });
+
         // Listen for page load events to detect full page navigations
         this.page.on('load', async () => {
+            console.log(`[DEBUG-PLAYWRIGHT] 'load' event fired`);
             this.navigationOccurred = true;
 
             // If there's a callback registered, call it immediately
             if (this.pageLoadCallback) {
-                await this.pageLoadCallback();
+                console.log(`[DEBUG-PLAYWRIGHT] Calling pageLoadCallback...`);
+                try {
+                    await this.pageLoadCallback();
+                    console.log(`[DEBUG-PLAYWRIGHT] pageLoadCallback completed`);
+                } catch (e: any) {
+                    console.log(`[DEBUG-PLAYWRIGHT] pageLoadCallback error: ${e.message}`);
+                }
+            } else {
+                console.log(`[DEBUG-PLAYWRIGHT] No pageLoadCallback registered`);
             }
         });
     }
@@ -499,6 +517,72 @@ export class BrowserClient {
      */
     onPageLoad(callback: () => Promise<void>): void {
         this.pageLoadCallback = callback;
+    }
+
+    /**
+     * Checks if a new tab was opened (e.g., from target="_blank" link).
+     */
+    hasPendingNewTab(): boolean {
+        return this.pendingNewTab !== null;
+    }
+
+    /**
+     * Switches to the pending new tab, updating page, CDP session, and provider.
+     * Returns true if switch was successful, false if no pending tab.
+     */
+    async switchToNewTab(): Promise<boolean> {
+        if (!this.pendingNewTab || !this.context) {
+            console.log(`[DEBUG-NEWTAB] No pending new tab to switch to`);
+            return false;
+        }
+
+        const newPage = this.pendingNewTab;
+        this.pendingNewTab = null;
+
+        console.log(`[DEBUG-NEWTAB] Switching to new tab: ${newPage.url()}`);
+
+        // Wait for the new page to load
+        try {
+            await newPage.waitForLoadState('domcontentloaded', { timeout: 10000 });
+            console.log(`[DEBUG-NEWTAB] New tab loaded: ${newPage.url()}`);
+        } catch (e: any) {
+            console.log(`[DEBUG-NEWTAB] Timeout waiting for new tab to load, continuing anyway`);
+        }
+
+        // Update page reference
+        this.page = newPage;
+
+        // Create new CDP session and provider for the new page
+        if (this.browserType === 'chrome' || this.browserType === 'chromium') {
+            this.cdpSession = await this.context.newCDPSession(this.page);
+            await this.cdpSession.send('DOM.enable');
+            this.provider = new CDPAccessibilityProvider(this.cdpSession, this.page);
+        } else {
+            this.cdpSession = null;
+            this.provider = new PlaywrightAccessibilityProvider(this.page);
+        }
+
+        // Set up load listener on the new page
+        this.page.on('load', async () => {
+            console.log(`[DEBUG-PLAYWRIGHT] 'load' event fired on new tab`);
+            this.navigationOccurred = true;
+            if (this.pageLoadCallback) {
+                try {
+                    await this.pageLoadCallback();
+                } catch (e: any) {
+                    console.log(`[DEBUG-PLAYWRIGHT] pageLoadCallback error: ${e.message}`);
+                }
+            }
+        });
+
+        return true;
+    }
+
+    /**
+     * Clears any pending new tab without switching to it.
+     */
+    clearPendingNewTab(): void {
+        this.pendingNewTab = null;
     }
 
     /**

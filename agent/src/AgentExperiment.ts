@@ -109,7 +109,7 @@ export class AgentExperiment {
 
       const steps: AgentStep[] = [];
       let loopCount = 0;
-      const maxLoops = 100; // Guard against infinite loops
+      const maxLoops = 200; // Guard against infinite loops
 
       console.log(`
 --- Starting Agent Goal: ${goal} ---
