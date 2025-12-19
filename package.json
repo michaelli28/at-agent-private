@@ -8,7 +8,8 @@
     "agent",
     "evaluation",
     "ui",
-    "virtual-screen-reader"
+    "virtual-screen-reader",
+    "taskgen"
   ],
   "scripts": {
     "build": "npm run build --workspaces --if-present",
@@ -36,7 +37,9 @@
     "visualize-report": "tsx -r tsconfig-paths/register scripts/generateReportHtml.ts",
     "generate-graph": "tsx scripts/generateGraphML.ts",
     "generate-sitemap": "tsx scripts/generateSitemap.ts",
-    "start:ui": "tsx -r tsconfig-paths/register ui/server.ts"
+    "start:ui": "tsx -r tsconfig-paths/register ui/server.ts",
+    "taskgen": "tsx -r tsconfig-paths/register taskgen/src/cli.ts",
+    "taskgen:detailed": "tsx -r tsconfig-paths/register taskgen/src/cli.ts --detailed"
   },
   "devDependencies": {
     "@types/node": "^20.19.25",

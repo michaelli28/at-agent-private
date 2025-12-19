@@ -1,0 +1,1126 @@
+[
+  {
+    "url": "https://cmu.edu",
+    "goal": "1. Navigate to and click Login link. 2. Navigate to username/email field and type 'test@example.com'. 3. Navigate to password field and type 'TestPassword123'. 4. Navigate to and click Sign In/Login button. 5. Report success with the reason as the authenticated page URL or any error message displayed."
+  },
+  {
+    "url": "https://www.cmu.edu/about/traditions",
+    "goal": "1. Navigate to banner landmark using D key. 2. Navigate to navigation landmark using D key. 3. Navigate to main landmark using D key. 4. Navigate to contentinfo landmark using D key. 5. Continue through all landmarks on the page. 6. Report success with the reason listing all landmarks found (expected: banner, main, contentinfo, navigation, navigation, main, navigation, main, navigation, region) and any missing required landmarks."
+  },
+  {
+    "url": "https://www.cmu.edu/academics/learning-for-a-lifetime",
+    "goal": "1. Navigate to banner landmark using D key. 2. Navigate to navigation landmark using D key. 3. Navigate to main landmark using D key. 4. Navigate to contentinfo landmark using D key. 5. Continue through all landmarks on the page. 6. Report success with the reason listing all landmarks found (expected: banner, main, contentinfo, navigation, navigation, main, navigation, main, navigation, navigation) and any missing required landmarks."
+  },
+  {
+    "url": "https://www.cmu.edu/research-and-creativity",
+    "goal": "1. Navigate to banner landmark using D key. 2. Navigate to navigation landmark using D key. 3. Navigate to main landmark using D key. 4. Navigate to contentinfo landmark using D key. 5. Continue through all landmarks on the page. 6. Report success with the reason listing all landmarks found (expected: banner, main, contentinfo, navigation, navigation, main, navigation, main, navigation, region) and any missing required landmarks."
+  },
+  {
+    "url": "https://www.cmu.edu/current-students",
+    "goal": "1. Navigate to banner landmark using D key. 2. Navigate to navigation landmark using D key. 3. Navigate to main landmark using D key. 4. Navigate to contentinfo landmark using D key. 5. Continue through all landmarks on the page. 6. Report success with the reason listing all landmarks found (expected: banner, main, contentinfo, navigation, navigation, main, navigation, main, navigation) and any missing required landmarks."
+  },
+  {
+    "url": "https://www.cmu.edu/faculty-staff",
+    "goal": "1. Navigate to banner landmark using D key. 2. Navigate to navigation landmark using D key. 3. Navigate to main landmark using D key. 4. Navigate to contentinfo landmark using D key. 5. Continue through all landmarks on the page. 6. Report success with the reason listing all landmarks found (expected: banner, main, contentinfo, navigation, navigation, main, navigation, main, navigation) and any missing required landmarks."
+  },
+  {
+    "url": "https://www.cmu.edu/engage/alumni",
+    "goal": "1. Navigate to banner landmark using D key. 2. Navigate to navigation landmark using D key. 3. Navigate to main landmark using D key. 4. Navigate to contentinfo landmark using D key. 5. Continue through all landmarks on the page. 6. Report success with the reason listing all landmarks found (expected: banner, main, contentinfo, navigation, navigation, main, navigation, main, navigation) and any missing required landmarks."
+  },
+  {
+    "url": "https://www.cmu.edu/directory-contact",
+    "goal": "1. Navigate to banner landmark using D key. 2. Navigate to navigation landmark using D key. 3. Navigate to main landmark using D key. 4. Navigate to contentinfo landmark using D key. 5. Continue through all landmarks on the page. 6. Report success with the reason listing all landmarks found (expected: banner, main, contentinfo, navigation, navigation, main, navigation, main, navigation) and any missing required landmarks."
+  },
+  {
+    "url": "https://www.cmu.edu/about",
+    "goal": "1. Navigate to banner landmark using D key. 2. Navigate to navigation landmark using D key. 3. Navigate to main landmark using D key. 4. Navigate to contentinfo landmark using D key. 5. Continue through all landmarks on the page. 6. Report success with the reason listing all landmarks found (expected: banner, main, contentinfo, navigation, navigation, main, navigation, main, navigation) and any missing required landmarks."
+  },
+  {
+    "url": "https://www.cmu.edu/leadership",
+    "goal": "1. Navigate to banner landmark using D key. 2. Navigate to navigation landmark using D key. 3. Navigate to main landmark using D key. 4. Navigate to contentinfo landmark using D key. 5. Continue through all landmarks on the page. 6. Report success with the reason listing all landmarks found (expected: banner, main, contentinfo, navigation, navigation, main, navigation, main, navigation) and any missing required landmarks."
+  },
+  {
+    "url": "https://www.cmu.edu/about/vision-mission-values",
+    "goal": "1. Navigate to banner landmark using D key. 2. Navigate to navigation landmark using D key. 3. Navigate to main landmark using D key. 4. Navigate to contentinfo landmark using D key. 5. Continue through all landmarks on the page. 6. Report success with the reason listing all landmarks found (expected: banner, main, contentinfo, navigation, navigation, main, navigation, main, navigation) and any missing required landmarks."
+  },
+  {
+    "url": "https://www.cmu.edu/about/history",
+    "goal": "1. Navigate to banner landmark using D key. 2. Navigate to navigation landmark using D key. 3. Navigate to main landmark using D key. 4. Navigate to contentinfo landmark using D key. 5. Continue through all landmarks on the page. 6. Report success with the reason listing all landmarks found (expected: banner, main, contentinfo, navigation, navigation, main, navigation, main, navigation) and any missing required landmarks."
+  },
+  {
+    "url": "https://www.cmu.edu/about/rankings-and-awards",
+    "goal": "1. Navigate to banner landmark using D key. 2. Navigate to navigation landmark using D key. 3. Navigate to main landmark using D key. 4. Navigate to contentinfo landmark using D key. 5. Continue through all landmarks on the page. 6. Report success with the reason listing all landmarks found (expected: banner, main, contentinfo, navigation, navigation, main, navigation, main, navigation) and any missing required landmarks."
+  },
+  {
+    "url": "https://www.cmu.edu/campus-life/living-in-pittsburgh",
+    "goal": "1. Navigate to banner landmark using D key. 2. Navigate to navigation landmark using D key. 3. Navigate to main landmark using D key. 4. Navigate to contentinfo landmark using D key. 5. Continue through all landmarks on the page. 6. Report success with the reason listing all landmarks found (expected: banner, main, contentinfo, navigation, navigation, main, navigation, main, navigation) and any missing required landmarks."
+  },
+  {
+    "url": "https://www.cmu.edu/global",
+    "goal": "1. Navigate to banner landmark using D key. 2. Navigate to navigation landmark using D key. 3. Navigate to main landmark using D key. 4. Navigate to contentinfo landmark using D key. 5. Continue through all landmarks on the page. 6. Report success with the reason listing all landmarks found (expected: banner, main, contentinfo, navigation, navigation, main, navigation, main, navigation) and any missing required landmarks."
+  },
+  {
+    "url": "https://www.cmu.edu/academics",
+    "goal": "1. Navigate to banner landmark using D key. 2. Navigate to navigation landmark using D key. 3. Navigate to main landmark using D key. 4. Navigate to contentinfo landmark using D key. 5. Continue through all landmarks on the page. 6. Report success with the reason listing all landmarks found (expected: banner, main, contentinfo, navigation, navigation, main, navigation, main, navigation) and any missing required landmarks."
+  },
+  {
+    "url": "https://www.cmu.edu/academics/interdisciplinary-programs",
+    "goal": "1. Navigate to banner landmark using D key. 2. Navigate to navigation landmark using D key. 3. Navigate to main landmark using D key. 4. Navigate to contentinfo landmark using D key. 5. Continue through all landmarks on the page. 6. Report success with the reason listing all landmarks found (expected: banner, main, contentinfo, navigation, navigation, main, navigation, main, navigation) and any missing required landmarks."
+  },
+  {
+    "url": "https://www.cmu.edu/academics/continuing-education",
+    "goal": "1. Navigate to banner landmark using D key. 2. Navigate to navigation landmark using D key. 3. Navigate to main landmark using D key. 4. Navigate to contentinfo landmark using D key. 5. Continue through all landmarks on the page. 6. Report success with the reason listing all landmarks found (expected: banner, main, contentinfo, navigation, navigation, main, navigation, main, navigation) and any missing required landmarks."
+  },
+  {
+    "url": "https://www.cmu.edu/student-admission",
+    "goal": "1. Navigate to banner landmark using D key. 2. Navigate to navigation landmark using D key. 3. Navigate to main landmark using D key. 4. Navigate to contentinfo landmark using D key. 5. Continue through all landmarks on the page. 6. Report success with the reason listing all landmarks found (expected: banner, main, contentinfo, navigation, navigation, main, navigation, main, navigation) and any missing required landmarks."
+  },
+  {
+    "url": "https://www.cmu.edu/student-admission/access-affordability",
+    "goal": "1. Navigate to banner landmark using D key. 2. Navigate to navigation landmark using D key. 3. Navigate to main landmark using D key. 4. Navigate to contentinfo landmark using D key. 5. Continue through all landmarks on the page. 6. Report success with the reason listing all landmarks found (expected: banner, main, contentinfo, navigation, navigation, main, navigation, main, navigation) and any missing required landmarks."
+  },
+  {
+    "url": "https://www.cmu.edu/campus-life",
+    "goal": "1. Navigate to banner landmark using D key. 2. Navigate to navigation landmark using D key. 3. Navigate to main landmark using D key. 4. Navigate to contentinfo landmark using D key. 5. Continue through all landmarks on the page. 6. Report success with the reason listing all landmarks found (expected: banner, main, contentinfo, navigation, navigation, main, navigation, main, navigation) and any missing required landmarks."
+  },
+  {
+    "url": "https://ai.cmu.edu/research-and-policy-impact",
+    "goal": "1. Navigate to banner landmark using D key. 2. Navigate to navigation landmark using D key. 3. Navigate to main landmark using D key. 4. Navigate to contentinfo landmark using D key. 5. Continue through all landmarks on the page. 6. Report success with the reason listing all landmarks found (expected: banner, main, contentinfo, navigation, navigation, main, navigation, main, navigation) and any missing required landmarks."
+  },
+  {
+    "url": "https://www.cmu.edu/research-and-creativity/centers-and-institutes",
+    "goal": "1. Navigate to banner landmark using D key. 2. Navigate to navigation landmark using D key. 3. Navigate to main landmark using D key. 4. Navigate to contentinfo landmark using D key. 5. Continue through all landmarks on the page. 6. Report success with the reason listing all landmarks found (expected: banner, main, contentinfo, navigation, navigation, main, navigation, main, navigation) and any missing required landmarks."
+  },
+  {
+    "url": "https://cmu.edu",
+    "goal": "1. Navigate to banner landmark using D key. 2. Navigate to navigation landmark using D key. 3. Navigate to main landmark using D key. 4. Navigate to contentinfo landmark using D key. 5. Continue through all landmarks on the page. 6. Report success with the reason listing all landmarks found (expected: banner, main, contentinfo, navigation, navigation, main, navigation, main) and any missing required landmarks."
+  },
+  {
+    "url": "https://www.cmu.edu",
+    "goal": "1. Navigate to banner landmark using D key. 2. Navigate to navigation landmark using D key. 3. Navigate to main landmark using D key. 4. Navigate to contentinfo landmark using D key. 5. Continue through all landmarks on the page. 6. Report success with the reason listing all landmarks found (expected: banner, main, contentinfo, navigation, navigation, main, navigation, main) and any missing required landmarks."
+  },
+  {
+    "url": "https://www.cmu.edu/visit",
+    "goal": "1. Navigate to banner landmark using D key. 2. Navigate to navigation landmark using D key. 3. Navigate to main landmark using D key. 4. Navigate to contentinfo landmark using D key. 5. Continue through all landmarks on the page. 6. Report success with the reason listing all landmarks found (expected: banner, main, contentinfo, navigation, navigation, main, navigation, main) and any missing required landmarks."
+  },
+  {
+    "url": "https://www.cmu.edu/work-that-matters",
+    "goal": "1. Navigate to banner landmark using D key. 2. Navigate to navigation landmark using D key. 3. Navigate to main landmark using D key. 4. Navigate to contentinfo landmark using D key. 5. Continue through all landmarks on the page. 6. Report success with the reason listing all landmarks found (expected: banner, main, contentinfo, navigation, navigation, main, navigation, main) and any missing required landmarks."
+  },
+  {
+    "url": "https://www.cmu.edu/news/stories/archives/2025/september/carnegie-mellon-named-a-top-20-us-university",
+    "goal": "1. Navigate to banner landmark using D key. 2. Navigate to navigation landmark using D key. 3. Navigate to main landmark using D key. 4. Navigate to contentinfo landmark using D key. 5. Continue through all landmarks on the page. 6. Report success with the reason listing all landmarks found (expected: banner, main, contentinfo, navigation, navigation) and any missing required landmarks."
+  },
+  {
+    "url": "https://www.cmu.edu/news/stories/archives/2025/august/cmu-celebrates-2025-fulbright-recipients",
+    "goal": "1. Navigate to banner landmark using D key. 2. Navigate to navigation landmark using D key. 3. Navigate to main landmark using D key. 4. Navigate to contentinfo landmark using D key. 5. Continue through all landmarks on the page. 6. Report success with the reason listing all landmarks found (expected: banner, main, contentinfo, navigation, navigation) and any missing required landmarks."
+  },
+  {
+    "url": "https://www.cmu.edu/student-affairs",
+    "goal": "1. Navigate to banner landmark using D key. 2. Navigate to navigation landmark using D key. 3. Navigate to main landmark using D key. 4. Navigate to contentinfo landmark using D key. 5. Continue through all landmarks on the page. 6. Report success with the reason listing all landmarks found (expected: navigation, banner, navigation, region, contentinfo) and any missing required landmarks."
+  },
+  {
+    "url": "https://www.cmu.edu/housing",
+    "goal": "1. Navigate to banner landmark using D key. 2. Navigate to navigation landmark using D key. 3. Navigate to main landmark using D key. 4. Navigate to contentinfo landmark using D key. 5. Continue through all landmarks on the page. 6. Report success with the reason listing all landmarks found (expected: navigation, banner, navigation, region, contentinfo) and any missing required landmarks."
+  },
+  {
+    "url": "https://www.library.cmu.edu",
+    "goal": "1. Navigate to banner landmark using D key. 2. Navigate to navigation landmark using D key. 3. Navigate to main landmark using D key. 4. Navigate to contentinfo landmark using D key. 5. Continue through all landmarks on the page. 6. Report success with the reason listing all landmarks found (expected: banner, main, contentinfo, navigation, complementary) and any missing required landmarks."
+  },
+  {
+    "url": "https://www.cmu.edu/news/stories/archives/2025/may/cmu-undergraduates-take-on-cancer-research",
+    "goal": "1. Navigate to banner landmark using D key. 2. Navigate to navigation landmark using D key. 3. Navigate to main landmark using D key. 4. Navigate to contentinfo landmark using D key. 5. Continue through all landmarks on the page. 6. Report success with the reason listing all landmarks found (expected: banner, main, contentinfo, navigation, navigation) and any missing required landmarks."
+  },
+  {
+    "url": "https://www.cmu.edu/news/stories/archives/2025/may/carnegie-mellon-professor-wins-2025-pulitzer-prize-in-history",
+    "goal": "1. Navigate to banner landmark using D key. 2. Navigate to navigation landmark using D key. 3. Navigate to main landmark using D key. 4. Navigate to contentinfo landmark using D key. 5. Continue through all landmarks on the page. 6. Report success with the reason listing all landmarks found (expected: banner, main, contentinfo, navigation, navigation) and any missing required landmarks."
+  },
+  {
+    "url": "https://www.cmu.edu/news/stories/archives/2025/may/where-research-gets-to-work",
+    "goal": "1. Navigate to banner landmark using D key. 2. Navigate to navigation landmark using D key. 3. Navigate to main landmark using D key. 4. Navigate to contentinfo landmark using D key. 5. Continue through all landmarks on the page. 6. Report success with the reason listing all landmarks found (expected: banner, main, contentinfo, navigation, navigation) and any missing required landmarks."
+  },
+  {
+    "url": "https://www.cmu.edu/news/stories/archives/2025/december/researchers-identify-new-target-to-fight-antibiotic-resistance",
+    "goal": "1. Navigate to banner landmark using D key. 2. Navigate to navigation landmark using D key. 3. Navigate to main landmark using D key. 4. Navigate to contentinfo landmark using D key. 5. Continue through all landmarks on the page. 6. Report success with the reason listing all landmarks found (expected: banner, main, contentinfo, navigation, navigation) and any missing required landmarks."
+  },
+  {
+    "url": "https://www.cmu.edu/strategic-framework",
+    "goal": "1. Navigate to banner landmark using D key. 2. Navigate to navigation landmark using D key. 3. Navigate to main landmark using D key. 4. Navigate to contentinfo landmark using D key. 5. Continue through all landmarks on the page. 6. Report success with the reason listing all landmarks found (expected: banner, region, contentinfo, navigation) and any missing required landmarks."
+  },
+  {
+    "url": "https://www.cmu.edu/admission/majors-programs",
+    "goal": "1. Navigate to banner landmark using D key. 2. Navigate to navigation landmark using D key. 3. Navigate to main landmark using D key. 4. Navigate to contentinfo landmark using D key. 5. Continue through all landmarks on the page. 6. Report success with the reason listing all landmarks found (expected: banner, main, contentinfo, navigation) and any missing required landmarks."
+  },
+  {
+    "url": "https://www.cmu.edu/graduate/prospective/index.html",
+    "goal": "1. Navigate to banner landmark using D key. 2. Navigate to navigation landmark using D key. 3. Navigate to main landmark using D key. 4. Navigate to contentinfo landmark using D key. 5. Continue through all landmarks on the page. 6. Report success with the reason listing all landmarks found (expected: navigation, banner, navigation, contentinfo) and any missing required landmarks."
+  },
+  {
+    "url": "https://www.cmu.edu/hub/calendar",
+    "goal": "1. Navigate to banner landmark using D key. 2. Navigate to navigation landmark using D key. 3. Navigate to main landmark using D key. 4. Navigate to contentinfo landmark using D key. 5. Continue through all landmarks on the page. 6. Report success with the reason listing all landmarks found (expected: navigation, banner, navigation, contentinfo) and any missing required landmarks."
+  },
+  {
+    "url": "https://www.cmu.edu/pre-college",
+    "goal": "1. Navigate to banner landmark using D key. 2. Navigate to navigation landmark using D key. 3. Navigate to main landmark using D key. 4. Navigate to contentinfo landmark using D key. 5. Continue through all landmarks on the page. 6. Report success with the reason listing all landmarks found (expected: navigation, banner, navigation, contentinfo) and any missing required landmarks."
+  },
+  {
+    "url": "https://www.cmu.edu/admission/campus-experience/activities-and-engagement",
+    "goal": "1. Navigate to banner landmark using D key. 2. Navigate to navigation landmark using D key. 3. Navigate to main landmark using D key. 4. Navigate to contentinfo landmark using D key. 5. Continue through all landmarks on the page. 6. Report success with the reason listing all landmarks found (expected: banner, main, contentinfo, navigation) and any missing required landmarks."
+  },
+  {
+    "url": "https://athletics.cmu.edu/landing/index",
+    "goal": "1. Navigate to banner landmark using D key. 2. Navigate to navigation landmark using D key. 3. Navigate to main landmark using D key. 4. Navigate to contentinfo landmark using D key. 5. Continue through all landmarks on the page. 6. Report success with the reason listing all landmarks found (expected: banner, main, contentinfo, navigation) and any missing required landmarks."
+  },
+  {
+    "url": "https://www.cmu.edu/125/index.html",
+    "goal": "1. Navigate to banner landmark using D key. 2. Navigate to navigation landmark using D key. 3. Navigate to main landmark using D key. 4. Navigate to contentinfo landmark using D key. 5. Continue through all landmarks on the page. 6. Report success with the reason listing all landmarks found (expected: navigation, banner, navigation, contentinfo) and any missing required landmarks."
+  },
+  {
+    "url": "https://www.cmu.edu/uro",
+    "goal": "1. Navigate to banner landmark using D key. 2. Navigate to navigation landmark using D key. 3. Navigate to main landmark using D key. 4. Navigate to contentinfo landmark using D key. 5. Continue through all landmarks on the page. 6. Report success with the reason listing all landmarks found (expected: navigation, banner, navigation, contentinfo) and any missing required landmarks."
+  },
+  {
+    "url": "https://www.cmu.edu/admission/admission",
+    "goal": "1. Navigate to banner landmark using D key. 2. Navigate to navigation landmark using D key. 3. Navigate to main landmark using D key. 4. Navigate to contentinfo landmark using D key. 5. Continue through all landmarks on the page. 6. Report success with the reason listing all landmarks found (expected: banner, main, contentinfo, navigation) and any missing required landmarks."
+  },
+  {
+    "url": "https://www.cmu.edu/career/outcomes/post-grad-dashboard.html",
+    "goal": "1. Navigate to banner landmark using D key. 2. Navigate to navigation landmark using D key. 3. Navigate to main landmark using D key. 4. Navigate to contentinfo landmark using D key. 5. Continue through all landmarks on the page. 6. Report success with the reason listing all landmarks found (expected: navigation, banner, navigation, contentinfo) and any missing required landmarks."
+  },
+  {
+    "url": "https://www.cmu.edu/online",
+    "goal": "1. Navigate to banner landmark using D key. 2. Navigate to navigation landmark using D key. 3. Navigate to main landmark using D key. 4. Navigate to contentinfo landmark using D key. 5. Continue through all landmarks on the page. 6. Report success with the reason listing all landmarks found (expected: banner, contentinfo, navigation) and any missing required landmarks."
+  },
+  {
+    "url": "https://www.cmu.edu/admission",
+    "goal": "1. Navigate to banner landmark using D key. 2. Navigate to navigation landmark using D key. 3. Navigate to main landmark using D key. 4. Navigate to contentinfo landmark using D key. 5. Continue through all landmarks on the page. 6. Report success with the reason listing all landmarks found (expected: banner, main, contentinfo) and any missing required landmarks."
+  },
+  {
+    "url": "https://scholars.cmu.edu",
+    "goal": "1. Navigate to banner landmark using D key. 2. Navigate to navigation landmark using D key. 3. Navigate to main landmark using D key. 4. Navigate to contentinfo landmark using D key. 5. Continue through all landmarks on the page. 6. Report success with the reason listing all landmarks found (expected: banner, main, contentinfo) and any missing required landmarks."
+  },
+  {
+    "url": "https://givenow.cmu.edu/campaigns/42524/donations/new?a=8338674",
+    "goal": "1. Navigate to banner landmark using D key. 2. Navigate to navigation landmark using D key. 3. Navigate to main landmark using D key. 4. Navigate to contentinfo landmark using D key. 5. Continue through all landmarks on the page. 6. Report success with the reason listing all landmarks found (expected: main, contentinfo) and any missing required landmarks."
+  },
+  {
+    "url": "https://cmu.edu",
+    "goal": "1. Navigate to search input field. 2. Type 'test'. 3. Navigate to and click Search button (or press Enter to submit). 4. Navigate to first search result. 5. Navigate to and click first result link. 6. Report success with the reason as the number of results found and destination URL."
+  },
+  {
+    "url": "https://cmu.edu",
+    "goal": "1. Navigate to and click Products/Shop link in navigation. 2. Navigate to first product in the listing. 3. Navigate to and click product link or image. 4. Navigate to and click Add to Cart button. 5. Navigate to and click Cart/Checkout link. 6. Report success with the reason as the cart contents announced by screen reader."
+  },
+  {
+    "url": "https://www.cmu.edu/hub/calendar",
+    "goal": "1. Navigate to first heading using H key. 2. Note the heading level and text. 3. Navigate to next heading using H key. 4. Continue navigating through all headings (expected: Please note: Beginning in January 2026, the academic calendar will transition to a new web-based calendar system, LiveWhale, which currently supports the main CMU Events calendar and offers advanced features such as the ability to share events across calendars, improved accessibility and enhanced filtering. Google Calendar and iCal options will continue to be available for adding dates to personal calendars; however, PDF and XLS formats will be discontinued., Academic Calendar, The Academic Calendar serves as Carnegie Mellon University's information source and planning document for students, faculty, staff and departments, as well as outside organizations., QUESTIONS MAY BE DIRECTED TO THE UNIVERSITY REGISTRAR'S OFFICE, Academic Calendar Approval Process). 5. Report success with the reason listing all headings found (e.g., \"h1: Title, h2: Section1, h2: Section2\") and any hierarchy issues (e.g., h1 followed by h4 skipping h2/h3)."
+  },
+  {
+    "url": "https://www.library.cmu.edu",
+    "goal": "1. Navigate to first heading using H key. 2. Note the heading level and text. 3. Navigate to next heading using H key. 4. Continue navigating through all headings (expected: Exhibits & Events, Featured Story, Julia Corrin Installed as Inaugural Michael and Lonna Smith University Archivist, Recent News, Blending Humanistic Inquiry and Technology, Carnegie Mellon Leads a New Era of Cultural Study and Research). 5. Report success with the reason listing all headings found (e.g., \"h1: Title, h2: Section1, h2: Section2\") and any hierarchy issues (e.g., h1 followed by h4 skipping h2/h3)."
+  },
+  {
+    "url": "https://www.cmu.edu/about/rankings-and-awards",
+    "goal": "1. Navigate to first heading using H key. 2. Note the heading level and text. 3. Navigate to next heading using H key. 4. Continue navigating through all headings (expected: Utility, Actions Menu, Main navigation, Carnegie Mellon Professor Wins 2025 Pulitzer Prize in History, A Leading Global Institution). 5. Report success with the reason listing all headings found (e.g., \"h1: Title, h2: Section1, h2: Section2\") and any hierarchy issues (e.g., h1 followed by h4 skipping h2/h3)."
+  },
+  {
+    "url": "https://www.cmu.edu/directory-contact",
+    "goal": "1. Navigate to first heading using H key. 2. Note the heading level and text. 3. Navigate to next heading using H key. 4. Continue navigating through all headings (expected: Utility, Actions Menu, Main navigation, Contacts, Administrative Departments). 5. Report success with the reason listing all headings found (e.g., \"h1: Title, h2: Section1, h2: Section2\") and any hierarchy issues (e.g., h1 followed by h4 skipping h2/h3)."
+  },
+  {
+    "url": "https://www.cmu.edu/work-that-matters",
+    "goal": "1. Navigate to first heading using H key. 2. Note the heading level and text. 3. Navigate to next heading using H key. 4. Continue navigating through all headings (expected: Utility, Actions Menu, Main navigation, What if all communities were future-ready?, Securing a Healthier, More Resilient World). 5. Report success with the reason listing all headings found (e.g., \"h1: Title, h2: Section1, h2: Section2\") and any hierarchy issues (e.g., h1 followed by h4 skipping h2/h3)."
+  },
+  {
+    "url": "https://www.cmu.edu/about",
+    "goal": "1. Navigate to first heading using H key. 2. Note the heading level and text. 3. Navigate to next heading using H key. 4. Continue navigating through all headings (expected: Utility, Actions Menu, Main navigation, Don’t Envision the Future, Invent It Every Day, CMU Stands Apart). 5. Report success with the reason listing all headings found (e.g., \"h1: Title, h2: Section1, h2: Section2\") and any hierarchy issues (e.g., h1 followed by h4 skipping h2/h3)."
+  },
+  {
+    "url": "https://www.cmu.edu/research-and-creativity",
+    "goal": "1. Navigate to first heading using H key. 2. Note the heading level and text. 3. Navigate to next heading using H key. 4. Continue navigating through all headings (expected: Utility, Actions Menu, Main navigation, CMU transforms the world through discovery and expression., CMU Research News). 5. Report success with the reason listing all headings found (e.g., \"h1: Title, h2: Section1, h2: Section2\") and any hierarchy issues (e.g., h1 followed by h4 skipping h2/h3)."
+  },
+  {
+    "url": "https://www.cmu.edu/admission/majors-programs",
+    "goal": "1. Navigate to first heading using H key. 2. Note the heading level and text. 3. Navigate to next heading using H key. 4. Continue navigating through all headings (expected: MAJORS & PROGRAMS, For Every Kind of Brilliant, Arts, COLLEGE OF FINE ARTS, Business). 5. Report success with the reason listing all headings found (e.g., \"h1: Title, h2: Section1, h2: Section2\") and any hierarchy issues (e.g., h1 followed by h4 skipping h2/h3)."
+  },
+  {
+    "url": "https://ai.cmu.edu/research-and-policy-impact",
+    "goal": "1. Navigate to first heading using H key. 2. Note the heading level and text. 3. Navigate to next heading using H key. 4. Continue navigating through all headings (expected: Utility, Actions Menu, Main navigation, AI Research at CMU: Building Systems that Matter, CMU is Deep-Rooted in AI). 5. Report success with the reason listing all headings found (e.g., \"h1: Title, h2: Section1, h2: Section2\") and any hierarchy issues (e.g., h1 followed by h4 skipping h2/h3)."
+  },
+  {
+    "url": "https://www.cmu.edu/campus-life/living-in-pittsburgh",
+    "goal": "1. Navigate to first heading using H key. 2. Note the heading level and text. 3. Navigate to next heading using H key. 4. Continue navigating through all headings (expected: Utility, Actions Menu, Main navigation, Where is Carnegie Mellon University?, Pittsburgh by the Numbers). 5. Report success with the reason listing all headings found (e.g., \"h1: Title, h2: Section1, h2: Section2\") and any hierarchy issues (e.g., h1 followed by h4 skipping h2/h3)."
+  },
+  {
+    "url": "https://www.cmu.edu/online",
+    "goal": "1. Navigate to first heading using H key. 2. Note the heading level and text. 3. Navigate to next heading using H key. 4. Continue navigating through all headings (expected: CMU Online Graduate Certificate Programs, Built Smarter. Backed by Science. Delivered by Carnegie Mellon., Select a Program Below:, High-Quality, Research-Backed Online Programs, Taught Live-Online by CMU Faculty). 5. Report success with the reason listing all headings found (e.g., \"h1: Title, h2: Section1, h2: Section2\") and any hierarchy issues (e.g., h1 followed by h4 skipping h2/h3)."
+  },
+  {
+    "url": "https://www.cmu.edu/strategic-framework",
+    "goal": "1. Navigate to first heading using H key. 2. Note the heading level and text. 3. Navigate to next heading using H key. 4. Continue navigating through all headings (expected: Be Part of What's Next, Our Four Strategic Priorities, Our Impact, Our Impact, Our Impact). 5. Report success with the reason listing all headings found (e.g., \"h1: Title, h2: Section1, h2: Section2\") and any hierarchy issues (e.g., h1 followed by h4 skipping h2/h3)."
+  },
+  {
+    "url": "https://www.cmu.edu/about/traditions",
+    "goal": "1. Navigate to first heading using H key. 2. Note the heading level and text. 3. Navigate to next heading using H key. 4. Continue navigating through all headings (expected: Utility, Actions Menu, Main navigation, Connected to the Past, Shaping the Future , The Fence at CMU). 5. Report success with the reason listing all headings found (e.g., \"h1: Title, h2: Section1, h2: Section2\") and any hierarchy issues (e.g., h1 followed by h4 skipping h2/h3)."
+  },
+  {
+    "url": "https://www.cmu.edu/about/history",
+    "goal": "1. Navigate to first heading using H key. 2. Note the heading level and text. 3. Navigate to next heading using H key. 4. Continue navigating through all headings (expected: Utility, Actions Menu, Main navigation, Founder Spotlight, Post-war Growth: Opening Three New Schools). 5. Report success with the reason listing all headings found (e.g., \"h1: Title, h2: Section1, h2: Section2\") and any hierarchy issues (e.g., h1 followed by h4 skipping h2/h3)."
+  },
+  {
+    "url": "https://www.cmu.edu/engage/alumni",
+    "goal": "1. Navigate to first heading using H key. 2. Note the heading level and text. 3. Navigate to next heading using H key. 4. Continue navigating through all headings (expected: Utility, Actions Menu, Main navigation, Building Makerspace Momentum Brick by Brick, Did you know?). 5. Report success with the reason listing all headings found (e.g., \"h1: Title, h2: Section1, h2: Section2\") and any hierarchy issues (e.g., h1 followed by h4 skipping h2/h3)."
+  },
+  {
+    "url": "https://www.cmu.edu/academics/interdisciplinary-programs",
+    "goal": "1. Navigate to first heading using H key. 2. Note the heading level and text. 3. Navigate to next heading using H key. 4. Continue navigating through all headings (expected: Utility, Actions Menu, Main navigation, Pursue Your Passions Without Boundaries, BXA Intercollege Degree Programs). 5. Report success with the reason listing all headings found (e.g., \"h1: Title, h2: Section1, h2: Section2\") and any hierarchy issues (e.g., h1 followed by h4 skipping h2/h3)."
+  },
+  {
+    "url": "https://www.cmu.edu/student-admission/access-affordability",
+    "goal": "1. Navigate to first heading using H key. 2. Note the heading level and text. 3. Navigate to next heading using H key. 4. Continue navigating through all headings (expected: Utility, Actions Menu, Main navigation, Financial need shouldn't stand in the way of bold ambitions. , CMU Pathway Program). 5. Report success with the reason listing all headings found (e.g., \"h1: Title, h2: Section1, h2: Section2\") and any hierarchy issues (e.g., h1 followed by h4 skipping h2/h3)."
+  },
+  {
+    "url": "https://cmu.edu",
+    "goal": "1. Navigate to first heading using H key. 2. Note the heading level and text. 3. Navigate to next heading using H key. 4. Continue navigating through all headings (expected: Utility, Actions Menu, Main navigation, Research That Moves the World Forward, Featured News). 5. Report success with the reason listing all headings found (e.g., \"h1: Title, h2: Section1, h2: Section2\") and any hierarchy issues (e.g., h1 followed by h4 skipping h2/h3)."
+  },
+  {
+    "url": "https://www.cmu.edu",
+    "goal": "1. Navigate to first heading using H key. 2. Note the heading level and text. 3. Navigate to next heading using H key. 4. Continue navigating through all headings (expected: Utility, Actions Menu, Main navigation, Research That Moves the World Forward, Featured News). 5. Report success with the reason listing all headings found (e.g., \"h1: Title, h2: Section1, h2: Section2\") and any hierarchy issues (e.g., h1 followed by h4 skipping h2/h3)."
+  },
+  {
+    "url": "https://www.cmu.edu/current-students",
+    "goal": "1. Navigate to first heading using H key. 2. Note the heading level and text. 3. Navigate to next heading using H key. 4. Continue navigating through all headings (expected: Utility, Actions Menu, Main navigation, Student Information, Academic Calendar). 5. Report success with the reason listing all headings found (e.g., \"h1: Title, h2: Section1, h2: Section2\") and any hierarchy issues (e.g., h1 followed by h4 skipping h2/h3)."
+  },
+  {
+    "url": "https://www.cmu.edu/leadership",
+    "goal": "1. Navigate to first heading using H key. 2. Note the heading level and text. 3. Navigate to next heading using H key. 4. Continue navigating through all headings (expected: Utility, Actions Menu, Main navigation, Key Academic and Administrative Leaders, The President). 5. Report success with the reason listing all headings found (e.g., \"h1: Title, h2: Section1, h2: Section2\") and any hierarchy issues (e.g., h1 followed by h4 skipping h2/h3)."
+  },
+  {
+    "url": "https://www.cmu.edu/academics/continuing-education",
+    "goal": "1. Navigate to first heading using H key. 2. Note the heading level and text. 3. Navigate to next heading using H key. 4. Continue navigating through all headings (expected: Utility, Actions Menu, Main navigation, Invest in Yourself, Invest in Your Future, In-Person and Online Degrees and Certificates). 5. Report success with the reason listing all headings found (e.g., \"h1: Title, h2: Section1, h2: Section2\") and any hierarchy issues (e.g., h1 followed by h4 skipping h2/h3)."
+  },
+  {
+    "url": "https://www.cmu.edu/student-admission",
+    "goal": "1. Navigate to first heading using H key. 2. Note the heading level and text. 3. Navigate to next heading using H key. 4. Continue navigating through all headings (expected: Utility, Actions Menu, Main navigation, Learn, create and innovate with the very best., Undergraduate Admission). 5. Report success with the reason listing all headings found (e.g., \"h1: Title, h2: Section1, h2: Section2\") and any hierarchy issues (e.g., h1 followed by h4 skipping h2/h3)."
+  },
+  {
+    "url": "https://www.cmu.edu/campus-life",
+    "goal": "1. Navigate to first heading using H key. 2. Note the heading level and text. 3. Navigate to next heading using H key. 4. Continue navigating through all headings (expected: Utility, Actions Menu, Main navigation, A Place to Grow, Explore and Excel, Be a Part of Carnegie Mellon Student Life). 5. Report success with the reason listing all headings found (e.g., \"h1: Title, h2: Section1, h2: Section2\") and any hierarchy issues (e.g., h1 followed by h4 skipping h2/h3)."
+  },
+  {
+    "url": "https://www.cmu.edu/admission/admission",
+    "goal": "1. Navigate to first heading using H key. 2. Note the heading level and text. 3. Navigate to next heading using H key. 4. Continue navigating through all headings (expected: ADMISSION , You’ve Got This. , Because We’ve Got You. , Nov 3, Dec 1). 5. Report success with the reason listing all headings found (e.g., \"h1: Title, h2: Section1, h2: Section2\") and any hierarchy issues (e.g., h1 followed by h4 skipping h2/h3)."
+  },
+  {
+    "url": "https://www.cmu.edu/visit",
+    "goal": "1. Navigate to first heading using H key. 2. Note the heading level and text. 3. Navigate to next heading using H key. 4. Continue navigating through all headings (expected: Utility, Actions Menu, Main navigation, Discover Carnegie Mellon, Campus Tours). 5. Report success with the reason listing all headings found (e.g., \"h1: Title, h2: Section1, h2: Section2\") and any hierarchy issues (e.g., h1 followed by h4 skipping h2/h3)."
+  },
+  {
+    "url": "https://www.cmu.edu/global",
+    "goal": "1. Navigate to first heading using H key. 2. Note the heading level and text. 3. Navigate to next heading using H key. 4. Continue navigating through all headings (expected: Utility, Actions Menu, Main navigation, Explore Our Campuses, Carnegie Mellon University in Pittsburgh). 5. Report success with the reason listing all headings found (e.g., \"h1: Title, h2: Section1, h2: Section2\") and any hierarchy issues (e.g., h1 followed by h4 skipping h2/h3)."
+  },
+  {
+    "url": "https://www.cmu.edu/admission/campus-experience/activities-and-engagement",
+    "goal": "1. Navigate to first heading using H key. 2. Note the heading level and text. 3. Navigate to next heading using H key. 4. Continue navigating through all headings (expected: Where dreamers and doers come together to create a community all their own., Clubs and Organizations, COMMUNITY ENGAGEMENT AND LEADERSHIP DEVELOPMENT, STAY ACTIVE, Fraternity & Sorority Life). 5. Report success with the reason listing all headings found (e.g., \"h1: Title, h2: Section1, h2: Section2\") and any hierarchy issues (e.g., h1 followed by h4 skipping h2/h3)."
+  },
+  {
+    "url": "https://athletics.cmu.edu/landing/index",
+    "goal": "1. Navigate to first heading using H key. 2. Note the heading level and text. 3. Navigate to next heading using H key. 4. Continue navigating through all headings (expected: site slogan, SCOREBOARD, Banner, RECENT NEWS, $heading). 5. Report success with the reason listing all headings found (e.g., \"h1: Title, h2: Section1, h2: Section2\") and any hierarchy issues (e.g., h1 followed by h4 skipping h2/h3)."
+  },
+  {
+    "url": "https://www.cmu.edu/about/vision-mission-values",
+    "goal": "1. Navigate to first heading using H key. 2. Note the heading level and text. 3. Navigate to next heading using H key. 4. Continue navigating through all headings (expected: Utility, Actions Menu, Main navigation, Empowering the Next Generation of World-Changers, Vision). 5. Report success with the reason listing all headings found (e.g., \"h1: Title, h2: Section1, h2: Section2\") and any hierarchy issues (e.g., h1 followed by h4 skipping h2/h3)."
+  },
+  {
+    "url": "https://www.cmu.edu/academics/learning-for-a-lifetime",
+    "goal": "1. Navigate to first heading using H key. 2. Note the heading level and text. 3. Navigate to next heading using H key. 4. Continue navigating through all headings (expected: Utility, Actions Menu, Main navigation, Learning for a Lifetime, Academics). 5. Report success with the reason listing all headings found (e.g., \"h1: Title, h2: Section1, h2: Section2\") and any hierarchy issues (e.g., h1 followed by h4 skipping h2/h3)."
+  },
+  {
+    "url": "https://www.cmu.edu/news/stories/archives/2025/september/carnegie-mellon-named-a-top-20-us-university",
+    "goal": "1. Navigate to first heading using H key. 2. Note the heading level and text. 3. Navigate to next heading using H key. 4. Continue navigating through all headings (expected: Main navigation, Carnegie Mellon Named a Top 20 US University, CMU secures seven No. 1 spots, including top 5 rankings in 19 undergraduate areas, Business, Computer Science). 5. Report success with the reason listing all headings found (e.g., \"h1: Title, h2: Section1, h2: Section2\") and any hierarchy issues (e.g., h1 followed by h4 skipping h2/h3)."
+  },
+  {
+    "url": "https://www.cmu.edu/uro",
+    "goal": "1. Navigate to first heading using H key. 2. Note the heading level and text. 3. Navigate to next heading using H key. 4. Continue navigating through all headings (expected: Office of Undergraduate Research and Scholar Development, Undergraduate Research at Carnegie Mellon, Innovative approaches at CMU expand access to research for undergraduates wanting to make an impact, Information for Newly Admitted Students , OURSD on YouTube). 5. Report success with the reason listing all headings found (e.g., \"h1: Title, h2: Section1, h2: Section2\") and any hierarchy issues (e.g., h1 followed by h4 skipping h2/h3)."
+  },
+  {
+    "url": "https://www.cmu.edu/news/stories/archives/2025/may/carnegie-mellon-professor-wins-2025-pulitzer-prize-in-history",
+    "goal": "1. Navigate to first heading using H key. 2. Note the heading level and text. 3. Navigate to next heading using H key. 4. Continue navigating through all headings (expected: Main navigation, Carnegie Mellon Professor Wins 2025 Pulitzer Prize in History, Edda Fields-Black awarded the Pulitzer Prize for her book recounting a rebellion led by Harriet Tubman that freed 756 enslaved people, Fields-Black on Tubman and “COMBEE”, Q: In addition to being one of your professional research interests, you have personally felt the ripple effect of Tubman’s work and legacy, as you discussed in an op-ed in the New York Times (opens in new window). Can you discuss your motivation for writing this book and how it feels to see your efforts come to fruition?). 5. Report success with the reason listing all headings found (e.g., \"h1: Title, h2: Section1, h2: Section2\") and any hierarchy issues (e.g., h1 followed by h4 skipping h2/h3)."
+  },
+  {
+    "url": "https://www.cmu.edu/news/stories/archives/2025/may/where-research-gets-to-work",
+    "goal": "1. Navigate to first heading using H key. 2. Note the heading level and text. 3. Navigate to next heading using H key. 4. Continue navigating through all headings (expected: Main navigation, Where Research Gets to Work, Carnegie Mellon University’s research enterprise delivers progress where people live, work and learn, Healthier neighbors, more resilient communities, Work is changing — CMU is helping people thrive). 5. Report success with the reason listing all headings found (e.g., \"h1: Title, h2: Section1, h2: Section2\") and any hierarchy issues (e.g., h1 followed by h4 skipping h2/h3)."
+  },
+  {
+    "url": "https://www.cmu.edu/news/stories/archives/2025/december/researchers-identify-new-target-to-fight-antibiotic-resistance",
+    "goal": "1. Navigate to first heading using H key. 2. Note the heading level and text. 3. Navigate to next heading using H key. 4. Continue navigating through all headings (expected: Main navigation, Researchers Identify New Target To Fight Antibiotic Resistance, heading level 2, Bacteria are smarter than people think, Not just cholera). 5. Report success with the reason listing all headings found (e.g., \"h1: Title, h2: Section1, h2: Section2\") and any hierarchy issues (e.g., h1 followed by h4 skipping h2/h3)."
+  },
+  {
+    "url": "https://www.cmu.edu/academics",
+    "goal": "1. Navigate to first heading using H key. 2. Note the heading level and text. 3. Navigate to next heading using H key. 4. Continue navigating through all headings (expected: Utility, Actions Menu, Main navigation, Build your future, Undergraduate Students). 5. Report success with the reason listing all headings found (e.g., \"h1: Title, h2: Section1, h2: Section2\") and any hierarchy issues (e.g., h1 followed by h4 skipping h2/h3)."
+  },
+  {
+    "url": "https://www.cmu.edu/125/index.html",
+    "goal": "1. Navigate to first heading using H key. 2. Note the heading level and text. 3. Navigate to next heading using H key. 4. Continue navigating through all headings (expected: For 125 years, Carnegie Mellon University has been achieving what was never thought possible., Since 1900, CMU community members have brought their individual talents and determination collectively to bear on the most complex issues facing our world. Together, CMU has harnessed the power of possibilities to create a legacy of impact that will resonate far into the future., Delve Deeper into CMU’s Milestone Moments, Explore the Future at CMU, CMU125 kicks off during Homecoming Weekend, Nov. 6-8, with events showcasing the past, highlighting the present and encouraging the CMU community to dream about the future. ). 5. Report success with the reason listing all headings found (e.g., \"h1: Title, h2: Section1, h2: Section2\") and any hierarchy issues (e.g., h1 followed by h4 skipping h2/h3)."
+  },
+  {
+    "url": "https://www.cmu.edu/research-and-creativity/centers-and-institutes",
+    "goal": "1. Navigate to first heading using H key. 2. Note the heading level and text. 3. Navigate to next heading using H key. 4. Continue navigating through all headings (expected: Utility, Actions Menu, Main navigation, Research That Changes the World, Studying the Connection Between Humans and Computers). 5. Report success with the reason listing all headings found (e.g., \"h1: Title, h2: Section1, h2: Section2\") and any hierarchy issues (e.g., h1 followed by h4 skipping h2/h3)."
+  },
+  {
+    "url": "https://www.cmu.edu/pre-college",
+    "goal": "1. Navigate to first heading using H key. 2. Note the heading level and text. 3. Navigate to next heading using H key. 4. Continue navigating through all headings (expected: Carnegie Mellon's Pre-College Programs , This is where your future begins – living and learning in a college setting that will challenge you to discover your best self., Carnegie Mellon's Pre-College Programs, ACADEMIC PROGRAMS, ADMISSION DEADLINES & DETAILS). 5. Report success with the reason listing all headings found (e.g., \"h1: Title, h2: Section1, h2: Section2\") and any hierarchy issues (e.g., h1 followed by h4 skipping h2/h3)."
+  },
+  {
+    "url": "https://www.cmu.edu/admission",
+    "goal": "1. Navigate to first heading using H key. 2. Note the heading level and text. 3. Navigate to next heading using H key. 4. Continue navigating through all headings (expected: Weave Your Own Path, Becoming a Tartan Unlocks Infinite Opportunities, It’s your life. Major in it., Financial Aid and the Value of Carnegie Mellon, 100%). 5. Report success with the reason listing all headings found (e.g., \"h1: Title, h2: Section1, h2: Section2\") and any hierarchy issues (e.g., h1 followed by h4 skipping h2/h3)."
+  },
+  {
+    "url": "https://www.cmu.edu/news/stories/archives/2025/may/cmu-undergraduates-take-on-cancer-research",
+    "goal": "1. Navigate to first heading using H key. 2. Note the heading level and text. 3. Navigate to next heading using H key. 4. Continue navigating through all headings (expected: Main navigation, CMU Undergraduates Take on Cancer Research, heading level 2, Innovating into new territory, Collaborations help fight cancer). 5. Report success with the reason listing all headings found (e.g., \"h1: Title, h2: Section1, h2: Section2\") and any hierarchy issues (e.g., h1 followed by h4 skipping h2/h3)."
+  },
+  {
+    "url": "https://www.cmu.edu/faculty-staff",
+    "goal": "1. Navigate to first heading using H key. 2. Note the heading level and text. 3. Navigate to next heading using H key. 4. Continue navigating through all headings (expected: Utility, Actions Menu, Main navigation, Human Resources, For Faculty). 5. Report success with the reason listing all headings found (e.g., \"h1: Title, h2: Section1, h2: Section2\") and any hierarchy issues (e.g., h1 followed by h4 skipping h2/h3)."
+  },
+  {
+    "url": "https://www.cmu.edu/news/stories/archives/2025/august/cmu-celebrates-2025-fulbright-recipients",
+    "goal": "1. Navigate to first heading using H key. 2. Note the heading level and text. 3. Navigate to next heading using H key. 4. Continue navigating through all headings (expected: Main navigation, CMU Celebrates 2025 Fulbright Recipients, heading level 2, — Related Content —, Mo Fahad Explores Humanity in Northern Ireland Through Fulbright). 5. Report success with the reason listing all headings found (e.g., \"h1: Title, h2: Section1, h2: Section2\") and any hierarchy issues (e.g., h1 followed by h4 skipping h2/h3)."
+  },
+  {
+    "url": "https://www.cmu.edu/graduate/prospective/index.html",
+    "goal": "1. Navigate to first heading using H key. 2. Note the heading level and text. 3. Navigate to next heading using H key. 4. Continue navigating through all headings (expected: Academics, Prospective Graduate Student Information, Resources, Admission and Application Process, Tuition and Financial Support). 5. Report success with the reason listing all headings found (e.g., \"h1: Title, h2: Section1, h2: Section2\") and any hierarchy issues (e.g., h1 followed by h4 skipping h2/h3)."
+  },
+  {
+    "url": "https://www.cmu.edu/housing",
+    "goal": "1. Navigate to first heading using H key. 2. Note the heading level and text. 3. Navigate to next heading using H key. 4. Continue navigating through all headings (expected: Student Affairs, Housing & Residential Education, What's life like at CMU?, Student Affairs Upcoming Events, STUDENT AFFAIRS). 5. Report success with the reason listing all headings found (e.g., \"h1: Title, h2: Section1, h2: Section2\") and any hierarchy issues (e.g., h1 followed by h4 skipping h2/h3)."
+  },
+  {
+    "url": "https://www.cmu.edu/student-affairs",
+    "goal": "1. Navigate to first heading using H key. 2. Note the heading level and text. 3. Navigate to next heading using H key. 4. Continue navigating through all headings (expected: Student Affairs at Carnegie Mellon, Connect & Engage, Student Affairs Calendar, DIVISION OF STUDENT AFFAIRS, We're here to help you grow.). 5. Report success with the reason listing all headings found (e.g., \"h1: Title, h2: Section1, h2: Section2\") and any hierarchy issues (e.g., h1 followed by h4 skipping h2/h3)."
+  },
+  {
+    "url": "https://scholars.cmu.edu",
+    "goal": "1. Navigate to first heading using H key. 2. Note the heading level and text. 3. Navigate to next heading using H key. 4. Continue navigating through all headings (expected: Scholars at Carnegie Mellon University, Contact us, FOR RESEARCHERS, USEFUL LINKS, Cookie settings). 5. Report success with the reason listing all headings found (e.g., \"h1: Title, h2: Section1, h2: Section2\") and any hierarchy issues (e.g., h1 followed by h4 skipping h2/h3)."
+  },
+  {
+    "url": "https://www.cmu.edu/career/outcomes/post-grad-dashboard.html",
+    "goal": "1. Navigate to first heading using H key. 2. Note the heading level and text. 3. Navigate to next heading using H key. 4. Continue navigating through all headings (expected: First Destination (Post-Graduation) Outcomes, Dashboard Guide:, Student Affairs, DIVISION OF STUDENT AFFAIRS). 5. Report success with the reason listing all headings found (e.g., \"h1: Title, h2: Section1, h2: Section2\") and any hierarchy issues (e.g., h1 followed by h4 skipping h2/h3)."
+  },
+  {
+    "url": "https://www.cmu.edu/current-students",
+    "goal": "1. Navigate to search form using landmarks or headings. 2. Navigate to first form field using F key or Tab. 3. Note the field's accessible label/name. 4. Type sample data into text fields (use \"test\" for text, \"test@example.com\" for email). 5. Navigate to next field using Tab. 6. Continue through all form fields (expected: Search). 7. Navigate to and click Submit button. 8. Report success with the reason listing all form fields found, any unlabeled fields, and the form submission result."
+  },
+  {
+    "url": "https://www.cmu.edu/faculty-staff",
+    "goal": "1. Navigate to search form using landmarks or headings. 2. Navigate to first form field using F key or Tab. 3. Note the field's accessible label/name. 4. Type sample data into text fields (use \"test\" for text, \"test@example.com\" for email). 5. Navigate to next field using Tab. 6. Continue through all form fields (expected: Enter an Andrew User ID, email address or name, then press search.). 7. Navigate to and click Submit button. 8. Report success with the reason listing all form fields found, any unlabeled fields, and the form submission result."
+  },
+  {
+    "url": "https://www.cmu.edu/directory-contact",
+    "goal": "1. Navigate to search form using landmarks or headings. 2. Navigate to first form field using F key or Tab. 3. Note the field's accessible label/name. 4. Type sample data into text fields (use \"test\" for text, \"test@example.com\" for email). 5. Navigate to next field using Tab. 6. Continue through all form fields (expected: Enter an Andrew User ID, email address or name, then press search.). 7. Navigate to and click Submit button. 8. Report success with the reason listing all form fields found, any unlabeled fields, and the form submission result."
+  },
+  {
+    "url": "https://givenow.cmu.edu/campaigns/42524/donations/new?a=8338674",
+    "goal": "1. Navigate to first heading using H key. 2. Note the heading level and text. 3. Navigate to next heading using H key. 4. Continue navigating through all headings (expected: givenow.cmu.edu). 5. Report success with the reason listing all headings found (e.g., \"h1: Title, h2: Section1, h2: Section2\") and any hierarchy issues (e.g., h1 followed by h4 skipping h2/h3)."
+  },
+  {
+    "url": "https://www.cmu.edu/strategic-framework",
+    "goal": "1. Navigate to search form using landmarks or headings. 2. Navigate to first form field using F key or Tab. 3. Note the field's accessible label/name. 4. Type sample data into text fields (use \"test\" for text, \"test@example.com\" for email). 5. Navigate to next field using Tab. 6. Continue through all form fields (expected: Search). 7. Navigate to and click Submit button. 8. Report success with the reason listing all form fields found, any unlabeled fields, and the form submission result."
+  },
+  {
+    "url": "https://www.cmu.edu/graduate/prospective/index.html",
+    "goal": "1. Navigate to search form using landmarks or headings. 2. Navigate to first form field using F key or Tab. 3. Note the field's accessible label/name. 4. Type sample data into text fields (use \"test\" for text, \"test@example.com\" for email). 5. Navigate to next field using Tab. 6. Continue through all form fields (expected: Search). 7. Navigate to and click Submit button. 8. Report success with the reason listing all form fields found, any unlabeled fields, and the form submission result."
+  },
+  {
+    "url": "https://www.cmu.edu/online",
+    "goal": "1. Navigate to search form using landmarks or headings. 2. Navigate to first form field using F key or Tab. 3. Note the field's accessible label/name. 4. Type sample data into text fields (use \"test\" for text, \"test@example.com\" for email). 5. Navigate to next field using Tab. 6. Continue through all form fields (expected: Search). 7. Navigate to and click Submit button. 8. Report success with the reason listing all form fields found, any unlabeled fields, and the form submission result."
+  },
+  {
+    "url": "https://www.cmu.edu/hub/calendar",
+    "goal": "1. Navigate to search form using landmarks or headings. 2. Navigate to first form field using F key or Tab. 3. Note the field's accessible label/name. 4. Type sample data into text fields (use \"test\" for text, \"test@example.com\" for email). 5. Navigate to next field using Tab. 6. Continue through all form fields (expected: Search). 7. Navigate to and click Submit button. 8. Report success with the reason listing all form fields found, any unlabeled fields, and the form submission result."
+  },
+  {
+    "url": "https://www.cmu.edu/pre-college",
+    "goal": "1. Navigate to search form using landmarks or headings. 2. Navigate to first form field using F key or Tab. 3. Note the field's accessible label/name. 4. Type sample data into text fields (use \"test\" for text, \"test@example.com\" for email). 5. Navigate to next field using Tab. 6. Continue through all form fields (expected: Search). 7. Navigate to and click Submit button. 8. Report success with the reason listing all form fields found, any unlabeled fields, and the form submission result."
+  },
+  {
+    "url": "https://www.cmu.edu/news/stories/archives/2025/september/carnegie-mellon-named-a-top-20-us-university",
+    "goal": "1. Navigate to search form using landmarks or headings. 2. Navigate to first form field using F key or Tab. 3. Note the field's accessible label/name. 4. Type sample data into text fields (use \"test\" for text, \"test@example.com\" for email). 5. Navigate to next field using Tab. 6. Continue through all form fields (expected: Search Carnegie Mellon University). 7. Navigate to and click Submit button. 8. Report success with the reason listing all form fields found, any unlabeled fields, and the form submission result."
+  },
+  {
+    "url": "https://www.cmu.edu/news/stories/archives/2025/august/cmu-celebrates-2025-fulbright-recipients",
+    "goal": "1. Navigate to search form using landmarks or headings. 2. Navigate to first form field using F key or Tab. 3. Note the field's accessible label/name. 4. Type sample data into text fields (use \"test\" for text, \"test@example.com\" for email). 5. Navigate to next field using Tab. 6. Continue through all form fields (expected: Search Carnegie Mellon University). 7. Navigate to and click Submit button. 8. Report success with the reason listing all form fields found, any unlabeled fields, and the form submission result."
+  },
+  {
+    "url": "https://www.cmu.edu/student-affairs",
+    "goal": "1. Navigate to search form using landmarks or headings. 2. Navigate to first form field using F key or Tab. 3. Note the field's accessible label/name. 4. Type sample data into text fields (use \"test\" for text, \"test@example.com\" for email). 5. Navigate to next field using Tab. 6. Continue through all form fields (expected: Search). 7. Navigate to and click Submit button. 8. Report success with the reason listing all form fields found, any unlabeled fields, and the form submission result."
+  },
+  {
+    "url": "https://www.cmu.edu/housing",
+    "goal": "1. Navigate to search form using landmarks or headings. 2. Navigate to first form field using F key or Tab. 3. Note the field's accessible label/name. 4. Type sample data into text fields (use \"test\" for text, \"test@example.com\" for email). 5. Navigate to next field using Tab. 6. Continue through all form fields (expected: Search). 7. Navigate to and click Submit button. 8. Report success with the reason listing all form fields found, any unlabeled fields, and the form submission result."
+  },
+  {
+    "url": "https://www.cmu.edu/125/index.html",
+    "goal": "1. Navigate to search form using landmarks or headings. 2. Navigate to first form field using F key or Tab. 3. Note the field's accessible label/name. 4. Type sample data into text fields (use \"test\" for text, \"test@example.com\" for email). 5. Navigate to next field using Tab. 6. Continue through all form fields (expected: Search). 7. Navigate to and click Submit button. 8. Report success with the reason listing all form fields found, any unlabeled fields, and the form submission result."
+  },
+  {
+    "url": "https://www.cmu.edu/uro",
+    "goal": "1. Navigate to search form using landmarks or headings. 2. Navigate to first form field using F key or Tab. 3. Note the field's accessible label/name. 4. Type sample data into text fields (use \"test\" for text, \"test@example.com\" for email). 5. Navigate to next field using Tab. 6. Continue through all form fields (expected: Search). 7. Navigate to and click Submit button. 8. Report success with the reason listing all form fields found, any unlabeled fields, and the form submission result."
+  },
+  {
+    "url": "https://www.library.cmu.edu",
+    "goal": "1. Navigate to search form using landmarks or headings. 2. Navigate to first form field using F key or Tab. 3. Note the field's accessible label/name. 4. Type sample data into text fields (use \"test\" for text, \"test@example.com\" for email). 5. Navigate to next field using Tab. 6. Continue through all form fields (expected: SEARCH). 7. Navigate to and click Submit button. 8. Report success with the reason listing all form fields found, any unlabeled fields, and the form submission result."
+  },
+  {
+    "url": "https://scholars.cmu.edu",
+    "goal": "1. Navigate to search form using landmarks or headings. 2. Navigate to first form field using F key or Tab. 3. Note the field's accessible label/name. 4. Type sample data into text fields (use \"test\" for text, \"test@example.com\" for email). 5. Navigate to next field using Tab. 6. Continue through all form fields (expected: Search by name or keyword). 7. Navigate to and click Submit button. 8. Report success with the reason listing all form fields found, any unlabeled fields, and the form submission result."
+  },
+  {
+    "url": "https://www.cmu.edu/career/outcomes/post-grad-dashboard.html",
+    "goal": "1. Navigate to search form using landmarks or headings. 2. Navigate to first form field using F key or Tab. 3. Note the field's accessible label/name. 4. Type sample data into text fields (use \"test\" for text, \"test@example.com\" for email). 5. Navigate to next field using Tab. 6. Continue through all form fields (expected: Search). 7. Navigate to and click Submit button. 8. Report success with the reason listing all form fields found, any unlabeled fields, and the form submission result."
+  },
+  {
+    "url": "https://www.cmu.edu/news/stories/archives/2025/may/cmu-undergraduates-take-on-cancer-research",
+    "goal": "1. Navigate to search form using landmarks or headings. 2. Navigate to first form field using F key or Tab. 3. Note the field's accessible label/name. 4. Type sample data into text fields (use \"test\" for text, \"test@example.com\" for email). 5. Navigate to next field using Tab. 6. Continue through all form fields (expected: Search Carnegie Mellon University). 7. Navigate to and click Submit button. 8. Report success with the reason listing all form fields found, any unlabeled fields, and the form submission result."
+  },
+  {
+    "url": "https://www.cmu.edu/news/stories/archives/2025/may/carnegie-mellon-professor-wins-2025-pulitzer-prize-in-history",
+    "goal": "1. Navigate to search form using landmarks or headings. 2. Navigate to first form field using F key or Tab. 3. Note the field's accessible label/name. 4. Type sample data into text fields (use \"test\" for text, \"test@example.com\" for email). 5. Navigate to next field using Tab. 6. Continue through all form fields (expected: Search Carnegie Mellon University). 7. Navigate to and click Submit button. 8. Report success with the reason listing all form fields found, any unlabeled fields, and the form submission result."
+  },
+  {
+    "url": "https://www.cmu.edu/news/stories/archives/2025/may/where-research-gets-to-work",
+    "goal": "1. Navigate to search form using landmarks or headings. 2. Navigate to first form field using F key or Tab. 3. Note the field's accessible label/name. 4. Type sample data into text fields (use \"test\" for text, \"test@example.com\" for email). 5. Navigate to next field using Tab. 6. Continue through all form fields (expected: Search Carnegie Mellon University). 7. Navigate to and click Submit button. 8. Report success with the reason listing all form fields found, any unlabeled fields, and the form submission result."
+  },
+  {
+    "url": "https://www.cmu.edu/news/stories/archives/2025/december/researchers-identify-new-target-to-fight-antibiotic-resistance",
+    "goal": "1. Navigate to search form using landmarks or headings. 2. Navigate to first form field using F key or Tab. 3. Note the field's accessible label/name. 4. Type sample data into text fields (use \"test\" for text, \"test@example.com\" for email). 5. Navigate to next field using Tab. 6. Continue through all form fields (expected: Search Carnegie Mellon University). 7. Navigate to and click Submit button. 8. Report success with the reason listing all form fields found, any unlabeled fields, and the form submission result."
+  },
+  {
+    "url": "https://cmu.edu",
+    "goal": "1. Navigate to Cart/Checkout link and click. 2. Navigate to and click Proceed to Checkout button. 3. Navigate through shipping form fields using Tab. 4. Fill in required shipping fields (name, address, etc.) using test data. 5. Navigate to and click Continue/Next button. 6. Navigate through payment form if present. 7. Navigate to and click Place Order/Complete button. 8. Report success with the reason as order confirmation or any validation errors encountered."
+  },
+  {
+    "url": "https://www.cmu.edu/about/rankings-and-awards",
+    "goal": "1. Navigate to first button on page using B key. 2. Note the button's accessible name. 3. Navigate to next button using B key. 4. Continue through all buttons (expected count: 20, examples: Back to top, Toggle search, About). 5. For each button, verify it has a descriptive accessible name. 6. Report success with the reason listing all buttons found and any that lacked accessible names or had generic names like \"button\" or \"click here\"."
+  },
+  {
+    "url": "https://cmu.edu",
+    "goal": "1. Navigate to first button on page using B key. 2. Note the button's accessible name. 3. Navigate to next button using B key. 4. Continue through all buttons (expected count: 17, examples: Back to top, Toggle search, Toggle video). 5. For each button, verify it has a descriptive accessible name. 6. Report success with the reason listing all buttons found and any that lacked accessible names or had generic names like \"button\" or \"click here\"."
+  },
+  {
+    "url": "https://www.cmu.edu",
+    "goal": "1. Navigate to first button on page using B key. 2. Note the button's accessible name. 3. Navigate to next button using B key. 4. Continue through all buttons (expected count: 17, examples: Back to top, Toggle search, Toggle video). 5. For each button, verify it has a descriptive accessible name. 6. Report success with the reason listing all buttons found and any that lacked accessible names or had generic names like \"button\" or \"click here\"."
+  },
+  {
+    "url": "https://www.cmu.edu/academics/interdisciplinary-programs",
+    "goal": "1. Navigate to first button on page using B key. 2. Note the button's accessible name. 3. Navigate to next button using B key. 4. Continue through all buttons (expected count: 15, examples: Back to top, Toggle search, About). 5. For each button, verify it has a descriptive accessible name. 6. Report success with the reason listing all buttons found and any that lacked accessible names or had generic names like \"button\" or \"click here\"."
+  },
+  {
+    "url": "https://www.cmu.edu/student-affairs",
+    "goal": "1. Navigate to first button on page using B key. 2. Note the button's accessible name. 3. Navigate to next button using B key. 4. Continue through all buttons (expected count: 14, examples: ▴, toggle menu, toggle menu). 5. For each button, verify it has a descriptive accessible name. 6. Report success with the reason listing all buttons found and any that lacked accessible names or had generic names like \"button\" or \"click here\"."
+  },
+  {
+    "url": "https://www.cmu.edu/housing",
+    "goal": "1. Navigate to first button on page using B key. 2. Note the button's accessible name. 3. Navigate to next button using B key. 4. Continue through all buttons (expected count: 14, examples: ▴, toggle menu, toggle menu). 5. For each button, verify it has a descriptive accessible name. 6. Report success with the reason listing all buttons found and any that lacked accessible names or had generic names like \"button\" or \"click here\"."
+  },
+  {
+    "url": "https://athletics.cmu.edu/landing/index",
+    "goal": "1. Navigate to first button on page using B key. 2. Note the button's accessible name. 3. Navigate to next button using B key. 4. Continue through all buttons (expected count: 11, examples: move to previous slide, move to next slide, move to previous slide). 5. For each button, verify it has a descriptive accessible name. 6. Report success with the reason listing all buttons found and any that lacked accessible names or had generic names like \"button\" or \"click here\"."
+  },
+  {
+    "url": "https://cmu.edu",
+    "goal": "1. Navigate to main navigation landmark using D key. 2. Navigate to first navigation link. 3. Note the link's accessible name. 4. Navigate to and click the first nav link. 5. Use browser back or navigate back to Carnegie Mellon University | CMU. 6. Navigate to and click the second nav link. 7. Continue for remaining navigation links (expected: Skip to main content, Carnegie Mellon University, About CMU, Academics, Our Impact). 8. Report success with the reason listing all navigation links visited and their destinations."
+  },
+  {
+    "url": "https://www.cmu.edu/research-and-creativity",
+    "goal": "1. Navigate to first button on page using B key. 2. Note the button's accessible name. 3. Navigate to next button using B key. 4. Continue through all buttons (expected count: 10, examples: Back to top, Toggle search, Load More Stories). 5. For each button, verify it has a descriptive accessible name. 6. Report success with the reason listing all buttons found and any that lacked accessible names or had generic names like \"button\" or \"click here\"."
+  },
+  {
+    "url": "https://www.cmu.edu/about/traditions",
+    "goal": "1. Navigate to first button on page using B key. 2. Note the button's accessible name. 3. Navigate to next button using B key. 4. Continue through all buttons (expected count: 9, examples: Back to top, Toggle search, About). 5. For each button, verify it has a descriptive accessible name. 6. Report success with the reason listing all buttons found and any that lacked accessible names or had generic names like \"button\" or \"click here\"."
+  },
+  {
+    "url": "https://www.cmu.edu/current-students",
+    "goal": "1. Navigate to first button on page using B key. 2. Note the button's accessible name. 3. Navigate to next button using B key. 4. Continue through all buttons (expected count: 8, examples: Back to top, Toggle search, About). 5. For each button, verify it has a descriptive accessible name. 6. Report success with the reason listing all buttons found and any that lacked accessible names or had generic names like \"button\" or \"click here\"."
+  },
+  {
+    "url": "https://www.cmu.edu/faculty-staff",
+    "goal": "1. Navigate to first button on page using B key. 2. Note the button's accessible name. 3. Navigate to next button using B key. 4. Continue through all buttons (expected count: 8, examples: Back to top, Toggle search, About). 5. For each button, verify it has a descriptive accessible name. 6. Report success with the reason listing all buttons found and any that lacked accessible names or had generic names like \"button\" or \"click here\"."
+  },
+  {
+    "url": "https://www.cmu.edu/directory-contact",
+    "goal": "1. Navigate to first button on page using B key. 2. Note the button's accessible name. 3. Navigate to next button using B key. 4. Continue through all buttons (expected count: 8, examples: Back to top, Toggle search, About). 5. For each button, verify it has a descriptive accessible name. 6. Report success with the reason listing all buttons found and any that lacked accessible names or had generic names like \"button\" or \"click here\"."
+  },
+  {
+    "url": "https://www.cmu.edu/strategic-framework",
+    "goal": "1. Navigate to first button on page using B key. 2. Note the button's accessible name. 3. Navigate to next button using B key. 4. Continue through all buttons (expected count: 8, examples: Previous, Next, Search). 5. For each button, verify it has a descriptive accessible name. 6. Report success with the reason listing all buttons found and any that lacked accessible names or had generic names like \"button\" or \"click here\"."
+  },
+  {
+    "url": "https://www.cmu.edu/pre-college",
+    "goal": "1. Navigate to first button on page using B key. 2. Note the button's accessible name. 3. Navigate to next button using B key. 4. Continue through all buttons (expected count: 8, examples: ▴, toggle menu, toggle menu). 5. For each button, verify it has a descriptive accessible name. 6. Report success with the reason listing all buttons found and any that lacked accessible names or had generic names like \"button\" or \"click here\"."
+  },
+  {
+    "url": "https://www.cmu.edu/admission",
+    "goal": "1. Navigate to first button on page using B key. 2. Note the button's accessible name. 3. Navigate to next button using B key. 4. Continue through all buttons (expected count: 8, examples: scroll to top, Search, Menu). 5. For each button, verify it has a descriptive accessible name. 6. Report success with the reason listing all buttons found and any that lacked accessible names or had generic names like \"button\" or \"click here\"."
+  },
+  {
+    "url": "https://www.cmu.edu/uro",
+    "goal": "1. Navigate to first button on page using B key. 2. Note the button's accessible name. 3. Navigate to next button using B key. 4. Continue through all buttons (expected count: 8, examples: ▴, toggle menu, toggle menu). 5. For each button, verify it has a descriptive accessible name. 6. Report success with the reason listing all buttons found and any that lacked accessible names or had generic names like \"button\" or \"click here\"."
+  },
+  {
+    "url": "https://www.cmu.edu/career/outcomes/post-grad-dashboard.html",
+    "goal": "1. Navigate to first button on page using B key. 2. Note the button's accessible name. 3. Navigate to next button using B key. 4. Continue through all buttons (expected count: 8, examples: ▴, toggle menu, Search). 5. For each button, verify it has a descriptive accessible name. 6. Report success with the reason listing all buttons found and any that lacked accessible names or had generic names like \"button\" or \"click here\"."
+  },
+  {
+    "url": "https://www.cmu.edu/engage/alumni",
+    "goal": "1. Navigate to first button on page using B key. 2. Note the button's accessible name. 3. Navigate to next button using B key. 4. Continue through all buttons (expected count: 7, examples: Back to top, Toggle search, Get Involved). 5. For each button, verify it has a descriptive accessible name. 6. Report success with the reason listing all buttons found and any that lacked accessible names or had generic names like \"button\" or \"click here\"."
+  },
+  {
+    "url": "https://www.cmu.edu/about",
+    "goal": "1. Navigate to first button on page using B key. 2. Note the button's accessible name. 3. Navigate to next button using B key. 4. Continue through all buttons (expected count: 7, examples: Back to top, Toggle search, About). 5. For each button, verify it has a descriptive accessible name. 6. Report success with the reason listing all buttons found and any that lacked accessible names or had generic names like \"button\" or \"click here\"."
+  },
+  {
+    "url": "https://www.cmu.edu/leadership",
+    "goal": "1. Navigate to first button on page using B key. 2. Note the button's accessible name. 3. Navigate to next button using B key. 4. Continue through all buttons (expected count: 7, examples: Back to top, Toggle search, About). 5. For each button, verify it has a descriptive accessible name. 6. Report success with the reason listing all buttons found and any that lacked accessible names or had generic names like \"button\" or \"click here\"."
+  },
+  {
+    "url": "https://www.cmu.edu/about/vision-mission-values",
+    "goal": "1. Navigate to first button on page using B key. 2. Note the button's accessible name. 3. Navigate to next button using B key. 4. Continue through all buttons (expected count: 7, examples: Back to top, Toggle search, About). 5. For each button, verify it has a descriptive accessible name. 6. Report success with the reason listing all buttons found and any that lacked accessible names or had generic names like \"button\" or \"click here\"."
+  },
+  {
+    "url": "https://www.cmu.edu/about/history",
+    "goal": "1. Navigate to first button on page using B key. 2. Note the button's accessible name. 3. Navigate to next button using B key. 4. Continue through all buttons (expected count: 7, examples: Back to top, Toggle search, About). 5. For each button, verify it has a descriptive accessible name. 6. Report success with the reason listing all buttons found and any that lacked accessible names or had generic names like \"button\" or \"click here\"."
+  },
+  {
+    "url": "https://www.cmu.edu/campus-life/living-in-pittsburgh",
+    "goal": "1. Navigate to first button on page using B key. 2. Note the button's accessible name. 3. Navigate to next button using B key. 4. Continue through all buttons (expected count: 7, examples: Back to top, Toggle search, About). 5. For each button, verify it has a descriptive accessible name. 6. Report success with the reason listing all buttons found and any that lacked accessible names or had generic names like \"button\" or \"click here\"."
+  },
+  {
+    "url": "https://www.cmu.edu/global",
+    "goal": "1. Navigate to first button on page using B key. 2. Note the button's accessible name. 3. Navigate to next button using B key. 4. Continue through all buttons (expected count: 7, examples: Back to top, Toggle search, About). 5. For each button, verify it has a descriptive accessible name. 6. Report success with the reason listing all buttons found and any that lacked accessible names or had generic names like \"button\" or \"click here\"."
+  },
+  {
+    "url": "https://www.cmu.edu/academics",
+    "goal": "1. Navigate to first button on page using B key. 2. Note the button's accessible name. 3. Navigate to next button using B key. 4. Continue through all buttons (expected count: 7, examples: Back to top, Toggle search, About). 5. For each button, verify it has a descriptive accessible name. 6. Report success with the reason listing all buttons found and any that lacked accessible names or had generic names like \"button\" or \"click here\"."
+  },
+  {
+    "url": "https://www.cmu.edu/academics/continuing-education",
+    "goal": "1. Navigate to first button on page using B key. 2. Note the button's accessible name. 3. Navigate to next button using B key. 4. Continue through all buttons (expected count: 7, examples: Back to top, Toggle search, About). 5. For each button, verify it has a descriptive accessible name. 6. Report success with the reason listing all buttons found and any that lacked accessible names or had generic names like \"button\" or \"click here\"."
+  },
+  {
+    "url": "https://www.cmu.edu/academics/learning-for-a-lifetime",
+    "goal": "1. Navigate to first button on page using B key. 2. Note the button's accessible name. 3. Navigate to next button using B key. 4. Continue through all buttons (expected count: 7, examples: Back to top, Toggle search, About). 5. For each button, verify it has a descriptive accessible name. 6. Report success with the reason listing all buttons found and any that lacked accessible names or had generic names like \"button\" or \"click here\"."
+  },
+  {
+    "url": "https://www.cmu.edu/student-admission",
+    "goal": "1. Navigate to first button on page using B key. 2. Note the button's accessible name. 3. Navigate to next button using B key. 4. Continue through all buttons (expected count: 7, examples: Back to top, Toggle search, About). 5. For each button, verify it has a descriptive accessible name. 6. Report success with the reason listing all buttons found and any that lacked accessible names or had generic names like \"button\" or \"click here\"."
+  },
+  {
+    "url": "https://www.cmu.edu/student-admission/access-affordability",
+    "goal": "1. Navigate to first button on page using B key. 2. Note the button's accessible name. 3. Navigate to next button using B key. 4. Continue through all buttons (expected count: 7, examples: Back to top, Toggle search, About). 5. For each button, verify it has a descriptive accessible name. 6. Report success with the reason listing all buttons found and any that lacked accessible names or had generic names like \"button\" or \"click here\"."
+  },
+  {
+    "url": "https://www.cmu.edu/campus-life",
+    "goal": "1. Navigate to first button on page using B key. 2. Note the button's accessible name. 3. Navigate to next button using B key. 4. Continue through all buttons (expected count: 7, examples: Back to top, Toggle search, About). 5. For each button, verify it has a descriptive accessible name. 6. Report success with the reason listing all buttons found and any that lacked accessible names or had generic names like \"button\" or \"click here\"."
+  },
+  {
+    "url": "https://www.cmu.edu/research-and-creativity/centers-and-institutes",
+    "goal": "1. Navigate to first button on page using B key. 2. Note the button's accessible name. 3. Navigate to next button using B key. 4. Continue through all buttons (expected count: 7, examples: Back to top, Toggle search, About). 5. For each button, verify it has a descriptive accessible name. 6. Report success with the reason listing all buttons found and any that lacked accessible names or had generic names like \"button\" or \"click here\"."
+  },
+  {
+    "url": "https://scholars.cmu.edu",
+    "goal": "1. Navigate to first button on page using B key. 2. Note the button's accessible name. 3. Navigate to next button using B key. 4. Continue through all buttons (expected count: 7, examples: Experts, Groups, Accept). 5. For each button, verify it has a descriptive accessible name. 6. Report success with the reason listing all buttons found and any that lacked accessible names or had generic names like \"button\" or \"click here\"."
+  },
+  {
+    "url": "https://www.cmu.edu/work-that-matters",
+    "goal": "1. Navigate to first button on page using B key. 2. Note the button's accessible name. 3. Navigate to next button using B key. 4. Continue through all buttons (expected count: 7, examples: Back to top, Toggle search, About). 5. For each button, verify it has a descriptive accessible name. 6. Report success with the reason listing all buttons found and any that lacked accessible names or had generic names like \"button\" or \"click here\"."
+  },
+  {
+    "url": "https://www.cmu.edu/graduate/prospective/index.html",
+    "goal": "1. Navigate to first button on page using B key. 2. Note the button's accessible name. 3. Navigate to next button using B key. 4. Continue through all buttons (expected count: 6, examples: ▴, toggle menu, toggle menu). 5. For each button, verify it has a descriptive accessible name. 6. Report success with the reason listing all buttons found and any that lacked accessible names or had generic names like \"button\" or \"click here\"."
+  },
+  {
+    "url": "https://www.cmu.edu/125/index.html",
+    "goal": "1. Navigate to first button on page using B key. 2. Note the button's accessible name. 3. Navigate to next button using B key. 4. Continue through all buttons (expected count: 6, examples: ▴, toggle menu, toggle menu). 5. For each button, verify it has a descriptive accessible name. 6. Report success with the reason listing all buttons found and any that lacked accessible names or had generic names like \"button\" or \"click here\"."
+  },
+  {
+    "url": "https://www.cmu.edu/hub/calendar",
+    "goal": "1. Navigate to first button on page using B key. 2. Note the button's accessible name. 3. Navigate to next button using B key. 4. Continue through all buttons (expected count: 5, examples: ▴, toggle menu, toggle menu). 5. For each button, verify it has a descriptive accessible name. 6. Report success with the reason listing all buttons found and any that lacked accessible names or had generic names like \"button\" or \"click here\"."
+  },
+  {
+    "url": "https://www.cmu.edu/visit",
+    "goal": "1. Navigate to first button on page using B key. 2. Note the button's accessible name. 3. Navigate to next button using B key. 4. Continue through all buttons (expected count: 4, examples: Back to top, Toggle search, Campus Tours). 5. For each button, verify it has a descriptive accessible name. 6. Report success with the reason listing all buttons found and any that lacked accessible names or had generic names like \"button\" or \"click here\"."
+  },
+  {
+    "url": "https://www.cmu.edu/admission/majors-programs",
+    "goal": "1. Navigate to first button on page using B key. 2. Note the button's accessible name. 3. Navigate to next button using B key. 4. Continue through all buttons (expected count: 3, examples: scroll to top, Search, Menu). 5. For each button, verify it has a descriptive accessible name. 6. Report success with the reason listing all buttons found and any that lacked accessible names or had generic names like \"button\" or \"click here\"."
+  },
+  {
+    "url": "https://www.cmu.edu/news/stories/archives/2025/september/carnegie-mellon-named-a-top-20-us-university",
+    "goal": "1. Navigate to first button on page using B key. 2. Note the button's accessible name. 3. Navigate to next button using B key. 4. Continue through all buttons (expected count: 3, examples: scroll to top, Menu, Search). 5. For each button, verify it has a descriptive accessible name. 6. Report success with the reason listing all buttons found and any that lacked accessible names or had generic names like \"button\" or \"click here\"."
+  },
+  {
+    "url": "https://www.cmu.edu/news/stories/archives/2025/august/cmu-celebrates-2025-fulbright-recipients",
+    "goal": "1. Navigate to first button on page using B key. 2. Note the button's accessible name. 3. Navigate to next button using B key. 4. Continue through all buttons (expected count: 3, examples: scroll to top, Menu, Search). 5. For each button, verify it has a descriptive accessible name. 6. Report success with the reason listing all buttons found and any that lacked accessible names or had generic names like \"button\" or \"click here\"."
+  },
+  {
+    "url": "https://www.cmu.edu/admission/campus-experience/activities-and-engagement",
+    "goal": "1. Navigate to first button on page using B key. 2. Note the button's accessible name. 3. Navigate to next button using B key. 4. Continue through all buttons (expected count: 3, examples: scroll to top, Search, Menu). 5. For each button, verify it has a descriptive accessible name. 6. Report success with the reason listing all buttons found and any that lacked accessible names or had generic names like \"button\" or \"click here\"."
+  },
+  {
+    "url": "https://ai.cmu.edu/research-and-policy-impact",
+    "goal": "1. Navigate to first button on page using B key. 2. Note the button's accessible name. 3. Navigate to next button using B key. 4. Continue through all buttons (expected count: 3, examples: Back to top, Toggle search, Research and Policy Impact). 5. For each button, verify it has a descriptive accessible name. 6. Report success with the reason listing all buttons found and any that lacked accessible names or had generic names like \"button\" or \"click here\"."
+  },
+  {
+    "url": "https://www.cmu.edu/admission/admission",
+    "goal": "1. Navigate to first button on page using B key. 2. Note the button's accessible name. 3. Navigate to next button using B key. 4. Continue through all buttons (expected count: 3, examples: scroll to top, Search, Menu). 5. For each button, verify it has a descriptive accessible name. 6. Report success with the reason listing all buttons found and any that lacked accessible names or had generic names like \"button\" or \"click here\"."
+  },
+  {
+    "url": "https://www.cmu.edu/news/stories/archives/2025/may/cmu-undergraduates-take-on-cancer-research",
+    "goal": "1. Navigate to first button on page using B key. 2. Note the button's accessible name. 3. Navigate to next button using B key. 4. Continue through all buttons (expected count: 3, examples: scroll to top, Menu, Search). 5. For each button, verify it has a descriptive accessible name. 6. Report success with the reason listing all buttons found and any that lacked accessible names or had generic names like \"button\" or \"click here\"."
+  },
+  {
+    "url": "https://www.cmu.edu/news/stories/archives/2025/may/carnegie-mellon-professor-wins-2025-pulitzer-prize-in-history",
+    "goal": "1. Navigate to first button on page using B key. 2. Note the button's accessible name. 3. Navigate to next button using B key. 4. Continue through all buttons (expected count: 3, examples: scroll to top, Menu, Search). 5. For each button, verify it has a descriptive accessible name. 6. Report success with the reason listing all buttons found and any that lacked accessible names or had generic names like \"button\" or \"click here\"."
+  },
+  {
+    "url": "https://www.cmu.edu/news/stories/archives/2025/may/where-research-gets-to-work",
+    "goal": "1. Navigate to first button on page using B key. 2. Note the button's accessible name. 3. Navigate to next button using B key. 4. Continue through all buttons (expected count: 3, examples: scroll to top, Menu, Search). 5. For each button, verify it has a descriptive accessible name. 6. Report success with the reason listing all buttons found and any that lacked accessible names or had generic names like \"button\" or \"click here\"."
+  },
+  {
+    "url": "https://www.cmu.edu/news/stories/archives/2025/december/researchers-identify-new-target-to-fight-antibiotic-resistance",
+    "goal": "1. Navigate to first button on page using B key. 2. Note the button's accessible name. 3. Navigate to next button using B key. 4. Continue through all buttons (expected count: 3, examples: scroll to top, Menu, Search). 5. For each button, verify it has a descriptive accessible name. 6. Report success with the reason listing all buttons found and any that lacked accessible names or had generic names like \"button\" or \"click here\"."
+  },
+  {
+    "url": "https://www.cmu.edu/online",
+    "goal": "1. Navigate to first button on page using B key. 2. Note the button's accessible name. 3. Navigate to next button using B key. 4. Continue through all buttons (expected count: 2, examples: Search, ▴). 5. For each button, verify it has a descriptive accessible name. 6. Report success with the reason listing all buttons found and any that lacked accessible names or had generic names like \"button\" or \"click here\"."
+  },
+  {
+    "url": "https://www.library.cmu.edu",
+    "goal": "1. Navigate to first button on page using B key. 2. Note the button's accessible name. 3. Navigate to next button using B key. 4. Continue through all buttons (expected count: 2, examples: SEARCH, Open Scottai). 5. For each button, verify it has a descriptive accessible name. 6. Report success with the reason listing all buttons found and any that lacked accessible names or had generic names like \"button\" or \"click here\"."
+  },
+  {
+    "url": "https://cmu.edu",
+    "goal": "1. Navigate to and click Contact link. 2. Navigate to name field and type 'Test User'. 3. Navigate to email field and type 'test@example.com'. 4. Navigate to message/textarea field and type 'This is a test message for accessibility testing.'. 5. Navigate to and click Submit/Send button. 6. Report success with the reason as the confirmation message or any validation errors."
+  },
+  {
+    "url": "https://www.cmu.edu/directory-contact",
+    "goal": "1. Navigate to first link on page using K key. 2. Note the link's accessible name and whether it's descriptive. 3. Navigate to next link using K key. 4. Continue through all links (expected count: approximately 205). 5. For each link, assess if the link text alone conveys the destination/purpose. 6. Report success with the reason listing link names that are non-descriptive (e.g., \"click here\", \"read more\", \"link\") and total link count."
+  },
+  {
+    "url": "https://ai.cmu.edu/research-and-policy-impact",
+    "goal": "1. Navigate to first link on page using K key. 2. Note the link's accessible name and whether it's descriptive. 3. Navigate to next link using K key. 4. Continue through all links (expected count: approximately 109). 5. For each link, assess if the link text alone conveys the destination/purpose. 6. Report success with the reason listing link names that are non-descriptive (e.g., \"click here\", \"read more\", \"link\") and total link count."
+  },
+  {
+    "url": "https://www.cmu.edu/current-students",
+    "goal": "1. Navigate to first link on page using K key. 2. Note the link's accessible name and whether it's descriptive. 3. Navigate to next link using K key. 4. Continue through all links (expected count: approximately 102). 5. For each link, assess if the link text alone conveys the destination/purpose. 6. Report success with the reason listing link names that are non-descriptive (e.g., \"click here\", \"read more\", \"link\") and total link count."
+  },
+  {
+    "url": "https://www.cmu.edu/faculty-staff",
+    "goal": "1. Navigate to first link on page using K key. 2. Note the link's accessible name and whether it's descriptive. 3. Navigate to next link using K key. 4. Continue through all links (expected count: approximately 89). 5. For each link, assess if the link text alone conveys the destination/purpose. 6. Report success with the reason listing link names that are non-descriptive (e.g., \"click here\", \"read more\", \"link\") and total link count."
+  },
+  {
+    "url": "https://www.cmu.edu/about/rankings-and-awards",
+    "goal": "1. Navigate to first link on page using K key. 2. Note the link's accessible name and whether it's descriptive. 3. Navigate to next link using K key. 4. Continue through all links (expected count: approximately 85). 5. For each link, assess if the link text alone conveys the destination/purpose. 6. Report success with the reason listing link names that are non-descriptive (e.g., \"click here\", \"read more\", \"link\") and total link count."
+  },
+  {
+    "url": "https://www.cmu.edu/research-and-creativity",
+    "goal": "1. Navigate to first link on page using K key. 2. Note the link's accessible name and whether it's descriptive. 3. Navigate to next link using K key. 4. Continue through all links (expected count: approximately 85). 5. For each link, assess if the link text alone conveys the destination/purpose. 6. Report success with the reason listing link names that are non-descriptive (e.g., \"click here\", \"read more\", \"link\") and total link count."
+  },
+  {
+    "url": "https://www.cmu.edu/work-that-matters",
+    "goal": "1. Navigate to first link on page using K key. 2. Note the link's accessible name and whether it's descriptive. 3. Navigate to next link using K key. 4. Continue through all links (expected count: approximately 83). 5. For each link, assess if the link text alone conveys the destination/purpose. 6. Report success with the reason listing link names that are non-descriptive (e.g., \"click here\", \"read more\", \"link\") and total link count."
+  },
+  {
+    "url": "https://www.cmu.edu/hub/calendar",
+    "goal": "1. Navigate to first link on page using K key. 2. Note the link's accessible name and whether it's descriptive. 3. Navigate to next link using K key. 4. Continue through all links (expected count: approximately 81). 5. For each link, assess if the link text alone conveys the destination/purpose. 6. Report success with the reason listing link names that are non-descriptive (e.g., \"click here\", \"read more\", \"link\") and total link count."
+  },
+  {
+    "url": "https://www.library.cmu.edu",
+    "goal": "1. Navigate to first link on page using K key. 2. Note the link's accessible name and whether it's descriptive. 3. Navigate to next link using K key. 4. Continue through all links (expected count: approximately 80). 5. For each link, assess if the link text alone conveys the destination/purpose. 6. Report success with the reason listing link names that are non-descriptive (e.g., \"click here\", \"read more\", \"link\") and total link count."
+  },
+  {
+    "url": "https://www.cmu.edu/research-and-creativity/centers-and-institutes",
+    "goal": "1. Navigate to first link on page using K key. 2. Note the link's accessible name and whether it's descriptive. 3. Navigate to next link using K key. 4. Continue through all links (expected count: approximately 77). 5. For each link, assess if the link text alone conveys the destination/purpose. 6. Report success with the reason listing link names that are non-descriptive (e.g., \"click here\", \"read more\", \"link\") and total link count."
+  },
+  {
+    "url": "https://www.cmu.edu/campus-life/living-in-pittsburgh",
+    "goal": "1. Navigate to first link on page using K key. 2. Note the link's accessible name and whether it's descriptive. 3. Navigate to next link using K key. 4. Continue through all links (expected count: approximately 76). 5. For each link, assess if the link text alone conveys the destination/purpose. 6. Report success with the reason listing link names that are non-descriptive (e.g., \"click here\", \"read more\", \"link\") and total link count."
+  },
+  {
+    "url": "https://cmu.edu",
+    "goal": "1. Navigate to first link on page using K key. 2. Note the link's accessible name and whether it's descriptive. 3. Navigate to next link using K key. 4. Continue through all links (expected count: approximately 75). 5. For each link, assess if the link text alone conveys the destination/purpose. 6. Report success with the reason listing link names that are non-descriptive (e.g., \"click here\", \"read more\", \"link\") and total link count."
+  },
+  {
+    "url": "https://www.cmu.edu",
+    "goal": "1. Navigate to first link on page using K key. 2. Note the link's accessible name and whether it's descriptive. 3. Navigate to next link using K key. 4. Continue through all links (expected count: approximately 75). 5. For each link, assess if the link text alone conveys the destination/purpose. 6. Report success with the reason listing link names that are non-descriptive (e.g., \"click here\", \"read more\", \"link\") and total link count."
+  },
+  {
+    "url": "https://www.cmu.edu/leadership",
+    "goal": "1. Navigate to first link on page using K key. 2. Note the link's accessible name and whether it's descriptive. 3. Navigate to next link using K key. 4. Continue through all links (expected count: approximately 68). 5. For each link, assess if the link text alone conveys the destination/purpose. 6. Report success with the reason listing link names that are non-descriptive (e.g., \"click here\", \"read more\", \"link\") and total link count."
+  },
+  {
+    "url": "https://www.cmu.edu/academics",
+    "goal": "1. Navigate to first link on page using K key. 2. Note the link's accessible name and whether it's descriptive. 3. Navigate to next link using K key. 4. Continue through all links (expected count: approximately 68). 5. For each link, assess if the link text alone conveys the destination/purpose. 6. Report success with the reason listing link names that are non-descriptive (e.g., \"click here\", \"read more\", \"link\") and total link count."
+  },
+  {
+    "url": "https://www.cmu.edu/academics/learning-for-a-lifetime",
+    "goal": "1. Navigate to first link on page using K key. 2. Note the link's accessible name and whether it's descriptive. 3. Navigate to next link using K key. 4. Continue through all links (expected count: approximately 68). 5. For each link, assess if the link text alone conveys the destination/purpose. 6. Report success with the reason listing link names that are non-descriptive (e.g., \"click here\", \"read more\", \"link\") and total link count."
+  },
+  {
+    "url": "https://www.cmu.edu/news/stories/archives/2025/may/where-research-gets-to-work",
+    "goal": "1. Navigate to first link on page using K key. 2. Note the link's accessible name and whether it's descriptive. 3. Navigate to next link using K key. 4. Continue through all links (expected count: approximately 68). 5. For each link, assess if the link text alone conveys the destination/purpose. 6. Report success with the reason listing link names that are non-descriptive (e.g., \"click here\", \"read more\", \"link\") and total link count."
+  },
+  {
+    "url": "https://www.cmu.edu/engage/alumni",
+    "goal": "1. Navigate to first link on page using K key. 2. Note the link's accessible name and whether it's descriptive. 3. Navigate to next link using K key. 4. Continue through all links (expected count: approximately 64). 5. For each link, assess if the link text alone conveys the destination/purpose. 6. Report success with the reason listing link names that are non-descriptive (e.g., \"click here\", \"read more\", \"link\") and total link count."
+  },
+  {
+    "url": "https://www.cmu.edu/about",
+    "goal": "1. Navigate to first link on page using K key. 2. Note the link's accessible name and whether it's descriptive. 3. Navigate to next link using K key. 4. Continue through all links (expected count: approximately 64). 5. For each link, assess if the link text alone conveys the destination/purpose. 6. Report success with the reason listing link names that are non-descriptive (e.g., \"click here\", \"read more\", \"link\") and total link count."
+  },
+  {
+    "url": "https://www.cmu.edu/about/traditions",
+    "goal": "1. Navigate to first link on page using K key. 2. Note the link's accessible name and whether it's descriptive. 3. Navigate to next link using K key. 4. Continue through all links (expected count: approximately 64). 5. For each link, assess if the link text alone conveys the destination/purpose. 6. Report success with the reason listing link names that are non-descriptive (e.g., \"click here\", \"read more\", \"link\") and total link count."
+  },
+  {
+    "url": "https://www.cmu.edu/visit",
+    "goal": "1. Navigate to first link on page using K key. 2. Note the link's accessible name and whether it's descriptive. 3. Navigate to next link using K key. 4. Continue through all links (expected count: approximately 62). 5. For each link, assess if the link text alone conveys the destination/purpose. 6. Report success with the reason listing link names that are non-descriptive (e.g., \"click here\", \"read more\", \"link\") and total link count."
+  },
+  {
+    "url": "https://www.cmu.edu/about/history",
+    "goal": "1. Navigate to first link on page using K key. 2. Note the link's accessible name and whether it's descriptive. 3. Navigate to next link using K key. 4. Continue through all links (expected count: approximately 62). 5. For each link, assess if the link text alone conveys the destination/purpose. 6. Report success with the reason listing link names that are non-descriptive (e.g., \"click here\", \"read more\", \"link\") and total link count."
+  },
+  {
+    "url": "https://www.cmu.edu/housing",
+    "goal": "1. Navigate to first link on page using K key. 2. Note the link's accessible name and whether it's descriptive. 3. Navigate to next link using K key. 4. Continue through all links (expected count: approximately 62). 5. For each link, assess if the link text alone conveys the destination/purpose. 6. Report success with the reason listing link names that are non-descriptive (e.g., \"click here\", \"read more\", \"link\") and total link count."
+  },
+  {
+    "url": "https://www.cmu.edu/student-admission/access-affordability",
+    "goal": "1. Navigate to first link on page using K key. 2. Note the link's accessible name and whether it's descriptive. 3. Navigate to next link using K key. 4. Continue through all links (expected count: approximately 61). 5. For each link, assess if the link text alone conveys the destination/purpose. 6. Report success with the reason listing link names that are non-descriptive (e.g., \"click here\", \"read more\", \"link\") and total link count."
+  },
+  {
+    "url": "https://www.cmu.edu/student-admission",
+    "goal": "1. Navigate to first link on page using K key. 2. Note the link's accessible name and whether it's descriptive. 3. Navigate to next link using K key. 4. Continue through all links (expected count: approximately 59). 5. For each link, assess if the link text alone conveys the destination/purpose. 6. Report success with the reason listing link names that are non-descriptive (e.g., \"click here\", \"read more\", \"link\") and total link count."
+  },
+  {
+    "url": "https://www.cmu.edu/campus-life",
+    "goal": "1. Navigate to first link on page using K key. 2. Note the link's accessible name and whether it's descriptive. 3. Navigate to next link using K key. 4. Continue through all links (expected count: approximately 59). 5. For each link, assess if the link text alone conveys the destination/purpose. 6. Report success with the reason listing link names that are non-descriptive (e.g., \"click here\", \"read more\", \"link\") and total link count."
+  },
+  {
+    "url": "https://www.cmu.edu/academics/continuing-education",
+    "goal": "1. Navigate to first link on page using K key. 2. Note the link's accessible name and whether it's descriptive. 3. Navigate to next link using K key. 4. Continue through all links (expected count: approximately 58). 5. For each link, assess if the link text alone conveys the destination/purpose. 6. Report success with the reason listing link names that are non-descriptive (e.g., \"click here\", \"read more\", \"link\") and total link count."
+  },
+  {
+    "url": "https://www.cmu.edu/global",
+    "goal": "1. Navigate to first link on page using K key. 2. Note the link's accessible name and whether it's descriptive. 3. Navigate to next link using K key. 4. Continue through all links (expected count: approximately 56). 5. For each link, assess if the link text alone conveys the destination/purpose. 6. Report success with the reason listing link names that are non-descriptive (e.g., \"click here\", \"read more\", \"link\") and total link count."
+  },
+  {
+    "url": "https://www.cmu.edu/academics/interdisciplinary-programs",
+    "goal": "1. Navigate to first link on page using K key. 2. Note the link's accessible name and whether it's descriptive. 3. Navigate to next link using K key. 4. Continue through all links (expected count: approximately 54). 5. For each link, assess if the link text alone conveys the destination/purpose. 6. Report success with the reason listing link names that are non-descriptive (e.g., \"click here\", \"read more\", \"link\") and total link count."
+  },
+  {
+    "url": "https://www.cmu.edu/strategic-framework",
+    "goal": "1. Navigate to first link on page using K key. 2. Note the link's accessible name and whether it's descriptive. 3. Navigate to next link using K key. 4. Continue through all links (expected count: approximately 53). 5. For each link, assess if the link text alone conveys the destination/purpose. 6. Report success with the reason listing link names that are non-descriptive (e.g., \"click here\", \"read more\", \"link\") and total link count."
+  },
+  {
+    "url": "https://www.cmu.edu/about/vision-mission-values",
+    "goal": "1. Navigate to first link on page using K key. 2. Note the link's accessible name and whether it's descriptive. 3. Navigate to next link using K key. 4. Continue through all links (expected count: approximately 52). 5. For each link, assess if the link text alone conveys the destination/purpose. 6. Report success with the reason listing link names that are non-descriptive (e.g., \"click here\", \"read more\", \"link\") and total link count."
+  },
+  {
+    "url": "https://www.cmu.edu/student-affairs",
+    "goal": "1. Navigate to first link on page using K key. 2. Note the link's accessible name and whether it's descriptive. 3. Navigate to next link using K key. 4. Continue through all links (expected count: approximately 52). 5. For each link, assess if the link text alone conveys the destination/purpose. 6. Report success with the reason listing link names that are non-descriptive (e.g., \"click here\", \"read more\", \"link\") and total link count."
+  },
+  {
+    "url": "https://www.cmu.edu/pre-college",
+    "goal": "1. Navigate to first link on page using K key. 2. Note the link's accessible name and whether it's descriptive. 3. Navigate to next link using K key. 4. Continue through all links (expected count: approximately 50). 5. For each link, assess if the link text alone conveys the destination/purpose. 6. Report success with the reason listing link names that are non-descriptive (e.g., \"click here\", \"read more\", \"link\") and total link count."
+  },
+  {
+    "url": "https://www.cmu.edu/career/outcomes/post-grad-dashboard.html",
+    "goal": "1. Navigate to first link on page using K key. 2. Note the link's accessible name and whether it's descriptive. 3. Navigate to next link using K key. 4. Continue through all links (expected count: approximately 50). 5. For each link, assess if the link text alone conveys the destination/purpose. 6. Report success with the reason listing link names that are non-descriptive (e.g., \"click here\", \"read more\", \"link\") and total link count."
+  },
+  {
+    "url": "https://www.cmu.edu/news/stories/archives/2025/september/carnegie-mellon-named-a-top-20-us-university",
+    "goal": "1. Navigate to first link on page using K key. 2. Note the link's accessible name and whether it's descriptive. 3. Navigate to next link using K key. 4. Continue through all links (expected count: approximately 48). 5. For each link, assess if the link text alone conveys the destination/purpose. 6. Report success with the reason listing link names that are non-descriptive (e.g., \"click here\", \"read more\", \"link\") and total link count."
+  },
+  {
+    "url": "https://athletics.cmu.edu/landing/index",
+    "goal": "1. Navigate to first link on page using K key. 2. Note the link's accessible name and whether it's descriptive. 3. Navigate to next link using K key. 4. Continue through all links (expected count: approximately 47). 5. For each link, assess if the link text alone conveys the destination/purpose. 6. Report success with the reason listing link names that are non-descriptive (e.g., \"click here\", \"read more\", \"link\") and total link count."
+  },
+  {
+    "url": "https://www.cmu.edu/uro",
+    "goal": "1. Navigate to first link on page using K key. 2. Note the link's accessible name and whether it's descriptive. 3. Navigate to next link using K key. 4. Continue through all links (expected count: approximately 46). 5. For each link, assess if the link text alone conveys the destination/purpose. 6. Report success with the reason listing link names that are non-descriptive (e.g., \"click here\", \"read more\", \"link\") and total link count."
+  },
+  {
+    "url": "https://www.cmu.edu/news/stories/archives/2025/august/cmu-celebrates-2025-fulbright-recipients",
+    "goal": "1. Navigate to first link on page using K key. 2. Note the link's accessible name and whether it's descriptive. 3. Navigate to next link using K key. 4. Continue through all links (expected count: approximately 45). 5. For each link, assess if the link text alone conveys the destination/purpose. 6. Report success with the reason listing link names that are non-descriptive (e.g., \"click here\", \"read more\", \"link\") and total link count."
+  },
+  {
+    "url": "https://www.cmu.edu/graduate/prospective/index.html",
+    "goal": "1. Navigate to first link on page using K key. 2. Note the link's accessible name and whether it's descriptive. 3. Navigate to next link using K key. 4. Continue through all links (expected count: approximately 43). 5. For each link, assess if the link text alone conveys the destination/purpose. 6. Report success with the reason listing link names that are non-descriptive (e.g., \"click here\", \"read more\", \"link\") and total link count."
+  },
+  {
+    "url": "https://www.cmu.edu/news/stories/archives/2025/may/carnegie-mellon-professor-wins-2025-pulitzer-prize-in-history",
+    "goal": "1. Navigate to first link on page using K key. 2. Note the link's accessible name and whether it's descriptive. 3. Navigate to next link using K key. 4. Continue through all links (expected count: approximately 43). 5. For each link, assess if the link text alone conveys the destination/purpose. 6. Report success with the reason listing link names that are non-descriptive (e.g., \"click here\", \"read more\", \"link\") and total link count."
+  },
+  {
+    "url": "https://www.cmu.edu/admission",
+    "goal": "1. Navigate to first link on page using K key. 2. Note the link's accessible name and whether it's descriptive. 3. Navigate to next link using K key. 4. Continue through all links (expected count: approximately 42). 5. For each link, assess if the link text alone conveys the destination/purpose. 6. Report success with the reason listing link names that are non-descriptive (e.g., \"click here\", \"read more\", \"link\") and total link count."
+  },
+  {
+    "url": "https://www.cmu.edu/news/stories/archives/2025/may/cmu-undergraduates-take-on-cancer-research",
+    "goal": "1. Navigate to first link on page using K key. 2. Note the link's accessible name and whether it's descriptive. 3. Navigate to next link using K key. 4. Continue through all links (expected count: approximately 42). 5. For each link, assess if the link text alone conveys the destination/purpose. 6. Report success with the reason listing link names that are non-descriptive (e.g., \"click here\", \"read more\", \"link\") and total link count."
+  },
+  {
+    "url": "https://www.cmu.edu/news/stories/archives/2025/december/researchers-identify-new-target-to-fight-antibiotic-resistance",
+    "goal": "1. Navigate to first link on page using K key. 2. Note the link's accessible name and whether it's descriptive. 3. Navigate to next link using K key. 4. Continue through all links (expected count: approximately 39). 5. For each link, assess if the link text alone conveys the destination/purpose. 6. Report success with the reason listing link names that are non-descriptive (e.g., \"click here\", \"read more\", \"link\") and total link count."
+  },
+  {
+    "url": "https://www.cmu.edu/online",
+    "goal": "1. Navigate to first link on page using K key. 2. Note the link's accessible name and whether it's descriptive. 3. Navigate to next link using K key. 4. Continue through all links (expected count: approximately 34). 5. For each link, assess if the link text alone conveys the destination/purpose. 6. Report success with the reason listing link names that are non-descriptive (e.g., \"click here\", \"read more\", \"link\") and total link count."
+  },
+  {
+    "url": "https://www.cmu.edu/admission/admission",
+    "goal": "1. Navigate to first link on page using K key. 2. Note the link's accessible name and whether it's descriptive. 3. Navigate to next link using K key. 4. Continue through all links (expected count: approximately 34). 5. For each link, assess if the link text alone conveys the destination/purpose. 6. Report success with the reason listing link names that are non-descriptive (e.g., \"click here\", \"read more\", \"link\") and total link count."
+  },
+  {
+    "url": "https://www.cmu.edu/admission/majors-programs",
+    "goal": "1. Navigate to first link on page using K key. 2. Note the link's accessible name and whether it's descriptive. 3. Navigate to next link using K key. 4. Continue through all links (expected count: approximately 33). 5. For each link, assess if the link text alone conveys the destination/purpose. 6. Report success with the reason listing link names that are non-descriptive (e.g., \"click here\", \"read more\", \"link\") and total link count."
+  },
+  {
+    "url": "https://www.cmu.edu/admission/campus-experience/activities-and-engagement",
+    "goal": "1. Navigate to first link on page using K key. 2. Note the link's accessible name and whether it's descriptive. 3. Navigate to next link using K key. 4. Continue through all links (expected count: approximately 26). 5. For each link, assess if the link text alone conveys the destination/purpose. 6. Report success with the reason listing link names that are non-descriptive (e.g., \"click here\", \"read more\", \"link\") and total link count."
+  },
+  {
+    "url": "https://www.cmu.edu/125/index.html",
+    "goal": "1. Navigate to first link on page using K key. 2. Note the link's accessible name and whether it's descriptive. 3. Navigate to next link using K key. 4. Continue through all links (expected count: approximately 23). 5. For each link, assess if the link text alone conveys the destination/purpose. 6. Report success with the reason listing link names that are non-descriptive (e.g., \"click here\", \"read more\", \"link\") and total link count."
+  },
+  {
+    "url": "https://scholars.cmu.edu",
+    "goal": "1. Navigate to first link on page using K key. 2. Note the link's accessible name and whether it's descriptive. 3. Navigate to next link using K key. 4. Continue through all links (expected count: approximately 11). 5. For each link, assess if the link text alone conveys the destination/purpose. 6. Report success with the reason listing link names that are non-descriptive (e.g., \"click here\", \"read more\", \"link\") and total link count."
+  },
+  {
+    "url": "https://givenow.cmu.edu/campaigns/42524/donations/new?a=8338674",
+    "goal": "1. Navigate to first link on page using K key. 2. Note the link's accessible name and whether it's descriptive. 3. Navigate to next link using K key. 4. Continue through all links (expected count: approximately 1). 5. For each link, assess if the link text alone conveys the destination/purpose. 6. Report success with the reason listing link names that are non-descriptive (e.g., \"click here\", \"read more\", \"link\") and total link count."
+  },
+  {
+    "url": "https://cmu.edu",
+    "goal": "1. Navigate to main navigation using D key. 2. Navigate to and click target page link. 3. Verify the page loads and main content is accessible. 4. Navigate to main landmark on new page. 5. Navigate through first few elements to verify page structure. 6. Report success with the reason as the destination URL and confirmation that main content is keyboard accessible."
+  },
+  {
+    "url": "https://cmu.edu",
+    "goal": "1. Navigate to main navigation using D key. 2. Navigate to and click target page link. 3. Verify the page loads and main content is accessible. 4. Navigate to main landmark on new page. 5. Navigate through first few elements to verify page structure. 6. Report success with the reason as the destination URL and confirmation that main content is keyboard accessible."
+  },
+  {
+    "url": "https://cmu.edu",
+    "goal": "1. Navigate to main navigation using D key. 2. Navigate to and click target page link. 3. Verify the page loads and main content is accessible. 4. Navigate to main landmark on new page. 5. Navigate through first few elements to verify page structure. 6. Report success with the reason as the destination URL and confirmation that main content is keyboard accessible."
+  },
+  {
+    "url": "https://www.cmu.edu/global",
+    "goal": "1. Navigate to table using T key. 2. Navigate through table headers (th elements). 3. Navigate through first row of data cells. 4. Verify screen reader announces header associations with data cells. 5. Navigate to next row and verify header associations. 6. If multiple tables exist (found: 2), navigate to next table using T key. 7. Report success with the reason describing table structure (number of headers, rows, columns) and any missing header associations or scope attributes."
+  },
+  {
+    "url": "https://www.library.cmu.edu",
+    "goal": "1. Navigate to table using T key. 2. Navigate through table headers (th elements). 3. Navigate through first row of data cells. 4. Verify screen reader announces header associations with data cells. 5. Navigate to next row and verify header associations. 6. If multiple tables exist (found: 1), navigate to next table using T key. 7. Report success with the reason describing table structure (number of headers, rows, columns) and any missing header associations or scope attributes."
+  },
+  {
+    "url": "https://www.cmu.edu/directory-contact",
+    "goal": "1. Navigate to main landmark using D key. 2. Navigate through all elements using Arrow Down key. 3. For each interactive element encountered, note its name and role. 4. Continue until reaching the end of the page or footer. 5. Navigate back to top using Arrow Up repeatedly or page reload. 6. Report success with the reason listing total elements traversed, interactive elements found, and any elements without accessible names."
+  },
+  {
+    "url": "https://www.cmu.edu/about/rankings-and-awards",
+    "goal": "1. Navigate to main landmark using D key. 2. Navigate through all elements using Arrow Down key. 3. For each interactive element encountered, note its name and role. 4. Continue until reaching the end of the page or footer. 5. Navigate back to top using Arrow Up repeatedly or page reload. 6. Report success with the reason listing total elements traversed, interactive elements found, and any elements without accessible names."
+  },
+  {
+    "url": "https://ai.cmu.edu/research-and-policy-impact",
+    "goal": "1. Navigate to main landmark using D key. 2. Navigate through all elements using Arrow Down key. 3. For each interactive element encountered, note its name and role. 4. Continue until reaching the end of the page or footer. 5. Navigate back to top using Arrow Up repeatedly or page reload. 6. Report success with the reason listing total elements traversed, interactive elements found, and any elements without accessible names."
+  },
+  {
+    "url": "https://www.cmu.edu/strategic-framework",
+    "goal": "1. Navigate to main landmark using D key. 2. Navigate through all elements using Arrow Down key. 3. For each interactive element encountered, note its name and role. 4. Continue until reaching the end of the page or footer. 5. Navigate back to top using Arrow Up repeatedly or page reload. 6. Report success with the reason listing total elements traversed, interactive elements found, and any elements without accessible names."
+  },
+  {
+    "url": "https://www.cmu.edu/news/stories/archives/2025/may/where-research-gets-to-work",
+    "goal": "1. Navigate to main landmark using D key. 2. Navigate through all elements using Arrow Down key. 3. For each interactive element encountered, note its name and role. 4. Continue until reaching the end of the page or footer. 5. Navigate back to top using Arrow Up repeatedly or page reload. 6. Report success with the reason listing total elements traversed, interactive elements found, and any elements without accessible names."
+  },
+  {
+    "url": "https://www.cmu.edu/research-and-creativity",
+    "goal": "1. Navigate to main landmark using D key. 2. Navigate through all elements using Arrow Down key. 3. For each interactive element encountered, note its name and role. 4. Continue until reaching the end of the page or footer. 5. Navigate back to top using Arrow Up repeatedly or page reload. 6. Report success with the reason listing total elements traversed, interactive elements found, and any elements without accessible names."
+  },
+  {
+    "url": "https://www.cmu.edu/about/history",
+    "goal": "1. Navigate to main landmark using D key. 2. Navigate through all elements using Arrow Down key. 3. For each interactive element encountered, note its name and role. 4. Continue until reaching the end of the page or footer. 5. Navigate back to top using Arrow Up repeatedly or page reload. 6. Report success with the reason listing total elements traversed, interactive elements found, and any elements without accessible names."
+  },
+  {
+    "url": "https://www.cmu.edu/work-that-matters",
+    "goal": "1. Navigate to main landmark using D key. 2. Navigate through all elements using Arrow Down key. 3. For each interactive element encountered, note its name and role. 4. Continue until reaching the end of the page or footer. 5. Navigate back to top using Arrow Up repeatedly or page reload. 6. Report success with the reason listing total elements traversed, interactive elements found, and any elements without accessible names."
+  },
+  {
+    "url": "https://www.library.cmu.edu",
+    "goal": "1. Navigate to main landmark using D key. 2. Navigate through all elements using Arrow Down key. 3. For each interactive element encountered, note its name and role. 4. Continue until reaching the end of the page or footer. 5. Navigate back to top using Arrow Up repeatedly or page reload. 6. Report success with the reason listing total elements traversed, interactive elements found, and any elements without accessible names."
+  },
+  {
+    "url": "https://cmu.edu",
+    "goal": "1. Navigate to main landmark using D key. 2. Navigate through all elements using Arrow Down key. 3. For each interactive element encountered, note its name and role. 4. Continue until reaching the end of the page or footer. 5. Navigate back to top using Arrow Up repeatedly or page reload. 6. Report success with the reason listing total elements traversed, interactive elements found, and any elements without accessible names."
+  },
+  {
+    "url": "https://www.cmu.edu",
+    "goal": "1. Navigate to main landmark using D key. 2. Navigate through all elements using Arrow Down key. 3. For each interactive element encountered, note its name and role. 4. Continue until reaching the end of the page or footer. 5. Navigate back to top using Arrow Up repeatedly or page reload. 6. Report success with the reason listing total elements traversed, interactive elements found, and any elements without accessible names."
+  },
+  {
+    "url": "https://www.cmu.edu/hub/calendar",
+    "goal": "1. Navigate to main landmark using D key. 2. Navigate through all elements using Arrow Down key. 3. For each interactive element encountered, note its name and role. 4. Continue until reaching the end of the page or footer. 5. Navigate back to top using Arrow Up repeatedly or page reload. 6. Report success with the reason listing total elements traversed, interactive elements found, and any elements without accessible names."
+  },
+  {
+    "url": "https://www.cmu.edu/global",
+    "goal": "1. Navigate to main landmark using D key. 2. Navigate through all elements using Arrow Down key. 3. For each interactive element encountered, note its name and role. 4. Continue until reaching the end of the page or footer. 5. Navigate back to top using Arrow Up repeatedly or page reload. 6. Report success with the reason listing total elements traversed, interactive elements found, and any elements without accessible names."
+  },
+  {
+    "url": "https://www.cmu.edu/news/stories/archives/2025/august/cmu-celebrates-2025-fulbright-recipients",
+    "goal": "1. Navigate to main landmark using D key. 2. Navigate through all elements using Arrow Down key. 3. For each interactive element encountered, note its name and role. 4. Continue until reaching the end of the page or footer. 5. Navigate back to top using Arrow Up repeatedly or page reload. 6. Report success with the reason listing total elements traversed, interactive elements found, and any elements without accessible names."
+  },
+  {
+    "url": "https://www.cmu.edu/current-students",
+    "goal": "1. Navigate to main landmark using D key. 2. Navigate through all elements using Arrow Down key. 3. For each interactive element encountered, note its name and role. 4. Continue until reaching the end of the page or footer. 5. Navigate back to top using Arrow Up repeatedly or page reload. 6. Report success with the reason listing total elements traversed, interactive elements found, and any elements without accessible names."
+  },
+  {
+    "url": "https://www.cmu.edu/campus-life/living-in-pittsburgh",
+    "goal": "1. Navigate to main landmark using D key. 2. Navigate through all elements using Arrow Down key. 3. For each interactive element encountered, note its name and role. 4. Continue until reaching the end of the page or footer. 5. Navigate back to top using Arrow Up repeatedly or page reload. 6. Report success with the reason listing total elements traversed, interactive elements found, and any elements without accessible names."
+  },
+  {
+    "url": "https://www.cmu.edu/news/stories/archives/2025/may/cmu-undergraduates-take-on-cancer-research",
+    "goal": "1. Navigate to main landmark using D key. 2. Navigate through all elements using Arrow Down key. 3. For each interactive element encountered, note its name and role. 4. Continue until reaching the end of the page or footer. 5. Navigate back to top using Arrow Up repeatedly or page reload. 6. Report success with the reason listing total elements traversed, interactive elements found, and any elements without accessible names."
+  },
+  {
+    "url": "https://www.cmu.edu/news/stories/archives/2025/may/carnegie-mellon-professor-wins-2025-pulitzer-prize-in-history",
+    "goal": "1. Navigate to main landmark using D key. 2. Navigate through all elements using Arrow Down key. 3. For each interactive element encountered, note its name and role. 4. Continue until reaching the end of the page or footer. 5. Navigate back to top using Arrow Up repeatedly or page reload. 6. Report success with the reason listing total elements traversed, interactive elements found, and any elements without accessible names."
+  },
+  {
+    "url": "https://www.cmu.edu/housing",
+    "goal": "1. Navigate to main landmark using D key. 2. Navigate through all elements using Arrow Down key. 3. For each interactive element encountered, note its name and role. 4. Continue until reaching the end of the page or footer. 5. Navigate back to top using Arrow Up repeatedly or page reload. 6. Report success with the reason listing total elements traversed, interactive elements found, and any elements without accessible names."
+  },
+  {
+    "url": "https://www.cmu.edu/research-and-creativity/centers-and-institutes",
+    "goal": "1. Navigate to main landmark using D key. 2. Navigate through all elements using Arrow Down key. 3. For each interactive element encountered, note its name and role. 4. Continue until reaching the end of the page or footer. 5. Navigate back to top using Arrow Up repeatedly or page reload. 6. Report success with the reason listing total elements traversed, interactive elements found, and any elements without accessible names."
+  },
+  {
+    "url": "https://www.cmu.edu/about",
+    "goal": "1. Navigate to main landmark using D key. 2. Navigate through all elements using Arrow Down key. 3. For each interactive element encountered, note its name and role. 4. Continue until reaching the end of the page or footer. 5. Navigate back to top using Arrow Up repeatedly or page reload. 6. Report success with the reason listing total elements traversed, interactive elements found, and any elements without accessible names."
+  },
+  {
+    "url": "https://www.cmu.edu/news/stories/archives/2025/september/carnegie-mellon-named-a-top-20-us-university",
+    "goal": "1. Navigate to main landmark using D key. 2. Navigate through all elements using Arrow Down key. 3. For each interactive element encountered, note its name and role. 4. Continue until reaching the end of the page or footer. 5. Navigate back to top using Arrow Up repeatedly or page reload. 6. Report success with the reason listing total elements traversed, interactive elements found, and any elements without accessible names."
+  },
+  {
+    "url": "https://www.cmu.edu/uro",
+    "goal": "1. Navigate to main landmark using D key. 2. Navigate through all elements using Arrow Down key. 3. For each interactive element encountered, note its name and role. 4. Continue until reaching the end of the page or footer. 5. Navigate back to top using Arrow Up repeatedly or page reload. 6. Report success with the reason listing total elements traversed, interactive elements found, and any elements without accessible names."
+  },
+  {
+    "url": "https://www.cmu.edu/faculty-staff",
+    "goal": "1. Navigate to main landmark using D key. 2. Navigate through all elements using Arrow Down key. 3. For each interactive element encountered, note its name and role. 4. Continue until reaching the end of the page or footer. 5. Navigate back to top using Arrow Up repeatedly or page reload. 6. Report success with the reason listing total elements traversed, interactive elements found, and any elements without accessible names."
+  },
+  {
+    "url": "https://www.cmu.edu/about/traditions",
+    "goal": "1. Navigate to main landmark using D key. 2. Navigate through all elements using Arrow Down key. 3. For each interactive element encountered, note its name and role. 4. Continue until reaching the end of the page or footer. 5. Navigate back to top using Arrow Up repeatedly or page reload. 6. Report success with the reason listing total elements traversed, interactive elements found, and any elements without accessible names."
+  },
+  {
+    "url": "https://www.cmu.edu/student-admission/access-affordability",
+    "goal": "1. Navigate to main landmark using D key. 2. Navigate through all elements using Arrow Down key. 3. For each interactive element encountered, note its name and role. 4. Continue until reaching the end of the page or footer. 5. Navigate back to top using Arrow Up repeatedly or page reload. 6. Report success with the reason listing total elements traversed, interactive elements found, and any elements without accessible names."
+  },
+  {
+    "url": "https://www.cmu.edu/visit",
+    "goal": "1. Navigate to main landmark using D key. 2. Navigate through all elements using Arrow Down key. 3. For each interactive element encountered, note its name and role. 4. Continue until reaching the end of the page or footer. 5. Navigate back to top using Arrow Up repeatedly or page reload. 6. Report success with the reason listing total elements traversed, interactive elements found, and any elements without accessible names."
+  },
+  {
+    "url": "https://www.cmu.edu/news/stories/archives/2025/december/researchers-identify-new-target-to-fight-antibiotic-resistance",
+    "goal": "1. Navigate to main landmark using D key. 2. Navigate through all elements using Arrow Down key. 3. For each interactive element encountered, note its name and role. 4. Continue until reaching the end of the page or footer. 5. Navigate back to top using Arrow Up repeatedly or page reload. 6. Report success with the reason listing total elements traversed, interactive elements found, and any elements without accessible names."
+  },
+  {
+    "url": "https://www.cmu.edu/online",
+    "goal": "1. Navigate to main landmark using D key. 2. Navigate through all elements using Arrow Down key. 3. For each interactive element encountered, note its name and role. 4. Continue until reaching the end of the page or footer. 5. Navigate back to top using Arrow Up repeatedly or page reload. 6. Report success with the reason listing total elements traversed, interactive elements found, and any elements without accessible names."
+  },
+  {
+    "url": "https://www.cmu.edu/leadership",
+    "goal": "1. Navigate to main landmark using D key. 2. Navigate through all elements using Arrow Down key. 3. For each interactive element encountered, note its name and role. 4. Continue until reaching the end of the page or footer. 5. Navigate back to top using Arrow Up repeatedly or page reload. 6. Report success with the reason listing total elements traversed, interactive elements found, and any elements without accessible names."
+  },
+  {
+    "url": "https://www.cmu.edu/academics/learning-for-a-lifetime",
+    "goal": "1. Navigate to main landmark using D key. 2. Navigate through all elements using Arrow Down key. 3. For each interactive element encountered, note its name and role. 4. Continue until reaching the end of the page or footer. 5. Navigate back to top using Arrow Up repeatedly or page reload. 6. Report success with the reason listing total elements traversed, interactive elements found, and any elements without accessible names."
+  },
+  {
+    "url": "https://www.cmu.edu/engage/alumni",
+    "goal": "1. Navigate to main landmark using D key. 2. Navigate through all elements using Arrow Down key. 3. For each interactive element encountered, note its name and role. 4. Continue until reaching the end of the page or footer. 5. Navigate back to top using Arrow Up repeatedly or page reload. 6. Report success with the reason listing total elements traversed, interactive elements found, and any elements without accessible names."
+  },
+  {
+    "url": "https://www.cmu.edu/about/vision-mission-values",
+    "goal": "1. Navigate to main landmark using D key. 2. Navigate through all elements using Arrow Down key. 3. For each interactive element encountered, note its name and role. 4. Continue until reaching the end of the page or footer. 5. Navigate back to top using Arrow Up repeatedly or page reload. 6. Report success with the reason listing total elements traversed, interactive elements found, and any elements without accessible names."
+  },
+  {
+    "url": "https://www.cmu.edu/student-admission",
+    "goal": "1. Navigate to main landmark using D key. 2. Navigate through all elements using Arrow Down key. 3. For each interactive element encountered, note its name and role. 4. Continue until reaching the end of the page or footer. 5. Navigate back to top using Arrow Up repeatedly or page reload. 6. Report success with the reason listing total elements traversed, interactive elements found, and any elements without accessible names."
+  },
+  {
+    "url": "https://www.cmu.edu/academics",
+    "goal": "1. Navigate to main landmark using D key. 2. Navigate through all elements using Arrow Down key. 3. For each interactive element encountered, note its name and role. 4. Continue until reaching the end of the page or footer. 5. Navigate back to top using Arrow Up repeatedly or page reload. 6. Report success with the reason listing total elements traversed, interactive elements found, and any elements without accessible names."
+  },
+  {
+    "url": "https://www.cmu.edu/campus-life",
+    "goal": "1. Navigate to main landmark using D key. 2. Navigate through all elements using Arrow Down key. 3. For each interactive element encountered, note its name and role. 4. Continue until reaching the end of the page or footer. 5. Navigate back to top using Arrow Up repeatedly or page reload. 6. Report success with the reason listing total elements traversed, interactive elements found, and any elements without accessible names."
+  },
+  {
+    "url": "https://www.cmu.edu/graduate/prospective/index.html",
+    "goal": "1. Navigate to main landmark using D key. 2. Navigate through all elements using Arrow Down key. 3. For each interactive element encountered, note its name and role. 4. Continue until reaching the end of the page or footer. 5. Navigate back to top using Arrow Up repeatedly or page reload. 6. Report success with the reason listing total elements traversed, interactive elements found, and any elements without accessible names."
+  },
+  {
+    "url": "https://www.cmu.edu/academics/continuing-education",
+    "goal": "1. Navigate to main landmark using D key. 2. Navigate through all elements using Arrow Down key. 3. For each interactive element encountered, note its name and role. 4. Continue until reaching the end of the page or footer. 5. Navigate back to top using Arrow Up repeatedly or page reload. 6. Report success with the reason listing total elements traversed, interactive elements found, and any elements without accessible names."
+  },
+  {
+    "url": "https://www.cmu.edu/student-affairs",
+    "goal": "1. Navigate to main landmark using D key. 2. Navigate through all elements using Arrow Down key. 3. For each interactive element encountered, note its name and role. 4. Continue until reaching the end of the page or footer. 5. Navigate back to top using Arrow Up repeatedly or page reload. 6. Report success with the reason listing total elements traversed, interactive elements found, and any elements without accessible names."
+  },
+  {
+    "url": "https://www.cmu.edu/academics/interdisciplinary-programs",
+    "goal": "1. Navigate to main landmark using D key. 2. Navigate through all elements using Arrow Down key. 3. For each interactive element encountered, note its name and role. 4. Continue until reaching the end of the page or footer. 5. Navigate back to top using Arrow Up repeatedly or page reload. 6. Report success with the reason listing total elements traversed, interactive elements found, and any elements without accessible names."
+  },
+  {
+    "url": "https://www.cmu.edu/admission",
+    "goal": "1. Navigate to main landmark using D key. 2. Navigate through all elements using Arrow Down key. 3. For each interactive element encountered, note its name and role. 4. Continue until reaching the end of the page or footer. 5. Navigate back to top using Arrow Up repeatedly or page reload. 6. Report success with the reason listing total elements traversed, interactive elements found, and any elements without accessible names."
+  },
+  {
+    "url": "https://www.cmu.edu/career/outcomes/post-grad-dashboard.html",
+    "goal": "1. Navigate to main landmark using D key. 2. Navigate through all elements using Arrow Down key. 3. For each interactive element encountered, note its name and role. 4. Continue until reaching the end of the page or footer. 5. Navigate back to top using Arrow Up repeatedly or page reload. 6. Report success with the reason listing total elements traversed, interactive elements found, and any elements without accessible names."
+  },
+  {
+    "url": "https://www.cmu.edu/admission/admission",
+    "goal": "1. Navigate to main landmark using D key. 2. Navigate through all elements using Arrow Down key. 3. For each interactive element encountered, note its name and role. 4. Continue until reaching the end of the page or footer. 5. Navigate back to top using Arrow Up repeatedly or page reload. 6. Report success with the reason listing total elements traversed, interactive elements found, and any elements without accessible names."
+  },
+  {
+    "url": "https://www.cmu.edu/admission/campus-experience/activities-and-engagement",
+    "goal": "1. Navigate to main landmark using D key. 2. Navigate through all elements using Arrow Down key. 3. For each interactive element encountered, note its name and role. 4. Continue until reaching the end of the page or footer. 5. Navigate back to top using Arrow Up repeatedly or page reload. 6. Report success with the reason listing total elements traversed, interactive elements found, and any elements without accessible names."
+  },
+  {
+    "url": "https://www.cmu.edu/pre-college",
+    "goal": "1. Navigate to main landmark using D key. 2. Navigate through all elements using Arrow Down key. 3. For each interactive element encountered, note its name and role. 4. Continue until reaching the end of the page or footer. 5. Navigate back to top using Arrow Up repeatedly or page reload. 6. Report success with the reason listing total elements traversed, interactive elements found, and any elements without accessible names."
+  },
+  {
+    "url": "https://www.cmu.edu/admission/majors-programs",
+    "goal": "1. Navigate to main landmark using D key. 2. Navigate through all elements using Arrow Down key. 3. For each interactive element encountered, note its name and role. 4. Continue until reaching the end of the page or footer. 5. Navigate back to top using Arrow Up repeatedly or page reload. 6. Report success with the reason listing total elements traversed, interactive elements found, and any elements without accessible names."
+  },
+  {
+    "url": "https://www.cmu.edu/125/index.html",
+    "goal": "1. Navigate to main landmark using D key. 2. Navigate through all elements using Arrow Down key. 3. For each interactive element encountered, note its name and role. 4. Continue until reaching the end of the page or footer. 5. Navigate back to top using Arrow Up repeatedly or page reload. 6. Report success with the reason listing total elements traversed, interactive elements found, and any elements without accessible names."
+  },
+  {
+    "url": "https://athletics.cmu.edu/landing/index",
+    "goal": "1. Navigate to main landmark using D key. 2. Navigate through all elements using Arrow Down key. 3. For each interactive element encountered, note its name and role. 4. Continue until reaching the end of the page or footer. 5. Navigate back to top using Arrow Up repeatedly or page reload. 6. Report success with the reason listing total elements traversed, interactive elements found, and any elements without accessible names."
+  },
+  {
+    "url": "https://scholars.cmu.edu",
+    "goal": "1. Navigate to main landmark using D key. 2. Navigate through all elements using Arrow Down key. 3. For each interactive element encountered, note its name and role. 4. Continue until reaching the end of the page or footer. 5. Navigate back to top using Arrow Up repeatedly or page reload. 6. Report success with the reason listing total elements traversed, interactive elements found, and any elements without accessible names."
+  },
+  {
+    "url": "https://givenow.cmu.edu/campaigns/42524/donations/new?a=8338674",
+    "goal": "1. Navigate to main landmark using D key. 2. Navigate through all elements using Arrow Down key. 3. For each interactive element encountered, note its name and role. 4. Continue until reaching the end of the page or footer. 5. Navigate back to top using Arrow Up repeatedly or page reload. 6. Report success with the reason listing total elements traversed, interactive elements found, and any elements without accessible names."
+  }
+]
