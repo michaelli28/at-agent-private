@@ -1,0 +1,27 @@
+load("//tools:ts_project.bzl", "ts_project")
+
+package(default_visibility = ["//visibility:public"])
+
+ts_project(
+    name = "virtual-screen-reader",
+    deps = [
+        "//packages/drivers",
+        "@npm//playwright",
+        "@npm//ws",
+    ],
+)
+
+# UI assets
+filegroup(
+    name = "ui_assets",
+    srcs = glob(["UI/**/*"]),
+)
+
+# Documentation
+filegroup(
+    name = "docs",
+    srcs = [
+        "README.md",
+        "Common Uses.md",
+    ],
+)

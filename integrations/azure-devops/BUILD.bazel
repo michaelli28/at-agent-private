@@ -1,0 +1,52 @@
+load("//tools:ts_project.bzl", "ts_project")
+load("@aspect_rules_js//js:defs.bzl", "js_run_binary")
+
+package(default_visibility = ["//visibility:public"])
+
+# Azure DevOps extension task
+ts_project(
+    name = "accessibility_agent_task",
+    srcs = glob(["tasks/accessibility-agent/src/**/*.ts"]),
+    deps = [
+        "//apps/agent",
+        "@npm//azure-pipelines-task-lib",
+    ],
+)
+
+# Package extension using tfx-cli
+# This creates the .vsix file for Azure DevOps marketplace
+js_run_binary(
+    name = "package",
+    srcs = [
+        "vss-extension.json",
+        "overview.md",
+        "package.json",
+        ":accessibility_agent_task",
+    ] + glob([
+        "images/**/*",
+        "tasks/**/*.json",
+    ]),
+    outs = ["at-agent.vsix"],
+    args = [
+        "extension",
+        "create",
+        "--manifest-globs",
+        "vss-extension.json",
+    ],
+    chdir = package_name(),
+    tool = "@npm//tfx-cli/bin:tfx",
+)
+
+# Documentation and assets
+filegroup(
+    name = "docs",
+    srcs = [
+        "README.md",
+        "overview.md",
+    ],
+)
+
+filegroup(
+    name = "images",
+    srcs = glob(["images/**/*"]),
+)

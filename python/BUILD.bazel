@@ -1,0 +1,4 @@
+# Python packages
+# Python code with its own toolchain
+
+package(default_visibility = ["//visibility:public"])

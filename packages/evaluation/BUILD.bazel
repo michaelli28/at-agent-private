@@ -1,0 +1,11 @@
+load("//tools:ts_project.bzl", "ts_project")
+
+package(default_visibility = ["//visibility:public"])
+
+ts_project(
+    name = "evaluation",
+    deps = [
+        "//packages/shared",
+        "//packages/drivers",
+    ],
+)

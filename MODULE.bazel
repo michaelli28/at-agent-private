@@ -1,0 +1,63 @@
+module(
+    name = "at_agent",
+    version = "0.0.1",
+)
+
+# Core Bazel dependencies
+bazel_dep(name = "bazel_skylib", version = "1.5.0")
+bazel_dep(name = "platforms", version = "0.0.8")
+
+# JavaScript/TypeScript rules
+bazel_dep(name = "aspect_rules_js", version = "1.42.3")
+bazel_dep(name = "aspect_rules_ts", version = "2.4.2")
+bazel_dep(name = "aspect_rules_esbuild", version = "0.21.0")
+bazel_dep(name = "rules_nodejs", version = "6.2.0")
+
+# Java rules (for Jenkins plugin)
+bazel_dep(name = "rules_java", version = "7.6.5")
+bazel_dep(name = "rules_jvm_external", version = "6.1")
+
+# Python rules (for discovery-agent)
+bazel_dep(name = "rules_python", version = "0.33.2")
+
+# Docker/OCI rules (for container builds)
+bazel_dep(name = "rules_oci", version = "1.7.6")
+bazel_dep(name = "rules_pkg", version = "0.10.1")
+
+# npm setup
+npm = use_extension("@aspect_rules_js//npm:extensions.bzl", "npm", dev_dependency = True)
+npm.npm_translate_lock(
+    name = "npm",
+    pnpm_lock = "//:pnpm-lock.yaml",
+    verify_node_modules_ignored = "//:.bazelignore",
+)
+use_repo(npm, "npm")
+
+# Python pip setup
+python = use_extension("@rules_python//python:extensions.bzl", "python")
+python.toolchain(
+    python_version = "3.11",
+)
+
+pip = use_extension("@rules_python//python/extensions:pip.bzl", "pip")
+pip.parse(
+    hub_name = "pip",
+    python_version = "3.11",
+    requirements_lock = "//python:requirements_lock.txt",
+)
+use_repo(pip, "pip")
+
+# Maven setup for Java dependencies
+maven = use_extension("@rules_jvm_external//:extensions.bzl", "maven")
+maven.install(
+    name = "maven",
+    artifacts = [
+        "org.jenkins-ci.main:jenkins-core:2.516",
+        "org.jenkins-ci.plugins:structs:338.v848422169819",
+    ],
+    repositories = [
+        "https://repo.jenkins-ci.org/public/",
+        "https://repo1.maven.org/maven2",
+    ],
+)
+use_repo(maven, "maven")

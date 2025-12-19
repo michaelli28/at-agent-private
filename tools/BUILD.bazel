@@ -1,0 +1,9 @@
+# Build tools and macros
+# This package contains shared build rules and utilities
+
+package(default_visibility = ["//visibility:public"])
+
+exports_files([
+    "ts_project.bzl",
+    "esbuild.bzl",
+])

@@ -1,0 +1,48 @@
+load("//tools:ts_project.bzl", "ts_project")
+load("@aspect_rules_js//js:defs.bzl", "js_binary")
+
+package(default_visibility = ["//visibility:public"])
+
+ts_project(
+    name = "ui_lib",
+    srcs = [
+        "server.ts",
+        "debug-server.ts",
+    ] + glob(["src/**/*.ts", "src/**/*.tsx"]),
+    deps = [
+        "//packages/drivers",
+        "//apps/agent",
+        "//apps/virtual-screen-reader",
+        "@npm//express",
+        "@npm//ws",
+        "@npm//dotenv",
+    ],
+)
+
+js_binary(
+    name = "server",
+    entry_point = "server.ts",
+    data = [
+        ":ui_lib",
+        ":public",
+    ],
+)
+
+js_binary(
+    name = "debug_server",
+    entry_point = "debug-server.ts",
+    data = [
+        ":ui_lib",
+        ":debug_public",
+    ],
+)
+
+filegroup(
+    name = "public",
+    srcs = glob(["public/**/*"]),
+)
+
+filegroup(
+    name = "debug_public",
+    srcs = glob(["debug-public/**/*"]),
+)

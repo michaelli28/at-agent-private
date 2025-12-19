@@ -1,0 +1,20 @@
+load("@rules_python//python:defs.bzl", "py_binary", "py_library")
+
+package(default_visibility = ["//visibility:public"])
+
+py_binary(
+    name = "discover",
+    srcs = ["discover.py"],
+    main = "discover.py",
+    deps = [
+        "@pip//deepagents",
+        "@pip//langchain_openai",
+        "@pip//python_dotenv",
+    ],
+)
+
+# Documentation
+filegroup(
+    name = "docs",
+    srcs = ["README.md"],
+)

@@ -1,0 +1,31 @@
+load("//tools:ts_project.bzl", "ts_project")
+
+package(default_visibility = ["//visibility:public"])
+
+ts_project(
+    name = "agent",
+    deps = [
+        "//packages/evaluation",
+        "//apps/virtual-screen-reader",
+        "@npm//@langchain/core",
+        "@npm//@langchain/openai",
+        "@npm//@langchain/google-genai",
+        "@npm//@langchain/langgraph",
+        "@npm//playwright",
+        "@npm//zod",
+        "@npm//ws",
+        "@npm//groq-sdk",
+    ],
+)
+
+# Prompt files
+filegroup(
+    name = "prompts",
+    srcs = glob(["*.txt"]),
+)
+
+# Benchmark data
+filegroup(
+    name = "benchmarks",
+    srcs = glob(["benchmarks/**/*"]),
+)

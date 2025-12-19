@@ -1,0 +1,64 @@
+load("@rules_oci//oci:defs.bzl", "oci_image", "oci_push", "oci_tarball")
+load("@rules_pkg//pkg:tar.bzl", "pkg_tar")
+
+package(default_visibility = ["//visibility:public"])
+
+# Package application files
+pkg_tar(
+    name = "app_tar",
+    srcs = [
+        "//apps/agent",
+        "//apps/ui",
+        "//packages/drivers",
+        "//packages/evaluation",
+        "//packages/shared",
+    ],
+    package_dir = "/app",
+)
+
+# Package scripts
+pkg_tar(
+    name = "scripts_tar",
+    srcs = [
+        "start.sh",
+        "supervisord.conf",
+    ],
+    package_dir = "/app",
+)
+
+# Main application Docker image
+oci_image(
+    name = "at_agent_image",
+    base = "@node_20",
+    entrypoint = ["/app/start.sh"],
+    tars = [
+        ":app_tar",
+        ":scripts_tar",
+    ],
+)
+
+# Export as tarball for local testing
+oci_tarball(
+    name = "at_agent_tarball",
+    image = ":at_agent_image",
+    repo_tags = ["at-agent:latest"],
+)
+
+# Push to registry
+oci_push(
+    name = "push",
+    image = ":at_agent_image",
+    repository = "ghcr.io/at-agent/at-agent",
+)
+
+# Docker Compose for local development
+filegroup(
+    name = "compose",
+    srcs = ["docker-compose.yml"],
+)
+
+# Dockerfile (for reference/fallback)
+filegroup(
+    name = "dockerfile",
+    srcs = ["Dockerfile"],
+)

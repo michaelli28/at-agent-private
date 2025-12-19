@@ -1,0 +1,45 @@
+# Third-party dependency declarations
+# This package centralizes external dependency management
+
+package(default_visibility = ["//visibility:public"])
+
+# Re-export commonly used npm packages for convenience
+alias(
+    name = "playwright",
+    actual = "@npm//:playwright",
+)
+
+alias(
+    name = "langchain_core",
+    actual = "@npm//:@langchain/core",
+)
+
+alias(
+    name = "langchain_openai",
+    actual = "@npm//:@langchain/openai",
+)
+
+alias(
+    name = "openai",
+    actual = "@npm//:openai",
+)
+
+alias(
+    name = "axe_core",
+    actual = "@npm//:axe-core",
+)
+
+alias(
+    name = "zod",
+    actual = "@npm//:zod",
+)
+
+alias(
+    name = "dotenv",
+    actual = "@npm//:dotenv",
+)
+
+alias(
+    name = "typescript",
+    actual = "@npm//:typescript",
+)

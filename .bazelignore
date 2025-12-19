@@ -1,0 +1,33 @@
+# Node modules
+node_modules
+
+# Build outputs
+dist
+.next
+out
+build
+target
+
+# IDE and editor
+.idea
+.vscode
+*.swp
+*.swo
+
+# Environment files
+.env
+.env.*
+
+# Test outputs
+test-results
+playwright-report
+coverage
+
+# Temporary files
+.cache
+.turbo
+*.log
+
+# OS files
+.DS_Store
+Thumbs.db

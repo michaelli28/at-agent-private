@@ -1,0 +1,4 @@
+# Deployable applications
+# These are standalone applications that can be built and deployed
+
+package(default_visibility = ["//visibility:public"])
