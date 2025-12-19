@@ -1,9 +1,6 @@
-load("//tools:ts_project.bzl", "ts_project")
-
 package(default_visibility = ["//visibility:public"])
 
-ts_project(
+filegroup(
     name = "shared",
-    srcs = ["types.ts"],
-    deps = [],
+    srcs = glob(["**/*.ts"]),
 )

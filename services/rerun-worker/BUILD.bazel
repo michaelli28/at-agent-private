@@ -1,18 +1,6 @@
-load("//tools:ts_project.bzl", "ts_project")
-load("@aspect_rules_js//js:defs.bzl", "js_binary")
-
 package(default_visibility = ["//visibility:public"])
 
-ts_project(
-    name = "rerun_worker_lib",
-    deps = [
-        "@npm//firebase-admin",
-        "@npm//dotenv",
-    ],
-)
-
-js_binary(
-    name = "worker",
-    entry_point = "src/worker.ts",
-    data = [":rerun_worker_lib"],
+filegroup(
+    name = "rerun-worker",
+    srcs = glob(["**/*.ts"]),
 )

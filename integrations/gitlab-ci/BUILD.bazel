@@ -1,6 +1,3 @@
-load("@rules_oci//oci:defs.bzl", "oci_image", "oci_push")
-load("@rules_pkg//pkg:tar.bzl", "pkg_tar")
-
 package(default_visibility = ["//visibility:public"])
 
 # GitLab CI template files
@@ -12,28 +9,16 @@ filegroup(
 # Example configurations
 filegroup(
     name = "examples",
-    srcs = glob(["examples/**/*"]),
+    srcs = glob(
+        ["examples/**/*"],
+        allow_empty = True,
+    ),
 )
 
 # Scripts
 filegroup(
     name = "scripts",
     srcs = ["entrypoint.sh"],
-)
-
-# Package scripts into tar for Docker image
-pkg_tar(
-    name = "scripts_tar",
-    srcs = [":scripts"],
-    package_dir = "/app",
-)
-
-# Docker image for GitLab CI runner
-oci_image(
-    name = "gitlab_runner_image",
-    base = "@node_20",
-    entrypoint = ["/app/entrypoint.sh"],
-    tars = [":scripts_tar"],
 )
 
 # Documentation

@@ -2,8 +2,8 @@ import 'dotenv/config';
 import * as fs from 'fs';
 import * as path from 'path';
 import { BrowserClient, ScreenReaderDriver } from '@adf/virtual-screen-reader';
-import { AgentOpenrouter } from '../agent/src/AgentOpenrouter';
-import { AgentStep } from '../agent/src/types';
+import { AgentOpenrouter } from '@adf/agent/AgentOpenrouter';
+import { AgentStep } from '@adf/agent/types';
 
 // --- Configuration ---
 

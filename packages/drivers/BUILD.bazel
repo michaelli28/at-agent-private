@@ -1,19 +1,6 @@
-load("//tools:ts_project.bzl", "ts_project")
-load("//tools:esbuild.bzl", "browser_bundle")
-
 package(default_visibility = ["//visibility:public"])
 
-ts_project(
+filegroup(
     name = "drivers",
-    deps = [
-        "//packages/shared",
-        "@npm//dom-accessibility-api",
-    ],
-)
-
-# Browser-injected script bundle
-browser_bundle(
-    name = "injected",
-    entry_point = "src/injected/index.ts",
-    deps = [":drivers"],
+    srcs = glob(["**/*.ts"]),
 )

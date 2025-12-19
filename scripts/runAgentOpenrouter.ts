@@ -1,7 +1,7 @@
 import 'dotenv/config';
 import { BrowserClient, ScreenReaderDriver } from '@adf/virtual-screen-reader';
-import { AgentOpenrouter, NavigationMode } from '../agent/src/AgentOpenrouter';
-import { AgentStep } from '../agent/src/types';
+import { AgentOpenrouter, NavigationMode } from '@adf/agent/AgentOpenrouter';
+import { AgentStep } from '@adf/agent/types';
 
 // Simple ANSI color codes for cleaner output
 const colors = {

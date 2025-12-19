@@ -1,4 +1,2 @@
 # Shared library packages
-# These are internal libraries imported by apps and services
-
 package(default_visibility = ["//visibility:public"])

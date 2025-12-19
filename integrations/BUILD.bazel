@@ -1,4 +1,2 @@
 # CI/CD platform integrations
-# Plugins and extensions for various CI/CD systems
-
 package(default_visibility = ["//visibility:public"])

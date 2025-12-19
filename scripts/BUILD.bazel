@@ -1,66 +1,9 @@
-load("//tools:ts_project.bzl", "ts_project")
-load("//tools:esbuild.bzl", "esbuild_bundle")
-load("@aspect_rules_js//js:defs.bzl", "js_binary")
-
 package(default_visibility = ["//visibility:public"])
 
-# All script sources
-ts_project(
-    name = "scripts_lib",
+# Scripts - run with tsx directly
+# Run: pnpm start:agent
+
+filegroup(
+    name = "scripts",
     srcs = glob(["*.ts"]),
-    deps = [
-        "//apps/agent",
-        "//apps/ui",
-        "//apps/virtual-screen-reader",
-        "//packages/drivers",
-        "//packages/evaluation",
-        "@npm//playwright",
-        "@npm//dotenv",
-        "@npm//chalk",
-        "@npm//ora",
-    ],
-)
-
-# CLI binary bundle
-esbuild_bundle(
-    name = "cli",
-    entry_point = "runAgentCli.ts",
-    deps = [":scripts_lib"],
-)
-
-# Individual script binaries
-js_binary(
-    name = "run_agent",
-    entry_point = "runAgent.ts",
-    data = [":scripts_lib"],
-)
-
-js_binary(
-    name = "run_agent_cli",
-    entry_point = "runAgentCli.ts",
-    data = [":scripts_lib"],
-)
-
-js_binary(
-    name = "audit_dom",
-    entry_point = "auditDOM.ts",
-    data = [":scripts_lib"],
-)
-
-js_binary(
-    name = "audit_visual",
-    entry_point = "auditVisual.ts",
-    data = [":scripts_lib"],
-)
-
-js_binary(
-    name = "audit_media",
-    entry_point = "auditMedia.ts",
-    data = [":scripts_lib"],
-)
-
-js_binary(
-    name = "benchmark_aria_at",
-    entry_point = "benchmarkAriaAt.ts",
-    data = [":scripts_lib"],
 )

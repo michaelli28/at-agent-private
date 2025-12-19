@@ -1,20 +1,9 @@
-load("//tools:ts_project.bzl", "ts_project")
-
 package(default_visibility = ["//visibility:public"])
 
-# GitHub Action
-ts_project(
-    name = "accessibility_agent_action",
-    srcs = glob(["accessibility-agent/**/*.ts"]),
-    deps = [
-        "//apps/agent",
-        "@npm//@actions/core",
-        "@npm//@actions/github",
-    ],
-)
-
-# Action metadata
 filegroup(
-    name = "action_metadata",
-    srcs = glob(["accessibility-agent/action.yml"]),
+    name = "action",
+    srcs = glob(
+        ["**/*"],
+        allow_empty = True,
+    ),
 )

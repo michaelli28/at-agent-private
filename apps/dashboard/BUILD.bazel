@@ -1,63 +1,21 @@
-load("@aspect_rules_js//js:defs.bzl", "js_run_binary")
-
 package(default_visibility = ["//visibility:public"])
 
-# Next.js build
-js_run_binary(
-    name = "build",
-    srcs = glob([
-        "src/**/*.ts",
-        "src/**/*.tsx",
-        "src/**/*.css",
-        "public/**/*",
-    ]) + [
-        "next.config.js",
-        "postcss.config.js",
-        "tailwind.config.js",
-        "tsconfig.json",
-        "package.json",
-    ],
-    outs = [".next"],
-    args = ["build"],
-    chdir = package_name(),
-    tool = "@npm//next/bin:next",
-)
+# Next.js app - build with pnpm directly
+# bazel build not recommended for Next.js apps
 
-# Development server (for local use)
-js_run_binary(
-    name = "dev",
-    srcs = glob([
-        "src/**/*.ts",
-        "src/**/*.tsx",
-        "src/**/*.css",
-        "public/**/*",
-    ]) + [
-        "next.config.js",
-        "postcss.config.js",
-        "tailwind.config.js",
-        "tsconfig.json",
-        "package.json",
-    ],
-    args = ["dev"],
-    chdir = package_name(),
-    tool = "@npm//next/bin:next",
-    tags = ["ibazel_notify_changes"],
-)
-
-# Static files
 filegroup(
-    name = "public_assets",
-    srcs = glob(["public/**/*"]),
+    name = "sources",
+    srcs = glob([
+        "src/**/*",
+        "public/**/*",
+    ]),
 )
 
-# Config files
 filegroup(
     name = "configs",
     srcs = [
         "next.config.js",
-        "postcss.config.js",
-        "tailwind.config.js",
+        "package.json",
         "tsconfig.json",
-        "vercel.json",
     ],
 )

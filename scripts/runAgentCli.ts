@@ -17,9 +17,9 @@
 
 import 'dotenv/config';
 import { BrowserClient, ScreenReaderDriver } from '@adf/virtual-screen-reader';
-import { Agent } from '../agent/src/Agent';
-import { buildOpenAIModel } from '../agent/src/OpenAIClient';
-import { buildGeminiModel } from '../agent/src/GeminiClient';
+import { Agent } from '@adf/agent/Agent';
+import { buildOpenAIModel } from '@adf/agent/OpenAIClient';
+import { buildGeminiModel } from '@adf/agent/GeminiClient';
 
 interface CliResult {
     url: string;

@@ -1,9 +1,0 @@
-# Requirements lock file for Bazel pip integration
-# Generated from discovery-agent/requirements.txt
-
-deepagents>=0.2.0
-langchain-openai>=0.3.0
-python-dotenv>=1.0.0
-
-# Transitive dependencies (to be filled by pip-compile)
-# Run: pip-compile --generate-hashes requirements.txt -o requirements_lock.txt

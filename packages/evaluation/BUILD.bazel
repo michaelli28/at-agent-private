@@ -1,11 +1,6 @@
-load("//tools:ts_project.bzl", "ts_project")
-
 package(default_visibility = ["//visibility:public"])
 
-ts_project(
+filegroup(
     name = "evaluation",
-    deps = [
-        "//packages/shared",
-        "//packages/drivers",
-    ],
+    srcs = glob(["**/*.ts"]),
 )

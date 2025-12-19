@@ -1,20 +1,12 @@
-load("@rules_python//python:defs.bzl", "py_binary", "py_library")
-
 package(default_visibility = ["//visibility:public"])
 
-py_binary(
-    name = "discover",
-    srcs = ["discover.py"],
-    main = "discover.py",
-    deps = [
-        "@pip//deepagents",
-        "@pip//langchain_openai",
-        "@pip//python_dotenv",
-    ],
-)
+# Python discovery agent - run with Python directly
+# Run: cd python/discovery-agent && python discover.py
 
-# Documentation
 filegroup(
-    name = "docs",
-    srcs = ["README.md"],
+    name = "sources",
+    srcs = [
+        "discover.py",
+        "requirements.txt",
+    ],
 )

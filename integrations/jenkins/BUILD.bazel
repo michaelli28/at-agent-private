@@ -1,41 +1,17 @@
-load("@rules_java//java:defs.bzl", "java_library", "java_plugin", "java_test")
-
 package(default_visibility = ["//visibility:public"])
 
-java_library(
-    name = "accessibility_agent_plugin",
-    srcs = glob(["src/main/java/**/*.java"]),
-    resources = glob(["src/main/resources/**/*"]),
-    deps = [
-        "@maven//:org_jenkins_ci_main_jenkins_core",
-        "@maven//:org_jenkins_ci_plugins_credentials",
-        "@maven//:org_jenkins_ci_plugins_plain_credentials",
-        "@maven//:com_google_code_gson_gson",
-    ],
-)
+# Jenkins plugin - build with Maven directly
+# Run: cd integrations/jenkins && ./mvnw package
 
-java_test(
-    name = "plugin_tests",
-    srcs = glob(["src/test/java/**/*.java"]),
-    deps = [
-        ":accessibility_agent_plugin",
-        "@maven//:org_jenkins_ci_plugins_workflow_workflow_basic_steps",
-        "@maven//:org_jenkins_ci_plugins_workflow_workflow_cps",
-        "@maven//:org_jenkins_ci_plugins_workflow_workflow_job",
-    ],
-)
-
-# Package as HPI (Jenkins plugin format)
-# Note: For actual HPI packaging, you may need a custom rule or use Maven
 filegroup(
-    name = "plugin_resources",
-    srcs = glob([
-        "src/main/resources/**/*",
-        "src/main/webapp/**/*",
-    ]),
+    name = "sources",
+    srcs = glob(
+        ["src/**/*"],
+        allow_empty = True,
+    ),
 )
 
 filegroup(
-    name = "examples",
-    srcs = glob(["examples/**/*"]),
+    name = "config",
+    srcs = ["pom.xml"],
 )

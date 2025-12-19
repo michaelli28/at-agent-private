@@ -2,7 +2,7 @@
 common --enable_bzlmod
 
 # Build settings
-build --experimental_remote_cache_compression
+build --remote_cache_compression
 build --jobs=auto
 
 # TypeScript settings

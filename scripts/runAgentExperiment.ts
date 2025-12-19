@@ -1,6 +1,6 @@
 import 'dotenv/config';
 import { BrowserClient, ScreenReaderDriver } from '@adf/virtual-screen-reader';
-import { AgentExperiment } from '../agent/src/AgentExperiment';
+import { AgentExperiment } from '@adf/agent/AgentExperiment';
 
 // Simple ANSI color codes for cleaner output
 const colors = {

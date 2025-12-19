@@ -1,4 +1,2 @@
 # Backend services and workers
-# These are long-running processes and background workers
-
 package(default_visibility = ["//visibility:public"])

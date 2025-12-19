@@ -1,5 +1,8 @@
-load("@aspect_rules_js//js:defs.bzl", "js_library")
 load("@aspect_rules_ts//ts:defs.bzl", "ts_config")
+load("@npm//:defs.bzl", "npm_link_all_packages")
+
+# Link all npm packages
+npm_link_all_packages(name = "node_modules")
 
 # Root tsconfig for the monorepo
 ts_config(
@@ -8,20 +11,10 @@ ts_config(
     visibility = ["//visibility:public"],
 )
 
-# Expose package.json for workspace info
+# Expose files needed by Bazel
 exports_files([
     "package.json",
     "pnpm-lock.yaml",
     "tsconfig.json",
     ".bazelignore",
 ])
-
-# Filegroup for shared config files
-filegroup(
-    name = "root_configs",
-    srcs = [
-        "package.json",
-        "tsconfig.json",
-    ],
-    visibility = ["//visibility:public"],
-)

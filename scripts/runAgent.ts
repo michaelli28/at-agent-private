@@ -1,8 +1,8 @@
-import 'dotenv/config';
-import { BrowserClient, ScreenReaderDriver } from '@adf/virtual-screen-reader';
-import { Agent } from '../agent/src/Agent';
-import { buildOpenAIModel } from '../agent/src/OpenAIClient';
-import { buildGeminiModel } from '../agent/src/GeminiClient';
+import "dotenv/config";
+import { BrowserClient, ScreenReaderDriver } from "@adf/virtual-screen-reader";
+import { Agent } from "@adf/agent/Agent";
+import { buildOpenAIModel } from "@adf/agent/OpenAIClient";
+import { buildGeminiModel } from "@adf/agent/GeminiClient";
 
 // Simple ANSI color codes for cleaner output
 const colors = {
@@ -20,14 +20,17 @@ function logStep(emoji: string, message: string) {
 }
 
 function logInfo(key: string, value: string) {
-  console.log(`   ${colors.dim}${key}:${colors.reset} ${colors.cyan}${value}${colors.reset}`);
+  console.log(
+    `   ${colors.dim}${key}:${colors.reset} ${colors.cyan}${value}${colors.reset}`,
+  );
 }
 
 async function main() {
   const args = getCliArgs();
   const url = args[0];
   const goal = args[1];
-  const provider = args.find((arg, idx) => idx === 2 && !arg.startsWith('--')) || 'openai';
+  const provider =
+    args.find((arg, idx) => idx === 2 && !arg.startsWith("--")) || "openai";
 
   if (!url || !goal) {
     console.error('Usage: npm run start:agent <url> "<goal>" [provider]');
@@ -36,7 +39,9 @@ async function main() {
 
   // Clear screen for a fresh start
   console.clear();
-  console.log(`${colors.bright}${colors.green}=== Accessibility Agent CLI ===${colors.reset}\n`);
+  console.log(
+    `${colors.bright}${colors.green}=== Accessibility Agent CLI ===${colors.reset}\n`,
+  );
 
   logInfo("Target URL", url);
   logInfo("Goal", goal);
@@ -55,12 +60,11 @@ async function main() {
   try {
     logStep("🌐", "Page loaded...");
 
-    const model = provider === 'gemini'
-      ? buildGeminiModel()
-      : buildOpenAIModel();
+    const model =
+      provider === "gemini" ? buildGeminiModel() : buildOpenAIModel();
 
     const agent = new Agent(driver, model, (step) => {
-      logStep("⚡", `Action: ${step.action.type} ${step.action.key || ''}`);
+      logStep("⚡", `Action: ${step.action.type} ${step.action.key || ""}`);
     });
 
     logStep("🤖", "Starting Agent Execution...");
@@ -74,7 +78,9 @@ async function main() {
 
     // Print result summary
     if (trace.success) {
-      console.log(`\n${colors.green}✓ Task completed successfully${colors.reset}`);
+      console.log(
+        `\n${colors.green}✓ Task completed successfully${colors.reset}`,
+      );
       if (trace.reason) {
         console.log(`   ${colors.dim}Reason: ${trace.reason}${colors.reset}`);
       }
@@ -84,8 +90,9 @@ async function main() {
         console.log(`   ${colors.dim}Error: ${trace.error}${colors.reset}`);
       }
     }
-    console.log(`   ${colors.dim}Total steps: ${trace.steps.length}${colors.reset}`);
-
+    console.log(
+      `   ${colors.dim}Total steps: ${trace.steps.length}${colors.reset}`,
+    );
   } catch (error) {
     console.error(`\n${colors.red}❌ Fatal Error:${colors.reset}`, error);
   } finally {
@@ -110,7 +117,7 @@ function getCliArgs(): string[] {
   return process.argv.slice(2);
 }
 
-main().catch(err => {
+main().catch((err) => {
   console.error(`${colors.red}Fatal error:${colors.reset}`, err);
   process.exit(1);
 });

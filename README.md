@@ -13,22 +13,16 @@ corepack enable && corepack prepare pnpm@latest --activate
 
 # Install packages
 pnpm install
-
-# Generate Python lock (first time only)
-pip-compile python/discovery-agent/requirements.txt -o python/requirements_lock.txt
 ```
 
 ## Build
 
 ```bash
-# Build everything
+# Build everything with Bazel
 bazel build //...
 
-# Build specific targets
-bazel build //apps/agent
-bazel build //apps/dashboard
-bazel build //packages/drivers:injected
-bazel build //scripts:cli
+# Or use pnpm for TypeScript
+pnpm build
 ```
 
 ## Run
@@ -36,42 +30,25 @@ bazel build //scripts:cli
 ### Agent
 
 ```bash
-# Run agent
 pnpm start:agent
-
-# Run agent CLI
 pnpm start:agent-cli
-
-# Run agent parallel
 pnpm start:agent-parallel
-
-# Run with OpenRouter
 pnpm start:agent-openrouter
 ```
 
 ### Audits
 
 ```bash
-# DOM audit
 pnpm audit-dom
-
-# Visual audit
 pnpm audit-visual
-
-# Media audit
 pnpm audit-media
-
-# Full audit
 pnpm audit
 ```
 
 ### UI
 
 ```bash
-# Start UI server
 pnpm start:ui
-
-# Start debug UI
 pnpm start:debug-ui
 ```
 
@@ -79,15 +56,16 @@ pnpm start:debug-ui
 
 ```bash
 cd apps/dashboard
-pnpm dev      # Development
-pnpm build    # Production build
-pnpm start    # Production server
+pnpm dev
+pnpm build
+pnpm start
 ```
 
 ### Discovery Agent (Python)
 
 ```bash
 cd python/discovery-agent
+pip install -r requirements.txt
 python discover.py
 ```
 
@@ -100,37 +78,22 @@ pnpm dev:sr
 ## Test
 
 ```bash
-# All tests
-bazel test //...
-
-# Specific package
-bazel test //apps/agent:tests
-
-# npm tests
 pnpm test
-
-# Visual regression
 pnpm test:visual-regression
-
-# Benchmarks
 pnpm benchmark:aria-at
 ```
 
 ## Scripts
 
 ```bash
-pnpm visualize-report    # Generate HTML report
-pnpm generate-graph      # Generate GraphML
-pnpm generate-sitemap    # Generate sitemap
+pnpm visualize-report
+pnpm generate-graph
+pnpm generate-sitemap
 ```
 
 ## Docker
 
 ```bash
-# Build image
-bazel build //infra/docker:at_agent_tarball
-
-# Or with docker-compose
 cd infra/docker
 docker-compose up
 ```
@@ -154,7 +117,7 @@ npx tfx extension create
 
 ### GitHub Action
 
-See `.github/actions/accessibility-agent/`
+See `integrations/github-actions/`
 
 ### GitLab CI
 
@@ -164,34 +127,35 @@ See `integrations/gitlab-ci/.gitlab-ci-template.yml`
 
 ```
 at-agent/
-├── apps/                 # Deployable applications
-│   ├── agent/            # Core AI agent
-│   ├── dashboard/        # Next.js dashboard
-│   ├── ui/               # Express server
+├── packages/                 # Shared libraries
+│   ├── browser/              # Browser automation client
+│   ├── shared/               # Common types
+│   ├── drivers/              # Accessibility drivers
+│   └── evaluation/           # Test evaluation
+├── apps/                     # Applications
+│   ├── agent/                # Core AI agent
+│   ├── dashboard/            # Next.js dashboard
+│   ├── ui/                   # Express server
 │   └── virtual-screen-reader/
-├── packages/             # Shared libraries
-│   ├── shared/           # Common types
-│   ├── drivers/          # Accessibility drivers
-│   └── evaluation/       # Test evaluation
-├── services/             # Backend workers
+├── services/                 # Backend workers
 │   └── rerun-worker/
-├── scripts/              # CLI tools
-├── integrations/         # CI/CD plugins
+├── scripts/                  # CLI tools
+├── integrations/             # CI/CD plugins
 │   ├── jenkins/
 │   ├── azure-devops/
 │   ├── github-actions/
 │   └── gitlab-ci/
-├── python/               # Python code
+├── python/                   # Python code
 │   └── discovery-agent/
-├── infra/                # Deployment
+├── infra/                    # Deployment
 │   └── docker/
-├── tools/                # Build macros
-└── third_party/          # External deps
+├── tools/                    # Bazel macros
+└── third_party/              # External deps
 ```
 
 ## Environment
 
-Create `.env` in root:
+Create `.env`:
 
 ```
 OPENAI_API_KEY=sk-...
