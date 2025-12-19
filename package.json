@@ -3,12 +3,14 @@
   "version": "0.0.1",
   "private": true,
   "workspaces": [
-    "browser",
-    "drivers",
-    "agent",
-    "evaluation",
-    "ui",
-    "virtual-screen-reader"
+    "packages/shared",
+    "packages/drivers",
+    "packages/evaluation",
+    "apps/agent",
+    "apps/dashboard",
+    "apps/ui",
+    "apps/virtual-screen-reader",
+    "services/rerun-worker"
   ],
   "scripts": {
     "build": "npm run build --workspaces --if-present",
@@ -36,8 +38,8 @@
     "visualize-report": "tsx -r tsconfig-paths/register scripts/generateReportHtml.ts",
     "generate-graph": "tsx scripts/generateGraphML.ts",
     "generate-sitemap": "tsx scripts/generateSitemap.ts",
-    "start:ui": "tsx -r tsconfig-paths/register ui/server.ts",
-    "start:debug-ui": "tsx -r tsconfig-paths/register ui/debug-server.ts"
+    "start:ui": "tsx -r tsconfig-paths/register apps/ui/server.ts",
+    "start:debug-ui": "tsx -r tsconfig-paths/register apps/ui/debug-server.ts"
   },
   "devDependencies": {
     "@types/node": "^20.19.25",

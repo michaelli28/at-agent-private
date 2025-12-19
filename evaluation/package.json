@@ -1,9 +1,0 @@
-{
-  "name": "@adf/evaluation",
-  "version": "0.0.1",
-  "main": "src/Evaluator.ts",
-  "dependencies": {
-    "@adf/drivers": "*",
-    "@adf/agent": "*"
-  }
-}
