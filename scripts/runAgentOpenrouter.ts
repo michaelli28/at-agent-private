@@ -1,11 +1,7 @@
 import 'dotenv/config';
-import { BrowserClient } from '../virtual-screen-reader/src/playwrightClient';
-import { ScreenReaderDriver } from '../virtual-screen-reader/src/ScreenReaderDriver';
-import { AgentOpenrouter } from '../agent/src/AgentOpenrouter';
-import { Reporter } from '../evaluation/src/Reporter';
-import { Evaluator } from '../evaluation/src/Evaluator';
-import { AXNode } from '../virtual-screen-reader/src/types';
-import { AgentStep } from '../agent/src/types';
+import { BrowserClient, ScreenReaderDriver } from '@adf/virtual-screen-reader';
+import { AgentOpenrouter, NavigationMode } from '@adf/agent/AgentOpenrouter';
+import { AgentStep } from '@adf/agent/types';
 
 // Simple ANSI color codes for cleaner output
 const colors = {
@@ -16,6 +12,7 @@ const colors = {
   cyan: "\x1b[36m",
   yellow: "\x1b[33m",
   red: "\x1b[31m",
+  magenta: "\x1b[35m",
 };
 
 function logStep(emoji: string, message: string) {
@@ -26,14 +23,54 @@ function logInfo(key: string, value: string) {
   console.log(`   ${colors.dim}${key}:${colors.reset} ${colors.cyan}${value}${colors.reset}`);
 }
 
+function parseArgs(args: string[]): {
+  url: string;
+  goal: string;
+  model: string;
+  navigationMode: NavigationMode;
+} {
+  let url = '';
+  let goal = '';
+  let model = 'google/gemini-2.0-flash-001';
+  let navigationMode: NavigationMode = 'default';
+
+  const positional: string[] = [];
+
+  for (let i = 0; i < args.length; i++) {
+    const arg = args[i];
+    if (arg === '--pagerank' || arg === '-p') {
+      navigationMode = 'pagerank';
+    } else if (arg === '--model' || arg === '-m') {
+      model = args[++i] || model;
+    } else if (!arg.startsWith('-')) {
+      positional.push(arg);
+    }
+  }
+
+  url = positional[0] || '';
+  goal = positional[1] || '';
+  // Allow model as third positional arg for backward compatibility
+  if (positional[2]) {
+    model = positional[2];
+  }
+
+  return { url, goal, model, navigationMode };
+}
+
 async function main() {
   const args = getCliArgs();
-  const url = args[0];
-  const goal = args[1];
-  const model = args[2] || 'google/gemini-3-pro'; // Allow model override via args
+  const { url, goal, model, navigationMode } = parseArgs(args);
 
   if (!url || !goal) {
-    console.error('Usage: npx ts-node scripts/runAgentOpenrouter.ts <url> "<goal>" [model]');
+    console.error('Usage: npx ts-node scripts/runAgentOpenrouter.ts <url> "<goal>" [model] [options]');
+    console.error('');
+    console.error('Options:');
+    console.error('  --pagerank, -p    Use PageRank-based navigation (crawls site first)');
+    console.error('  --model, -m       Specify the LLM model to use');
+    console.error('');
+    console.error('Examples:');
+    console.error('  npx ts-node scripts/runAgentOpenrouter.ts https://example.com "find contact page"');
+    console.error('  npx ts-node scripts/runAgentOpenrouter.ts https://example.com "find pricing" --pagerank');
     process.exit(1);
   }
 
@@ -44,32 +81,48 @@ async function main() {
   logInfo("Target URL", url);
   logInfo("Goal", goal);
   logInfo("Model", model);
+  logInfo("Navigation Mode", navigationMode === 'pagerank' ? 'PageRank (crawl + rank)' : 'Default (LLM-only)');
   console.log(); // Spacer
 
   const client = new BrowserClient();
+  await client.launch(false); // headed mode
 
   logStep("🚀", "Launching Browser...");
-  await client.launch(false);
+  await client.goto(url);
+
+  const driver = new ScreenReaderDriver(client);
+  await driver.enable();
 
   try {
-    logStep("🌐", "Navigating to page...");
-    await client.goto(url);
+    logStep("🌐", "Page loaded...");
 
-    const driver = new ScreenReaderDriver(client);
-
-    // Instantiate AgentOpenrouter
-    const agent = new AgentOpenrouter(
+    // Instantiate AgentOpenrouter with navigation mode
+    const agent = new AgentOpenrouter({
       driver,
-      (step: AgentStep) => {
+      onStep: (step: AgentStep) => {
         const thought = step.thought && step.thought.trim().length > 0
           ? step.thought
           : '(no model thought returned)';
         logStep("🧠", `Thought: ${thought}`);
-        logStep("⚡", `Action: ${step.action.type} ${step.action.key || ''}`);
+        const actionDetail = step.action.text
+          ? `"${step.action.text}"`
+          : step.action.key || '';
+        logStep("⚡", `Action: ${step.action.type} ${actionDetail}`);
       },
-      undefined, // apiKey (defaults to env)
-      model
-    );
+      model,
+      navigationMode,
+      entryUrl: url, // Required for PageRank mode
+      onLog: (message: string) => {
+        // Show PageRank-related logs in magenta
+        if (message.includes('[PageRank]')) {
+          console.log(`${colors.magenta}${message}${colors.reset}`);
+        }
+      },
+    });
+
+    if (navigationMode === 'pagerank') {
+      logStep("📊", "PageRank mode enabled - will crawl site before navigation...");
+    }
 
     logStep("🤖", "Starting Agent Execution...");
     console.log(`${colors.dim}   (Press Ctrl+C to interrupt)\n${colors.reset}`);
@@ -80,28 +133,24 @@ async function main() {
 
     logStep("🏁", "Agent execution finished.");
 
-    logStep("📊", "Evaluating session...");
-    const evaluator = new Evaluator();
-    let axTree: AXNode[] = [];
-    try {
-      axTree = await client.getFullAXTree();
-    } catch (e) {
-      console.warn(`${colors.yellow}   Warning: Could not fetch AXTree for evaluation.${colors.reset}`);
+    // Print result summary
+    if (trace.success) {
+      console.log(`\n${colors.green}✓ Task completed successfully${colors.reset}`);
+      if (trace.reason) {
+        console.log(`   ${colors.dim}Reason: ${trace.reason}${colors.reset}`);
+      }
+    } else {
+      console.log(`\n${colors.red}✗ Task failed${colors.reset}`);
+      if (trace.error) {
+        console.log(`   ${colors.dim}Error: ${trace.error}${colors.reset}`);
+      }
     }
-
-    const violations = evaluator.evaluate(axTree, trace);
-
-    // Generate Report
-    const reporter = new Reporter();
-    const markdown = reporter.toMarkdown(violations, trace);
-
-    console.log('\n' + colors.dim + '='.repeat(60) + colors.reset);
-    console.log(markdown);
-    console.log(colors.dim + '='.repeat(60) + colors.reset + '\n');
+    console.log(`   ${colors.dim}Total steps: ${trace.steps.length}${colors.reset}`);
 
   } catch (error) {
     console.error(`\n${colors.red}❌ Fatal Error:${colors.reset}`, error);
   } finally {
+    await driver.disable();
     await client.close();
     logStep("👋", "Browser closed.");
   }

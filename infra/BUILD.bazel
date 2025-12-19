@@ -1,0 +1,4 @@
+# Infrastructure and deployment configurations
+# Docker, Kubernetes, and other deployment resources
+
+package(default_visibility = ["//visibility:public"])

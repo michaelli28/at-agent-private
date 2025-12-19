@@ -1,12 +1,8 @@
-import 'dotenv/config';
-import { BrowserClient } from '../virtual-screen-reader/src/playwrightClient';
-import { ScreenReaderDriver } from '../virtual-screen-reader/src/ScreenReaderDriver';
-import { Agent } from '../agent/src/Agent';
-import { buildOpenAIModel } from '../agent/src/OpenAIClient';
-import { buildGeminiModel } from '../agent/src/GeminiClient';
-import { Reporter } from '../evaluation/src/Reporter';
-import { Evaluator } from '../evaluation/src/Evaluator';
-import { AXNode } from '../virtual-screen-reader/src/types';
+import "dotenv/config";
+import { BrowserClient, ScreenReaderDriver } from "@adf/virtual-screen-reader";
+import { Agent } from "@adf/agent/Agent";
+import { buildOpenAIModel } from "@adf/agent/OpenAIClient";
+import { buildGeminiModel } from "@adf/agent/GeminiClient";
 
 // Simple ANSI color codes for cleaner output
 const colors = {
@@ -24,14 +20,17 @@ function logStep(emoji: string, message: string) {
 }
 
 function logInfo(key: string, value: string) {
-  console.log(`   ${colors.dim}${key}:${colors.reset} ${colors.cyan}${value}${colors.reset}`);
+  console.log(
+    `   ${colors.dim}${key}:${colors.reset} ${colors.cyan}${value}${colors.reset}`,
+  );
 }
 
 async function main() {
   const args = getCliArgs();
   const url = args[0];
   const goal = args[1];
-  const provider = args.find((arg, idx) => idx === 2 && !arg.startsWith('--')) || 'openai';
+  const provider =
+    args.find((arg, idx) => idx === 2 && !arg.startsWith("--")) || "openai";
 
   if (!url || !goal) {
     console.error('Usage: npm run start:agent <url> "<goal>" [provider]');
@@ -40,7 +39,9 @@ async function main() {
 
   // Clear screen for a fresh start
   console.clear();
-  console.log(`${colors.bright}${colors.green}=== Accessibility Agent CLI ===${colors.reset}\n`);
+  console.log(
+    `${colors.bright}${colors.green}=== Accessibility Agent CLI ===${colors.reset}\n`,
+  );
 
   logInfo("Target URL", url);
   logInfo("Goal", goal);
@@ -48,22 +49,22 @@ async function main() {
   console.log(); // Spacer
 
   const client = new BrowserClient();
+  await client.launch(false); // headed mode
 
   logStep("🚀", "Launching Browser...");
-  await client.launch(false);
+  await client.goto(url);
+
+  const driver = new ScreenReaderDriver(client);
+  await driver.enable();
 
   try {
-    logStep("🌐", "Navigating to page...");
-    await client.goto(url);
+    logStep("🌐", "Page loaded...");
 
-    const driver = new ScreenReaderDriver(client);
-
-    const model = provider === 'gemini'
-      ? buildGeminiModel()
-      : buildOpenAIModel();
+    const model =
+      provider === "gemini" ? buildGeminiModel() : buildOpenAIModel();
 
     const agent = new Agent(driver, model, (step) => {
-      logStep("⚡", `Action: ${step.action.type} ${step.action.key || ''}`);
+      logStep("⚡", `Action: ${step.action.type} ${step.action.key || ""}`);
     });
 
     logStep("🤖", "Starting Agent Execution...");
@@ -74,29 +75,28 @@ async function main() {
     console.log(); // Spacer
 
     logStep("🏁", "Agent execution finished.");
-    
-    logStep("📊", "Evaluating session...");
-    const evaluator = new Evaluator();
-    let axTree: AXNode[] = [];
-    try {
-      axTree = await client.getFullAXTree();
-    } catch (e) {
-      console.warn(`${colors.yellow}   Warning: Could not fetch AXTree for evaluation.${colors.reset}`);
+
+    // Print result summary
+    if (trace.success) {
+      console.log(
+        `\n${colors.green}✓ Task completed successfully${colors.reset}`,
+      );
+      if (trace.reason) {
+        console.log(`   ${colors.dim}Reason: ${trace.reason}${colors.reset}`);
+      }
+    } else {
+      console.log(`\n${colors.red}✗ Task failed${colors.reset}`);
+      if (trace.error) {
+        console.log(`   ${colors.dim}Error: ${trace.error}${colors.reset}`);
+      }
     }
-    
-    const violations = evaluator.evaluate(axTree, trace);
-
-    // Generate Report
-    const reporter = new Reporter();
-    const markdown = reporter.toMarkdown(violations, trace);
-
-    console.log('\n' + colors.dim + '='.repeat(60) + colors.reset);
-    console.log(markdown);
-    console.log(colors.dim + '='.repeat(60) + colors.reset + '\n');
-
+    console.log(
+      `   ${colors.dim}Total steps: ${trace.steps.length}${colors.reset}`,
+    );
   } catch (error) {
     console.error(`\n${colors.red}❌ Fatal Error:${colors.reset}`, error);
   } finally {
+    await driver.disable();
     await client.close();
     logStep("👋", "Browser closed.");
   }
@@ -117,7 +117,7 @@ function getCliArgs(): string[] {
   return process.argv.slice(2);
 }
 
-main().catch(err => {
+main().catch((err) => {
   console.error(`${colors.red}Fatal error:${colors.reset}`, err);
   process.exit(1);
 });

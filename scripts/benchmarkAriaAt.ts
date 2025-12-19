@@ -1,9 +1,8 @@
 import 'dotenv/config';
-import { BrowserClient } from '../virtual-screen-reader/src/playwrightClient';
-import { ScreenReaderDriver } from '../virtual-screen-reader/src/ScreenReaderDriver';
-import { Agent } from '../agent/src/Agent';
-import { buildOpenAIModel } from '../agent/src/OpenAIClient';
-import { buildGeminiModel } from '../agent/src/GeminiClient';
+import { BrowserClient, ScreenReaderDriver } from '@adf/virtual-screen-reader';
+import { Agent } from '@adf/agent/Agent';
+import { buildOpenAIModel } from '@adf/agent/OpenAIClient';
+import { buildGeminiModel } from '@adf/agent/GeminiClient';
 
 async function main() {
   const url = 'https://aria-at.w3.org/reports';
@@ -16,13 +15,13 @@ async function main() {
   console.log(`[Benchmark] Provider: ${provider}`);
 
   const client = new BrowserClient();
-  await client.launch(false); // Visible for observation
+  await client.launch(false); // headed mode
+  await client.goto(url);
+
+  const driver = new ScreenReaderDriver(client);
+  await driver.enable();
 
   try {
-    await client.goto(url);
-
-    const driver = new ScreenReaderDriver(client);
-    await driver.enable(); // Explicitly enable to inject script
 
     const model = provider === 'gemini' ? buildGeminiModel() : buildOpenAIModel();
     const agent = new Agent(driver, model);
@@ -35,16 +34,24 @@ async function main() {
 
     // Simple success check based on the last step's thought or action
     const lastStep = trace.steps[trace.steps.length - 1];
-    console.log(`[Benchmark] Last Step Observation: ${lastStep.observation}`);
-    console.log(`[Benchmark] Last Step Thought: ${lastStep.thought}`);
+    if (lastStep) {
+      console.log(`[Benchmark] Last Step Observation: ${lastStep.observation?.text || 'N/A'}`);
+      console.log(`[Benchmark] Last Step Thought: ${lastStep.thought}`);
+    }
 
-    // In a real benchmark, we might parse the output to verify the specific number
-    // For now, we rely on the agent's self-reported completion.
+    console.log(`[Benchmark] Success: ${trace.success}`);
+    if (trace.reason) {
+      console.log(`[Benchmark] Reason: ${trace.reason}`);
+    }
+    if (trace.error) {
+      console.log(`[Benchmark] Error: ${trace.error}`);
+    }
 
   } catch (error) {
     console.error('[Benchmark] Error:', error);
     process.exit(1);
   } finally {
+    await driver.disable();
     await client.close();
   }
 }

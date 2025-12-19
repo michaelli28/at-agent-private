@@ -1,0 +1,22 @@
+package(default_visibility = ["//visibility:public"])
+
+# Docker Compose for local development
+filegroup(
+    name = "compose",
+    srcs = ["docker-compose.yml"],
+)
+
+# Dockerfile (use docker build directly)
+filegroup(
+    name = "dockerfile",
+    srcs = ["Dockerfile"],
+)
+
+# Scripts
+filegroup(
+    name = "scripts",
+    srcs = [
+        "start.sh",
+        "supervisord.conf",
+    ],
+)

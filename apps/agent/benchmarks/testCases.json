@@ -1,0 +1,82 @@
+{
+  "testCases": [
+    {
+      "id": "bhs-leadership",
+      "name": "Find BHS Leadership Page",
+      "url": "https://www.bloomfield.org/",
+      "goal": "1. Navigate to the About BHS dropdown but do not click it. 2. Navigate within the dropdown and click BHS Leadership. 3. Report success once you click the link, with the reason as the url.",
+      "maxSteps": -1,
+      "successCriteria": {
+        "expectAgentSuccess": true,
+        "containsText": "https://www.bloomfield.org/about-bhs/bhs-leadership"
+      },
+      "tags": [
+        "school"
+      ]
+    },
+    {
+      "id": "mich-gov-corrections",
+      "name": "Find Corrections Contact Page",
+      "url": "https://www.michigan.gov/som",
+      "goal": "1. Navigate to and click the Government dropdown. 2. Within the dropdown, navigate to and click Branches of Government. 3. Navigate to and click Executive Branch. 4. Navigate to and click the MDOC Organization link. 5. Report success after clicking the link, with the reason as the url.",
+      "successCriteria": {
+        "expectAgentSuccess": true,
+        "containsText": "https://www.michigan.gov/corrections/about/contact-us"
+      },
+      "tags": [
+        "government"
+      ]
+    },
+    {
+      "id": "cmu-fin-aid",
+      "name": "Find Financial Aid Disbursement Page",
+      "url": "https://www.cmu.edu/",
+      "goal": "1. Navigate to and click the Admission dropdown. 2. Within the dropdown, navigate to and click Access and Affordability. 3. Navigate to and click Understanding your Offer. 4. Navigate to and click the financial aid disbursement link. 5. Report success after clicking the link, with the reason as the url.",
+      "successCriteria": {
+        "expectAgentSuccess": true,
+        "containsText": "https://www.cmu.edu/sfs/financial-aid/disbursement.html"
+      },
+      "tags": [
+        "school"
+      ]
+    },
+    {
+      "id": "troyschool-meal-form",
+      "name": "Find How to Apply for MI School Meals Form",
+      "url": "https://www.troy.k12.mi.us/",
+      "goal": "1. Navigate to and click the Menu button. 2. Navigate to and click the Food and Nutrition Link. 3. Navigate to and click Free and Reduced Information link. 4. Navigate to and click 2025-2026 How to Apply for MI School Meals link. 5. Report success after clicking the link, with the reason as the url.",
+      "successCriteria": {
+        "expectAgentSuccess": true,
+        "containsText": "2025-2026HowtoApplyforMISchoolMeals.pdf"
+      },
+      "tags": [
+        "school"
+      ]
+    },
+    {
+      "id": "troy-water-change-address",
+      "name": "Fill out Change of Address Form for Water and Sewer",
+      "url": "https://troymi.gov/",
+      "goal": "1. Navigate to and click DEPARTMENTS link. 2. Navigate to and click Vist Department about Public Works link. 3. Navigate to and click Water and Sewer link. 4. Navigate to and click Change of Address link. 5. Fill out the form with fake but valid information. 6. After finished, navigate to and click Submit button. 7. Report success after clicking the button and form submission is successful.",
+      "successCriteria": {
+        "expectAgentSuccess": true
+      },
+      "tags": [
+        "government"
+      ]
+    },
+    {
+      "id": "usa-gov-w9",
+      "name": "Find W9 Tax Form",
+      "url": "https://www.usa.gov/",
+      "goal": "1. Navigate to and click Taxes link. 2. Navigate to and click Learn how to get tax forms link. 3. Navigate to and click Get federal tax return forms and file by mail link. 4. Navigate to and click Download them from IRS.gov. 5. Navigate to and click Form W-9 PDF link. 6. Report success after clicking the link, with the reason as the url.",
+      "successCriteria": {
+        "expectAgentSuccess": true,
+        "containsText": "https://www.irs.gov/pub/irs-pdf/fw9.pdf"
+      },
+      "tags": [
+        "government"
+      ]
+    }
+  ]
+}

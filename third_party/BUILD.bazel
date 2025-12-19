@@ -1,0 +1,7 @@
+# Third-party dependency declarations
+# This package centralizes external dependency management
+
+package(default_visibility = ["//visibility:public"])
+
+# Note: npm packages are referenced directly from @npm//package-name
+# This file is kept for documentation and potential future vendoring

@@ -1,0 +1,12 @@
+package(default_visibility = ["//visibility:public"])
+
+# Python discovery agent - run with Python directly
+# Run: cd python/discovery-agent && python discover.py
+
+filegroup(
+    name = "sources",
+    srcs = [
+        "discover.py",
+        "requirements.txt",
+    ],
+)

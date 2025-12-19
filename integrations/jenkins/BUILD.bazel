@@ -1,0 +1,17 @@
+package(default_visibility = ["//visibility:public"])
+
+# Jenkins plugin - build with Maven directly
+# Run: cd integrations/jenkins && ./mvnw package
+
+filegroup(
+    name = "sources",
+    srcs = glob(
+        ["src/**/*"],
+        allow_empty = True,
+    ),
+)
+
+filegroup(
+    name = "config",
+    srcs = ["pom.xml"],
+)

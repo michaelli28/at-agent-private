@@ -9,34 +9,16 @@
     "forceConsistentCasingInFileNames": true,
     "baseUrl": ".",
     "paths": {
-      "@adf/browser/*": [
-        "browser/src/*"
-      ],
-      "@adf/drivers/*": [
-        "drivers/src/*"
-      ],
-      "@adf/virtual-screen-reader": [
-        "virtual-screen-reader/src/index.ts"
-      ],
-      "@adf/virtual-screen-reader/*": [
-        "virtual-screen-reader/src/*"
-      ],
-      "@adf/agent/*": [
-        "agent/src/*"
-      ],
-      "@adf/evaluation/*": [
-        "evaluation/src/*"
-      ],
-      "@adf/ui/*": [
-        "ui/src/*"
-      ],
-      "@langchain/core/*": [
-        "node_modules/@langchain/core/dist/*"
-      ]
-    }
+      "@adf/browser/*": ["packages/browser/src/*"],
+      "@adf/shared/*": ["packages/shared/*"],
+      "@adf/drivers/*": ["packages/drivers/src/*"],
+      "@adf/evaluation/*": ["packages/evaluation/src/*"],
+      "@adf/agent/*": ["apps/agent/src/*"],
+      "@adf/virtual-screen-reader": ["apps/virtual-screen-reader/src/index.ts"],
+      "@adf/virtual-screen-reader/*": ["apps/virtual-screen-reader/src/*"],
+      "@adf/ui/*": ["apps/ui/src/*"],
+      "@langchain/core/*": ["node_modules/@langchain/core/dist/*"],
+    },
   },
-  "exclude": [
-    "node_modules",
-    "dist"
-  ]
+  "exclude": ["node_modules", "dist"],
 }
