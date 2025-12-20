@@ -1,3 +1,4 @@
+
 # Enable bzlmod (Bazel modules)
 common --enable_bzlmod
 
@@ -34,3 +35,13 @@ build:debug --strip=never
 # Release settings
 build:release --compilation_mode=opt
 build:release --strip=always
+
+# Enable bzlmod (default in Bazel 7+)
+common --enable_bzlmod
+
+# Python configuration
+build --python_version=PY3
+
+# Better error messages
+build --verbose_failures
+

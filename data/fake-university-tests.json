@@ -1,0 +1,398 @@
+[
+  {
+    "url": "https://fake-university.com",
+    "goal": "1. Navigate to and click Login link. 2. Navigate to username/email field and type 'test@example.com'. 3. Navigate to password field and type 'TestPassword123'. 4. Navigate to and click Sign In/Login button. 5. Report success with the reason as the authenticated page URL or any error message displayed."
+  },
+  {
+    "url": "https://fake-university.com/courses.html",
+    "goal": "1. Navigate to banner landmark using D key. 2. Navigate to navigation landmark using D key. 3. Navigate to main landmark using D key. 4. Navigate to contentinfo landmark using D key. 5. Continue through all landmarks on the page. 6. Report success with the reason listing all landmarks found (expected: banner, contentinfo, navigation) and any missing required landmarks."
+  },
+  {
+    "url": "https://fake-university.com/courses/course-1.html",
+    "goal": "1. Navigate to banner landmark using D key. 2. Navigate to navigation landmark using D key. 3. Navigate to main landmark using D key. 4. Navigate to contentinfo landmark using D key. 5. Continue through all landmarks on the page. 6. Report success with the reason listing all landmarks found (expected: banner, contentinfo, complementary) and any missing required landmarks."
+  },
+  {
+    "url": "https://fake-university.com/courses/course-2.html",
+    "goal": "1. Navigate to banner landmark using D key. 2. Navigate to navigation landmark using D key. 3. Navigate to main landmark using D key. 4. Navigate to contentinfo landmark using D key. 5. Continue through all landmarks on the page. 6. Report success with the reason listing all landmarks found (expected: banner, contentinfo, complementary) and any missing required landmarks."
+  },
+  {
+    "url": "https://fake-university.com/courses/course-3.html",
+    "goal": "1. Navigate to banner landmark using D key. 2. Navigate to navigation landmark using D key. 3. Navigate to main landmark using D key. 4. Navigate to contentinfo landmark using D key. 5. Continue through all landmarks on the page. 6. Report success with the reason listing all landmarks found (expected: banner, contentinfo, complementary) and any missing required landmarks."
+  },
+  {
+    "url": "https://fake-university.com/courses/course-4.html",
+    "goal": "1. Navigate to banner landmark using D key. 2. Navigate to navigation landmark using D key. 3. Navigate to main landmark using D key. 4. Navigate to contentinfo landmark using D key. 5. Continue through all landmarks on the page. 6. Report success with the reason listing all landmarks found (expected: banner, contentinfo, complementary) and any missing required landmarks."
+  },
+  {
+    "url": "https://fake-university.com/courses/course-5.html",
+    "goal": "1. Navigate to banner landmark using D key. 2. Navigate to navigation landmark using D key. 3. Navigate to main landmark using D key. 4. Navigate to contentinfo landmark using D key. 5. Continue through all landmarks on the page. 6. Report success with the reason listing all landmarks found (expected: banner, contentinfo, complementary) and any missing required landmarks."
+  },
+  {
+    "url": "https://fake-university.com/news-and-events.html",
+    "goal": "1. Navigate to banner landmark using D key. 2. Navigate to navigation landmark using D key. 3. Navigate to main landmark using D key. 4. Navigate to contentinfo landmark using D key. 5. Continue through all landmarks on the page. 6. Report success with the reason listing all landmarks found (expected: banner, contentinfo, navigation) and any missing required landmarks."
+  },
+  {
+    "url": "https://fake-university.com",
+    "goal": "1. Navigate to banner landmark using D key. 2. Navigate to navigation landmark using D key. 3. Navigate to main landmark using D key. 4. Navigate to contentinfo landmark using D key. 5. Continue through all landmarks on the page. 6. Report success with the reason listing all landmarks found (expected: banner, contentinfo) and any missing required landmarks."
+  },
+  {
+    "url": "https://fake-university.com/index.html",
+    "goal": "1. Navigate to banner landmark using D key. 2. Navigate to navigation landmark using D key. 3. Navigate to main landmark using D key. 4. Navigate to contentinfo landmark using D key. 5. Continue through all landmarks on the page. 6. Report success with the reason listing all landmarks found (expected: banner, contentinfo) and any missing required landmarks."
+  },
+  {
+    "url": "https://fake-university.com/about.html",
+    "goal": "1. Navigate to banner landmark using D key. 2. Navigate to navigation landmark using D key. 3. Navigate to main landmark using D key. 4. Navigate to contentinfo landmark using D key. 5. Continue through all landmarks on the page. 6. Report success with the reason listing all landmarks found (expected: banner, contentinfo) and any missing required landmarks."
+  },
+  {
+    "url": "https://fake-university.com/research.html",
+    "goal": "1. Navigate to banner landmark using D key. 2. Navigate to navigation landmark using D key. 3. Navigate to main landmark using D key. 4. Navigate to contentinfo landmark using D key. 5. Continue through all landmarks on the page. 6. Report success with the reason listing all landmarks found (expected: banner, contentinfo) and any missing required landmarks."
+  },
+  {
+    "url": "https://fake-university.com/business.html",
+    "goal": "1. Navigate to banner landmark using D key. 2. Navigate to navigation landmark using D key. 3. Navigate to main landmark using D key. 4. Navigate to contentinfo landmark using D key. 5. Continue through all landmarks on the page. 6. Report success with the reason listing all landmarks found (expected: banner, contentinfo) and any missing required landmarks."
+  },
+  {
+    "url": "https://fake-university.com/social-responsibility.html",
+    "goal": "1. Navigate to banner landmark using D key. 2. Navigate to navigation landmark using D key. 3. Navigate to main landmark using D key. 4. Navigate to contentinfo landmark using D key. 5. Continue through all landmarks on the page. 6. Report success with the reason listing all landmarks found (expected: banner, contentinfo) and any missing required landmarks."
+  },
+  {
+    "url": "https://fake-university.com/blog/article-1.html",
+    "goal": "1. Navigate to banner landmark using D key. 2. Navigate to navigation landmark using D key. 3. Navigate to main landmark using D key. 4. Navigate to contentinfo landmark using D key. 5. Continue through all landmarks on the page. 6. Report success with the reason listing all landmarks found (expected: banner) and any missing required landmarks."
+  },
+  {
+    "url": "https://fake-university.com/blog/article-2.html",
+    "goal": "1. Navigate to banner landmark using D key. 2. Navigate to navigation landmark using D key. 3. Navigate to main landmark using D key. 4. Navigate to contentinfo landmark using D key. 5. Continue through all landmarks on the page. 6. Report success with the reason listing all landmarks found (expected: banner) and any missing required landmarks."
+  },
+  {
+    "url": "https://fake-university.com/blog/article-3.html",
+    "goal": "1. Navigate to banner landmark using D key. 2. Navigate to navigation landmark using D key. 3. Navigate to main landmark using D key. 4. Navigate to contentinfo landmark using D key. 5. Continue through all landmarks on the page. 6. Report success with the reason listing all landmarks found (expected: banner) and any missing required landmarks."
+  },
+  {
+    "url": "https://fake-university.com",
+    "goal": "1. Navigate to search input field. 2. Type 'test'. 3. Navigate to and click Search button (or press Enter to submit). 4. Navigate to first search result. 5. Navigate to and click first result link. 6. Report success with the reason as the number of results found and destination URL."
+  },
+  {
+    "url": "https://fake-university.com",
+    "goal": "1. Navigate to and click Products/Shop link in navigation. 2. Navigate to first product in the listing. 3. Navigate to and click product link or image. 4. Navigate to and click Add to Cart button. 5. Navigate to and click Cart/Checkout link. 6. Report success with the reason as the cart contents announced by screen reader."
+  },
+  {
+    "url": "https://fake-university.com/news-and-events.html",
+    "goal": "1. Navigate to first heading using H key. 2. Note the heading level and text. 3. Navigate to next heading using H key. 4. Continue navigating through all headings (expected: News & Events, The Future of Education: How Fake University is Preparing Students for the 21th Century, A Global Leader in Education, Preparing Students for the Future of Work, Excellence in sports achievements). 5. Report success with the reason listing all headings found (e.g., \"h1: Title, h2: Section1, h2: Section2\") and any hierarchy issues (e.g., h1 followed by h4 skipping h2/h3)."
+  },
+  {
+    "url": "https://fake-university.com/research.html",
+    "goal": "1. Navigate to first heading using H key. 2. Note the heading level and text. 3. Navigate to next heading using H key. 4. Continue navigating through all headings (expected: Research, Research at Fake University, Our Research Mission, Research Excellence, Research Areas). 5. Report success with the reason listing all headings found (e.g., \"h1: Title, h2: Section1, h2: Section2\") and any hierarchy issues (e.g., h1 followed by h4 skipping h2/h3)."
+  },
+  {
+    "url": "https://fake-university.com/courses.html",
+    "goal": "1. Navigate to first heading using H key. 2. Note the heading level and text. 3. Navigate to next heading using H key. 4. Continue navigating through all headings (expected: Courses, Refine by, English Literature, Psychology, Anthropology). 5. Report success with the reason listing all headings found (e.g., \"h1: Title, h2: Section1, h2: Section2\") and any hierarchy issues (e.g., h1 followed by h4 skipping h2/h3)."
+  },
+  {
+    "url": "https://fake-university.com/about.html",
+    "goal": "1. Navigate to first heading using H key. 2. Note the heading level and text. 3. Navigate to next heading using H key. 4. Continue navigating through all headings (expected: About, About the Fake University, Our Mission, Our Values, Why Choose Fake University?). 5. Report success with the reason listing all headings found (e.g., \"h1: Title, h2: Section1, h2: Section2\") and any hierarchy issues (e.g., h1 followed by h4 skipping h2/h3)."
+  },
+  {
+    "url": "https://fake-university.com/register.html",
+    "goal": "1. Navigate to the form using landmarks or headings. 2. Navigate to first form field using F key or Tab. 3. Note the field's accessible label/name. 4. Type sample data into text fields (use \"test\" for text, \"test@example.com\" for email). 5. Navigate to next field using Tab. 6. Continue through all form fields (expected: First name*, Last name*, textbox). 7. Navigate to and click Submit button. 8. Report success with the reason listing all form fields found, any unlabeled fields, and the form submission result."
+  },
+  {
+    "url": "https://fake-university.com/social-responsibility.html",
+    "goal": "1. Navigate to first heading using H key. 2. Note the heading level and text. 3. Navigate to next heading using H key. 4. Continue navigating through all headings (expected: Corporate social responsibility, Our students work hard... and so do we, Open Day, Start looking four the right course, SOLUTIONS). 5. Report success with the reason listing all headings found (e.g., \"h1: Title, h2: Section1, h2: Section2\") and any hierarchy issues (e.g., h1 followed by h4 skipping h2/h3)."
+  },
+  {
+    "url": "https://fake-university.com/business.html",
+    "goal": "1. Navigate to first heading using H key. 2. Note the heading level and text. 3. Navigate to next heading using H key. 4. Continue navigating through all headings (expected: Business, Business Department, What we offer, Open Day, Start looking for the right course). 5. Report success with the reason listing all headings found (e.g., \"h1: Title, h2: Section1, h2: Section2\") and any hierarchy issues (e.g., h1 followed by h4 skipping h2/h3)."
+  },
+  {
+    "url": "https://fake-university.com",
+    "goal": "1. Navigate to first heading using H key. 2. Note the heading level and text. 3. Navigate to next heading using H key. 4. Continue navigating through all headings (expected: Choose your future, Open Day, Start looking for the right course, SOLUTIONS, INDUSTRIES). 5. Report success with the reason listing all headings found (e.g., \"h1: Title, h2: Section1, h2: Section2\") and any hierarchy issues (e.g., h1 followed by h4 skipping h2/h3)."
+  },
+  {
+    "url": "https://fake-university.com/index.html",
+    "goal": "1. Navigate to first heading using H key. 2. Note the heading level and text. 3. Navigate to next heading using H key. 4. Continue navigating through all headings (expected: Choose your future, Open Day, Start looking for the right course, SOLUTIONS, INDUSTRIES). 5. Report success with the reason listing all headings found (e.g., \"h1: Title, h2: Section1, h2: Section2\") and any hierarchy issues (e.g., h1 followed by h4 skipping h2/h3)."
+  },
+  {
+    "url": "https://fake-university.com/courses/course-1.html",
+    "goal": "1. Navigate to first heading using H key. 2. Note the heading level and text. 3. Navigate to next heading using H key. 4. Continue navigating through all headings (expected: English Literature, Start looking for the right course, SOLUTIONS, INDUSTRIES, RESOURCES). 5. Report success with the reason listing all headings found (e.g., \"h1: Title, h2: Section1, h2: Section2\") and any hierarchy issues (e.g., h1 followed by h4 skipping h2/h3)."
+  },
+  {
+    "url": "https://fake-university.com/courses/course-2.html",
+    "goal": "1. Navigate to first heading using H key. 2. Note the heading level and text. 3. Navigate to next heading using H key. 4. Continue navigating through all headings (expected: Psychology, Start looking for the right course, SOLUTIONS, INDUSTRIES, RESOURCES). 5. Report success with the reason listing all headings found (e.g., \"h1: Title, h2: Section1, h2: Section2\") and any hierarchy issues (e.g., h1 followed by h4 skipping h2/h3)."
+  },
+  {
+    "url": "https://fake-university.com/courses/course-3.html",
+    "goal": "1. Navigate to first heading using H key. 2. Note the heading level and text. 3. Navigate to next heading using H key. 4. Continue navigating through all headings (expected: Anthropology, Start looking for the right course, SOLUTIONS, INDUSTRIES, RESOURCES). 5. Report success with the reason listing all headings found (e.g., \"h1: Title, h2: Section1, h2: Section2\") and any hierarchy issues (e.g., h1 followed by h4 skipping h2/h3)."
+  },
+  {
+    "url": "https://fake-university.com/courses/course-4.html",
+    "goal": "1. Navigate to first heading using H key. 2. Note the heading level and text. 3. Navigate to next heading using H key. 4. Continue navigating through all headings (expected: Art History, Start looking for the right course, SOLUTIONS, INDUSTRIES, RESOURCES). 5. Report success with the reason listing all headings found (e.g., \"h1: Title, h2: Section1, h2: Section2\") and any hierarchy issues (e.g., h1 followed by h4 skipping h2/h3)."
+  },
+  {
+    "url": "https://fake-university.com/courses/course-5.html",
+    "goal": "1. Navigate to first heading using H key. 2. Note the heading level and text. 3. Navigate to next heading using H key. 4. Continue navigating through all headings (expected: Creative Writing, Start looking for the right course, SOLUTIONS, INDUSTRIES, RESOURCES). 5. Report success with the reason listing all headings found (e.g., \"h1: Title, h2: Section1, h2: Section2\") and any hierarchy issues (e.g., h1 followed by h4 skipping h2/h3)."
+  },
+  {
+    "url": "https://fake-university.com/blog/article-2.html",
+    "goal": "1. Navigate to first heading using H key. 2. Note the heading level and text. 3. Navigate to next heading using H key. 4. Continue navigating through all headings (expected: A Global Leader in Education, Why Fake University?, Student success, heading level 4, The Future of Education: How Fake University is Preparing Students for the 21st Century). 5. Report success with the reason listing all headings found (e.g., \"h1: Title, h2: Section1, h2: Section2\") and any hierarchy issues (e.g., h1 followed by h4 skipping h2/h3)."
+  },
+  {
+    "url": "https://fake-university.com/blog/article-3.html",
+    "goal": "1. Navigate to first heading using H key. 2. Note the heading level and text. 3. Navigate to next heading using H key. 4. Continue navigating through all headings (expected: Preparing Students for the Future of Work, Skills for the future, How Fake University is preparing students, heading level 4, The Future of Education: How Fake University is Preparing Students for the 21st Century). 5. Report success with the reason listing all headings found (e.g., \"h1: Title, h2: Section1, h2: Section2\") and any hierarchy issues (e.g., h1 followed by h4 skipping h2/h3)."
+  },
+  {
+    "url": "https://fake-university.com/blog/article-1.html",
+    "goal": "1. Navigate to first heading using H key. 2. Note the heading level and text. 3. Navigate to next heading using H key. 4. Continue navigating through all headings (expected: The Future of Education: How Fake University is Preparing Students for the 21st Century, Specific ways that Fake University is preparing students four the future:, heading level 4, The Future of Education: How Fake University is Preparing Students for the 21st Century, A Global Leader in Education). 5. Report success with the reason listing all headings found (e.g., \"h1: Title, h2: Section1, h2: Section2\") and any hierarchy issues (e.g., h1 followed by h4 skipping h2/h3)."
+  },
+  {
+    "url": "https://fake-university.com/courses.html",
+    "goal": "1. Navigate to the form using landmarks or headings. 2. Navigate to first form field using F key or Tab. 3. Note the field's accessible label/name. 4. Type sample data into text fields (use \"test\" for text, \"test@example.com\" for email). 5. Navigate to next field using Tab. 6. Continue through all form fields (expected: textbox, combobox, combobox). 7. Navigate to and click Submit button. 8. Report success with the reason listing all form fields found, any unlabeled fields, and the form submission result."
+  },
+  {
+    "url": "https://fake-university.com",
+    "goal": "1. Navigate to the form using landmarks or headings. 2. Navigate to first form field using F key or Tab. 3. Note the field's accessible label/name. 4. Type sample data into text fields (use \"test\" for text, \"test@example.com\" for email). 5. Navigate to next field using Tab. 6. Continue through all form fields (expected: textbox, combobox). 7. Navigate to and click Submit button. 8. Report success with the reason listing all form fields found, any unlabeled fields, and the form submission result."
+  },
+  {
+    "url": "https://fake-university.com/index.html",
+    "goal": "1. Navigate to the form using landmarks or headings. 2. Navigate to first form field using F key or Tab. 3. Note the field's accessible label/name. 4. Type sample data into text fields (use \"test\" for text, \"test@example.com\" for email). 5. Navigate to next field using Tab. 6. Continue through all form fields (expected: textbox, combobox). 7. Navigate to and click Submit button. 8. Report success with the reason listing all form fields found, any unlabeled fields, and the form submission result."
+  },
+  {
+    "url": "https://fake-university.com/register.html",
+    "goal": "1. Navigate to first heading using H key. 2. Note the heading level and text. 3. Navigate to next heading using H key. 4. Continue navigating through all headings (expected: Register today). 5. Report success with the reason listing all headings found (e.g., \"h1: Title, h2: Section1, h2: Section2\") and any hierarchy issues (e.g., h1 followed by h4 skipping h2/h3)."
+  },
+  {
+    "url": "https://fake-university.com/coursse.html",
+    "goal": "1. Navigate to first heading using H key. 2. Note the heading level and text. 3. Navigate to next heading using H key. 4. Continue navigating through all headings (expected: 404 Not Found). 5. Report success with the reason listing all headings found (e.g., \"h1: Title, h2: Section1, h2: Section2\") and any hierarchy issues (e.g., h1 followed by h4 skipping h2/h3)."
+  },
+  {
+    "url": "https://fake-university.com",
+    "goal": "1. Navigate to Cart/Checkout link and click. 2. Navigate to and click Proceed to Checkout button. 3. Navigate through shipping form fields using Tab. 4. Fill in required shipping fields (name, address, etc.) using test data. 5. Navigate to and click Continue/Next button. 6. Navigate through payment form if present. 7. Navigate to and click Place Order/Complete button. 8. Report success with the reason as order confirmation or any validation errors encountered."
+  },
+  {
+    "url": "https://fake-university.com/courses.html",
+    "goal": "1. Navigate to first button on page using B key. 2. Note the button's accessible name. 3. Navigate to next button using B key. 4. Continue through all buttons (expected count: 5, examples: Search, Close, View courses). 5. For each button, verify it has a descriptive accessible name. 6. Report success with the reason listing all buttons found and any that lacked accessible names or had generic names like \"button\" or \"click here\"."
+  },
+  {
+    "url": "https://fake-university.com/register.html",
+    "goal": "1. Navigate to first button on page using B key. 2. Note the button's accessible name. 3. Navigate to next button using B key. 4. Continue through all buttons (expected count: 4, examples: Sign-in with Google, [unnamed], Courses ). 5. For each button, verify it has a descriptive accessible name. 6. Report success with the reason listing all buttons found and any that lacked accessible names or had generic names like \"button\" or \"click here\"."
+  },
+  {
+    "url": "https://fake-university.com/social-responsibility.html",
+    "goal": "1. Navigate to first button on page using B key. 2. Note the button's accessible name. 3. Navigate to next button using B key. 4. Continue through all buttons (expected count: 3, examples: I Accept Cookies, Learn more, Courses ). 5. For each button, verify it has a descriptive accessible name. 6. Report success with the reason listing all buttons found and any that lacked accessible names or had generic names like \"button\" or \"click here\"."
+  },
+  {
+    "url": "https://fake-university.com",
+    "goal": "1. Navigate to first button on page using B key. 2. Note the button's accessible name. 3. Navigate to next button using B key. 4. Continue through all buttons (expected count: 2, examples: Search, Courses ). 5. For each button, verify it has a descriptive accessible name. 6. Report success with the reason listing all buttons found and any that lacked accessible names or had generic names like \"button\" or \"click here\"."
+  },
+  {
+    "url": "https://fake-university.com/index.html",
+    "goal": "1. Navigate to first button on page using B key. 2. Note the button's accessible name. 3. Navigate to next button using B key. 4. Continue through all buttons (expected count: 2, examples: Search, Courses ). 5. For each button, verify it has a descriptive accessible name. 6. Report success with the reason listing all buttons found and any that lacked accessible names or had generic names like \"button\" or \"click here\"."
+  },
+  {
+    "url": "https://fake-university.com/courses/course-1.html",
+    "goal": "1. Navigate to first button on page using B key. 2. Note the button's accessible name. 3. Navigate to next button using B key. 4. Continue through all buttons (expected count: 1, examples: Courses ). 5. For each button, verify it has a descriptive accessible name. 6. Report success with the reason listing all buttons found and any that lacked accessible names or had generic names like \"button\" or \"click here\"."
+  },
+  {
+    "url": "https://fake-university.com/courses/course-2.html",
+    "goal": "1. Navigate to first button on page using B key. 2. Note the button's accessible name. 3. Navigate to next button using B key. 4. Continue through all buttons (expected count: 1, examples: Courses ). 5. For each button, verify it has a descriptive accessible name. 6. Report success with the reason listing all buttons found and any that lacked accessible names or had generic names like \"button\" or \"click here\"."
+  },
+  {
+    "url": "https://fake-university.com/courses/course-3.html",
+    "goal": "1. Navigate to first button on page using B key. 2. Note the button's accessible name. 3. Navigate to next button using B key. 4. Continue through all buttons (expected count: 1, examples: Courses ). 5. For each button, verify it has a descriptive accessible name. 6. Report success with the reason listing all buttons found and any that lacked accessible names or had generic names like \"button\" or \"click here\"."
+  },
+  {
+    "url": "https://fake-university.com/courses/course-4.html",
+    "goal": "1. Navigate to first button on page using B key. 2. Note the button's accessible name. 3. Navigate to next button using B key. 4. Continue through all buttons (expected count: 1, examples: Courses ). 5. For each button, verify it has a descriptive accessible name. 6. Report success with the reason listing all buttons found and any that lacked accessible names or had generic names like \"button\" or \"click here\"."
+  },
+  {
+    "url": "https://fake-university.com/courses/course-5.html",
+    "goal": "1. Navigate to first button on page using B key. 2. Note the button's accessible name. 3. Navigate to next button using B key. 4. Continue through all buttons (expected count: 1, examples: Courses ). 5. For each button, verify it has a descriptive accessible name. 6. Report success with the reason listing all buttons found and any that lacked accessible names or had generic names like \"button\" or \"click here\"."
+  },
+  {
+    "url": "https://fake-university.com/about.html",
+    "goal": "1. Navigate to first button on page using B key. 2. Note the button's accessible name. 3. Navigate to next button using B key. 4. Continue through all buttons (expected count: 1, examples: Courses ). 5. For each button, verify it has a descriptive accessible name. 6. Report success with the reason listing all buttons found and any that lacked accessible names or had generic names like \"button\" or \"click here\"."
+  },
+  {
+    "url": "https://fake-university.com/research.html",
+    "goal": "1. Navigate to first button on page using B key. 2. Note the button's accessible name. 3. Navigate to next button using B key. 4. Continue through all buttons (expected count: 1, examples: Courses ). 5. For each button, verify it has a descriptive accessible name. 6. Report success with the reason listing all buttons found and any that lacked accessible names or had generic names like \"button\" or \"click here\"."
+  },
+  {
+    "url": "https://fake-university.com/business.html",
+    "goal": "1. Navigate to first button on page using B key. 2. Note the button's accessible name. 3. Navigate to next button using B key. 4. Continue through all buttons (expected count: 1, examples: Courses ). 5. For each button, verify it has a descriptive accessible name. 6. Report success with the reason listing all buttons found and any that lacked accessible names or had generic names like \"button\" or \"click here\"."
+  },
+  {
+    "url": "https://fake-university.com/news-and-events.html",
+    "goal": "1. Navigate to first button on page using B key. 2. Note the button's accessible name. 3. Navigate to next button using B key. 4. Continue through all buttons (expected count: 1, examples: Courses ). 5. For each button, verify it has a descriptive accessible name. 6. Report success with the reason listing all buttons found and any that lacked accessible names or had generic names like \"button\" or \"click here\"."
+  },
+  {
+    "url": "https://fake-university.com/blog/article-1.html",
+    "goal": "1. Navigate to first button on page using B key. 2. Note the button's accessible name. 3. Navigate to next button using B key. 4. Continue through all buttons (expected count: 1, examples: Courses ). 5. For each button, verify it has a descriptive accessible name. 6. Report success with the reason listing all buttons found and any that lacked accessible names or had generic names like \"button\" or \"click here\"."
+  },
+  {
+    "url": "https://fake-university.com/blog/article-2.html",
+    "goal": "1. Navigate to first button on page using B key. 2. Note the button's accessible name. 3. Navigate to next button using B key. 4. Continue through all buttons (expected count: 1, examples: Courses ). 5. For each button, verify it has a descriptive accessible name. 6. Report success with the reason listing all buttons found and any that lacked accessible names or had generic names like \"button\" or \"click here\"."
+  },
+  {
+    "url": "https://fake-university.com/blog/article-3.html",
+    "goal": "1. Navigate to first button on page using B key. 2. Note the button's accessible name. 3. Navigate to next button using B key. 4. Continue through all buttons (expected count: 1, examples: Courses ). 5. For each button, verify it has a descriptive accessible name. 6. Report success with the reason listing all buttons found and any that lacked accessible names or had generic names like \"button\" or \"click here\"."
+  },
+  {
+    "url": "https://fake-university.com",
+    "goal": "1. Navigate to and click Contact link. 2. Navigate to name field and type 'Test User'. 3. Navigate to email field and type 'test@example.com'. 4. Navigate to message/textarea field and type 'This is a test message for accessibility testing.'. 5. Navigate to and click Submit/Send button. 6. Report success with the reason as the confirmation message or any validation errors."
+  },
+  {
+    "url": "https://fake-university.com/news-and-events.html",
+    "goal": "1. Navigate to first link on page using K key. 2. Note the link's accessible name and whether it's descriptive. 3. Navigate to next link using K key. 4. Continue through all links (expected count: approximately 67). 5. For each link, assess if the link text alone conveys the destination/purpose. 6. Report success with the reason listing link names that are non-descriptive (e.g., \"click here\", \"read more\", \"link\") and total link count."
+  },
+  {
+    "url": "https://fake-university.com",
+    "goal": "1. Navigate to first link on page using K key. 2. Note the link's accessible name and whether it's descriptive. 3. Navigate to next link using K key. 4. Continue through all links (expected count: approximately 66). 5. For each link, assess if the link text alone conveys the destination/purpose. 6. Report success with the reason listing link names that are non-descriptive (e.g., \"click here\", \"read more\", \"link\") and total link count."
+  },
+  {
+    "url": "https://fake-university.com/index.html",
+    "goal": "1. Navigate to first link on page using K key. 2. Note the link's accessible name and whether it's descriptive. 3. Navigate to next link using K key. 4. Continue through all links (expected count: approximately 66). 5. For each link, assess if the link text alone conveys the destination/purpose. 6. Report success with the reason listing link names that are non-descriptive (e.g., \"click here\", \"read more\", \"link\") and total link count."
+  },
+  {
+    "url": "https://fake-university.com/courses.html",
+    "goal": "1. Navigate to first link on page using K key. 2. Note the link's accessible name and whether it's descriptive. 3. Navigate to next link using K key. 4. Continue through all links (expected count: approximately 65). 5. For each link, assess if the link text alone conveys the destination/purpose. 6. Report success with the reason listing link names that are non-descriptive (e.g., \"click here\", \"read more\", \"link\") and total link count."
+  },
+  {
+    "url": "https://fake-university.com/social-responsibility.html",
+    "goal": "1. Navigate to first link on page using K key. 2. Note the link's accessible name and whether it's descriptive. 3. Navigate to next link using K key. 4. Continue through all links (expected count: approximately 65). 5. For each link, assess if the link text alone conveys the destination/purpose. 6. Report success with the reason listing link names that are non-descriptive (e.g., \"click here\", \"read more\", \"link\") and total link count."
+  },
+  {
+    "url": "https://fake-university.com/courses/course-1.html",
+    "goal": "1. Navigate to first link on page using K key. 2. Note the link's accessible name and whether it's descriptive. 3. Navigate to next link using K key. 4. Continue through all links (expected count: approximately 53). 5. For each link, assess if the link text alone conveys the destination/purpose. 6. Report success with the reason listing link names that are non-descriptive (e.g., \"click here\", \"read more\", \"link\") and total link count."
+  },
+  {
+    "url": "https://fake-university.com/courses/course-2.html",
+    "goal": "1. Navigate to first link on page using K key. 2. Note the link's accessible name and whether it's descriptive. 3. Navigate to next link using K key. 4. Continue through all links (expected count: approximately 53). 5. For each link, assess if the link text alone conveys the destination/purpose. 6. Report success with the reason listing link names that are non-descriptive (e.g., \"click here\", \"read more\", \"link\") and total link count."
+  },
+  {
+    "url": "https://fake-university.com/courses/course-3.html",
+    "goal": "1. Navigate to first link on page using K key. 2. Note the link's accessible name and whether it's descriptive. 3. Navigate to next link using K key. 4. Continue through all links (expected count: approximately 53). 5. For each link, assess if the link text alone conveys the destination/purpose. 6. Report success with the reason listing link names that are non-descriptive (e.g., \"click here\", \"read more\", \"link\") and total link count."
+  },
+  {
+    "url": "https://fake-university.com/courses/course-4.html",
+    "goal": "1. Navigate to first link on page using K key. 2. Note the link's accessible name and whether it's descriptive. 3. Navigate to next link using K key. 4. Continue through all links (expected count: approximately 53). 5. For each link, assess if the link text alone conveys the destination/purpose. 6. Report success with the reason listing link names that are non-descriptive (e.g., \"click here\", \"read more\", \"link\") and total link count."
+  },
+  {
+    "url": "https://fake-university.com/courses/course-5.html",
+    "goal": "1. Navigate to first link on page using K key. 2. Note the link's accessible name and whether it's descriptive. 3. Navigate to next link using K key. 4. Continue through all links (expected count: approximately 53). 5. For each link, assess if the link text alone conveys the destination/purpose. 6. Report success with the reason listing link names that are non-descriptive (e.g., \"click here\", \"read more\", \"link\") and total link count."
+  },
+  {
+    "url": "https://fake-university.com/about.html",
+    "goal": "1. Navigate to first link on page using K key. 2. Note the link's accessible name and whether it's descriptive. 3. Navigate to next link using K key. 4. Continue through all links (expected count: approximately 52). 5. For each link, assess if the link text alone conveys the destination/purpose. 6. Report success with the reason listing link names that are non-descriptive (e.g., \"click here\", \"read more\", \"link\") and total link count."
+  },
+  {
+    "url": "https://fake-university.com/research.html",
+    "goal": "1. Navigate to first link on page using K key. 2. Note the link's accessible name and whether it's descriptive. 3. Navigate to next link using K key. 4. Continue through all links (expected count: approximately 51). 5. For each link, assess if the link text alone conveys the destination/purpose. 6. Report success with the reason listing link names that are non-descriptive (e.g., \"click here\", \"read more\", \"link\") and total link count."
+  },
+  {
+    "url": "https://fake-university.com/business.html",
+    "goal": "1. Navigate to first link on page using K key. 2. Note the link's accessible name and whether it's descriptive. 3. Navigate to next link using K key. 4. Continue through all links (expected count: approximately 51). 5. For each link, assess if the link text alone conveys the destination/purpose. 6. Report success with the reason listing link names that are non-descriptive (e.g., \"click here\", \"read more\", \"link\") and total link count."
+  },
+  {
+    "url": "https://fake-university.com/blog/article-1.html",
+    "goal": "1. Navigate to first link on page using K key. 2. Note the link's accessible name and whether it's descriptive. 3. Navigate to next link using K key. 4. Continue through all links (expected count: approximately 19). 5. For each link, assess if the link text alone conveys the destination/purpose. 6. Report success with the reason listing link names that are non-descriptive (e.g., \"click here\", \"read more\", \"link\") and total link count."
+  },
+  {
+    "url": "https://fake-university.com/blog/article-3.html",
+    "goal": "1. Navigate to first link on page using K key. 2. Note the link's accessible name and whether it's descriptive. 3. Navigate to next link using K key. 4. Continue through all links (expected count: approximately 15). 5. For each link, assess if the link text alone conveys the destination/purpose. 6. Report success with the reason listing link names that are non-descriptive (e.g., \"click here\", \"read more\", \"link\") and total link count."
+  },
+  {
+    "url": "https://fake-university.com/blog/article-2.html",
+    "goal": "1. Navigate to first link on page using K key. 2. Note the link's accessible name and whether it's descriptive. 3. Navigate to next link using K key. 4. Continue through all links (expected count: approximately 14). 5. For each link, assess if the link text alone conveys the destination/purpose. 6. Report success with the reason listing link names that are non-descriptive (e.g., \"click here\", \"read more\", \"link\") and total link count."
+  },
+  {
+    "url": "https://fake-university.com/register.html",
+    "goal": "1. Navigate to first link on page using K key. 2. Note the link's accessible name and whether it's descriptive. 3. Navigate to next link using K key. 4. Continue through all links (expected count: approximately 10). 5. For each link, assess if the link text alone conveys the destination/purpose. 6. Report success with the reason listing link names that are non-descriptive (e.g., \"click here\", \"read more\", \"link\") and total link count."
+  },
+  {
+    "url": "https://fake-university.com",
+    "goal": "1. Navigate to main navigation using D key. 2. Navigate to and click target page link. 3. Verify the page loads and main content is accessible. 4. Navigate to main landmark on new page. 5. Navigate through first few elements to verify page structure. 6. Report success with the reason as the destination URL and confirmation that main content is keyboard accessible."
+  },
+  {
+    "url": "https://fake-university.com",
+    "goal": "1. Navigate to main navigation using D key. 2. Navigate to and click target page link. 3. Verify the page loads and main content is accessible. 4. Navigate to main landmark on new page. 5. Navigate through first few elements to verify page structure. 6. Report success with the reason as the destination URL and confirmation that main content is keyboard accessible."
+  },
+  {
+    "url": "https://fake-university.com",
+    "goal": "1. Navigate to main navigation using D key. 2. Navigate to and click target page link. 3. Verify the page loads and main content is accessible. 4. Navigate to main landmark on new page. 5. Navigate through first few elements to verify page structure. 6. Report success with the reason as the destination URL and confirmation that main content is keyboard accessible."
+  },
+  {
+    "url": "https://fake-university.com/about.html",
+    "goal": "1. Navigate to table using T key. 2. Navigate through table headers (th elements). 3. Navigate through first row of data cells. 4. Verify screen reader announces header associations with data cells. 5. Navigate to next row and verify header associations. 6. If multiple tables exist (found: 1), navigate to next table using T key. 7. Report success with the reason describing table structure (number of headers, rows, columns) and any missing header associations or scope attributes."
+  },
+  {
+    "url": "https://fake-university.com/about.html",
+    "goal": "1. Navigate to main landmark using D key. 2. Navigate through all elements using Arrow Down key. 3. For each interactive element encountered, note its name and role. 4. Continue until reaching the end of the page or footer. 5. Navigate back to top using Arrow Up repeatedly or page reload. 6. Report success with the reason listing total elements traversed, interactive elements found, and any elements without accessible names."
+  },
+  {
+    "url": "https://fake-university.com/news-and-events.html",
+    "goal": "1. Navigate to main landmark using D key. 2. Navigate through all elements using Arrow Down key. 3. For each interactive element encountered, note its name and role. 4. Continue until reaching the end of the page or footer. 5. Navigate back to top using Arrow Up repeatedly or page reload. 6. Report success with the reason listing total elements traversed, interactive elements found, and any elements without accessible names."
+  },
+  {
+    "url": "https://fake-university.com/courses.html",
+    "goal": "1. Navigate to main landmark using D key. 2. Navigate through all elements using Arrow Down key. 3. For each interactive element encountered, note its name and role. 4. Continue until reaching the end of the page or footer. 5. Navigate back to top using Arrow Up repeatedly or page reload. 6. Report success with the reason listing total elements traversed, interactive elements found, and any elements without accessible names."
+  },
+  {
+    "url": "https://fake-university.com/social-responsibility.html",
+    "goal": "1. Navigate to main landmark using D key. 2. Navigate through all elements using Arrow Down key. 3. For each interactive element encountered, note its name and role. 4. Continue until reaching the end of the page or footer. 5. Navigate back to top using Arrow Up repeatedly or page reload. 6. Report success with the reason listing total elements traversed, interactive elements found, and any elements without accessible names."
+  },
+  {
+    "url": "https://fake-university.com/research.html",
+    "goal": "1. Navigate to main landmark using D key. 2. Navigate through all elements using Arrow Down key. 3. For each interactive element encountered, note its name and role. 4. Continue until reaching the end of the page or footer. 5. Navigate back to top using Arrow Up repeatedly or page reload. 6. Report success with the reason listing total elements traversed, interactive elements found, and any elements without accessible names."
+  },
+  {
+    "url": "https://fake-university.com",
+    "goal": "1. Navigate to main landmark using D key. 2. Navigate through all elements using Arrow Down key. 3. For each interactive element encountered, note its name and role. 4. Continue until reaching the end of the page or footer. 5. Navigate back to top using Arrow Up repeatedly or page reload. 6. Report success with the reason listing total elements traversed, interactive elements found, and any elements without accessible names."
+  },
+  {
+    "url": "https://fake-university.com/index.html",
+    "goal": "1. Navigate to main landmark using D key. 2. Navigate through all elements using Arrow Down key. 3. For each interactive element encountered, note its name and role. 4. Continue until reaching the end of the page or footer. 5. Navigate back to top using Arrow Up repeatedly or page reload. 6. Report success with the reason listing total elements traversed, interactive elements found, and any elements without accessible names."
+  },
+  {
+    "url": "https://fake-university.com/business.html",
+    "goal": "1. Navigate to main landmark using D key. 2. Navigate through all elements using Arrow Down key. 3. For each interactive element encountered, note its name and role. 4. Continue until reaching the end of the page or footer. 5. Navigate back to top using Arrow Up repeatedly or page reload. 6. Report success with the reason listing total elements traversed, interactive elements found, and any elements without accessible names."
+  },
+  {
+    "url": "https://fake-university.com/courses/course-4.html",
+    "goal": "1. Navigate to main landmark using D key. 2. Navigate through all elements using Arrow Down key. 3. For each interactive element encountered, note its name and role. 4. Continue until reaching the end of the page or footer. 5. Navigate back to top using Arrow Up repeatedly or page reload. 6. Report success with the reason listing total elements traversed, interactive elements found, and any elements without accessible names."
+  },
+  {
+    "url": "https://fake-university.com/courses/course-2.html",
+    "goal": "1. Navigate to main landmark using D key. 2. Navigate through all elements using Arrow Down key. 3. For each interactive element encountered, note its name and role. 4. Continue until reaching the end of the page or footer. 5. Navigate back to top using Arrow Up repeatedly or page reload. 6. Report success with the reason listing total elements traversed, interactive elements found, and any elements without accessible names."
+  },
+  {
+    "url": "https://fake-university.com/courses/course-1.html",
+    "goal": "1. Navigate to main landmark using D key. 2. Navigate through all elements using Arrow Down key. 3. For each interactive element encountered, note its name and role. 4. Continue until reaching the end of the page or footer. 5. Navigate back to top using Arrow Up repeatedly or page reload. 6. Report success with the reason listing total elements traversed, interactive elements found, and any elements without accessible names."
+  },
+  {
+    "url": "https://fake-university.com/courses/course-5.html",
+    "goal": "1. Navigate to main landmark using D key. 2. Navigate through all elements using Arrow Down key. 3. For each interactive element encountered, note its name and role. 4. Continue until reaching the end of the page or footer. 5. Navigate back to top using Arrow Up repeatedly or page reload. 6. Report success with the reason listing total elements traversed, interactive elements found, and any elements without accessible names."
+  },
+  {
+    "url": "https://fake-university.com/courses/course-3.html",
+    "goal": "1. Navigate to main landmark using D key. 2. Navigate through all elements using Arrow Down key. 3. For each interactive element encountered, note its name and role. 4. Continue until reaching the end of the page or footer. 5. Navigate back to top using Arrow Up repeatedly or page reload. 6. Report success with the reason listing total elements traversed, interactive elements found, and any elements without accessible names."
+  },
+  {
+    "url": "https://fake-university.com/blog/article-1.html",
+    "goal": "1. Navigate to main landmark using D key. 2. Navigate through all elements using Arrow Down key. 3. For each interactive element encountered, note its name and role. 4. Continue until reaching the end of the page or footer. 5. Navigate back to top using Arrow Up repeatedly or page reload. 6. Report success with the reason listing total elements traversed, interactive elements found, and any elements without accessible names."
+  },
+  {
+    "url": "https://fake-university.com/blog/article-3.html",
+    "goal": "1. Navigate to main landmark using D key. 2. Navigate through all elements using Arrow Down key. 3. For each interactive element encountered, note its name and role. 4. Continue until reaching the end of the page or footer. 5. Navigate back to top using Arrow Up repeatedly or page reload. 6. Report success with the reason listing total elements traversed, interactive elements found, and any elements without accessible names."
+  },
+  {
+    "url": "https://fake-university.com/blog/article-2.html",
+    "goal": "1. Navigate to main landmark using D key. 2. Navigate through all elements using Arrow Down key. 3. For each interactive element encountered, note its name and role. 4. Continue until reaching the end of the page or footer. 5. Navigate back to top using Arrow Up repeatedly or page reload. 6. Report success with the reason listing total elements traversed, interactive elements found, and any elements without accessible names."
+  },
+  {
+    "url": "https://fake-university.com/register.html",
+    "goal": "1. Navigate to main landmark using D key. 2. Navigate through all elements using Arrow Down key. 3. For each interactive element encountered, note its name and role. 4. Continue until reaching the end of the page or footer. 5. Navigate back to top using Arrow Up repeatedly or page reload. 6. Report success with the reason listing total elements traversed, interactive elements found, and any elements without accessible names."
+  },
+  {
+    "url": "https://fake-university.com/coursse.html",
+    "goal": "1. Navigate to 404 Not Found. 2. Navigate through elements using Arrow Down or Tab. 3. Locate and verify these elements: separator \"unnamed\", RootWebArea \"404 Not Found\", StaticText \"404 Not Found\", StaticText \"nginx/1.18.0 (Ubuntu)\", InlineTextBox \"404 Not Found\". 4. For each element, note its accessible name and role. 5. Report success with the reason listing all elements found and any that lacked accessible names."
+  }
+]
