@@ -20,7 +20,7 @@
     "apps/dashboard",
     "apps/ui",
     "apps/virtual-screen-reader",
-    "services/rerun-worker"
+    "services/rerun-worker",
     "browser",
     "drivers",
     "agent",
