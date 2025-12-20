@@ -1,0 +1,134 @@
+\begin{center}
+    \textsc{\huge Accessibility Testing with Screen Reader Agents}\\[0.1cm]
+    \textsc{Ruining the job market for the disabled since 2025}\\[1em]
+\end{center}
+
+\section{PURPOSE}
+\textit{We are building an agent-centered CI/CD pipeline for government agencies and outward-facing businesses to maintain accessibility compliance under the Americans with Disabilities Act and Section 508 of the Rehabilitation Act.}
+
+\textit{Our platform will help companies constantly detect and redesign their websites to comply with regulations without the need for large quality analyst teams that need to be trained on accessibility awareness.}
+
+\vspace{0.5em}
+\section{PROBLEM AND OPPORTUNITY}
+Almost 95\% of top companies have detectable accessibility violations in accordance with the ADA or Section 508. This leads to easy lawsuits from consumers and users who can't access their website with screenreaders like VoiceOver and NVDA.
+
+These companies rely on old technologies like accessibility overlays (AccessiBe), manual verification, etc, which have several problems:
+
+\begin{enumerate}
+    \item False claims of "solving accessibility" without addressing the root cause by injecting JavaScript into the DOM to mask the issue
+    \item Missing coverage of dozens of key compliance rules
+    \item Slow and inaccurate coverage using humans to subjectively test these rules
+\end{enumerate}
+
+These tools are also often slow and tedious to work with, resulting in slower development as accessibility teams work to catch up with developers.
+
+\vspace{0.5em}
+\section{SOLUTION AND EDGE}
+We are building a platform that relies on AI agents to quickly analyze and report accessibility problems, not just for the company, but specifically for developers to quickly iterate upon errors and ship accessible websites. Our platform:
+\vspace{-0.5em}
+\begin{itemize}[noitemsep]
+    \item Ensures 100\% coverage of all WCAG 2.1 violations on a daily/weekly basis, as well as instantaneously when called upon by a dev/QA
+    \item ... what else lol help
+\end{itemize}
+\vspace{-0.5em}
+
+The core of our platform are the AI agents and screen reader tool. We utilize agents connected to the screen reader to traverse a webpage's DOM and detect accessibility errors automatically, without any human visual verification required. 
+
+(In the future, we hope to generalize our technique of traversing the DOM to build a browser-use agent competitor that relies entirely on text from the DOM instead of screenshots of the browser).
+
+Currently, no tools on the market are automating accessibility testing in such a manner.
+
+\textbf{Competition:}
+One competitor, TestParty.ai, actually created a list of comparison sheets for their (and our) direct competitors. We can take these and come up with a more specific edge since they did half the work for us.
+
+\href{https://docs.google.com/spreadsheets/d/1kwO59YhMjCMFA10uVmhMSY2MzajYV_xlmmT7f2pqnCQ/edit?gid=341975604#gid=341975604}{BrowserStack}
+
+\href{https://docs.google.com/spreadsheets/d/1tQvP-EH_zTHU7yy8FAqanjfP_HxO3DcKT7B_RJo8y3s/edit?gid=2092862956#gid=2092862956}{accessiBe}
+
+\href{https://docs.google.com/spreadsheets/d/1SBt0X3tEOOkkAydGDxnTUuCwWjNlLqUOd6BjAicuZIk/edit?gid=341975604#gid=341975604}{Evinced}
+
+\href{https://docs.google.com/spreadsheets/d/1yJ3LYM08dTz5_2XZuRsPVcVLytmLFtvTTiW_rFqSS2o/edit?gid=341975604#gid=341975604}{Deque}
+
+\href{https://docs.google.com/spreadsheets/d/1ztxqLq_EjeOvK6zflibTAFhzpawkYc2Gjv7iUVYsOxM/edit?gid=2092862956#gid=2092862956}{Level Access}
+
+\href{https://github.com/GovTechSG/oobee}{Oobee, Singapore Version}
+
+% \begin{itemize}[noitemsep]
+% \item \textbf{MaxRewards} focuses on maximizing the expected value of cards a user \textit{already} possesses.\footnote{MaxRewards poses privacy and legal risks: it stores user banking credentials due to the lack of public, user-facing APIs (e.g., Amex, Chase), which triggers fraud alerts and account lockouts. It also automates all issuer rewards, including those not covered by the credit card, raising compliance concerns.}
+% \item \textbf{CardPointers} offers static\footnote{Emmanuel Crouvisier, the solo founder of CardPointers, manages the platform by his lonesome, including \textit{manually} updating card suggestions. CardPointers, however, boasts over 20,000 paying customers, and thus constitutes a ripe partnership opportunity: our architecture significantly outperforms CardPointers' in scalability and automation while Crouvisier has a six-year distribution moat.} suggestions that help users \textit{superficially} assess card eligibility and better apply spend to bonuses on opened cards.
+% \item Our platform integrates eligibility, sequencing, and long-term value modeling through a dynamic graph based on user-contributed outcomes.
+% \end{itemize}
+% \vspace{-0.5em}
+% Our \textit{ultimate} intent is to help users plan the timing and sequence of multiple credit card applications to maximize rewards and minimize risks over time.
+
+\newpage
+\section{MARKET SIZE AND STRATEGY}
+\textbf{Market Estimate:}
+\vspace{-0.5em}
+\begin{itemize}[noitemsep]
+    \item \textbf{TAM}: \$100M+, driven by consumer subscriptions and referral monetization
+    \begin{itemize}
+        \item 170M credit card users in the U.S.
+        \item 48\% with FICO scores exceeding 750
+        \item 10M with active interest in travel rewards, inferred from traffic to subreddits, blogs, and loyalty groups
+        \item $\sim$1.75\% of transaction volume directed toward rewards (~\$100B USD)
+    \end{itemize}
+    
+    \item \textbf{SAM:} \$10M--\$30M, targeting high-FICO users actively optimizing credit card rewards
+    \begin{itemize}
+        \item $\sim$5M users highly engaged with reward optimization tools and content
+        \item Monetizable via \$2--\$6/month subscription or \$20--\$50/year referral value
+    \end{itemize}
+    
+    \item \textbf{SOM:} \$1M--\$5M in near-term obtainable revenue
+    \begin{itemize}
+        \item Targeting $\sim$10K--25K early adopters through niche communities and influencer partnerships
+        \item Initial revenue via premium subscription tiers and high-intent referrals
+    \end{itemize}
+\end{itemize}
+\vspace{-0.5em}
+
+\textbf{Initial user segments:}
+\vspace{-0.5em}
+\begin{itemize}[noitemsep]
+\item Users already involved in churning via Reddit, Discord, and niche forums
+\item Early-career professionals building credit and aiming to travel with points
+\item Students with high credit scores and interest in travel or cashback rewards
+\end{itemize}
+\vspace{-0.5em}
+
+\textbf{Growth plan:}
+\vspace{-0.5em}
+\begin{itemize}[noitemsep]
+\item Direct outreach in high-engagement online forums
+\item Socially engineer a contributor-driven community (e.g., rewarding influencers)
+\item Gamified referral system based on user-verified card paths
+\item Educational content focused on risk management, long-term planning, and successful strategies
+\end{itemize}
+
+\section{MONETIZATION AND OPERATIONS}
+Our platform will offer a free trial, granting users full access to sophisticated planning tools, simulations, and data syncing for an introductory period. Post trial, premium features will remain available for \$4.99/month via subscription. Throughout, users can trust that all recommendations are based on objective analysis and never influenced by issuer incentives.
+
+\textbf{Revenue streams include:}
+\vspace{-0.5em}
+\begin{itemize}[noitemsep]
+\item \textbf{Subscription fees:} The primary source of revenue, offering paying users enhanced functionality and a seamless experience.
+\item \textbf{Issuer referrals:} Used only when a referral aligns with the best, unbiased recommendation for the user—not as a default or intrusive strategy.
+\item \textbf{Merchant partnerships:} Collaborations with merchants relevant to manufactured spending (e.g., prepaid and gift card providers), to create mutually beneficial referral opportunities.
+\item \textbf{Graph data licensing:} Carefully anonymized churn path data may be licensed to fintech companies and academic researchers.
+\end{itemize}
+
+As our platform scales, additional roles in customer support, compliance, and partnership development will be added to support operations. 
+
+Initial costs will center on critical infrastructure and early-stage growth:
+\vspace{-0.5em}
+\begin{itemize}[noitemsep]
+\item Community data scraping (e.g., from public forums)
+\item Integrations with essential data providers, such as Plaid and Experian
+\item Cloud infrastructure to run simulations and deliver real-time services
+\item Legal and compliance reviews to ensure regulatory alignment
+\item Budget for community development, including moderation resources and user rewards
+\end{itemize}
+\vspace{-0.5em}
+
+In conclusion, this structure lays the groundwork for a fundamentally new way users can unlock the full value of their credit.
