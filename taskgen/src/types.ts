@@ -33,6 +33,83 @@ export type NavigationKey =
   | 'l'        // Next list
   | '1' | '2' | '3' | '4' | '5' | '6';  // Heading levels
 
+// ==================== DOM Crawling Types ====================
+
+/**
+ * Raw DOM element from CDP DOM.* commands.
+ * Used to find potentially interactive elements that may not be in the accessibility tree.
+ */
+export interface DOMElement {
+  nodeId: number;                    // CDP DOM nodeId
+  backendNodeId: number;             // Backend node ID for bridging to a11y tree
+  nodeName: string;                  // Tag name (e.g., 'DIV', 'BUTTON')
+  localName: string;                 // Lowercase tag name
+  attributes: Record<string, string>; // Element attributes
+  boundingBox?: { x: number; y: number; width: number; height: number } | null;
+  pageUrl: string;                   // Which page this element is on
+}
+
+/**
+ * Signals that indicate an element may be interactive.
+ * Used to detect elements that LOOK interactive but may not be accessible.
+ */
+export interface InteractivitySignals {
+  hasClickHandler: boolean;          // onclick, addEventListener('click'), ng-click, @click
+  hasCursorPointer: boolean;         // cursor: pointer in computed styles
+  isSemanticInteractive: boolean;    // <button>, <a href>, <input>, etc.
+  hasTabindex: boolean;              // tabindex attribute present
+  tabindexValue: number | null;      // Actual tabindex value (-1, 0, positive)
+  hasRoleAttribute: boolean;         // role="button" etc.
+  roleValue: string | null;          // Actual role value
+  hasAriaExpanded: boolean;          // Often indicates interactive widget
+  classNameHints: string[];          // Classes suggesting interactivity (btn, button, clickable)
+}
+
+/**
+ * Types of accessibility gaps that can be detected.
+ */
+export type AccessibilityGapType =
+  | 'missing_from_a11y_tree'        // Element not in accessibility tree at all
+  | 'no_accessible_name'            // In tree but has no name
+  | 'wrong_role'                    // Has generic role but should be interactive
+  | 'not_focusable'                 // Should be keyboard accessible but isn't
+  | 'hidden_but_interactive';       // aria-hidden/display:none but has handlers
+
+/**
+ * A detected accessibility gap - an element that should be accessible but isn't.
+ */
+export interface AccessibilityGap {
+  domElement: DOMElement;
+  signals: InteractivitySignals;
+  gapType: AccessibilityGapType;
+  severity: 'critical' | 'serious' | 'moderate' | 'minor';
+  wcagViolations: string[];          // Relevant WCAG criteria (e.g., '4.1.2', '2.1.1')
+  suggestedFix?: string;             // Recommended remediation
+  evidence: string;                  // Human-readable description of the gap
+}
+
+/**
+ * Result of dual crawl (DOM + accessibility tree comparison).
+ */
+export interface DualCrawlResult {
+  pageUrl: string;
+  accessibilityTree: PageElementGraph;  // Existing a11y tree crawl
+  domElements: DOMElement[];            // All potentially interactive DOM elements
+  gaps: AccessibilityGap[];             // Detected accessibility gaps
+  bridgeMap: Map<number, string>;       // backendNodeId -> ElementNode.id mapping
+}
+
+/**
+ * Summary report of all gaps found across the site.
+ */
+export interface GapReport {
+  totalGaps: number;
+  gapsByType: Record<AccessibilityGapType, number>;
+  gapsBySeverity: Record<string, number>;
+  criticalGaps: AccessibilityGap[];
+  pageBreakdown: Map<string, AccessibilityGap[]>;
+}
+
 // ==================== Element Types ====================
 
 /**
@@ -75,6 +152,9 @@ export interface ElementNode {
   name: string;                 // Accessible name
   description?: string;         // Accessible description
   value?: string;               // Current value (for inputs)
+
+  // Bridge to DOM tree for gap detection
+  backendDOMNodeId?: number;    // CDP backend node ID for bridging to DOM
 
   // Type flags
   typeFlags: ElementTypeFlags;
@@ -196,7 +276,7 @@ export interface TraversalPath {
 /**
  * Task type classification.
  */
-export type TaskType = 'atomic' | 'journey' | 'coverage' | 'adaptive';
+export type TaskType = 'atomic' | 'journey' | 'coverage' | 'adaptive' | 'gap';
 
 /**
  * A single step in a task goal.
@@ -322,6 +402,8 @@ export interface TaskGenConfig {
   coverageThreshold: number;    // Target coverage percentage (0-100)
   includeJourneyTasks: boolean;
   includeAtomicTasks: boolean;
+  enableGapDetection?: boolean; // Enable dual-crawl accessibility gap detection
+  gapReportPath?: string;       // Output path for gap detection report
 }
 
 /**

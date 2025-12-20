@@ -1,0 +1,655 @@
+[
+  {
+    "url": "https://fake-university.com",
+    "goal": "1. Navigate to and click Login link. 2. Navigate to username/email field and type 'test@example.com'. 3. Navigate to password field and type 'TestPassword123'. 4. Navigate to and click Sign In/Login button. 5. Report success with the reason as the authenticated page URL or any error message displayed.",
+    "success": false,
+    "reason": "I have encountered an issue where the browser session ended up on 'about:blank' after a series of redirects and failed navigation attempts. I am unable to navigate back to the target website 'https://fake-university.com/' using the available keyboard tools.",
+    "error": null,
+    "stepCount": 271,
+    "durationMs": 223026,
+    "violations": [
+      {
+        "ruleId": "WCAG-2.4.1",
+        "description": "Page lacks bypass mechanism: no skip link or main landmark found.",
+        "severity": "serious",
+        "evidence": "Users cannot skip repetitive navigation blocks."
+      },
+      {
+        "ruleId": "WCAG-2.4.2",
+        "description": "Page is missing a title.",
+        "severity": "serious",
+        "evidence": "The <title> element is empty or missing."
+      },
+      {
+        "ruleId": "WCAG-3.1.1",
+        "description": "Page is missing a language declaration.",
+        "severity": "serious",
+        "evidence": "The <html> element is missing the lang attribute."
+      }
+    ],
+    "violationSummary": {
+      "critical": 0,
+      "serious": 3,
+      "moderate": 0,
+      "minor": 0,
+      "total": 3
+    },
+    "wcagPasses": [
+      "1.1.1",
+      "1.3.1-headings",
+      "1.3.1-forms",
+      "2.1.2",
+      "2.4.4",
+      "2.4.6",
+      "3.3.2",
+      "4.1.2"
+    ]
+  },
+  {
+    "url": "https://fake-university.com/courses.html",
+    "goal": "1. Navigate to banner landmark using D key. 2. Navigate to navigation landmark using D key. 3. Navigate to main landmark using D key. 4. Navigate to contentinfo landmark using D key. 5. Continue through all landmarks on the page. 6. Report success with the reason listing all landmarks found (expected: banner, contentinfo, navigation) and any missing required landmarks.",
+    "success": true,
+    "reason": "I navigated through the landmarks using the 'D' key and found the following: Banner, Navigation, and Content Info. The 'main' landmark was not found, which was explicitly mentioned in the navigation steps but noted as missing from the expected list in the final step. All landmarks found: banner, navigation, contentinfo. Missing required landmark: main.",
+    "error": null,
+    "stepCount": 4,
+    "durationMs": 12573,
+    "violations": [
+      {
+        "ruleId": "WCAG-1.1.1",
+        "description": "Image is missing alternative text.",
+        "severity": "critical",
+        "axNodeId": "130",
+        "evidence": "Image node (BackendID: 130) has no accessible name."
+      },
+      {
+        "ruleId": "WCAG-1.1.1",
+        "description": "Image is missing alternative text.",
+        "severity": "critical",
+        "axNodeId": "277",
+        "evidence": "Image node (BackendID: 277) has no accessible name."
+      },
+      {
+        "ruleId": "WCAG-1.1.1",
+        "description": "Image is missing alternative text.",
+        "severity": "critical",
+        "axNodeId": "98",
+        "evidence": "Image node (BackendID: 98) has no accessible name."
+      },
+      {
+        "ruleId": "WCAG-1.1.1",
+        "description": "Image is missing alternative text.",
+        "severity": "critical",
+        "axNodeId": "288",
+        "evidence": "Image node (BackendID: 288) has no accessible name."
+      },
+      {
+        "ruleId": "WCAG-1.3.1",
+        "description": "Heading hierarchy skips levels: h2 to h4.",
+        "severity": "moderate",
+        "axNodeId": "170",
+        "evidence": "Heading \"Refine by\" (h4) follows \"Courses\" (h2), skipping 1 level(s)."
+      },
+      {
+        "ruleId": "WCAG-1.3.1",
+        "description": "Heading hierarchy skips levels: h2 to h4.",
+        "severity": "moderate",
+        "axNodeId": "291",
+        "evidence": "Heading \"SOLUTIONS\" (h4) follows \"Start looking for the right course\" (h2), skipping 1 level(s)."
+      },
+      {
+        "ruleId": "WCAG-1.3.1",
+        "description": "Page does not start with an h1 heading.",
+        "severity": "moderate",
+        "axNodeId": "125",
+        "evidence": "First heading is h2: \"Courses\"."
+      },
+      {
+        "ruleId": "WCAG-1.3.1",
+        "description": "Form field with role 'textbox' has no associated label.",
+        "severity": "serious",
+        "axNodeId": "136",
+        "evidence": "Form field (BackendID: 136) is missing a label."
+      },
+      {
+        "ruleId": "WCAG-1.3.1",
+        "description": "Form field with role 'combobox' has no associated label.",
+        "severity": "serious",
+        "axNodeId": "138",
+        "evidence": "Form field (BackendID: 138) is missing a label."
+      },
+      {
+        "ruleId": "WCAG-1.3.1",
+        "description": "Form field with role 'combobox' has no associated label.",
+        "severity": "serious",
+        "axNodeId": "172",
+        "evidence": "Form field (BackendID: 172) is missing a label."
+      },
+      {
+        "ruleId": "WCAG-1.3.1",
+        "description": "Form field with role 'combobox' has no associated label.",
+        "severity": "serious",
+        "axNodeId": "197",
+        "evidence": "Form field (BackendID: 197) is missing a label."
+      },
+      {
+        "ruleId": "WCAG-1.3.1",
+        "description": "Form field with role 'combobox' has no associated label.",
+        "severity": "serious",
+        "axNodeId": "216",
+        "evidence": "Form field (BackendID: 216) is missing a label."
+      },
+      {
+        "ruleId": "WCAG-2.4.1",
+        "description": "Page lacks bypass mechanism: no skip link or main landmark found.",
+        "severity": "serious",
+        "evidence": "Users cannot skip repetitive navigation blocks."
+      },
+      {
+        "ruleId": "WCAG-2.4.2",
+        "description": "Page is missing a title.",
+        "severity": "serious",
+        "evidence": "The <title> element is empty or missing."
+      },
+      {
+        "ruleId": "WCAG-2.4.4",
+        "description": "Link has vague or non-descriptive text: \"Link\".",
+        "severity": "moderate",
+        "axNodeId": "372",
+        "evidence": "Link text \"Link\" does not describe link purpose."
+      },
+      {
+        "ruleId": "WCAG-3.1.1",
+        "description": "Page is missing a language declaration.",
+        "severity": "serious",
+        "evidence": "The <html> element is missing the lang attribute."
+      },
+      {
+        "ruleId": "WCAG-3.3.2",
+        "description": "Input field with role 'textbox' is missing a label.",
+        "severity": "serious",
+        "axNodeId": "136",
+        "evidence": "Input (BackendID: 136) has no accessible label."
+      },
+      {
+        "ruleId": "WCAG-3.3.2",
+        "description": "Input field with role 'combobox' is missing a label.",
+        "severity": "serious",
+        "axNodeId": "138",
+        "evidence": "Input (BackendID: 138) has no accessible label."
+      },
+      {
+        "ruleId": "WCAG-3.3.2",
+        "description": "Input field with role 'combobox' is missing a label.",
+        "severity": "serious",
+        "axNodeId": "172",
+        "evidence": "Input (BackendID: 172) has no accessible label."
+      },
+      {
+        "ruleId": "WCAG-3.3.2",
+        "description": "Input field with role 'combobox' is missing a label.",
+        "severity": "serious",
+        "axNodeId": "197",
+        "evidence": "Input (BackendID: 197) has no accessible label."
+      },
+      {
+        "ruleId": "WCAG-3.3.2",
+        "description": "Input field with role 'combobox' is missing a label.",
+        "severity": "serious",
+        "axNodeId": "216",
+        "evidence": "Input (BackendID: 216) has no accessible label."
+      },
+      {
+        "ruleId": "WCAG-4.1.2",
+        "description": "Interactive element with role 'link' has no accessible name.",
+        "severity": "critical",
+        "axNodeId": "97",
+        "evidence": "Element (BackendID: 97) with role 'link' is missing a name."
+      },
+      {
+        "ruleId": "WCAG-4.1.2",
+        "description": "Interactive element with role 'textbox' has no accessible name.",
+        "severity": "critical",
+        "axNodeId": "136",
+        "evidence": "Element (BackendID: 136) with role 'textbox' is missing a name."
+      },
+      {
+        "ruleId": "WCAG-4.1.2",
+        "description": "Interactive element with role 'combobox' has no accessible name.",
+        "severity": "critical",
+        "axNodeId": "138",
+        "evidence": "Element (BackendID: 138) with role 'combobox' is missing a name."
+      },
+      {
+        "ruleId": "WCAG-4.1.2",
+        "description": "Interactive element with role 'combobox' has no accessible name.",
+        "severity": "critical",
+        "axNodeId": "172",
+        "evidence": "Element (BackendID: 172) with role 'combobox' is missing a name."
+      },
+      {
+        "ruleId": "WCAG-4.1.2",
+        "description": "Interactive element with role 'combobox' has no accessible name.",
+        "severity": "critical",
+        "axNodeId": "197",
+        "evidence": "Element (BackendID: 197) with role 'combobox' is missing a name."
+      },
+      {
+        "ruleId": "WCAG-4.1.2",
+        "description": "Interactive element with role 'combobox' has no accessible name.",
+        "severity": "critical",
+        "axNodeId": "216",
+        "evidence": "Element (BackendID: 216) with role 'combobox' is missing a name."
+      },
+      {
+        "ruleId": "WCAG-4.1.2",
+        "description": "Interactive element with role 'link' has no accessible name.",
+        "severity": "critical",
+        "axNodeId": "287",
+        "evidence": "Element (BackendID: 287) with role 'link' is missing a name."
+      }
+    ],
+    "violationSummary": {
+      "critical": 11,
+      "serious": 13,
+      "moderate": 4,
+      "minor": 0,
+      "total": 28
+    },
+    "wcagPasses": [
+      "2.1.2",
+      "2.4.6"
+    ]
+  },
+  {
+    "url": "https://fake-university.com/courses/course-1.html",
+    "goal": "1. Navigate to banner landmark using D key. 2. Navigate to navigation landmark using D key. 3. Navigate to main landmark using D key. 4. Navigate to contentinfo landmark using D key. 5. Continue through all landmarks on the page. 6. Report success with the reason listing all landmarks found (expected: banner, contentinfo, complementary) and any missing required landmarks.",
+    "success": true,
+    "reason": "Found landmarks: banner, complementary, contentinfo. Missing landmarks that were requested to be navigated to: navigation, main.",
+    "error": null,
+    "stepCount": 4,
+    "durationMs": 11086,
+    "violations": [
+      {
+        "ruleId": "WCAG-1.1.1",
+        "description": "Image is missing alternative text.",
+        "severity": "critical",
+        "axNodeId": "3",
+        "evidence": "Image node (BackendID: 3) has no accessible name."
+      },
+      {
+        "ruleId": "WCAG-1.1.1",
+        "description": "Image is missing alternative text.",
+        "severity": "critical",
+        "axNodeId": "148",
+        "evidence": "Image node (BackendID: 148) has no accessible name."
+      },
+      {
+        "ruleId": "WCAG-1.1.1",
+        "description": "Image is missing alternative text.",
+        "severity": "critical",
+        "axNodeId": "87",
+        "evidence": "Image node (BackendID: 87) has no accessible name."
+      },
+      {
+        "ruleId": "WCAG-1.1.1",
+        "description": "Image is missing alternative text.",
+        "severity": "critical",
+        "axNodeId": "159",
+        "evidence": "Image node (BackendID: 159) has no accessible name."
+      },
+      {
+        "ruleId": "WCAG-1.1.1",
+        "description": "Image is missing alternative text.",
+        "severity": "critical",
+        "axNodeId": "21",
+        "evidence": "Image node (BackendID: 21) has no accessible name."
+      },
+      {
+        "ruleId": "WCAG-1.1.1",
+        "description": "Image is missing alternative text.",
+        "severity": "critical",
+        "axNodeId": "22",
+        "evidence": "Image node (BackendID: 22) has no accessible name."
+      },
+      {
+        "ruleId": "WCAG-1.1.1",
+        "description": "Image is missing alternative text.",
+        "severity": "critical",
+        "axNodeId": "23",
+        "evidence": "Image node (BackendID: 23) has no accessible name."
+      },
+      {
+        "ruleId": "WCAG-1.1.1",
+        "description": "Image is missing alternative text.",
+        "severity": "critical",
+        "axNodeId": "130",
+        "evidence": "Image node (BackendID: 130) has no accessible name."
+      },
+      {
+        "ruleId": "WCAG-1.3.1",
+        "description": "Heading hierarchy skips levels: h2 to h4.",
+        "severity": "moderate",
+        "axNodeId": "162",
+        "evidence": "Heading \"SOLUTIONS\" (h4) follows \"Start looking for the right course\" (h2), skipping 1 level(s)."
+      },
+      {
+        "ruleId": "WCAG-2.4.1",
+        "description": "Page lacks bypass mechanism: no skip link or main landmark found.",
+        "severity": "serious",
+        "evidence": "Users cannot skip repetitive navigation blocks."
+      },
+      {
+        "ruleId": "WCAG-2.4.2",
+        "description": "Page is missing a title.",
+        "severity": "serious",
+        "evidence": "The <title> element is empty or missing."
+      },
+      {
+        "ruleId": "WCAG-2.4.4",
+        "description": "Link has vague or non-descriptive text: \"Link\".",
+        "severity": "moderate",
+        "axNodeId": "243",
+        "evidence": "Link text \"Link\" does not describe link purpose."
+      },
+      {
+        "ruleId": "WCAG-3.1.1",
+        "description": "Page is missing a language declaration.",
+        "severity": "serious",
+        "evidence": "The <html> element is missing the lang attribute."
+      },
+      {
+        "ruleId": "WCAG-4.1.2",
+        "description": "Interactive element with role 'link' has no accessible name.",
+        "severity": "critical",
+        "axNodeId": "86",
+        "evidence": "Element (BackendID: 86) with role 'link' is missing a name."
+      },
+      {
+        "ruleId": "WCAG-4.1.2",
+        "description": "Interactive element with role 'link' has no accessible name.",
+        "severity": "critical",
+        "axNodeId": "158",
+        "evidence": "Element (BackendID: 158) with role 'link' is missing a name."
+      }
+    ],
+    "violationSummary": {
+      "critical": 10,
+      "serious": 3,
+      "moderate": 2,
+      "minor": 0,
+      "total": 15
+    },
+    "wcagPasses": [
+      "1.3.1-forms",
+      "2.1.2",
+      "2.4.6",
+      "3.3.2"
+    ]
+  },
+  {
+    "url": "https://fake-university.com/courses/course-2.html",
+    "goal": "1. Navigate to banner landmark using D key. 2. Navigate to navigation landmark using D key. 3. Navigate to main landmark using D key. 4. Navigate to contentinfo landmark using D key. 5. Continue through all landmarks on the page. 6. Report success with the reason listing all landmarks found (expected: banner, contentinfo, complementary) and any missing required landmarks.",
+    "success": true,
+    "reason": "Found landmarks: banner, complementary, and contentinfo. Missing landmarks: navigation and main. Navigation through landmarks with the 'D' key reached the end of the page after these three.",
+    "error": null,
+    "stepCount": 4,
+    "durationMs": 11246,
+    "violations": [
+      {
+        "ruleId": "WCAG-1.1.1",
+        "description": "Image is missing alternative text.",
+        "severity": "critical",
+        "axNodeId": "3",
+        "evidence": "Image node (BackendID: 3) has no accessible name."
+      },
+      {
+        "ruleId": "WCAG-1.1.1",
+        "description": "Image is missing alternative text.",
+        "severity": "critical",
+        "axNodeId": "146",
+        "evidence": "Image node (BackendID: 146) has no accessible name."
+      },
+      {
+        "ruleId": "WCAG-1.1.1",
+        "description": "Image is missing alternative text.",
+        "severity": "critical",
+        "axNodeId": "77",
+        "evidence": "Image node (BackendID: 77) has no accessible name."
+      },
+      {
+        "ruleId": "WCAG-1.1.1",
+        "description": "Image is missing alternative text.",
+        "severity": "critical",
+        "axNodeId": "157",
+        "evidence": "Image node (BackendID: 157) has no accessible name."
+      },
+      {
+        "ruleId": "WCAG-1.1.1",
+        "description": "Image is missing alternative text.",
+        "severity": "critical",
+        "axNodeId": "116",
+        "evidence": "Image node (BackendID: 116) has no accessible name."
+      },
+      {
+        "ruleId": "WCAG-1.1.1",
+        "description": "Image is missing alternative text.",
+        "severity": "critical",
+        "axNodeId": "120",
+        "evidence": "Image node (BackendID: 120) has no accessible name."
+      },
+      {
+        "ruleId": "WCAG-1.1.1",
+        "description": "Image is missing alternative text.",
+        "severity": "critical",
+        "axNodeId": "124",
+        "evidence": "Image node (BackendID: 124) has no accessible name."
+      },
+      {
+        "ruleId": "WCAG-1.1.1",
+        "description": "Image is missing alternative text.",
+        "severity": "critical",
+        "axNodeId": "128",
+        "evidence": "Image node (BackendID: 128) has no accessible name."
+      },
+      {
+        "ruleId": "WCAG-1.3.1",
+        "description": "Heading hierarchy skips levels: h2 to h4.",
+        "severity": "moderate",
+        "axNodeId": "160",
+        "evidence": "Heading \"SOLUTIONS\" (h4) follows \"Start looking for the right course\" (h2), skipping 1 level(s)."
+      },
+      {
+        "ruleId": "WCAG-1.3.1",
+        "description": "Page does not start with an h1 heading.",
+        "severity": "moderate",
+        "axNodeId": "104",
+        "evidence": "First heading is h2: \"Psychology\"."
+      },
+      {
+        "ruleId": "WCAG-2.4.1",
+        "description": "Page lacks bypass mechanism: no skip link or main landmark found.",
+        "severity": "serious",
+        "evidence": "Users cannot skip repetitive navigation blocks."
+      },
+      {
+        "ruleId": "WCAG-2.4.2",
+        "description": "Page is missing a title.",
+        "severity": "serious",
+        "evidence": "The <title> element is empty or missing."
+      },
+      {
+        "ruleId": "WCAG-2.4.4",
+        "description": "Link has vague or non-descriptive text: \"Link\".",
+        "severity": "moderate",
+        "axNodeId": "241",
+        "evidence": "Link text \"Link\" does not describe link purpose."
+      },
+      {
+        "ruleId": "WCAG-3.1.1",
+        "description": "Page is missing a language declaration.",
+        "severity": "serious",
+        "evidence": "The <html> element is missing the lang attribute."
+      },
+      {
+        "ruleId": "WCAG-4.1.2",
+        "description": "Interactive element with role 'link' has no accessible name.",
+        "severity": "critical",
+        "axNodeId": "76",
+        "evidence": "Element (BackendID: 76) with role 'link' is missing a name."
+      },
+      {
+        "ruleId": "WCAG-4.1.2",
+        "description": "Interactive element with role 'link' has no accessible name.",
+        "severity": "critical",
+        "axNodeId": "156",
+        "evidence": "Element (BackendID: 156) with role 'link' is missing a name."
+      }
+    ],
+    "violationSummary": {
+      "critical": 10,
+      "serious": 3,
+      "moderate": 3,
+      "minor": 0,
+      "total": 16
+    },
+    "wcagPasses": [
+      "1.3.1-forms",
+      "2.1.2",
+      "2.4.6",
+      "3.3.2"
+    ]
+  },
+  {
+    "url": "https://fake-university.com/courses/course-3.html",
+    "goal": "1. Navigate to banner landmark using D key. 2. Navigate to navigation landmark using D key. 3. Navigate to main landmark using D key. 4. Navigate to contentinfo landmark using D key. 5. Continue through all landmarks on the page. 6. Report success with the reason listing all landmarks found (expected: banner, contentinfo, complementary) and any missing required landmarks.",
+    "success": true,
+    "reason": "Successfully navigated through all landmarks using the D key. Found the following landmarks: banner, complementary, and contentinfo. The following landmarks mentioned in the steps were missing: navigation and main.",
+    "error": null,
+    "stepCount": 4,
+    "durationMs": 9484,
+    "violations": [
+      {
+        "ruleId": "WCAG-1.1.1",
+        "description": "Image is missing alternative text.",
+        "severity": "critical",
+        "axNodeId": "3",
+        "evidence": "Image node (BackendID: 3) has no accessible name."
+      },
+      {
+        "ruleId": "WCAG-1.1.1",
+        "description": "Image is missing alternative text.",
+        "severity": "critical",
+        "axNodeId": "147",
+        "evidence": "Image node (BackendID: 147) has no accessible name."
+      },
+      {
+        "ruleId": "WCAG-1.1.1",
+        "description": "Image is missing alternative text.",
+        "severity": "critical",
+        "axNodeId": "79",
+        "evidence": "Image node (BackendID: 79) has no accessible name."
+      },
+      {
+        "ruleId": "WCAG-1.1.1",
+        "description": "Image is missing alternative text.",
+        "severity": "critical",
+        "axNodeId": "158",
+        "evidence": "Image node (BackendID: 158) has no accessible name."
+      },
+      {
+        "ruleId": "WCAG-1.1.1",
+        "description": "Image is missing alternative text.",
+        "severity": "critical",
+        "axNodeId": "117",
+        "evidence": "Image node (BackendID: 117) has no accessible name."
+      },
+      {
+        "ruleId": "WCAG-1.1.1",
+        "description": "Image is missing alternative text.",
+        "severity": "critical",
+        "axNodeId": "121",
+        "evidence": "Image node (BackendID: 121) has no accessible name."
+      },
+      {
+        "ruleId": "WCAG-1.1.1",
+        "description": "Image is missing alternative text.",
+        "severity": "critical",
+        "axNodeId": "125",
+        "evidence": "Image node (BackendID: 125) has no accessible name."
+      },
+      {
+        "ruleId": "WCAG-1.1.1",
+        "description": "Image is missing alternative text.",
+        "severity": "critical",
+        "axNodeId": "129",
+        "evidence": "Image node (BackendID: 129) has no accessible name."
+      },
+      {
+        "ruleId": "WCAG-1.3.1",
+        "description": "Heading hierarchy skips levels: h2 to h4.",
+        "severity": "moderate",
+        "axNodeId": "161",
+        "evidence": "Heading \"SOLUTIONS\" (h4) follows \"Start looking for the right course\" (h2), skipping 1 level(s)."
+      },
+      {
+        "ruleId": "WCAG-1.3.1",
+        "description": "Page does not start with an h1 heading.",
+        "severity": "moderate",
+        "axNodeId": "105",
+        "evidence": "First heading is h2: \"Anthropology\"."
+      },
+      {
+        "ruleId": "WCAG-2.4.1",
+        "description": "Page lacks bypass mechanism: no skip link or main landmark found.",
+        "severity": "serious",
+        "evidence": "Users cannot skip repetitive navigation blocks."
+      },
+      {
+        "ruleId": "WCAG-2.4.2",
+        "description": "Page is missing a title.",
+        "severity": "serious",
+        "evidence": "The <title> element is empty or missing."
+      },
+      {
+        "ruleId": "WCAG-2.4.4",
+        "description": "Link has vague or non-descriptive text: \"Link\".",
+        "severity": "moderate",
+        "axNodeId": "242",
+        "evidence": "Link text \"Link\" does not describe link purpose."
+      },
+      {
+        "ruleId": "WCAG-3.1.1",
+        "description": "Page is missing a language declaration.",
+        "severity": "serious",
+        "evidence": "The <html> element is missing the lang attribute."
+      },
+      {
+        "ruleId": "WCAG-4.1.2",
+        "description": "Interactive element with role 'link' has no accessible name.",
+        "severity": "critical",
+        "axNodeId": "78",
+        "evidence": "Element (BackendID: 78) with role 'link' is missing a name."
+      },
+      {
+        "ruleId": "WCAG-4.1.2",
+        "description": "Interactive element with role 'link' has no accessible name.",
+        "severity": "critical",
+        "axNodeId": "157",
+        "evidence": "Element (BackendID: 157) with role 'link' is missing a name."
+      }
+    ],
+    "violationSummary": {
+      "critical": 10,
+      "serious": 3,
+      "moderate": 3,
+      "minor": 0,
+      "total": 16
+    },
+    "wcagPasses": [
+      "1.3.1-forms",
+      "2.1.2",
+      "2.4.6",
+      "3.3.2"
+    ]
+  }
+]

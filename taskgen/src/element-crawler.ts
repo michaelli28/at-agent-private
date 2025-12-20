@@ -20,7 +20,12 @@ import {
   SiteElementGraph,
   OutboundLink,
   PageTransition,
+  DualCrawlResult,
+  DOMElement,
+  InteractivitySignals,
 } from './types';
+import { DOMCrawler } from './dom-crawler';
+import { GapDetector } from './gap-detector';
 
 // ==================== CDP Types ====================
 
@@ -398,6 +403,7 @@ export class ElementCrawler {
         name,
         description: axNode.description?.value,
         value: axNode.value?.value,
+        backendDOMNodeId: axNode.backendDOMNodeId,  // Bridge to DOM tree for gap detection
         typeFlags,
         children: [],
         parent: null,
@@ -660,6 +666,116 @@ export class ElementCrawler {
       return new URL(url, baseUrl).href;
     } catch {
       return url;
+    }
+  }
+
+  // ==================== Dual Crawl for Gap Detection ====================
+
+  /**
+   * Perform dual crawl: accessibility tree + DOM comparison for gap detection.
+   * This method crawls both the accessibility tree and the DOM to find
+   * elements that should be accessible but aren't.
+   */
+  async crawlPageWithGapDetection(url: string): Promise<DualCrawlResult> {
+    await this.init();
+
+    const context = await this.browser!.newContext();
+    const page = await context.newPage();
+
+    try {
+      console.log(`[ElementCrawler] Dual crawl for gap detection: ${url}`);
+
+      await page.goto(url, { waitUntil: 'domcontentloaded', timeout: 60000 });
+      await page.waitForTimeout(3000); // Wait for dynamic content
+
+      // Phase 1: Get accessibility tree (existing functionality)
+      const axNodes = await this.getAccessibilityTree(page);
+      const accessibilityTree = this.convertToElementGraph(axNodes, url, await page.title());
+
+      // Phase 2: Crawl DOM for potentially interactive elements
+      const domCrawler = new DOMCrawler();
+      const domElements = await domCrawler.crawlDOM(page, url);
+
+      console.log(`[ElementCrawler] Found ${domElements.length} potentially interactive DOM elements`);
+
+      // Phase 3: Get interactivity signals for each DOM element
+      const signals = new Map<number, InteractivitySignals>();
+      for (const element of domElements) {
+        try {
+          const elementSignals = await domCrawler.getInteractivitySignals(page, element);
+          signals.set(element.backendNodeId, elementSignals);
+        } catch {
+          // Skip elements where we can't get signals
+        }
+      }
+
+      // Phase 4: Build bridge map and detect gaps
+      const gapDetector = new GapDetector();
+      const bridgeMap = gapDetector.buildBridgeMap(accessibilityTree);
+      const gaps = gapDetector.detectGaps(domElements, accessibilityTree, signals);
+
+      console.log(`[ElementCrawler] Detected ${gaps.length} accessibility gaps`);
+
+      // Log gap summary
+      if (gaps.length > 0) {
+        const gapsByType: Record<string, number> = {};
+        for (const gap of gaps) {
+          gapsByType[gap.gapType] = (gapsByType[gap.gapType] || 0) + 1;
+        }
+        console.log('[ElementCrawler] Gaps by type:', gapsByType);
+      }
+
+      return {
+        pageUrl: url,
+        accessibilityTree,
+        domElements,
+        gaps,
+        bridgeMap,
+      };
+    } finally {
+      await context.close();
+    }
+  }
+
+  /**
+   * Perform dual crawl for all pages in the site.
+   * Uses the instance's maxPages and maxDepth settings.
+   */
+  async crawlSiteWithGapDetection(
+    entryUrl: string,
+    maxPages?: number,
+    maxDepth?: number
+  ): Promise<{
+    graph: SiteElementGraph;
+    dualCrawlResults: Map<string, DualCrawlResult>;
+  }> {
+    // Temporarily override maxPages/maxDepth if provided
+    const originalMaxPages = this.maxPages;
+    const originalMaxDepth = this.maxDepth;
+    if (maxPages !== undefined) this.maxPages = maxPages;
+    if (maxDepth !== undefined) this.maxDepth = maxDepth;
+
+    try {
+      // First, do the regular site crawl
+      const graph = await this.crawlSite(entryUrl);
+
+      // Then, do dual crawl for each page
+      const dualCrawlResults = new Map<string, DualCrawlResult>();
+
+      for (const [pageUrl] of graph.pages) {
+        try {
+          const dualResult = await this.crawlPageWithGapDetection(pageUrl);
+          dualCrawlResults.set(pageUrl, dualResult);
+        } catch (error) {
+          console.warn(`[ElementCrawler] Dual crawl failed for ${pageUrl}:`, error);
+        }
+      }
+
+      return { graph, dualCrawlResults };
+    } finally {
+      // Restore original settings
+      this.maxPages = originalMaxPages;
+      this.maxDepth = originalMaxDepth;
     }
   }
 }

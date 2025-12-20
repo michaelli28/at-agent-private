@@ -1,11 +1,8 @@
 /**
- * Task Generator - Generates accessibility testing tasks from element graphs.
+ * Task Generator - Generates journey-based accessibility testing tasks.
  *
- * This module:
- * 1. Uses templates to generate atomic tasks per page/section
- * 2. Generates user journey tasks for multi-page workflows
- * 3. Generates coverage tasks to fill gaps in the spanning forest
- * 4. Generates adaptive tasks based on execution results
+ * All tasks are journeys that simulate real user behavior while ensuring
+ * comprehensive coverage of the site's accessibility.
  */
 
 import {
@@ -16,172 +13,111 @@ import {
   TraversalPath,
   TaskExecutionResult,
   SimpleTask,
+  DualCrawlResult,
 } from './types';
 import { CoverageAlgorithm } from './coverage';
 import {
-  ATOMIC_TEMPLATES,
   JOURNEY_TEMPLATES,
   buildTaskFromTemplate,
   generateTaskId,
   TemplateContext,
 } from './templates';
+import { GapTaskGenerator } from './gap-task-generator';
 
 // ==================== Task Generator ====================
 
 export class TaskGenerator {
   private coverageAlgo: CoverageAlgorithm;
+  private gapTaskGenerator: GapTaskGenerator;
 
   constructor() {
     this.coverageAlgo = new CoverageAlgorithm();
+    this.gapTaskGenerator = new GapTaskGenerator();
   }
 
   /**
-   * Generate all tasks for a site graph.
+   * Generate all journey tasks for a site graph.
    */
   generateAllTasks(graph: SiteElementGraph, includeJourneys: boolean = true): AccessibilityTask[] {
     const tasks: AccessibilityTask[] = [];
 
-    // 1. Generate atomic tasks per page
-    const atomicTasks = this.generateAtomicTasks(graph);
-    tasks.push(...atomicTasks);
+    // 1. Generate page exploration journeys for each page
+    const pageJourneys = this.generatePageExplorationJourneys(graph);
+    tasks.push(...pageJourneys);
 
-    // 2. Generate journey tasks
-    if (includeJourneys) {
-      const journeyTasks = this.generateJourneyTasks(graph);
-      tasks.push(...journeyTasks);
-    }
+    // 2. Generate feature-specific journeys (login, search, forms, etc.)
+    const featureJourneys = this.generateFeatureJourneys(graph);
+    tasks.push(...featureJourneys);
 
-    // 3. Generate coverage tasks to fill gaps
-    const coverageTasks = this.generateCoverageTasks(graph, tasks);
-    tasks.push(...coverageTasks);
+    // 3. Generate cross-page navigation journeys
+    const navJourneys = this.generateNavigationJourneys(graph);
+    tasks.push(...navJourneys);
 
-    // 4. Prioritize tasks
+    // 4. Prioritize and return tasks
     return this.prioritizeTasks(tasks);
   }
 
   /**
-   * Generate atomic tasks per element type per page.
+   * Generate page exploration journeys - one comprehensive journey per important page.
    */
-  generateAtomicTasks(graph: SiteElementGraph): AccessibilityTask[] {
+  generatePageExplorationJourneys(graph: SiteElementGraph): AccessibilityTask[] {
     const tasks: AccessibilityTask[] = [];
+    const pages = Array.from(graph.pages.entries());
 
-    for (const [pageUrl, page] of graph.pages) {
+    // Sort pages by importance (element count as proxy for content richness)
+    pages.sort((a, b) => b[1].elementCount - a[1].elementCount);
+
+    // Generate exploration journey for top pages
+    const maxPages = Math.min(pages.length, 10);
+    for (let i = 0; i < maxPages; i++) {
+      const [pageUrl, page] = pages[i];
+
       const context: TemplateContext = {
         pageUrl,
         pageTitle: page.title,
         elements: Array.from(page.elements.values()),
+        headingCount: page.headings.length,
+        landmarkCount: page.landmarks.length,
+        linkCount: page.links.length,
+        buttonCount: page.buttons.length,
+        formFieldCount: page.formFields.length,
+        landmarkNames: this.getLandmarkNames(page),
+        headingNames: this.getHeadingNames(page),
       };
 
-      // Generate heading task if page has headings
-      if (page.headings.length > 0) {
-        const headingElements = page.headings.map((id) => page.elements.get(id)!).filter(Boolean);
-        context.elements = headingElements;
+      // Page structure exploration (covers landmarks, headings, interactive elements)
+      tasks.push(
+        buildTaskFromTemplate(
+          JOURNEY_TEMPLATES.explorePageStructure,
+          context,
+          [...page.landmarks, ...page.headings.slice(0, 10)],
+          9 - i * 0.5 // Higher priority for first pages
+        )
+      );
+
+      // Content page exploration for pages with lots of content
+      if (page.headings.length > 3 && page.links.length > 10) {
         tasks.push(
           buildTaskFromTemplate(
-            ATOMIC_TEMPLATES.headings,
+            JOURNEY_TEMPLATES.exploreContentPage,
             context,
-            page.headings,
-            8 // High priority - headings are foundational
+            [...page.headings, ...page.links.slice(0, 10)],
+            7 - i * 0.3
           )
         );
       }
 
-      // Generate landmark task if page has landmarks
-      if (page.landmarks.length > 0) {
-        const landmarkElements = page.landmarks.map((id) => page.elements.get(id)!).filter(Boolean);
-        context.elements = landmarkElements;
-        tasks.push(
-          buildTaskFromTemplate(
-            ATOMIC_TEMPLATES.landmarks,
-            context,
-            page.landmarks,
-            9 // Highest priority - landmarks define structure
-          )
-        );
-      }
-
-      // Generate button task if page has buttons
-      if (page.buttons.length > 0) {
-        const buttonElements = page.buttons.map((id) => page.elements.get(id)!).filter(Boolean);
-        context.elements = buttonElements;
-        tasks.push(
-          buildTaskFromTemplate(
-            ATOMIC_TEMPLATES.buttons,
-            context,
-            page.buttons,
-            7
-          )
-        );
-      }
-
-      // Generate form task if page has form fields
+      // Form interaction for pages with forms
       if (page.formFields.length > 0) {
-        const formElements = page.formFields.map((id) => page.elements.get(id)!).filter(Boolean);
-        context.elements = formElements;
-        context.formName = this.detectFormName(formElements);
+        context.formName = this.detectFormName(
+          page.formFields.map(id => page.elements.get(id)!).filter(Boolean)
+        );
         tasks.push(
           buildTaskFromTemplate(
-            ATOMIC_TEMPLATES.forms,
+            JOURNEY_TEMPLATES.interactWithForm,
             context,
             page.formFields,
-            8 // High priority - forms are critical
-          )
-        );
-      }
-
-      // Generate link task if page has links
-      if (page.links.length > 0) {
-        const linkElements = page.links.map((id) => page.elements.get(id)!).filter(Boolean);
-        context.elements = linkElements;
-        tasks.push(
-          buildTaskFromTemplate(
-            ATOMIC_TEMPLATES.links,
-            context,
-            page.links,
-            6
-          )
-        );
-      }
-
-      // Generate table task if page has tables
-      if (page.tables.length > 0) {
-        const tableElements = page.tables.map((id) => page.elements.get(id)!).filter(Boolean);
-        context.elements = tableElements;
-        tasks.push(
-          buildTaskFromTemplate(
-            ATOMIC_TEMPLATES.tables,
-            context,
-            page.tables,
-            5
-          )
-        );
-      }
-
-      // Generate navigation task for the main page
-      if (pageUrl === graph.baseUrl && page.landmarks.some((id) => {
-        const el = page.elements.get(id);
-        return el?.typeFlags.landmarkRole === 'navigation';
-      })) {
-        context.elements = Array.from(page.elements.values());
-        tasks.push(
-          buildTaskFromTemplate(
-            ATOMIC_TEMPLATES.navigation,
-            context,
-            page.links.slice(0, 10),
-            7
-          )
-        );
-      }
-
-      // Generate full page traversal for pages with many elements
-      if (page.elementCount > 20) {
-        context.elements = Array.from(page.elements.values());
-        tasks.push(
-          buildTaskFromTemplate(
-            ATOMIC_TEMPLATES.fullPageTraversal,
-            context,
-            Array.from(page.elements.keys()),
-            4 // Lower priority - comprehensive but slow
+            8
           )
         );
       }
@@ -191,83 +127,71 @@ export class TaskGenerator {
   }
 
   /**
-   * Generate user journey tasks for multi-page workflows.
+   * Generate feature-specific journeys based on detected site features.
    */
-  generateJourneyTasks(graph: SiteElementGraph): AccessibilityTask[] {
+  generateFeatureJourneys(graph: SiteElementGraph): AccessibilityTask[] {
     const tasks: AccessibilityTask[] = [];
     const baseUrl = graph.baseUrl;
+    const baseContext: TemplateContext = {
+      pageUrl: baseUrl,
+      pageTitle: '',
+      elements: [],
+    };
 
-    // Check if site likely has login functionality
-    const hasLogin = this.detectFeature(graph, ['login', 'sign in', 'signin', 'log in']);
-    if (hasLogin) {
+    // Login journey
+    if (this.detectFeature(graph, ['login', 'sign in', 'signin', 'log in'])) {
       tasks.push(
-        buildTaskFromTemplate(
-          JOURNEY_TEMPLATES.login,
-          { pageUrl: baseUrl, pageTitle: '', elements: [] },
-          [],
-          10 // Very high priority
-        )
+        buildTaskFromTemplate(JOURNEY_TEMPLATES.login, baseContext, [], 10)
       );
     }
 
-    // Check if site has search functionality
-    const hasSearch = this.detectFeature(graph, ['search']);
-    if (hasSearch) {
+    // Registration journey
+    if (this.detectFeature(graph, ['register', 'sign up', 'signup', 'create account'])) {
+      tasks.push(
+        buildTaskFromTemplate(JOURNEY_TEMPLATES.registration, baseContext, [], 9)
+      );
+    }
+
+    // Search journey
+    if (this.detectFeature(graph, ['search'])) {
       tasks.push(
         buildTaskFromTemplate(
           JOURNEY_TEMPLATES.search,
-          { pageUrl: baseUrl, pageTitle: '', elements: [], searchQuery: 'test' },
+          { ...baseContext, searchQuery: 'test' },
           [],
           9
         )
       );
     }
 
-    // Check if site has contact form
-    const hasContact = this.detectFeature(graph, ['contact', 'contact us', 'get in touch']);
-    if (hasContact) {
+    // Contact form journey
+    if (this.detectFeature(graph, ['contact', 'contact us', 'get in touch'])) {
       tasks.push(
-        buildTaskFromTemplate(
-          JOURNEY_TEMPLATES.contactForm,
-          { pageUrl: baseUrl, pageTitle: '', elements: [] },
-          [],
-          7
-        )
+        buildTaskFromTemplate(JOURNEY_TEMPLATES.contactForm, baseContext, [], 8)
       );
     }
 
-    // Check if site is e-commerce (has add to cart, products, etc.)
-    const hasEcommerce = this.detectFeature(graph, ['add to cart', 'buy now', 'shop', 'products', 'cart']);
-    if (hasEcommerce) {
+    // E-commerce journeys
+    if (this.detectFeature(graph, ['add to cart', 'buy now', 'shop', 'products', 'cart'])) {
       tasks.push(
-        buildTaskFromTemplate(
-          JOURNEY_TEMPLATES.addToCart,
-          { pageUrl: baseUrl, pageTitle: '', elements: [] },
-          [],
-          9
-        )
+        buildTaskFromTemplate(JOURNEY_TEMPLATES.addToCart, baseContext, [], 9)
       );
-
       tasks.push(
-        buildTaskFromTemplate(
-          JOURNEY_TEMPLATES.checkout,
-          { pageUrl: baseUrl, pageTitle: '', elements: [] },
-          [],
-          8
-        )
+        buildTaskFromTemplate(JOURNEY_TEMPLATES.checkout, baseContext, [], 8)
       );
     }
 
-    // Generate navigation journeys for top pages
-    const topPages = Array.from(graph.pages.keys()).slice(1, 4); // Skip base URL
-    for (const targetUrl of topPages) {
+    // Interactive components journey (if page seems to have complex UI)
+    if (this.detectFeature(graph, ['tab', 'accordion', 'modal', 'dropdown', 'menu'])) {
       tasks.push(
-        buildTaskFromTemplate(
-          JOURNEY_TEMPLATES.navigation,
-          { pageUrl: baseUrl, pageTitle: '', elements: [], targetUrl },
-          [],
-          6
-        )
+        buildTaskFromTemplate(JOURNEY_TEMPLATES.testInteractiveComponents, baseContext, [], 7)
+      );
+    }
+
+    // Media content journey
+    if (this.detectFeature(graph, ['video', 'audio', 'play', 'player', 'watch'])) {
+      tasks.push(
+        buildTaskFromTemplate(JOURNEY_TEMPLATES.testMediaContent, baseContext, [], 6)
       );
     }
 
@@ -275,54 +199,44 @@ export class TaskGenerator {
   }
 
   /**
-   * Generate coverage tasks to fill gaps not covered by atomic + journey tasks.
+   * Generate navigation journeys to test cross-page navigation.
    */
-  generateCoverageTasks(graph: SiteElementGraph, existingTasks: AccessibilityTask[]): AccessibilityTask[] {
+  generateNavigationJourneys(graph: SiteElementGraph): AccessibilityTask[] {
     const tasks: AccessibilityTask[] = [];
+    const baseUrl = graph.baseUrl;
+    const pages = Array.from(graph.pages.keys());
 
-    // Get elements already targeted by existing tasks
-    const targetedElements = new Set<string>();
-    for (const task of existingTasks) {
-      for (const elementId of task.targetElements) {
-        targetedElements.add(elementId);
-      }
-    }
+    // Navigation exploration from homepage
+    tasks.push(
+      buildTaskFromTemplate(
+        JOURNEY_TEMPLATES.exploreNavigation,
+        { pageUrl: baseUrl, pageTitle: '', elements: [] },
+        [],
+        8
+      )
+    );
 
-    // Generate traversal paths for coverage
-    const paths = this.coverageAlgo.generateTraversalPaths(graph);
+    // Footer exploration
+    tasks.push(
+      buildTaskFromTemplate(
+        JOURNEY_TEMPLATES.exploreFooter,
+        { pageUrl: baseUrl, pageTitle: '', elements: [] },
+        [],
+        6
+      )
+    );
 
-    // Find paths that cover untargeted elements
-    for (const path of paths) {
-      const untargetedInPath = path.elements.filter((id) => !targetedElements.has(id));
-
-      if (untargetedInPath.length > 0) {
-        // Create a coverage task for this path
-        const page = graph.pages.get(path.entryUrl);
-        if (!page) continue;
-
-        const task: AccessibilityTask = {
-          id: generateTaskId(),
-          type: 'coverage',
-          url: path.entryUrl,
-          goal: this.generateCoverageGoal(path, page, untargetedInPath),
-          steps: [],
-          targetElements: untargetedInPath,
-          requiredActions: path.actions,
-          expectedCoverage: untargetedInPath.length,
-          wcagCriteria: ['4.1.2', '2.1.1'],
-          elementTypes: [],
-          priority: 3,
-          dependencies: [],
-          attempts: 0,
-        };
-
-        tasks.push(task);
-
-        // Mark elements as targeted
-        for (const elementId of untargetedInPath) {
-          targetedElements.add(elementId);
-        }
-      }
+    // Cross-page navigation journeys to important pages
+    const targetPages = pages.slice(1, 4); // Top 3 internal pages
+    for (const targetUrl of targetPages) {
+      tasks.push(
+        buildTaskFromTemplate(
+          JOURNEY_TEMPLATES.navigateBetweenPages,
+          { pageUrl: baseUrl, pageTitle: '', elements: [], targetUrl },
+          [],
+          5
+        )
+      );
     }
 
     return tasks;
@@ -366,7 +280,7 @@ export class TaskGenerator {
       missedByPage.set(element.pageUrl, existing);
     }
 
-    // Generate targeted tasks for missed elements
+    // Generate targeted journeys for missed elements
     for (const [pageUrl, elements] of missedByPage) {
       const elementNames = elements
         .slice(0, 5)
@@ -375,13 +289,14 @@ export class TaskGenerator {
 
       const task: AccessibilityTask = {
         id: generateTaskId(),
-        type: 'adaptive',
+        type: 'journey',
         url: pageUrl,
         goal: [
           `1. Navigate to ${pageUrl}.`,
-          `2. Navigate to and locate these specific elements: ${elementNames}.`,
-          `3. For each element, verify its accessible name and keyboard operability.`,
-          `4. Report success with the reason listing which elements were found and any accessibility issues.`,
+          `2. Navigate to main content area.`,
+          `3. Navigate to and locate these specific elements: ${elementNames}.`,
+          `4. For each element, verify its accessible name and keyboard operability.`,
+          `5. Report success with: (a) which elements were found, (b) any accessibility issues discovered, (c) any elements that couldn't be reached via keyboard.`,
         ].join(' '),
         steps: [],
         targetElements: elements.map((e) => e.id),
@@ -389,56 +304,7 @@ export class TaskGenerator {
         expectedCoverage: elements.length,
         wcagCriteria: ['4.1.2', '2.1.1'],
         elementTypes: [...new Set(elements.map((e) => e.role))],
-        priority: 10, // High priority for adaptive tasks
-        dependencies: [],
-        attempts: 0,
-      };
-
-      tasks.push(task);
-    }
-
-    // Generate tasks for elements with violations that need re-verification
-    const violationElements = new Map<string, { element: ElementNode; violations: string[] }>();
-    for (const result of executionResults) {
-      for (const violation of result.newViolations) {
-        if (violation.elementId) {
-          for (const page of graph.pages.values()) {
-            const element = page.elements.get(violation.elementId);
-            if (element) {
-              const existing = violationElements.get(violation.elementId);
-              if (existing) {
-                existing.violations.push(violation.ruleId);
-              } else {
-                violationElements.set(violation.elementId, {
-                  element,
-                  violations: [violation.ruleId],
-                });
-              }
-            }
-          }
-        }
-      }
-    }
-
-    // Create re-verification tasks for violations
-    for (const { element, violations } of violationElements.values()) {
-      const task: AccessibilityTask = {
-        id: generateTaskId(),
-        type: 'adaptive',
-        url: element.pageUrl,
-        goal: [
-          `1. Navigate to ${element.pageUrl}.`,
-          `2. Navigate to element "${element.name || element.role}" which had violations: ${violations.join(', ')}.`,
-          `3. Verify the accessibility issue is still present.`,
-          `4. Report success with the reason describing whether the violation persists and its details.`,
-        ].join(' '),
-        steps: [],
-        targetElements: [element.id],
-        requiredActions: [],
-        expectedCoverage: 1,
-        wcagCriteria: violations,
-        elementTypes: [element.role],
-        priority: 15, // Highest priority for violation re-testing
+        priority: 10,
         dependencies: [],
         attempts: 0,
       };
@@ -464,9 +330,7 @@ export class TaskGenerator {
         return b.expectedCoverage - a.expectedCoverage;
       }
 
-      // Then by type (atomic before journey before coverage)
-      const typeOrder = { atomic: 1, journey: 2, coverage: 3, adaptive: 0 };
-      return typeOrder[a.type] - typeOrder[b.type];
+      return 0;
     });
   }
 
@@ -481,10 +345,33 @@ export class TaskGenerator {
   }
 
   /**
+   * Get landmark names from a page for context.
+   */
+  private getLandmarkNames(page: PageElementGraph): string {
+    const landmarks = page.landmarks
+      .map(id => page.elements.get(id))
+      .filter(Boolean)
+      .map(el => el!.typeFlags.landmarkRole || 'region');
+
+    return [...new Set(landmarks)].join(', ');
+  }
+
+  /**
+   * Get heading names from a page for context.
+   */
+  private getHeadingNames(page: PageElementGraph): string {
+    return page.headings
+      .slice(0, 5)
+      .map(id => page.elements.get(id))
+      .filter(Boolean)
+      .map(el => `h${el!.typeFlags.headingLevel}: ${el!.name || 'unnamed'}`)
+      .join(', ');
+  }
+
+  /**
    * Detect form name from form elements.
    */
   private detectFormName(elements: ElementNode[]): string {
-    // Look for common form indicators
     for (const element of elements) {
       const name = element.name?.toLowerCase() || '';
       if (name.includes('login') || name.includes('sign in')) return 'login form';
@@ -493,6 +380,8 @@ export class TaskGenerator {
       if (name.includes('contact')) return 'contact form';
       if (name.includes('checkout')) return 'checkout form';
       if (name.includes('payment')) return 'payment form';
+      if (name.includes('subscribe')) return 'subscription form';
+      if (name.includes('newsletter')) return 'newsletter form';
     }
     return 'the form';
   }
@@ -504,8 +393,9 @@ export class TaskGenerator {
     for (const page of graph.pages.values()) {
       for (const element of page.elements.values()) {
         const name = element.name?.toLowerCase() || '';
+        const role = element.role?.toLowerCase() || '';
         for (const keyword of keywords) {
-          if (name.includes(keyword.toLowerCase())) {
+          if (name.includes(keyword.toLowerCase()) || role.includes(keyword.toLowerCase())) {
             return true;
           }
         }
@@ -514,28 +404,52 @@ export class TaskGenerator {
     return false;
   }
 
-  /**
-   * Generate a coverage goal for a traversal path.
-   */
-  private generateCoverageGoal(
-    path: TraversalPath,
-    page: PageElementGraph,
-    targetElements: string[]
-  ): string {
-    const elementDescriptions = targetElements
-      .slice(0, 5)
-      .map((id) => {
-        const element = page.elements.get(id);
-        return element ? `${element.role} "${element.name || 'unnamed'}"` : id;
-      })
-      .join(', ');
+  // ==================== Gap Task Generation ====================
 
-    return [
-      `1. Navigate to ${page.title || path.entryUrl}.`,
-      `2. Navigate through elements using Arrow Down or Tab.`,
-      `3. Locate and verify these elements: ${elementDescriptions}.`,
-      `4. For each element, note its accessible name and role.`,
-      `5. Report success with the reason listing all elements found and any that lacked accessible names.`,
-    ].join(' ');
+  /**
+   * Generate tasks for accessibility gaps detected by dual crawl.
+   */
+  generateGapTasks(dualCrawlResult: DualCrawlResult): AccessibilityTask[] {
+    return this.gapTaskGenerator.generateGapTasks(dualCrawlResult);
+  }
+
+  /**
+   * Generate all tasks including gap detection tasks.
+   * This combines regular journey tasks with gap-focused tasks.
+   */
+  generateAllTasksWithGaps(
+    graph: SiteElementGraph,
+    dualCrawlResults: Map<string, DualCrawlResult>,
+    includeJourneys: boolean = true
+  ): AccessibilityTask[] {
+    // Generate regular journey tasks
+    const journeyTasks = this.generateAllTasks(graph, includeJourneys);
+
+    // Generate gap tasks for each page
+    const gapTasks: AccessibilityTask[] = [];
+    for (const [pageUrl, dualResult] of dualCrawlResults) {
+      if (dualResult.gaps.length > 0) {
+        const pageTasks = this.generateGapTasks(dualResult);
+        gapTasks.push(...pageTasks);
+      }
+    }
+
+    // Combine and prioritize: gap tasks get higher base priority
+    const allTasks = [...gapTasks, ...journeyTasks];
+    return this.prioritizeTasks(allTasks);
+  }
+
+  /**
+   * Generate a page summary task for all gaps on a page.
+   */
+  generatePageGapSummaryTask(
+    pageUrl: string,
+    dualCrawlResult: DualCrawlResult
+  ): AccessibilityTask | null {
+    if (dualCrawlResult.gaps.length === 0) {
+      return null;
+    }
+
+    return this.gapTaskGenerator.generatePageSummaryTask(pageUrl, dualCrawlResult.gaps);
   }
 }

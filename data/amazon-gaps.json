@@ -1,0 +1,4768 @@
+{
+  "totalGaps": 208,
+  "gapsByType": {
+    "missing_from_a11y_tree": 200,
+    "no_accessible_name": 4,
+    "wrong_role": 0,
+    "not_focusable": 4,
+    "hidden_but_interactive": 0
+  },
+  "gapsBySeverity": {
+    "critical": 204,
+    "serious": 4,
+    "moderate": 0,
+    "minor": 0
+  },
+  "criticalGaps": [
+    {
+      "pageUrl": "https://www.amazon.com",
+      "element": {
+        "nodeName": "BUTTON",
+        "class": "vjs-play-control vjs-control vjs-button vjs-paused"
+      },
+      "gapType": "missing_from_a11y_tree",
+      "severity": "critical",
+      "wcagViolations": [
+        "4.1.2"
+      ],
+      "evidence": "BUTTON element with interactivity signals is not exposed in the accessibility tree",
+      "suggestedFix": "Add appropriate ARIA role and ensure element is not hidden from assistive technology. Consider using semantic HTML (e.g., <button> instead of <div>)."
+    },
+    {
+      "pageUrl": "https://www.amazon.com",
+      "element": {
+        "nodeName": "BUTTON",
+        "class": "vjs-default-button"
+      },
+      "gapType": "missing_from_a11y_tree",
+      "severity": "critical",
+      "wcagViolations": [
+        "4.1.2"
+      ],
+      "evidence": "BUTTON element with interactivity signals is not exposed in the accessibility tree",
+      "suggestedFix": "Add appropriate ARIA role and ensure element is not hidden from assistive technology. Consider using semantic HTML (e.g., <button> instead of <div>)."
+    },
+    {
+      "pageUrl": "https://www.amazon.com",
+      "element": {
+        "nodeName": "BUTTON",
+        "class": "vjs-done-button"
+      },
+      "gapType": "missing_from_a11y_tree",
+      "severity": "critical",
+      "wcagViolations": [
+        "4.1.2"
+      ],
+      "evidence": "BUTTON element with interactivity signals is not exposed in the accessibility tree",
+      "suggestedFix": "Add appropriate ARIA role and ensure element is not hidden from assistive technology. Consider using semantic HTML (e.g., <button> instead of <div>)."
+    },
+    {
+      "pageUrl": "https://www.amazon.com",
+      "element": {
+        "nodeName": "BUTTON",
+        "class": "vjs-close-button vjs-control vjs-button"
+      },
+      "gapType": "missing_from_a11y_tree",
+      "severity": "critical",
+      "wcagViolations": [
+        "4.1.2"
+      ],
+      "evidence": "BUTTON element with interactivity signals is not exposed in the accessibility tree",
+      "suggestedFix": "Add appropriate ARIA role and ensure element is not hidden from assistive technology. Consider using semantic HTML (e.g., <button> instead of <div>)."
+    },
+    {
+      "pageUrl": "https://www.amazon.com",
+      "element": {
+        "nodeName": "A",
+        "class": "nav-link nav-item"
+      },
+      "gapType": "missing_from_a11y_tree",
+      "severity": "critical",
+      "wcagViolations": [
+        "4.1.2"
+      ],
+      "evidence": "A element with interactivity signals is not exposed in the accessibility tree",
+      "suggestedFix": "Add appropriate ARIA role and ensure element is not hidden from assistive technology. Consider using semantic HTML (e.g., <button> instead of <div>)."
+    },
+    {
+      "pageUrl": "https://www.amazon.com",
+      "element": {
+        "nodeName": "A",
+        "class": "nav-link nav-item"
+      },
+      "gapType": "missing_from_a11y_tree",
+      "severity": "critical",
+      "wcagViolations": [
+        "4.1.2"
+      ],
+      "evidence": "A element with interactivity signals is not exposed in the accessibility tree",
+      "suggestedFix": "Add appropriate ARIA role and ensure element is not hidden from assistive technology. Consider using semantic HTML (e.g., <button> instead of <div>)."
+    },
+    {
+      "pageUrl": "https://www.amazon.com",
+      "element": {
+        "nodeName": "A",
+        "class": "nav-link nav-item"
+      },
+      "gapType": "missing_from_a11y_tree",
+      "severity": "critical",
+      "wcagViolations": [
+        "4.1.2"
+      ],
+      "evidence": "A element with interactivity signals is not exposed in the accessibility tree",
+      "suggestedFix": "Add appropriate ARIA role and ensure element is not hidden from assistive technology. Consider using semantic HTML (e.g., <button> instead of <div>)."
+    },
+    {
+      "pageUrl": "https://www.amazon.com",
+      "element": {
+        "nodeName": "A",
+        "id": "nav_prefetch_yourorders",
+        "class": "nav-link nav-item"
+      },
+      "gapType": "missing_from_a11y_tree",
+      "severity": "critical",
+      "wcagViolations": [
+        "4.1.2"
+      ],
+      "evidence": "A element with interactivity signals is not exposed in the accessibility tree",
+      "suggestedFix": "Add appropriate ARIA role and ensure element is not hidden from assistive technology. Consider using semantic HTML (e.g., <button> instead of <div>)."
+    },
+    {
+      "pageUrl": "https://www.amazon.com",
+      "element": {
+        "nodeName": "A",
+        "class": "nav-link nav-item"
+      },
+      "gapType": "missing_from_a11y_tree",
+      "severity": "critical",
+      "wcagViolations": [
+        "4.1.2"
+      ],
+      "evidence": "A element with interactivity signals is not exposed in the accessibility tree",
+      "suggestedFix": "Add appropriate ARIA role and ensure element is not hidden from assistive technology. Consider using semantic HTML (e.g., <button> instead of <div>)."
+    },
+    {
+      "pageUrl": "https://www.amazon.com",
+      "element": {
+        "nodeName": "A",
+        "class": "nav-link nav-item"
+      },
+      "gapType": "missing_from_a11y_tree",
+      "severity": "critical",
+      "wcagViolations": [
+        "4.1.2"
+      ],
+      "evidence": "A element with interactivity signals is not exposed in the accessibility tree",
+      "suggestedFix": "Add appropriate ARIA role and ensure element is not hidden from assistive technology. Consider using semantic HTML (e.g., <button> instead of <div>)."
+    },
+    {
+      "pageUrl": "https://www.amazon.com",
+      "element": {
+        "nodeName": "A",
+        "class": "nav-link nav-item"
+      },
+      "gapType": "missing_from_a11y_tree",
+      "severity": "critical",
+      "wcagViolations": [
+        "4.1.2"
+      ],
+      "evidence": "A element with interactivity signals is not exposed in the accessibility tree",
+      "suggestedFix": "Add appropriate ARIA role and ensure element is not hidden from assistive technology. Consider using semantic HTML (e.g., <button> instead of <div>)."
+    },
+    {
+      "pageUrl": "https://www.amazon.com",
+      "element": {
+        "nodeName": "A",
+        "class": "nav-link nav-item"
+      },
+      "gapType": "missing_from_a11y_tree",
+      "severity": "critical",
+      "wcagViolations": [
+        "4.1.2"
+      ],
+      "evidence": "A element with interactivity signals is not exposed in the accessibility tree",
+      "suggestedFix": "Add appropriate ARIA role and ensure element is not hidden from assistive technology. Consider using semantic HTML (e.g., <button> instead of <div>)."
+    },
+    {
+      "pageUrl": "https://www.amazon.com",
+      "element": {
+        "nodeName": "A",
+        "class": "nav-link nav-item"
+      },
+      "gapType": "missing_from_a11y_tree",
+      "severity": "critical",
+      "wcagViolations": [
+        "4.1.2"
+      ],
+      "evidence": "A element with interactivity signals is not exposed in the accessibility tree",
+      "suggestedFix": "Add appropriate ARIA role and ensure element is not hidden from assistive technology. Consider using semantic HTML (e.g., <button> instead of <div>)."
+    },
+    {
+      "pageUrl": "https://www.amazon.com",
+      "element": {
+        "nodeName": "A",
+        "class": "nav-link nav-item"
+      },
+      "gapType": "missing_from_a11y_tree",
+      "severity": "critical",
+      "wcagViolations": [
+        "4.1.2"
+      ],
+      "evidence": "A element with interactivity signals is not exposed in the accessibility tree",
+      "suggestedFix": "Add appropriate ARIA role and ensure element is not hidden from assistive technology. Consider using semantic HTML (e.g., <button> instead of <div>)."
+    },
+    {
+      "pageUrl": "https://www.amazon.com",
+      "element": {
+        "nodeName": "A",
+        "class": "nav-link nav-item"
+      },
+      "gapType": "missing_from_a11y_tree",
+      "severity": "critical",
+      "wcagViolations": [
+        "4.1.2"
+      ],
+      "evidence": "A element with interactivity signals is not exposed in the accessibility tree",
+      "suggestedFix": "Add appropriate ARIA role and ensure element is not hidden from assistive technology. Consider using semantic HTML (e.g., <button> instead of <div>)."
+    },
+    {
+      "pageUrl": "https://www.amazon.com",
+      "element": {
+        "nodeName": "A",
+        "class": "nav-link nav-item"
+      },
+      "gapType": "missing_from_a11y_tree",
+      "severity": "critical",
+      "wcagViolations": [
+        "4.1.2"
+      ],
+      "evidence": "A element with interactivity signals is not exposed in the accessibility tree",
+      "suggestedFix": "Add appropriate ARIA role and ensure element is not hidden from assistive technology. Consider using semantic HTML (e.g., <button> instead of <div>)."
+    },
+    {
+      "pageUrl": "https://www.amazon.com",
+      "element": {
+        "nodeName": "A",
+        "class": "nav-link nav-item"
+      },
+      "gapType": "missing_from_a11y_tree",
+      "severity": "critical",
+      "wcagViolations": [
+        "4.1.2"
+      ],
+      "evidence": "A element with interactivity signals is not exposed in the accessibility tree",
+      "suggestedFix": "Add appropriate ARIA role and ensure element is not hidden from assistive technology. Consider using semantic HTML (e.g., <button> instead of <div>)."
+    },
+    {
+      "pageUrl": "https://www.amazon.com",
+      "element": {
+        "nodeName": "A",
+        "class": "nav-link nav-item"
+      },
+      "gapType": "missing_from_a11y_tree",
+      "severity": "critical",
+      "wcagViolations": [
+        "4.1.2"
+      ],
+      "evidence": "A element with interactivity signals is not exposed in the accessibility tree",
+      "suggestedFix": "Add appropriate ARIA role and ensure element is not hidden from assistive technology. Consider using semantic HTML (e.g., <button> instead of <div>)."
+    },
+    {
+      "pageUrl": "https://www.amazon.com",
+      "element": {
+        "nodeName": "A",
+        "class": "nav-link nav-item"
+      },
+      "gapType": "missing_from_a11y_tree",
+      "severity": "critical",
+      "wcagViolations": [
+        "4.1.2"
+      ],
+      "evidence": "A element with interactivity signals is not exposed in the accessibility tree",
+      "suggestedFix": "Add appropriate ARIA role and ensure element is not hidden from assistive technology. Consider using semantic HTML (e.g., <button> instead of <div>)."
+    },
+    {
+      "pageUrl": "https://www.amazon.com",
+      "element": {
+        "nodeName": "A",
+        "class": "nav-link nav-item"
+      },
+      "gapType": "missing_from_a11y_tree",
+      "severity": "critical",
+      "wcagViolations": [
+        "4.1.2"
+      ],
+      "evidence": "A element with interactivity signals is not exposed in the accessibility tree",
+      "suggestedFix": "Add appropriate ARIA role and ensure element is not hidden from assistive technology. Consider using semantic HTML (e.g., <button> instead of <div>)."
+    },
+    {
+      "pageUrl": "https://www.amazon.com",
+      "element": {
+        "nodeName": "A",
+        "class": "nav-link nav-item"
+      },
+      "gapType": "missing_from_a11y_tree",
+      "severity": "critical",
+      "wcagViolations": [
+        "4.1.2"
+      ],
+      "evidence": "A element with interactivity signals is not exposed in the accessibility tree",
+      "suggestedFix": "Add appropriate ARIA role and ensure element is not hidden from assistive technology. Consider using semantic HTML (e.g., <button> instead of <div>)."
+    },
+    {
+      "pageUrl": "https://www.amazon.com",
+      "element": {
+        "nodeName": "A",
+        "class": "nav-link nav-item"
+      },
+      "gapType": "missing_from_a11y_tree",
+      "severity": "critical",
+      "wcagViolations": [
+        "4.1.2"
+      ],
+      "evidence": "A element with interactivity signals is not exposed in the accessibility tree",
+      "suggestedFix": "Add appropriate ARIA role and ensure element is not hidden from assistive technology. Consider using semantic HTML (e.g., <button> instead of <div>)."
+    },
+    {
+      "pageUrl": "https://www.amazon.com",
+      "element": {
+        "nodeName": "A",
+        "class": "nav-link nav-item"
+      },
+      "gapType": "missing_from_a11y_tree",
+      "severity": "critical",
+      "wcagViolations": [
+        "4.1.2"
+      ],
+      "evidence": "A element with interactivity signals is not exposed in the accessibility tree",
+      "suggestedFix": "Add appropriate ARIA role and ensure element is not hidden from assistive technology. Consider using semantic HTML (e.g., <button> instead of <div>)."
+    },
+    {
+      "pageUrl": "https://www.amazon.com",
+      "element": {
+        "nodeName": "A",
+        "class": "nav-link nav-item"
+      },
+      "gapType": "missing_from_a11y_tree",
+      "severity": "critical",
+      "wcagViolations": [
+        "4.1.2"
+      ],
+      "evidence": "A element with interactivity signals is not exposed in the accessibility tree",
+      "suggestedFix": "Add appropriate ARIA role and ensure element is not hidden from assistive technology. Consider using semantic HTML (e.g., <button> instead of <div>)."
+    },
+    {
+      "pageUrl": "https://www.amazon.com",
+      "element": {
+        "nodeName": "A",
+        "class": "a-link-normal _desktop-tall-hero-video_style_cta-link__25RUl"
+      },
+      "gapType": "missing_from_a11y_tree",
+      "severity": "critical",
+      "wcagViolations": [
+        "4.1.2"
+      ],
+      "evidence": "A element with interactivity signals is not exposed in the accessibility tree",
+      "suggestedFix": "Add appropriate ARIA role and ensure element is not hidden from assistive technology. Consider using semantic HTML (e.g., <button> instead of <div>)."
+    },
+    {
+      "pageUrl": "https://www.amazon.com",
+      "element": {
+        "nodeName": "A",
+        "class": "a-link-normal _cropped-image-link_style_centerImage__1rzYI _cropped-image-link_style_centerImage-focusable__1JvMN aok-block image-window a-text-normal"
+      },
+      "gapType": "missing_from_a11y_tree",
+      "severity": "critical",
+      "wcagViolations": [
+        "4.1.2"
+      ],
+      "evidence": "A element with interactivity signals is not exposed in the accessibility tree",
+      "suggestedFix": "Add appropriate ARIA role and ensure element is not hidden from assistive technology. Consider using semantic HTML (e.g., <button> instead of <div>)."
+    },
+    {
+      "pageUrl": "https://www.amazon.com",
+      "element": {
+        "nodeName": "A",
+        "class": "a-link-normal _cropped-image-link_style_centerImage__1rzYI _cropped-image-link_style_centerImage-focusable__1JvMN aok-block image-window a-text-normal"
+      },
+      "gapType": "missing_from_a11y_tree",
+      "severity": "critical",
+      "wcagViolations": [
+        "4.1.2"
+      ],
+      "evidence": "A element with interactivity signals is not exposed in the accessibility tree",
+      "suggestedFix": "Add appropriate ARIA role and ensure element is not hidden from assistive technology. Consider using semantic HTML (e.g., <button> instead of <div>)."
+    },
+    {
+      "pageUrl": "https://www.amazon.com",
+      "element": {
+        "nodeName": "A",
+        "class": "a-link-normal _cropped-image-link_style_centerImage__1rzYI _cropped-image-link_style_centerImage-focusable__1JvMN aok-block image-window a-text-normal"
+      },
+      "gapType": "missing_from_a11y_tree",
+      "severity": "critical",
+      "wcagViolations": [
+        "4.1.2"
+      ],
+      "evidence": "A element with interactivity signals is not exposed in the accessibility tree",
+      "suggestedFix": "Add appropriate ARIA role and ensure element is not hidden from assistive technology. Consider using semantic HTML (e.g., <button> instead of <div>)."
+    },
+    {
+      "pageUrl": "https://www.amazon.com",
+      "element": {
+        "nodeName": "A",
+        "class": "a-link-normal _cropped-image-link_style_centerImage__1rzYI _cropped-image-link_style_centerImage-focusable__1JvMN aok-block image-window a-text-normal"
+      },
+      "gapType": "missing_from_a11y_tree",
+      "severity": "critical",
+      "wcagViolations": [
+        "4.1.2"
+      ],
+      "evidence": "A element with interactivity signals is not exposed in the accessibility tree",
+      "suggestedFix": "Add appropriate ARIA role and ensure element is not hidden from assistive technology. Consider using semantic HTML (e.g., <button> instead of <div>)."
+    },
+    {
+      "pageUrl": "https://www.amazon.com",
+      "element": {
+        "nodeName": "A"
+      },
+      "gapType": "missing_from_a11y_tree",
+      "severity": "critical",
+      "wcagViolations": [
+        "4.1.2"
+      ],
+      "evidence": "A element with interactivity signals is not exposed in the accessibility tree",
+      "suggestedFix": "Add appropriate ARIA role and ensure element is not hidden from assistive technology. Consider using semantic HTML (e.g., <button> instead of <div>)."
+    },
+    {
+      "pageUrl": "https://www.amazon.com",
+      "element": {
+        "nodeName": "A",
+        "class": "a-link-normal _cropped-image-link_style_centerImage__1rzYI _cropped-image-link_style_centerImage-focusable__1JvMN aok-block image-window a-text-normal"
+      },
+      "gapType": "missing_from_a11y_tree",
+      "severity": "critical",
+      "wcagViolations": [
+        "4.1.2"
+      ],
+      "evidence": "A element with interactivity signals is not exposed in the accessibility tree",
+      "suggestedFix": "Add appropriate ARIA role and ensure element is not hidden from assistive technology. Consider using semantic HTML (e.g., <button> instead of <div>)."
+    },
+    {
+      "pageUrl": "https://www.amazon.com",
+      "element": {
+        "nodeName": "A",
+        "class": "a-link-normal _Zmx1a_centerImage_30wh- aok-block image-window"
+      },
+      "gapType": "missing_from_a11y_tree",
+      "severity": "critical",
+      "wcagViolations": [
+        "4.1.2"
+      ],
+      "evidence": "A element with interactivity signals is not exposed in the accessibility tree",
+      "suggestedFix": "Add appropriate ARIA role and ensure element is not hidden from assistive technology. Consider using semantic HTML (e.g., <button> instead of <div>)."
+    },
+    {
+      "pageUrl": "https://www.amazon.com",
+      "element": {
+        "nodeName": "A",
+        "class": "a-link-normal _Zmx1a_centerImage_30wh- aok-block image-window"
+      },
+      "gapType": "missing_from_a11y_tree",
+      "severity": "critical",
+      "wcagViolations": [
+        "4.1.2"
+      ],
+      "evidence": "A element with interactivity signals is not exposed in the accessibility tree",
+      "suggestedFix": "Add appropriate ARIA role and ensure element is not hidden from assistive technology. Consider using semantic HTML (e.g., <button> instead of <div>)."
+    },
+    {
+      "pageUrl": "https://www.amazon.com",
+      "element": {
+        "nodeName": "A",
+        "class": "a-link-normal _Zmx1a_centerImage_30wh- aok-block image-window"
+      },
+      "gapType": "missing_from_a11y_tree",
+      "severity": "critical",
+      "wcagViolations": [
+        "4.1.2"
+      ],
+      "evidence": "A element with interactivity signals is not exposed in the accessibility tree",
+      "suggestedFix": "Add appropriate ARIA role and ensure element is not hidden from assistive technology. Consider using semantic HTML (e.g., <button> instead of <div>)."
+    },
+    {
+      "pageUrl": "https://www.amazon.com",
+      "element": {
+        "nodeName": "A",
+        "class": "a-link-normal _Zmx1a_centerImage_30wh- aok-block image-window"
+      },
+      "gapType": "missing_from_a11y_tree",
+      "severity": "critical",
+      "wcagViolations": [
+        "4.1.2"
+      ],
+      "evidence": "A element with interactivity signals is not exposed in the accessibility tree",
+      "suggestedFix": "Add appropriate ARIA role and ensure element is not hidden from assistive technology. Consider using semantic HTML (e.g., <button> instead of <div>)."
+    },
+    {
+      "pageUrl": "https://www.amazon.com",
+      "element": {
+        "nodeName": "A",
+        "class": "a-link-normal aok-block"
+      },
+      "gapType": "missing_from_a11y_tree",
+      "severity": "critical",
+      "wcagViolations": [
+        "4.1.2"
+      ],
+      "evidence": "A element with interactivity signals is not exposed in the accessibility tree",
+      "suggestedFix": "Add appropriate ARIA role and ensure element is not hidden from assistive technology. Consider using semantic HTML (e.g., <button> instead of <div>)."
+    },
+    {
+      "pageUrl": "https://www.amazon.com",
+      "element": {
+        "nodeName": "A",
+        "class": "a-link-normal feed-carousel-control feed-left feed-control-disabled"
+      },
+      "gapType": "missing_from_a11y_tree",
+      "severity": "critical",
+      "wcagViolations": [
+        "4.1.2"
+      ],
+      "evidence": "A element with interactivity signals is not exposed in the accessibility tree",
+      "suggestedFix": "Add appropriate ARIA role and ensure element is not hidden from assistive technology. Consider using semantic HTML (e.g., <button> instead of <div>)."
+    },
+    {
+      "pageUrl": "https://www.amazon.com",
+      "element": {
+        "nodeName": "A",
+        "class": "a-link-normal feed-carousel-control feed-right"
+      },
+      "gapType": "missing_from_a11y_tree",
+      "severity": "critical",
+      "wcagViolations": [
+        "4.1.2"
+      ],
+      "evidence": "A element with interactivity signals is not exposed in the accessibility tree",
+      "suggestedFix": "Add appropriate ARIA role and ensure element is not hidden from assistive technology. Consider using semantic HTML (e.g., <button> instead of <div>)."
+    },
+    {
+      "pageUrl": "https://www.amazon.com",
+      "element": {
+        "nodeName": "A",
+        "class": "a-link-normal feed-carousel-control feed-left feed-control-disabled"
+      },
+      "gapType": "missing_from_a11y_tree",
+      "severity": "critical",
+      "wcagViolations": [
+        "4.1.2"
+      ],
+      "evidence": "A element with interactivity signals is not exposed in the accessibility tree",
+      "suggestedFix": "Add appropriate ARIA role and ensure element is not hidden from assistive technology. Consider using semantic HTML (e.g., <button> instead of <div>)."
+    },
+    {
+      "pageUrl": "https://www.amazon.com",
+      "element": {
+        "nodeName": "A",
+        "class": "a-link-normal feed-carousel-control feed-right"
+      },
+      "gapType": "missing_from_a11y_tree",
+      "severity": "critical",
+      "wcagViolations": [
+        "4.1.2"
+      ],
+      "evidence": "A element with interactivity signals is not exposed in the accessibility tree",
+      "suggestedFix": "Add appropriate ARIA role and ensure element is not hidden from assistive technology. Consider using semantic HTML (e.g., <button> instead of <div>)."
+    },
+    {
+      "pageUrl": "https://www.amazon.com",
+      "element": {
+        "nodeName": "A",
+        "class": "a-link-normal feed-carousel-control feed-left feed-control-disabled"
+      },
+      "gapType": "missing_from_a11y_tree",
+      "severity": "critical",
+      "wcagViolations": [
+        "4.1.2"
+      ],
+      "evidence": "A element with interactivity signals is not exposed in the accessibility tree",
+      "suggestedFix": "Add appropriate ARIA role and ensure element is not hidden from assistive technology. Consider using semantic HTML (e.g., <button> instead of <div>)."
+    },
+    {
+      "pageUrl": "https://www.amazon.com",
+      "element": {
+        "nodeName": "A",
+        "class": "a-link-normal feed-carousel-control feed-right"
+      },
+      "gapType": "missing_from_a11y_tree",
+      "severity": "critical",
+      "wcagViolations": [
+        "4.1.2"
+      ],
+      "evidence": "A element with interactivity signals is not exposed in the accessibility tree",
+      "suggestedFix": "Add appropriate ARIA role and ensure element is not hidden from assistive technology. Consider using semantic HTML (e.g., <button> instead of <div>)."
+    },
+    {
+      "pageUrl": "https://www.amazon.com",
+      "element": {
+        "nodeName": "A",
+        "class": "a-link-normal feed-carousel-control feed-left feed-control-disabled"
+      },
+      "gapType": "missing_from_a11y_tree",
+      "severity": "critical",
+      "wcagViolations": [
+        "4.1.2"
+      ],
+      "evidence": "A element with interactivity signals is not exposed in the accessibility tree",
+      "suggestedFix": "Add appropriate ARIA role and ensure element is not hidden from assistive technology. Consider using semantic HTML (e.g., <button> instead of <div>)."
+    },
+    {
+      "pageUrl": "https://www.amazon.com",
+      "element": {
+        "nodeName": "A",
+        "class": "a-link-normal feed-carousel-control feed-right"
+      },
+      "gapType": "missing_from_a11y_tree",
+      "severity": "critical",
+      "wcagViolations": [
+        "4.1.2"
+      ],
+      "evidence": "A element with interactivity signals is not exposed in the accessibility tree",
+      "suggestedFix": "Add appropriate ARIA role and ensure element is not hidden from assistive technology. Consider using semantic HTML (e.g., <button> instead of <div>)."
+    },
+    {
+      "pageUrl": "https://www.amazon.com",
+      "element": {
+        "nodeName": "A",
+        "class": "a-link-normal feed-carousel-control feed-left feed-control-disabled"
+      },
+      "gapType": "missing_from_a11y_tree",
+      "severity": "critical",
+      "wcagViolations": [
+        "4.1.2"
+      ],
+      "evidence": "A element with interactivity signals is not exposed in the accessibility tree",
+      "suggestedFix": "Add appropriate ARIA role and ensure element is not hidden from assistive technology. Consider using semantic HTML (e.g., <button> instead of <div>)."
+    },
+    {
+      "pageUrl": "https://www.amazon.com",
+      "element": {
+        "nodeName": "A",
+        "class": "a-link-normal feed-carousel-control feed-right"
+      },
+      "gapType": "missing_from_a11y_tree",
+      "severity": "critical",
+      "wcagViolations": [
+        "4.1.2"
+      ],
+      "evidence": "A element with interactivity signals is not exposed in the accessibility tree",
+      "suggestedFix": "Add appropriate ARIA role and ensure element is not hidden from assistive technology. Consider using semantic HTML (e.g., <button> instead of <div>)."
+    },
+    {
+      "pageUrl": "https://www.amazon.com",
+      "element": {
+        "nodeName": "A",
+        "class": "a-link-normal feed-carousel-control feed-left feed-control-disabled"
+      },
+      "gapType": "missing_from_a11y_tree",
+      "severity": "critical",
+      "wcagViolations": [
+        "4.1.2"
+      ],
+      "evidence": "A element with interactivity signals is not exposed in the accessibility tree",
+      "suggestedFix": "Add appropriate ARIA role and ensure element is not hidden from assistive technology. Consider using semantic HTML (e.g., <button> instead of <div>)."
+    },
+    {
+      "pageUrl": "https://www.amazon.com",
+      "element": {
+        "nodeName": "A",
+        "class": "a-link-normal feed-carousel-control feed-right"
+      },
+      "gapType": "missing_from_a11y_tree",
+      "severity": "critical",
+      "wcagViolations": [
+        "4.1.2"
+      ],
+      "evidence": "A element with interactivity signals is not exposed in the accessibility tree",
+      "suggestedFix": "Add appropriate ARIA role and ensure element is not hidden from assistive technology. Consider using semantic HTML (e.g., <button> instead of <div>)."
+    },
+    {
+      "pageUrl": "https://www.amazon.com",
+      "element": {
+        "nodeName": "A",
+        "class": "a-link-normal feed-carousel-control feed-left feed-control-disabled"
+      },
+      "gapType": "missing_from_a11y_tree",
+      "severity": "critical",
+      "wcagViolations": [
+        "4.1.2"
+      ],
+      "evidence": "A element with interactivity signals is not exposed in the accessibility tree",
+      "suggestedFix": "Add appropriate ARIA role and ensure element is not hidden from assistive technology. Consider using semantic HTML (e.g., <button> instead of <div>)."
+    },
+    {
+      "pageUrl": "https://www.amazon.com",
+      "element": {
+        "nodeName": "A",
+        "class": "a-link-normal feed-carousel-control feed-right"
+      },
+      "gapType": "missing_from_a11y_tree",
+      "severity": "critical",
+      "wcagViolations": [
+        "4.1.2"
+      ],
+      "evidence": "A element with interactivity signals is not exposed in the accessibility tree",
+      "suggestedFix": "Add appropriate ARIA role and ensure element is not hidden from assistive technology. Consider using semantic HTML (e.g., <button> instead of <div>)."
+    },
+    {
+      "pageUrl": "https://www.amazon.com",
+      "element": {
+        "nodeName": "INPUT",
+        "class": "a-carousel-firstvisibleitem"
+      },
+      "gapType": "missing_from_a11y_tree",
+      "severity": "critical",
+      "wcagViolations": [
+        "4.1.2"
+      ],
+      "evidence": "INPUT element with interactivity signals is not exposed in the accessibility tree",
+      "suggestedFix": "Add appropriate ARIA role and ensure element is not hidden from assistive technology. Consider using semantic HTML (e.g., <button> instead of <div>)."
+    },
+    {
+      "pageUrl": "https://www.amazon.com",
+      "element": {
+        "nodeName": "INPUT"
+      },
+      "gapType": "missing_from_a11y_tree",
+      "severity": "critical",
+      "wcagViolations": [
+        "4.1.2"
+      ],
+      "evidence": "INPUT element with interactivity signals is not exposed in the accessibility tree",
+      "suggestedFix": "Add appropriate ARIA role and ensure element is not hidden from assistive technology. Consider using semantic HTML (e.g., <button> instead of <div>)."
+    },
+    {
+      "pageUrl": "https://www.amazon.com",
+      "element": {
+        "nodeName": "SELECT"
+      },
+      "gapType": "missing_from_a11y_tree",
+      "severity": "critical",
+      "wcagViolations": [
+        "4.1.2"
+      ],
+      "evidence": "SELECT element with interactivity signals is not exposed in the accessibility tree",
+      "suggestedFix": "Add appropriate ARIA role and ensure element is not hidden from assistive technology. Consider using semantic HTML (e.g., <button> instead of <div>)."
+    },
+    {
+      "pageUrl": "https://www.amazon.com",
+      "element": {
+        "nodeName": "SELECT"
+      },
+      "gapType": "missing_from_a11y_tree",
+      "severity": "critical",
+      "wcagViolations": [
+        "4.1.2"
+      ],
+      "evidence": "SELECT element with interactivity signals is not exposed in the accessibility tree",
+      "suggestedFix": "Add appropriate ARIA role and ensure element is not hidden from assistive technology. Consider using semantic HTML (e.g., <button> instead of <div>)."
+    },
+    {
+      "pageUrl": "https://www.amazon.com",
+      "element": {
+        "nodeName": "SELECT"
+      },
+      "gapType": "missing_from_a11y_tree",
+      "severity": "critical",
+      "wcagViolations": [
+        "4.1.2"
+      ],
+      "evidence": "SELECT element with interactivity signals is not exposed in the accessibility tree",
+      "suggestedFix": "Add appropriate ARIA role and ensure element is not hidden from assistive technology. Consider using semantic HTML (e.g., <button> instead of <div>)."
+    },
+    {
+      "pageUrl": "https://www.amazon.com",
+      "element": {
+        "nodeName": "SELECT"
+      },
+      "gapType": "missing_from_a11y_tree",
+      "severity": "critical",
+      "wcagViolations": [
+        "4.1.2"
+      ],
+      "evidence": "SELECT element with interactivity signals is not exposed in the accessibility tree",
+      "suggestedFix": "Add appropriate ARIA role and ensure element is not hidden from assistive technology. Consider using semantic HTML (e.g., <button> instead of <div>)."
+    },
+    {
+      "pageUrl": "https://www.amazon.com",
+      "element": {
+        "nodeName": "SELECT"
+      },
+      "gapType": "missing_from_a11y_tree",
+      "severity": "critical",
+      "wcagViolations": [
+        "4.1.2"
+      ],
+      "evidence": "SELECT element with interactivity signals is not exposed in the accessibility tree",
+      "suggestedFix": "Add appropriate ARIA role and ensure element is not hidden from assistive technology. Consider using semantic HTML (e.g., <button> instead of <div>)."
+    },
+    {
+      "pageUrl": "https://www.amazon.com",
+      "element": {
+        "nodeName": "SELECT"
+      },
+      "gapType": "missing_from_a11y_tree",
+      "severity": "critical",
+      "wcagViolations": [
+        "4.1.2"
+      ],
+      "evidence": "SELECT element with interactivity signals is not exposed in the accessibility tree",
+      "suggestedFix": "Add appropriate ARIA role and ensure element is not hidden from assistive technology. Consider using semantic HTML (e.g., <button> instead of <div>)."
+    },
+    {
+      "pageUrl": "https://www.amazon.com",
+      "element": {
+        "nodeName": "SELECT"
+      },
+      "gapType": "missing_from_a11y_tree",
+      "severity": "critical",
+      "wcagViolations": [
+        "4.1.2"
+      ],
+      "evidence": "SELECT element with interactivity signals is not exposed in the accessibility tree",
+      "suggestedFix": "Add appropriate ARIA role and ensure element is not hidden from assistive technology. Consider using semantic HTML (e.g., <button> instead of <div>)."
+    },
+    {
+      "pageUrl": "https://www.amazon.com",
+      "element": {
+        "nodeName": "SELECT"
+      },
+      "gapType": "missing_from_a11y_tree",
+      "severity": "critical",
+      "wcagViolations": [
+        "4.1.2"
+      ],
+      "evidence": "SELECT element with interactivity signals is not exposed in the accessibility tree",
+      "suggestedFix": "Add appropriate ARIA role and ensure element is not hidden from assistive technology. Consider using semantic HTML (e.g., <button> instead of <div>)."
+    },
+    {
+      "pageUrl": "https://www.amazon.com",
+      "element": {
+        "nodeName": "SELECT"
+      },
+      "gapType": "missing_from_a11y_tree",
+      "severity": "critical",
+      "wcagViolations": [
+        "4.1.2"
+      ],
+      "evidence": "SELECT element with interactivity signals is not exposed in the accessibility tree",
+      "suggestedFix": "Add appropriate ARIA role and ensure element is not hidden from assistive technology. Consider using semantic HTML (e.g., <button> instead of <div>)."
+    },
+    {
+      "pageUrl": "https://www.amazon.com",
+      "element": {
+        "nodeName": "NAV",
+        "id": "shortcut-menu",
+        "class": "nav-assistant"
+      },
+      "gapType": "not_focusable",
+      "severity": "critical",
+      "wcagViolations": [
+        "2.1.1",
+        "2.4.7"
+      ],
+      "evidence": "NAV element has click handlers but tabindex=\"-1\" makes it unfocusable",
+      "suggestedFix": "Add tabindex=\"0\" to make the element keyboard focusable, and ensure it can be activated with Enter/Space."
+    },
+    {
+      "pageUrl": "https://www.amazon.com",
+      "element": {
+        "nodeName": "A",
+        "id": "skippedLink"
+      },
+      "gapType": "missing_from_a11y_tree",
+      "severity": "critical",
+      "wcagViolations": [
+        "4.1.2"
+      ],
+      "evidence": "A element with interactivity signals is not exposed in the accessibility tree",
+      "suggestedFix": "Add appropriate ARIA role and ensure element is not hidden from assistive technology. Consider using semantic HTML (e.g., <button> instead of <div>)."
+    },
+    {
+      "pageUrl": "https://www.amazon.com",
+      "element": {
+        "nodeName": "DIV",
+        "id": "desktopTallHeroVideo-560e2033-13ab-470e-932a-f40f5b97ef10",
+        "class": "video-js _desktop-tall-hero-video_style_video-js-tall-hero-skin__WzPOh vjs-fluid desktopTallHeroVideo-560e2033-13ab-470e-932a-f40f5b97ef10-dimensions vjs-controls-enabled vjs-workinghover vjs-v7 vjs-user-active vjs-paused"
+      },
+      "gapType": "missing_from_a11y_tree",
+      "severity": "critical",
+      "wcagViolations": [
+        "4.1.2"
+      ],
+      "evidence": "DIV element with interactivity signals is not exposed in the accessibility tree",
+      "suggestedFix": "Add appropriate ARIA role and ensure element is not hidden from assistive technology. Consider using semantic HTML (e.g., <button> instead of <div>)."
+    },
+    {
+      "pageUrl": "https://www.amazon.com",
+      "element": {
+        "nodeName": "VIDEO",
+        "id": "desktopTallHeroVideo-560e2033-13ab-470e-932a-f40f5b97ef10_html5_api",
+        "class": "vjs-tech"
+      },
+      "gapType": "missing_from_a11y_tree",
+      "severity": "critical",
+      "wcagViolations": [
+        "4.1.2"
+      ],
+      "evidence": "VIDEO element with interactivity signals is not exposed in the accessibility tree",
+      "suggestedFix": "Add appropriate ARIA role and ensure element is not hidden from assistive technology. Consider using semantic HTML (e.g., <button> instead of <div>)."
+    },
+    {
+      "pageUrl": "https://www.amazon.com",
+      "element": {
+        "nodeName": "DIV",
+        "id": "icp-touch-link-language",
+        "class": "icp-button"
+      },
+      "gapType": "missing_from_a11y_tree",
+      "severity": "critical",
+      "wcagViolations": [
+        "4.1.2"
+      ],
+      "evidence": "DIV element with interactivity signals is not exposed in the accessibility tree",
+      "suggestedFix": "Add appropriate ARIA role and ensure element is not hidden from assistive technology. Consider using semantic HTML (e.g., <button> instead of <div>)."
+    },
+    {
+      "pageUrl": "https://www.amazon.com/ref=nav_logo",
+      "element": {
+        "nodeName": "A",
+        "class": "nav-action-signin-button"
+      },
+      "gapType": "missing_from_a11y_tree",
+      "severity": "critical",
+      "wcagViolations": [
+        "4.1.2"
+      ],
+      "evidence": "A element with interactivity signals is not exposed in the accessibility tree",
+      "suggestedFix": "Add appropriate ARIA role and ensure element is not hidden from assistive technology. Consider using semantic HTML (e.g., <button> instead of <div>)."
+    },
+    {
+      "pageUrl": "https://www.amazon.com/ref=nav_logo",
+      "element": {
+        "nodeName": "A",
+        "class": "nav-a"
+      },
+      "gapType": "missing_from_a11y_tree",
+      "severity": "critical",
+      "wcagViolations": [
+        "4.1.2"
+      ],
+      "evidence": "A element with interactivity signals is not exposed in the accessibility tree",
+      "suggestedFix": "Add appropriate ARIA role and ensure element is not hidden from assistive technology. Consider using semantic HTML (e.g., <button> instead of <div>)."
+    },
+    {
+      "pageUrl": "https://www.amazon.com/ref=nav_logo",
+      "element": {
+        "nodeName": "A",
+        "class": "nav-link nav-item"
+      },
+      "gapType": "missing_from_a11y_tree",
+      "severity": "critical",
+      "wcagViolations": [
+        "4.1.2"
+      ],
+      "evidence": "A element with interactivity signals is not exposed in the accessibility tree",
+      "suggestedFix": "Add appropriate ARIA role and ensure element is not hidden from assistive technology. Consider using semantic HTML (e.g., <button> instead of <div>)."
+    },
+    {
+      "pageUrl": "https://www.amazon.com/ref=nav_logo",
+      "element": {
+        "nodeName": "A",
+        "class": "nav-link nav-item"
+      },
+      "gapType": "missing_from_a11y_tree",
+      "severity": "critical",
+      "wcagViolations": [
+        "4.1.2"
+      ],
+      "evidence": "A element with interactivity signals is not exposed in the accessibility tree",
+      "suggestedFix": "Add appropriate ARIA role and ensure element is not hidden from assistive technology. Consider using semantic HTML (e.g., <button> instead of <div>)."
+    },
+    {
+      "pageUrl": "https://www.amazon.com/ref=nav_logo",
+      "element": {
+        "nodeName": "A",
+        "class": "nav-link nav-item"
+      },
+      "gapType": "missing_from_a11y_tree",
+      "severity": "critical",
+      "wcagViolations": [
+        "4.1.2"
+      ],
+      "evidence": "A element with interactivity signals is not exposed in the accessibility tree",
+      "suggestedFix": "Add appropriate ARIA role and ensure element is not hidden from assistive technology. Consider using semantic HTML (e.g., <button> instead of <div>)."
+    },
+    {
+      "pageUrl": "https://www.amazon.com/ref=nav_logo",
+      "element": {
+        "nodeName": "A",
+        "id": "nav_prefetch_yourorders",
+        "class": "nav-link nav-item"
+      },
+      "gapType": "missing_from_a11y_tree",
+      "severity": "critical",
+      "wcagViolations": [
+        "4.1.2"
+      ],
+      "evidence": "A element with interactivity signals is not exposed in the accessibility tree",
+      "suggestedFix": "Add appropriate ARIA role and ensure element is not hidden from assistive technology. Consider using semantic HTML (e.g., <button> instead of <div>)."
+    },
+    {
+      "pageUrl": "https://www.amazon.com/ref=nav_logo",
+      "element": {
+        "nodeName": "A",
+        "class": "nav-link nav-item"
+      },
+      "gapType": "missing_from_a11y_tree",
+      "severity": "critical",
+      "wcagViolations": [
+        "4.1.2"
+      ],
+      "evidence": "A element with interactivity signals is not exposed in the accessibility tree",
+      "suggestedFix": "Add appropriate ARIA role and ensure element is not hidden from assistive technology. Consider using semantic HTML (e.g., <button> instead of <div>)."
+    },
+    {
+      "pageUrl": "https://www.amazon.com/ref=nav_logo",
+      "element": {
+        "nodeName": "A",
+        "class": "nav-link nav-item"
+      },
+      "gapType": "missing_from_a11y_tree",
+      "severity": "critical",
+      "wcagViolations": [
+        "4.1.2"
+      ],
+      "evidence": "A element with interactivity signals is not exposed in the accessibility tree",
+      "suggestedFix": "Add appropriate ARIA role and ensure element is not hidden from assistive technology. Consider using semantic HTML (e.g., <button> instead of <div>)."
+    },
+    {
+      "pageUrl": "https://www.amazon.com/ref=nav_logo",
+      "element": {
+        "nodeName": "A",
+        "class": "nav-link nav-item"
+      },
+      "gapType": "missing_from_a11y_tree",
+      "severity": "critical",
+      "wcagViolations": [
+        "4.1.2"
+      ],
+      "evidence": "A element with interactivity signals is not exposed in the accessibility tree",
+      "suggestedFix": "Add appropriate ARIA role and ensure element is not hidden from assistive technology. Consider using semantic HTML (e.g., <button> instead of <div>)."
+    },
+    {
+      "pageUrl": "https://www.amazon.com/ref=nav_logo",
+      "element": {
+        "nodeName": "A",
+        "class": "nav-link nav-item"
+      },
+      "gapType": "missing_from_a11y_tree",
+      "severity": "critical",
+      "wcagViolations": [
+        "4.1.2"
+      ],
+      "evidence": "A element with interactivity signals is not exposed in the accessibility tree",
+      "suggestedFix": "Add appropriate ARIA role and ensure element is not hidden from assistive technology. Consider using semantic HTML (e.g., <button> instead of <div>)."
+    },
+    {
+      "pageUrl": "https://www.amazon.com/ref=nav_logo",
+      "element": {
+        "nodeName": "A",
+        "class": "nav-link nav-item"
+      },
+      "gapType": "missing_from_a11y_tree",
+      "severity": "critical",
+      "wcagViolations": [
+        "4.1.2"
+      ],
+      "evidence": "A element with interactivity signals is not exposed in the accessibility tree",
+      "suggestedFix": "Add appropriate ARIA role and ensure element is not hidden from assistive technology. Consider using semantic HTML (e.g., <button> instead of <div>)."
+    },
+    {
+      "pageUrl": "https://www.amazon.com/ref=nav_logo",
+      "element": {
+        "nodeName": "A",
+        "class": "nav-link nav-item"
+      },
+      "gapType": "missing_from_a11y_tree",
+      "severity": "critical",
+      "wcagViolations": [
+        "4.1.2"
+      ],
+      "evidence": "A element with interactivity signals is not exposed in the accessibility tree",
+      "suggestedFix": "Add appropriate ARIA role and ensure element is not hidden from assistive technology. Consider using semantic HTML (e.g., <button> instead of <div>)."
+    },
+    {
+      "pageUrl": "https://www.amazon.com/ref=nav_logo",
+      "element": {
+        "nodeName": "A",
+        "class": "nav-link nav-item"
+      },
+      "gapType": "missing_from_a11y_tree",
+      "severity": "critical",
+      "wcagViolations": [
+        "4.1.2"
+      ],
+      "evidence": "A element with interactivity signals is not exposed in the accessibility tree",
+      "suggestedFix": "Add appropriate ARIA role and ensure element is not hidden from assistive technology. Consider using semantic HTML (e.g., <button> instead of <div>)."
+    },
+    {
+      "pageUrl": "https://www.amazon.com/ref=nav_logo",
+      "element": {
+        "nodeName": "A",
+        "class": "nav-link nav-item"
+      },
+      "gapType": "missing_from_a11y_tree",
+      "severity": "critical",
+      "wcagViolations": [
+        "4.1.2"
+      ],
+      "evidence": "A element with interactivity signals is not exposed in the accessibility tree",
+      "suggestedFix": "Add appropriate ARIA role and ensure element is not hidden from assistive technology. Consider using semantic HTML (e.g., <button> instead of <div>)."
+    },
+    {
+      "pageUrl": "https://www.amazon.com/ref=nav_logo",
+      "element": {
+        "nodeName": "A",
+        "class": "nav-link nav-item"
+      },
+      "gapType": "missing_from_a11y_tree",
+      "severity": "critical",
+      "wcagViolations": [
+        "4.1.2"
+      ],
+      "evidence": "A element with interactivity signals is not exposed in the accessibility tree",
+      "suggestedFix": "Add appropriate ARIA role and ensure element is not hidden from assistive technology. Consider using semantic HTML (e.g., <button> instead of <div>)."
+    },
+    {
+      "pageUrl": "https://www.amazon.com/ref=nav_logo",
+      "element": {
+        "nodeName": "A",
+        "class": "nav-link nav-item"
+      },
+      "gapType": "missing_from_a11y_tree",
+      "severity": "critical",
+      "wcagViolations": [
+        "4.1.2"
+      ],
+      "evidence": "A element with interactivity signals is not exposed in the accessibility tree",
+      "suggestedFix": "Add appropriate ARIA role and ensure element is not hidden from assistive technology. Consider using semantic HTML (e.g., <button> instead of <div>)."
+    },
+    {
+      "pageUrl": "https://www.amazon.com/ref=nav_logo",
+      "element": {
+        "nodeName": "A",
+        "class": "nav-link nav-item"
+      },
+      "gapType": "missing_from_a11y_tree",
+      "severity": "critical",
+      "wcagViolations": [
+        "4.1.2"
+      ],
+      "evidence": "A element with interactivity signals is not exposed in the accessibility tree",
+      "suggestedFix": "Add appropriate ARIA role and ensure element is not hidden from assistive technology. Consider using semantic HTML (e.g., <button> instead of <div>)."
+    },
+    {
+      "pageUrl": "https://www.amazon.com/ref=nav_logo",
+      "element": {
+        "nodeName": "A",
+        "class": "nav-link nav-item"
+      },
+      "gapType": "missing_from_a11y_tree",
+      "severity": "critical",
+      "wcagViolations": [
+        "4.1.2"
+      ],
+      "evidence": "A element with interactivity signals is not exposed in the accessibility tree",
+      "suggestedFix": "Add appropriate ARIA role and ensure element is not hidden from assistive technology. Consider using semantic HTML (e.g., <button> instead of <div>)."
+    },
+    {
+      "pageUrl": "https://www.amazon.com/ref=nav_logo",
+      "element": {
+        "nodeName": "A",
+        "class": "nav-link nav-item"
+      },
+      "gapType": "missing_from_a11y_tree",
+      "severity": "critical",
+      "wcagViolations": [
+        "4.1.2"
+      ],
+      "evidence": "A element with interactivity signals is not exposed in the accessibility tree",
+      "suggestedFix": "Add appropriate ARIA role and ensure element is not hidden from assistive technology. Consider using semantic HTML (e.g., <button> instead of <div>)."
+    },
+    {
+      "pageUrl": "https://www.amazon.com/ref=nav_logo",
+      "element": {
+        "nodeName": "A",
+        "class": "nav-link nav-item"
+      },
+      "gapType": "missing_from_a11y_tree",
+      "severity": "critical",
+      "wcagViolations": [
+        "4.1.2"
+      ],
+      "evidence": "A element with interactivity signals is not exposed in the accessibility tree",
+      "suggestedFix": "Add appropriate ARIA role and ensure element is not hidden from assistive technology. Consider using semantic HTML (e.g., <button> instead of <div>)."
+    },
+    {
+      "pageUrl": "https://www.amazon.com/ref=nav_logo",
+      "element": {
+        "nodeName": "A",
+        "class": "nav-link nav-item"
+      },
+      "gapType": "missing_from_a11y_tree",
+      "severity": "critical",
+      "wcagViolations": [
+        "4.1.2"
+      ],
+      "evidence": "A element with interactivity signals is not exposed in the accessibility tree",
+      "suggestedFix": "Add appropriate ARIA role and ensure element is not hidden from assistive technology. Consider using semantic HTML (e.g., <button> instead of <div>)."
+    },
+    {
+      "pageUrl": "https://www.amazon.com/ref=nav_logo",
+      "element": {
+        "nodeName": "A",
+        "class": "nav-link nav-item"
+      },
+      "gapType": "missing_from_a11y_tree",
+      "severity": "critical",
+      "wcagViolations": [
+        "4.1.2"
+      ],
+      "evidence": "A element with interactivity signals is not exposed in the accessibility tree",
+      "suggestedFix": "Add appropriate ARIA role and ensure element is not hidden from assistive technology. Consider using semantic HTML (e.g., <button> instead of <div>)."
+    },
+    {
+      "pageUrl": "https://www.amazon.com/ref=nav_logo",
+      "element": {
+        "nodeName": "A",
+        "class": "a-link-normal _cropped-image-link_style_centerImage__1rzYI _cropped-image-link_style_centerImage-focusable__1JvMN aok-block image-window a-text-normal"
+      },
+      "gapType": "missing_from_a11y_tree",
+      "severity": "critical",
+      "wcagViolations": [
+        "4.1.2"
+      ],
+      "evidence": "A element with interactivity signals is not exposed in the accessibility tree",
+      "suggestedFix": "Add appropriate ARIA role and ensure element is not hidden from assistive technology. Consider using semantic HTML (e.g., <button> instead of <div>)."
+    },
+    {
+      "pageUrl": "https://www.amazon.com/ref=nav_logo",
+      "element": {
+        "nodeName": "A",
+        "class": "a-link-normal _cropped-image-link_style_centerImage__1rzYI _cropped-image-link_style_centerImage-focusable__1JvMN aok-block image-window a-text-normal"
+      },
+      "gapType": "missing_from_a11y_tree",
+      "severity": "critical",
+      "wcagViolations": [
+        "4.1.2"
+      ],
+      "evidence": "A element with interactivity signals is not exposed in the accessibility tree",
+      "suggestedFix": "Add appropriate ARIA role and ensure element is not hidden from assistive technology. Consider using semantic HTML (e.g., <button> instead of <div>)."
+    },
+    {
+      "pageUrl": "https://www.amazon.com/ref=nav_logo",
+      "element": {
+        "nodeName": "A",
+        "class": "a-link-normal _cropped-image-link_style_centerImage__1rzYI _cropped-image-link_style_centerImage-focusable__1JvMN aok-block image-window a-text-normal"
+      },
+      "gapType": "missing_from_a11y_tree",
+      "severity": "critical",
+      "wcagViolations": [
+        "4.1.2"
+      ],
+      "evidence": "A element with interactivity signals is not exposed in the accessibility tree",
+      "suggestedFix": "Add appropriate ARIA role and ensure element is not hidden from assistive technology. Consider using semantic HTML (e.g., <button> instead of <div>)."
+    },
+    {
+      "pageUrl": "https://www.amazon.com/ref=nav_logo",
+      "element": {
+        "nodeName": "A",
+        "class": "a-link-normal _cropped-image-link_style_centerImage__1rzYI _cropped-image-link_style_centerImage-focusable__1JvMN aok-block image-window a-text-normal"
+      },
+      "gapType": "missing_from_a11y_tree",
+      "severity": "critical",
+      "wcagViolations": [
+        "4.1.2"
+      ],
+      "evidence": "A element with interactivity signals is not exposed in the accessibility tree",
+      "suggestedFix": "Add appropriate ARIA role and ensure element is not hidden from assistive technology. Consider using semantic HTML (e.g., <button> instead of <div>)."
+    },
+    {
+      "pageUrl": "https://www.amazon.com/ref=nav_logo",
+      "element": {
+        "nodeName": "A",
+        "class": "a-link-normal _cropped-image-link_style_centerImage__1rzYI _cropped-image-link_style_centerImage-focusable__1JvMN aok-block image-window a-text-normal"
+      },
+      "gapType": "missing_from_a11y_tree",
+      "severity": "critical",
+      "wcagViolations": [
+        "4.1.2"
+      ],
+      "evidence": "A element with interactivity signals is not exposed in the accessibility tree",
+      "suggestedFix": "Add appropriate ARIA role and ensure element is not hidden from assistive technology. Consider using semantic HTML (e.g., <button> instead of <div>)."
+    },
+    {
+      "pageUrl": "https://www.amazon.com/ref=nav_logo",
+      "element": {
+        "nodeName": "A"
+      },
+      "gapType": "missing_from_a11y_tree",
+      "severity": "critical",
+      "wcagViolations": [
+        "4.1.2"
+      ],
+      "evidence": "A element with interactivity signals is not exposed in the accessibility tree",
+      "suggestedFix": "Add appropriate ARIA role and ensure element is not hidden from assistive technology. Consider using semantic HTML (e.g., <button> instead of <div>)."
+    },
+    {
+      "pageUrl": "https://www.amazon.com/ref=nav_logo",
+      "element": {
+        "nodeName": "A",
+        "class": "a-link-normal _cropped-image-link_style_centerImage__1rzYI _cropped-image-link_style_centerImage-focusable__1JvMN aok-block image-window a-text-normal"
+      },
+      "gapType": "missing_from_a11y_tree",
+      "severity": "critical",
+      "wcagViolations": [
+        "4.1.2"
+      ],
+      "evidence": "A element with interactivity signals is not exposed in the accessibility tree",
+      "suggestedFix": "Add appropriate ARIA role and ensure element is not hidden from assistive technology. Consider using semantic HTML (e.g., <button> instead of <div>)."
+    },
+    {
+      "pageUrl": "https://www.amazon.com/ref=nav_logo",
+      "element": {
+        "nodeName": "A",
+        "class": "a-link-normal _Zmx1a_centerImage_30wh- aok-block image-window"
+      },
+      "gapType": "missing_from_a11y_tree",
+      "severity": "critical",
+      "wcagViolations": [
+        "4.1.2"
+      ],
+      "evidence": "A element with interactivity signals is not exposed in the accessibility tree",
+      "suggestedFix": "Add appropriate ARIA role and ensure element is not hidden from assistive technology. Consider using semantic HTML (e.g., <button> instead of <div>)."
+    },
+    {
+      "pageUrl": "https://www.amazon.com/ref=nav_logo",
+      "element": {
+        "nodeName": "A",
+        "class": "a-link-normal _Zmx1a_centerImage_30wh- aok-block image-window"
+      },
+      "gapType": "missing_from_a11y_tree",
+      "severity": "critical",
+      "wcagViolations": [
+        "4.1.2"
+      ],
+      "evidence": "A element with interactivity signals is not exposed in the accessibility tree",
+      "suggestedFix": "Add appropriate ARIA role and ensure element is not hidden from assistive technology. Consider using semantic HTML (e.g., <button> instead of <div>)."
+    },
+    {
+      "pageUrl": "https://www.amazon.com/ref=nav_logo",
+      "element": {
+        "nodeName": "A",
+        "class": "a-link-normal _Zmx1a_centerImage_30wh- aok-block image-window"
+      },
+      "gapType": "missing_from_a11y_tree",
+      "severity": "critical",
+      "wcagViolations": [
+        "4.1.2"
+      ],
+      "evidence": "A element with interactivity signals is not exposed in the accessibility tree",
+      "suggestedFix": "Add appropriate ARIA role and ensure element is not hidden from assistive technology. Consider using semantic HTML (e.g., <button> instead of <div>)."
+    },
+    {
+      "pageUrl": "https://www.amazon.com/ref=nav_logo",
+      "element": {
+        "nodeName": "A",
+        "class": "a-link-normal _Zmx1a_centerImage_30wh- aok-block image-window"
+      },
+      "gapType": "missing_from_a11y_tree",
+      "severity": "critical",
+      "wcagViolations": [
+        "4.1.2"
+      ],
+      "evidence": "A element with interactivity signals is not exposed in the accessibility tree",
+      "suggestedFix": "Add appropriate ARIA role and ensure element is not hidden from assistive technology. Consider using semantic HTML (e.g., <button> instead of <div>)."
+    },
+    {
+      "pageUrl": "https://www.amazon.com/ref=nav_logo",
+      "element": {
+        "nodeName": "A",
+        "class": "a-link-normal aok-block"
+      },
+      "gapType": "missing_from_a11y_tree",
+      "severity": "critical",
+      "wcagViolations": [
+        "4.1.2"
+      ],
+      "evidence": "A element with interactivity signals is not exposed in the accessibility tree",
+      "suggestedFix": "Add appropriate ARIA role and ensure element is not hidden from assistive technology. Consider using semantic HTML (e.g., <button> instead of <div>)."
+    },
+    {
+      "pageUrl": "https://www.amazon.com/ref=nav_logo",
+      "element": {
+        "nodeName": "A",
+        "class": "a-link-normal feed-carousel-control feed-left feed-control-disabled"
+      },
+      "gapType": "missing_from_a11y_tree",
+      "severity": "critical",
+      "wcagViolations": [
+        "4.1.2"
+      ],
+      "evidence": "A element with interactivity signals is not exposed in the accessibility tree",
+      "suggestedFix": "Add appropriate ARIA role and ensure element is not hidden from assistive technology. Consider using semantic HTML (e.g., <button> instead of <div>)."
+    },
+    {
+      "pageUrl": "https://www.amazon.com/ref=nav_logo",
+      "element": {
+        "nodeName": "A",
+        "class": "a-link-normal feed-carousel-control feed-right"
+      },
+      "gapType": "missing_from_a11y_tree",
+      "severity": "critical",
+      "wcagViolations": [
+        "4.1.2"
+      ],
+      "evidence": "A element with interactivity signals is not exposed in the accessibility tree",
+      "suggestedFix": "Add appropriate ARIA role and ensure element is not hidden from assistive technology. Consider using semantic HTML (e.g., <button> instead of <div>)."
+    },
+    {
+      "pageUrl": "https://www.amazon.com/ref=nav_logo",
+      "element": {
+        "nodeName": "A",
+        "class": "a-link-normal feed-carousel-control feed-left feed-control-disabled"
+      },
+      "gapType": "missing_from_a11y_tree",
+      "severity": "critical",
+      "wcagViolations": [
+        "4.1.2"
+      ],
+      "evidence": "A element with interactivity signals is not exposed in the accessibility tree",
+      "suggestedFix": "Add appropriate ARIA role and ensure element is not hidden from assistive technology. Consider using semantic HTML (e.g., <button> instead of <div>)."
+    },
+    {
+      "pageUrl": "https://www.amazon.com/ref=nav_logo",
+      "element": {
+        "nodeName": "A",
+        "class": "a-link-normal feed-carousel-control feed-right"
+      },
+      "gapType": "missing_from_a11y_tree",
+      "severity": "critical",
+      "wcagViolations": [
+        "4.1.2"
+      ],
+      "evidence": "A element with interactivity signals is not exposed in the accessibility tree",
+      "suggestedFix": "Add appropriate ARIA role and ensure element is not hidden from assistive technology. Consider using semantic HTML (e.g., <button> instead of <div>)."
+    },
+    {
+      "pageUrl": "https://www.amazon.com/ref=nav_logo",
+      "element": {
+        "nodeName": "A",
+        "class": "a-link-normal feed-carousel-control feed-left feed-control-disabled"
+      },
+      "gapType": "missing_from_a11y_tree",
+      "severity": "critical",
+      "wcagViolations": [
+        "4.1.2"
+      ],
+      "evidence": "A element with interactivity signals is not exposed in the accessibility tree",
+      "suggestedFix": "Add appropriate ARIA role and ensure element is not hidden from assistive technology. Consider using semantic HTML (e.g., <button> instead of <div>)."
+    },
+    {
+      "pageUrl": "https://www.amazon.com/ref=nav_logo",
+      "element": {
+        "nodeName": "A",
+        "class": "a-link-normal feed-carousel-control feed-right"
+      },
+      "gapType": "missing_from_a11y_tree",
+      "severity": "critical",
+      "wcagViolations": [
+        "4.1.2"
+      ],
+      "evidence": "A element with interactivity signals is not exposed in the accessibility tree",
+      "suggestedFix": "Add appropriate ARIA role and ensure element is not hidden from assistive technology. Consider using semantic HTML (e.g., <button> instead of <div>)."
+    },
+    {
+      "pageUrl": "https://www.amazon.com/ref=nav_logo",
+      "element": {
+        "nodeName": "A",
+        "class": "a-link-normal feed-carousel-control feed-left feed-control-disabled"
+      },
+      "gapType": "missing_from_a11y_tree",
+      "severity": "critical",
+      "wcagViolations": [
+        "4.1.2"
+      ],
+      "evidence": "A element with interactivity signals is not exposed in the accessibility tree",
+      "suggestedFix": "Add appropriate ARIA role and ensure element is not hidden from assistive technology. Consider using semantic HTML (e.g., <button> instead of <div>)."
+    },
+    {
+      "pageUrl": "https://www.amazon.com/ref=nav_logo",
+      "element": {
+        "nodeName": "A",
+        "class": "a-link-normal feed-carousel-control feed-right"
+      },
+      "gapType": "missing_from_a11y_tree",
+      "severity": "critical",
+      "wcagViolations": [
+        "4.1.2"
+      ],
+      "evidence": "A element with interactivity signals is not exposed in the accessibility tree",
+      "suggestedFix": "Add appropriate ARIA role and ensure element is not hidden from assistive technology. Consider using semantic HTML (e.g., <button> instead of <div>)."
+    },
+    {
+      "pageUrl": "https://www.amazon.com/ref=nav_logo",
+      "element": {
+        "nodeName": "A",
+        "class": "a-link-normal feed-carousel-control feed-left feed-control-disabled"
+      },
+      "gapType": "missing_from_a11y_tree",
+      "severity": "critical",
+      "wcagViolations": [
+        "4.1.2"
+      ],
+      "evidence": "A element with interactivity signals is not exposed in the accessibility tree",
+      "suggestedFix": "Add appropriate ARIA role and ensure element is not hidden from assistive technology. Consider using semantic HTML (e.g., <button> instead of <div>)."
+    },
+    {
+      "pageUrl": "https://www.amazon.com/ref=nav_logo",
+      "element": {
+        "nodeName": "A",
+        "class": "a-link-normal feed-carousel-control feed-right"
+      },
+      "gapType": "missing_from_a11y_tree",
+      "severity": "critical",
+      "wcagViolations": [
+        "4.1.2"
+      ],
+      "evidence": "A element with interactivity signals is not exposed in the accessibility tree",
+      "suggestedFix": "Add appropriate ARIA role and ensure element is not hidden from assistive technology. Consider using semantic HTML (e.g., <button> instead of <div>)."
+    },
+    {
+      "pageUrl": "https://www.amazon.com/ref=nav_logo",
+      "element": {
+        "nodeName": "A",
+        "class": "a-link-normal feed-carousel-control feed-left feed-control-disabled"
+      },
+      "gapType": "missing_from_a11y_tree",
+      "severity": "critical",
+      "wcagViolations": [
+        "4.1.2"
+      ],
+      "evidence": "A element with interactivity signals is not exposed in the accessibility tree",
+      "suggestedFix": "Add appropriate ARIA role and ensure element is not hidden from assistive technology. Consider using semantic HTML (e.g., <button> instead of <div>)."
+    },
+    {
+      "pageUrl": "https://www.amazon.com/ref=nav_logo",
+      "element": {
+        "nodeName": "A",
+        "class": "a-link-normal feed-carousel-control feed-right"
+      },
+      "gapType": "missing_from_a11y_tree",
+      "severity": "critical",
+      "wcagViolations": [
+        "4.1.2"
+      ],
+      "evidence": "A element with interactivity signals is not exposed in the accessibility tree",
+      "suggestedFix": "Add appropriate ARIA role and ensure element is not hidden from assistive technology. Consider using semantic HTML (e.g., <button> instead of <div>)."
+    },
+    {
+      "pageUrl": "https://www.amazon.com/ref=nav_logo",
+      "element": {
+        "nodeName": "A",
+        "class": "a-link-normal feed-carousel-control feed-left feed-control-disabled"
+      },
+      "gapType": "missing_from_a11y_tree",
+      "severity": "critical",
+      "wcagViolations": [
+        "4.1.2"
+      ],
+      "evidence": "A element with interactivity signals is not exposed in the accessibility tree",
+      "suggestedFix": "Add appropriate ARIA role and ensure element is not hidden from assistive technology. Consider using semantic HTML (e.g., <button> instead of <div>)."
+    },
+    {
+      "pageUrl": "https://www.amazon.com/ref=nav_logo",
+      "element": {
+        "nodeName": "A",
+        "class": "a-link-normal feed-carousel-control feed-right"
+      },
+      "gapType": "missing_from_a11y_tree",
+      "severity": "critical",
+      "wcagViolations": [
+        "4.1.2"
+      ],
+      "evidence": "A element with interactivity signals is not exposed in the accessibility tree",
+      "suggestedFix": "Add appropriate ARIA role and ensure element is not hidden from assistive technology. Consider using semantic HTML (e.g., <button> instead of <div>)."
+    },
+    {
+      "pageUrl": "https://www.amazon.com/ref=nav_logo",
+      "element": {
+        "nodeName": "A"
+      },
+      "gapType": "missing_from_a11y_tree",
+      "severity": "critical",
+      "wcagViolations": [
+        "4.1.2"
+      ],
+      "evidence": "A element with interactivity signals is not exposed in the accessibility tree",
+      "suggestedFix": "Add appropriate ARIA role and ensure element is not hidden from assistive technology. Consider using semantic HTML (e.g., <button> instead of <div>)."
+    },
+    {
+      "pageUrl": "https://www.amazon.com/ref=nav_logo",
+      "element": {
+        "nodeName": "INPUT",
+        "id": "unifiedLocation1ClickAddress",
+        "class": "nav-progressive-attribute"
+      },
+      "gapType": "missing_from_a11y_tree",
+      "severity": "critical",
+      "wcagViolations": [
+        "4.1.2"
+      ],
+      "evidence": "INPUT element with interactivity signals is not exposed in the accessibility tree",
+      "suggestedFix": "Add appropriate ARIA role and ensure element is not hidden from assistive technology. Consider using semantic HTML (e.g., <button> instead of <div>)."
+    },
+    {
+      "pageUrl": "https://www.amazon.com/ref=nav_logo",
+      "element": {
+        "nodeName": "INPUT",
+        "id": "ubbShipTo",
+        "class": "nav-progressive-attribute"
+      },
+      "gapType": "missing_from_a11y_tree",
+      "severity": "critical",
+      "wcagViolations": [
+        "4.1.2"
+      ],
+      "evidence": "INPUT element with interactivity signals is not exposed in the accessibility tree",
+      "suggestedFix": "Add appropriate ARIA role and ensure element is not hidden from assistive technology. Consider using semantic HTML (e.g., <button> instead of <div>)."
+    },
+    {
+      "pageUrl": "https://www.amazon.com/ref=nav_logo",
+      "element": {
+        "nodeName": "INPUT",
+        "id": "glowValidationToken",
+        "class": "nav-progressive-attribute"
+      },
+      "gapType": "missing_from_a11y_tree",
+      "severity": "critical",
+      "wcagViolations": [
+        "4.1.2"
+      ],
+      "evidence": "INPUT element with interactivity signals is not exposed in the accessibility tree",
+      "suggestedFix": "Add appropriate ARIA role and ensure element is not hidden from assistive technology. Consider using semantic HTML (e.g., <button> instead of <div>)."
+    },
+    {
+      "pageUrl": "https://www.amazon.com/ref=nav_logo",
+      "element": {
+        "nodeName": "INPUT",
+        "id": "glowDestinationType",
+        "class": "nav-progressive-attribute"
+      },
+      "gapType": "missing_from_a11y_tree",
+      "severity": "critical",
+      "wcagViolations": [
+        "4.1.2"
+      ],
+      "evidence": "INPUT element with interactivity signals is not exposed in the accessibility tree",
+      "suggestedFix": "Add appropriate ARIA role and ensure element is not hidden from assistive technology. Consider using semantic HTML (e.g., <button> instead of <div>)."
+    },
+    {
+      "pageUrl": "https://www.amazon.com/ref=nav_logo",
+      "element": {
+        "nodeName": "INPUT",
+        "class": "a-carousel-firstvisibleitem"
+      },
+      "gapType": "missing_from_a11y_tree",
+      "severity": "critical",
+      "wcagViolations": [
+        "4.1.2"
+      ],
+      "evidence": "INPUT element with interactivity signals is not exposed in the accessibility tree",
+      "suggestedFix": "Add appropriate ARIA role and ensure element is not hidden from assistive technology. Consider using semantic HTML (e.g., <button> instead of <div>)."
+    },
+    {
+      "pageUrl": "https://www.amazon.com/ref=nav_logo",
+      "element": {
+        "nodeName": "INPUT"
+      },
+      "gapType": "missing_from_a11y_tree",
+      "severity": "critical",
+      "wcagViolations": [
+        "4.1.2"
+      ],
+      "evidence": "INPUT element with interactivity signals is not exposed in the accessibility tree",
+      "suggestedFix": "Add appropriate ARIA role and ensure element is not hidden from assistive technology. Consider using semantic HTML (e.g., <button> instead of <div>)."
+    },
+    {
+      "pageUrl": "https://www.amazon.com/ref=nav_logo",
+      "element": {
+        "nodeName": "NAV",
+        "id": "shortcut-menu",
+        "class": "nav-assistant"
+      },
+      "gapType": "not_focusable",
+      "severity": "critical",
+      "wcagViolations": [
+        "2.1.1",
+        "2.4.7"
+      ],
+      "evidence": "NAV element has click handlers but tabindex=\"-1\" makes it unfocusable",
+      "suggestedFix": "Add tabindex=\"0\" to make the element keyboard focusable, and ensure it can be activated with Enter/Space."
+    },
+    {
+      "pageUrl": "https://www.amazon.com/ref=nav_logo",
+      "element": {
+        "nodeName": "A",
+        "id": "skippedLink"
+      },
+      "gapType": "missing_from_a11y_tree",
+      "severity": "critical",
+      "wcagViolations": [
+        "4.1.2"
+      ],
+      "evidence": "A element with interactivity signals is not exposed in the accessibility tree",
+      "suggestedFix": "Add appropriate ARIA role and ensure element is not hidden from assistive technology. Consider using semantic HTML (e.g., <button> instead of <div>)."
+    },
+    {
+      "pageUrl": "https://www.amazon.com/ref=nav_logo",
+      "element": {
+        "nodeName": "DIV",
+        "id": "icp-touch-link-language",
+        "class": "icp-button"
+      },
+      "gapType": "missing_from_a11y_tree",
+      "severity": "critical",
+      "wcagViolations": [
+        "4.1.2"
+      ],
+      "evidence": "DIV element with interactivity signals is not exposed in the accessibility tree",
+      "suggestedFix": "Add appropriate ARIA role and ensure element is not hidden from assistive technology. Consider using semantic HTML (e.g., <button> instead of <div>)."
+    },
+    {
+      "pageUrl": "https://www.amazon.com/customer-preferences/edit?ie=UTF8&preferencesReturnUrl=%2F&ref_=topnav_lang",
+      "element": {
+        "nodeName": "A",
+        "class": "nav-action-signin-button"
+      },
+      "gapType": "missing_from_a11y_tree",
+      "severity": "critical",
+      "wcagViolations": [
+        "4.1.2"
+      ],
+      "evidence": "A element with interactivity signals is not exposed in the accessibility tree",
+      "suggestedFix": "Add appropriate ARIA role and ensure element is not hidden from assistive technology. Consider using semantic HTML (e.g., <button> instead of <div>)."
+    },
+    {
+      "pageUrl": "https://www.amazon.com/customer-preferences/edit?ie=UTF8&preferencesReturnUrl=%2F&ref_=topnav_lang",
+      "element": {
+        "nodeName": "A",
+        "class": "nav-a"
+      },
+      "gapType": "missing_from_a11y_tree",
+      "severity": "critical",
+      "wcagViolations": [
+        "4.1.2"
+      ],
+      "evidence": "A element with interactivity signals is not exposed in the accessibility tree",
+      "suggestedFix": "Add appropriate ARIA role and ensure element is not hidden from assistive technology. Consider using semantic HTML (e.g., <button> instead of <div>)."
+    },
+    {
+      "pageUrl": "https://www.amazon.com/customer-preferences/edit?ie=UTF8&preferencesReturnUrl=%2F&ref_=topnav_lang",
+      "element": {
+        "nodeName": "A",
+        "class": "nav-link nav-item"
+      },
+      "gapType": "missing_from_a11y_tree",
+      "severity": "critical",
+      "wcagViolations": [
+        "4.1.2"
+      ],
+      "evidence": "A element with interactivity signals is not exposed in the accessibility tree",
+      "suggestedFix": "Add appropriate ARIA role and ensure element is not hidden from assistive technology. Consider using semantic HTML (e.g., <button> instead of <div>)."
+    },
+    {
+      "pageUrl": "https://www.amazon.com/customer-preferences/edit?ie=UTF8&preferencesReturnUrl=%2F&ref_=topnav_lang",
+      "element": {
+        "nodeName": "A",
+        "class": "nav-link nav-item"
+      },
+      "gapType": "missing_from_a11y_tree",
+      "severity": "critical",
+      "wcagViolations": [
+        "4.1.2"
+      ],
+      "evidence": "A element with interactivity signals is not exposed in the accessibility tree",
+      "suggestedFix": "Add appropriate ARIA role and ensure element is not hidden from assistive technology. Consider using semantic HTML (e.g., <button> instead of <div>)."
+    },
+    {
+      "pageUrl": "https://www.amazon.com/customer-preferences/edit?ie=UTF8&preferencesReturnUrl=%2F&ref_=topnav_lang",
+      "element": {
+        "nodeName": "A",
+        "class": "nav-link nav-item"
+      },
+      "gapType": "missing_from_a11y_tree",
+      "severity": "critical",
+      "wcagViolations": [
+        "4.1.2"
+      ],
+      "evidence": "A element with interactivity signals is not exposed in the accessibility tree",
+      "suggestedFix": "Add appropriate ARIA role and ensure element is not hidden from assistive technology. Consider using semantic HTML (e.g., <button> instead of <div>)."
+    },
+    {
+      "pageUrl": "https://www.amazon.com/customer-preferences/edit?ie=UTF8&preferencesReturnUrl=%2F&ref_=topnav_lang",
+      "element": {
+        "nodeName": "A",
+        "id": "nav_prefetch_yourorders",
+        "class": "nav-link nav-item"
+      },
+      "gapType": "missing_from_a11y_tree",
+      "severity": "critical",
+      "wcagViolations": [
+        "4.1.2"
+      ],
+      "evidence": "A element with interactivity signals is not exposed in the accessibility tree",
+      "suggestedFix": "Add appropriate ARIA role and ensure element is not hidden from assistive technology. Consider using semantic HTML (e.g., <button> instead of <div>)."
+    },
+    {
+      "pageUrl": "https://www.amazon.com/customer-preferences/edit?ie=UTF8&preferencesReturnUrl=%2F&ref_=topnav_lang",
+      "element": {
+        "nodeName": "A",
+        "class": "nav-link nav-item"
+      },
+      "gapType": "missing_from_a11y_tree",
+      "severity": "critical",
+      "wcagViolations": [
+        "4.1.2"
+      ],
+      "evidence": "A element with interactivity signals is not exposed in the accessibility tree",
+      "suggestedFix": "Add appropriate ARIA role and ensure element is not hidden from assistive technology. Consider using semantic HTML (e.g., <button> instead of <div>)."
+    },
+    {
+      "pageUrl": "https://www.amazon.com/customer-preferences/edit?ie=UTF8&preferencesReturnUrl=%2F&ref_=topnav_lang",
+      "element": {
+        "nodeName": "A",
+        "class": "nav-link nav-item"
+      },
+      "gapType": "missing_from_a11y_tree",
+      "severity": "critical",
+      "wcagViolations": [
+        "4.1.2"
+      ],
+      "evidence": "A element with interactivity signals is not exposed in the accessibility tree",
+      "suggestedFix": "Add appropriate ARIA role and ensure element is not hidden from assistive technology. Consider using semantic HTML (e.g., <button> instead of <div>)."
+    },
+    {
+      "pageUrl": "https://www.amazon.com/customer-preferences/edit?ie=UTF8&preferencesReturnUrl=%2F&ref_=topnav_lang",
+      "element": {
+        "nodeName": "A",
+        "class": "nav-link nav-item"
+      },
+      "gapType": "missing_from_a11y_tree",
+      "severity": "critical",
+      "wcagViolations": [
+        "4.1.2"
+      ],
+      "evidence": "A element with interactivity signals is not exposed in the accessibility tree",
+      "suggestedFix": "Add appropriate ARIA role and ensure element is not hidden from assistive technology. Consider using semantic HTML (e.g., <button> instead of <div>)."
+    },
+    {
+      "pageUrl": "https://www.amazon.com/customer-preferences/edit?ie=UTF8&preferencesReturnUrl=%2F&ref_=topnav_lang",
+      "element": {
+        "nodeName": "A",
+        "class": "nav-link nav-item"
+      },
+      "gapType": "missing_from_a11y_tree",
+      "severity": "critical",
+      "wcagViolations": [
+        "4.1.2"
+      ],
+      "evidence": "A element with interactivity signals is not exposed in the accessibility tree",
+      "suggestedFix": "Add appropriate ARIA role and ensure element is not hidden from assistive technology. Consider using semantic HTML (e.g., <button> instead of <div>)."
+    },
+    {
+      "pageUrl": "https://www.amazon.com/customer-preferences/edit?ie=UTF8&preferencesReturnUrl=%2F&ref_=topnav_lang",
+      "element": {
+        "nodeName": "A",
+        "class": "nav-link nav-item"
+      },
+      "gapType": "missing_from_a11y_tree",
+      "severity": "critical",
+      "wcagViolations": [
+        "4.1.2"
+      ],
+      "evidence": "A element with interactivity signals is not exposed in the accessibility tree",
+      "suggestedFix": "Add appropriate ARIA role and ensure element is not hidden from assistive technology. Consider using semantic HTML (e.g., <button> instead of <div>)."
+    },
+    {
+      "pageUrl": "https://www.amazon.com/customer-preferences/edit?ie=UTF8&preferencesReturnUrl=%2F&ref_=topnav_lang",
+      "element": {
+        "nodeName": "A",
+        "class": "nav-link nav-item"
+      },
+      "gapType": "missing_from_a11y_tree",
+      "severity": "critical",
+      "wcagViolations": [
+        "4.1.2"
+      ],
+      "evidence": "A element with interactivity signals is not exposed in the accessibility tree",
+      "suggestedFix": "Add appropriate ARIA role and ensure element is not hidden from assistive technology. Consider using semantic HTML (e.g., <button> instead of <div>)."
+    },
+    {
+      "pageUrl": "https://www.amazon.com/customer-preferences/edit?ie=UTF8&preferencesReturnUrl=%2F&ref_=topnav_lang",
+      "element": {
+        "nodeName": "A",
+        "class": "nav-link nav-item"
+      },
+      "gapType": "missing_from_a11y_tree",
+      "severity": "critical",
+      "wcagViolations": [
+        "4.1.2"
+      ],
+      "evidence": "A element with interactivity signals is not exposed in the accessibility tree",
+      "suggestedFix": "Add appropriate ARIA role and ensure element is not hidden from assistive technology. Consider using semantic HTML (e.g., <button> instead of <div>)."
+    },
+    {
+      "pageUrl": "https://www.amazon.com/customer-preferences/edit?ie=UTF8&preferencesReturnUrl=%2F&ref_=topnav_lang",
+      "element": {
+        "nodeName": "A",
+        "class": "nav-link nav-item"
+      },
+      "gapType": "missing_from_a11y_tree",
+      "severity": "critical",
+      "wcagViolations": [
+        "4.1.2"
+      ],
+      "evidence": "A element with interactivity signals is not exposed in the accessibility tree",
+      "suggestedFix": "Add appropriate ARIA role and ensure element is not hidden from assistive technology. Consider using semantic HTML (e.g., <button> instead of <div>)."
+    },
+    {
+      "pageUrl": "https://www.amazon.com/customer-preferences/edit?ie=UTF8&preferencesReturnUrl=%2F&ref_=topnav_lang",
+      "element": {
+        "nodeName": "A",
+        "class": "nav-link nav-item"
+      },
+      "gapType": "missing_from_a11y_tree",
+      "severity": "critical",
+      "wcagViolations": [
+        "4.1.2"
+      ],
+      "evidence": "A element with interactivity signals is not exposed in the accessibility tree",
+      "suggestedFix": "Add appropriate ARIA role and ensure element is not hidden from assistive technology. Consider using semantic HTML (e.g., <button> instead of <div>)."
+    },
+    {
+      "pageUrl": "https://www.amazon.com/customer-preferences/edit?ie=UTF8&preferencesReturnUrl=%2F&ref_=topnav_lang",
+      "element": {
+        "nodeName": "A",
+        "class": "nav-link nav-item"
+      },
+      "gapType": "missing_from_a11y_tree",
+      "severity": "critical",
+      "wcagViolations": [
+        "4.1.2"
+      ],
+      "evidence": "A element with interactivity signals is not exposed in the accessibility tree",
+      "suggestedFix": "Add appropriate ARIA role and ensure element is not hidden from assistive technology. Consider using semantic HTML (e.g., <button> instead of <div>)."
+    },
+    {
+      "pageUrl": "https://www.amazon.com/customer-preferences/edit?ie=UTF8&preferencesReturnUrl=%2F&ref_=topnav_lang",
+      "element": {
+        "nodeName": "A",
+        "class": "nav-link nav-item"
+      },
+      "gapType": "missing_from_a11y_tree",
+      "severity": "critical",
+      "wcagViolations": [
+        "4.1.2"
+      ],
+      "evidence": "A element with interactivity signals is not exposed in the accessibility tree",
+      "suggestedFix": "Add appropriate ARIA role and ensure element is not hidden from assistive technology. Consider using semantic HTML (e.g., <button> instead of <div>)."
+    },
+    {
+      "pageUrl": "https://www.amazon.com/customer-preferences/edit?ie=UTF8&preferencesReturnUrl=%2F&ref_=topnav_lang",
+      "element": {
+        "nodeName": "A",
+        "class": "nav-link nav-item"
+      },
+      "gapType": "missing_from_a11y_tree",
+      "severity": "critical",
+      "wcagViolations": [
+        "4.1.2"
+      ],
+      "evidence": "A element with interactivity signals is not exposed in the accessibility tree",
+      "suggestedFix": "Add appropriate ARIA role and ensure element is not hidden from assistive technology. Consider using semantic HTML (e.g., <button> instead of <div>)."
+    },
+    {
+      "pageUrl": "https://www.amazon.com/customer-preferences/edit?ie=UTF8&preferencesReturnUrl=%2F&ref_=topnav_lang",
+      "element": {
+        "nodeName": "A",
+        "class": "nav-link nav-item"
+      },
+      "gapType": "missing_from_a11y_tree",
+      "severity": "critical",
+      "wcagViolations": [
+        "4.1.2"
+      ],
+      "evidence": "A element with interactivity signals is not exposed in the accessibility tree",
+      "suggestedFix": "Add appropriate ARIA role and ensure element is not hidden from assistive technology. Consider using semantic HTML (e.g., <button> instead of <div>)."
+    },
+    {
+      "pageUrl": "https://www.amazon.com/customer-preferences/edit?ie=UTF8&preferencesReturnUrl=%2F&ref_=topnav_lang",
+      "element": {
+        "nodeName": "A",
+        "class": "nav-link nav-item"
+      },
+      "gapType": "missing_from_a11y_tree",
+      "severity": "critical",
+      "wcagViolations": [
+        "4.1.2"
+      ],
+      "evidence": "A element with interactivity signals is not exposed in the accessibility tree",
+      "suggestedFix": "Add appropriate ARIA role and ensure element is not hidden from assistive technology. Consider using semantic HTML (e.g., <button> instead of <div>)."
+    },
+    {
+      "pageUrl": "https://www.amazon.com/customer-preferences/edit?ie=UTF8&preferencesReturnUrl=%2F&ref_=topnav_lang",
+      "element": {
+        "nodeName": "A",
+        "class": "nav-link nav-item"
+      },
+      "gapType": "missing_from_a11y_tree",
+      "severity": "critical",
+      "wcagViolations": [
+        "4.1.2"
+      ],
+      "evidence": "A element with interactivity signals is not exposed in the accessibility tree",
+      "suggestedFix": "Add appropriate ARIA role and ensure element is not hidden from assistive technology. Consider using semantic HTML (e.g., <button> instead of <div>)."
+    },
+    {
+      "pageUrl": "https://www.amazon.com/customer-preferences/edit?ie=UTF8&preferencesReturnUrl=%2F&ref_=topnav_lang",
+      "element": {
+        "nodeName": "A",
+        "class": "nav-link nav-item"
+      },
+      "gapType": "missing_from_a11y_tree",
+      "severity": "critical",
+      "wcagViolations": [
+        "4.1.2"
+      ],
+      "evidence": "A element with interactivity signals is not exposed in the accessibility tree",
+      "suggestedFix": "Add appropriate ARIA role and ensure element is not hidden from assistive technology. Consider using semantic HTML (e.g., <button> instead of <div>)."
+    },
+    {
+      "pageUrl": "https://www.amazon.com/customer-preferences/edit?ie=UTF8&preferencesReturnUrl=%2F&ref_=topnav_lang",
+      "element": {
+        "nodeName": "A"
+      },
+      "gapType": "missing_from_a11y_tree",
+      "severity": "critical",
+      "wcagViolations": [
+        "4.1.2"
+      ],
+      "evidence": "A element with interactivity signals is not exposed in the accessibility tree",
+      "suggestedFix": "Add appropriate ARIA role and ensure element is not hidden from assistive technology. Consider using semantic HTML (e.g., <button> instead of <div>)."
+    },
+    {
+      "pageUrl": "https://www.amazon.com/customer-preferences/edit?ie=UTF8&preferencesReturnUrl=%2F&ref_=topnav_lang",
+      "element": {
+        "nodeName": "INPUT",
+        "id": "unifiedLocation1ClickAddress",
+        "class": "nav-progressive-attribute"
+      },
+      "gapType": "missing_from_a11y_tree",
+      "severity": "critical",
+      "wcagViolations": [
+        "4.1.2"
+      ],
+      "evidence": "INPUT element with interactivity signals is not exposed in the accessibility tree",
+      "suggestedFix": "Add appropriate ARIA role and ensure element is not hidden from assistive technology. Consider using semantic HTML (e.g., <button> instead of <div>)."
+    },
+    {
+      "pageUrl": "https://www.amazon.com/customer-preferences/edit?ie=UTF8&preferencesReturnUrl=%2F&ref_=topnav_lang",
+      "element": {
+        "nodeName": "INPUT",
+        "id": "ubbShipTo",
+        "class": "nav-progressive-attribute"
+      },
+      "gapType": "missing_from_a11y_tree",
+      "severity": "critical",
+      "wcagViolations": [
+        "4.1.2"
+      ],
+      "evidence": "INPUT element with interactivity signals is not exposed in the accessibility tree",
+      "suggestedFix": "Add appropriate ARIA role and ensure element is not hidden from assistive technology. Consider using semantic HTML (e.g., <button> instead of <div>)."
+    },
+    {
+      "pageUrl": "https://www.amazon.com/customer-preferences/edit?ie=UTF8&preferencesReturnUrl=%2F&ref_=topnav_lang",
+      "element": {
+        "nodeName": "INPUT",
+        "id": "glowValidationToken",
+        "class": "nav-progressive-attribute"
+      },
+      "gapType": "missing_from_a11y_tree",
+      "severity": "critical",
+      "wcagViolations": [
+        "4.1.2"
+      ],
+      "evidence": "INPUT element with interactivity signals is not exposed in the accessibility tree",
+      "suggestedFix": "Add appropriate ARIA role and ensure element is not hidden from assistive technology. Consider using semantic HTML (e.g., <button> instead of <div>)."
+    },
+    {
+      "pageUrl": "https://www.amazon.com/customer-preferences/edit?ie=UTF8&preferencesReturnUrl=%2F&ref_=topnav_lang",
+      "element": {
+        "nodeName": "INPUT",
+        "id": "glowDestinationType",
+        "class": "nav-progressive-attribute"
+      },
+      "gapType": "missing_from_a11y_tree",
+      "severity": "critical",
+      "wcagViolations": [
+        "4.1.2"
+      ],
+      "evidence": "INPUT element with interactivity signals is not exposed in the accessibility tree",
+      "suggestedFix": "Add appropriate ARIA role and ensure element is not hidden from assistive technology. Consider using semantic HTML (e.g., <button> instead of <div>)."
+    },
+    {
+      "pageUrl": "https://www.amazon.com/customer-preferences/edit?ie=UTF8&preferencesReturnUrl=%2F&ref_=topnav_lang",
+      "element": {
+        "nodeName": "INPUT"
+      },
+      "gapType": "missing_from_a11y_tree",
+      "severity": "critical",
+      "wcagViolations": [
+        "4.1.2"
+      ],
+      "evidence": "INPUT element with interactivity signals is not exposed in the accessibility tree",
+      "suggestedFix": "Add appropriate ARIA role and ensure element is not hidden from assistive technology. Consider using semantic HTML (e.g., <button> instead of <div>)."
+    },
+    {
+      "pageUrl": "https://www.amazon.com/customer-preferences/edit?ie=UTF8&preferencesReturnUrl=%2F&ref_=topnav_lang",
+      "element": {
+        "nodeName": "INPUT"
+      },
+      "gapType": "missing_from_a11y_tree",
+      "severity": "critical",
+      "wcagViolations": [
+        "4.1.2"
+      ],
+      "evidence": "INPUT element with interactivity signals is not exposed in the accessibility tree",
+      "suggestedFix": "Add appropriate ARIA role and ensure element is not hidden from assistive technology. Consider using semantic HTML (e.g., <button> instead of <div>)."
+    },
+    {
+      "pageUrl": "https://www.amazon.com/customer-preferences/edit?ie=UTF8&preferencesReturnUrl=%2F&ref_=topnav_lang",
+      "element": {
+        "nodeName": "NAV",
+        "id": "shortcut-menu",
+        "class": "nav-assistant"
+      },
+      "gapType": "not_focusable",
+      "severity": "critical",
+      "wcagViolations": [
+        "2.1.1",
+        "2.4.7"
+      ],
+      "evidence": "NAV element has click handlers but tabindex=\"-1\" makes it unfocusable",
+      "suggestedFix": "Add tabindex=\"0\" to make the element keyboard focusable, and ensure it can be activated with Enter/Space."
+    },
+    {
+      "pageUrl": "https://www.amazon.com/customer-preferences/edit?ie=UTF8&preferencesReturnUrl=%2F&ref_=topnav_lang",
+      "element": {
+        "nodeName": "A",
+        "id": "skippedLink"
+      },
+      "gapType": "missing_from_a11y_tree",
+      "severity": "critical",
+      "wcagViolations": [
+        "4.1.2"
+      ],
+      "evidence": "A element with interactivity signals is not exposed in the accessibility tree",
+      "suggestedFix": "Add appropriate ARIA role and ensure element is not hidden from assistive technology. Consider using semantic HTML (e.g., <button> instead of <div>)."
+    },
+    {
+      "pageUrl": "https://www.amazon.com/customer-preferences/edit?ie=UTF8&preferencesReturnUrl=%2F&ref_=topnav_lang",
+      "element": {
+        "nodeName": "SPAN",
+        "id": "icp-save-button",
+        "class": "a-button a-spacing-top-mini a-button-primary"
+      },
+      "gapType": "missing_from_a11y_tree",
+      "severity": "critical",
+      "wcagViolations": [
+        "4.1.2"
+      ],
+      "evidence": "SPAN element with interactivity signals is not exposed in the accessibility tree",
+      "suggestedFix": "Add appropriate ARIA role and ensure element is not hidden from assistive technology. Consider using semantic HTML (e.g., <button> instead of <div>)."
+    },
+    {
+      "pageUrl": "https://www.amazon.com/customer-preferences/edit?ie=UTF8&preferencesReturnUrl=%2F&ref_=topnav_lang",
+      "element": {
+        "nodeName": "DIV",
+        "id": "icp-touch-link-language",
+        "class": "icp-button"
+      },
+      "gapType": "missing_from_a11y_tree",
+      "severity": "critical",
+      "wcagViolations": [
+        "4.1.2"
+      ],
+      "evidence": "DIV element with interactivity signals is not exposed in the accessibility tree",
+      "suggestedFix": "Add appropriate ARIA role and ensure element is not hidden from assistive technology. Consider using semantic HTML (e.g., <button> instead of <div>)."
+    },
+    {
+      "pageUrl": "http://www.amazon.com/gp/css/homepage.html?ref_=nav_youraccount_btn_b",
+      "element": {
+        "nodeName": "A",
+        "class": "nav-action-signin-button"
+      },
+      "gapType": "missing_from_a11y_tree",
+      "severity": "critical",
+      "wcagViolations": [
+        "4.1.2"
+      ],
+      "evidence": "A element with interactivity signals is not exposed in the accessibility tree",
+      "suggestedFix": "Add appropriate ARIA role and ensure element is not hidden from assistive technology. Consider using semantic HTML (e.g., <button> instead of <div>)."
+    },
+    {
+      "pageUrl": "http://www.amazon.com/gp/css/homepage.html?ref_=nav_youraccount_btn_b",
+      "element": {
+        "nodeName": "A",
+        "class": "nav-a"
+      },
+      "gapType": "missing_from_a11y_tree",
+      "severity": "critical",
+      "wcagViolations": [
+        "4.1.2"
+      ],
+      "evidence": "A element with interactivity signals is not exposed in the accessibility tree",
+      "suggestedFix": "Add appropriate ARIA role and ensure element is not hidden from assistive technology. Consider using semantic HTML (e.g., <button> instead of <div>)."
+    },
+    {
+      "pageUrl": "http://www.amazon.com/gp/css/homepage.html?ref_=nav_youraccount_btn_b",
+      "element": {
+        "nodeName": "A",
+        "class": "nav-link nav-item"
+      },
+      "gapType": "missing_from_a11y_tree",
+      "severity": "critical",
+      "wcagViolations": [
+        "4.1.2"
+      ],
+      "evidence": "A element with interactivity signals is not exposed in the accessibility tree",
+      "suggestedFix": "Add appropriate ARIA role and ensure element is not hidden from assistive technology. Consider using semantic HTML (e.g., <button> instead of <div>)."
+    },
+    {
+      "pageUrl": "http://www.amazon.com/gp/css/homepage.html?ref_=nav_youraccount_btn_b",
+      "element": {
+        "nodeName": "A",
+        "class": "nav-link nav-item"
+      },
+      "gapType": "missing_from_a11y_tree",
+      "severity": "critical",
+      "wcagViolations": [
+        "4.1.2"
+      ],
+      "evidence": "A element with interactivity signals is not exposed in the accessibility tree",
+      "suggestedFix": "Add appropriate ARIA role and ensure element is not hidden from assistive technology. Consider using semantic HTML (e.g., <button> instead of <div>)."
+    },
+    {
+      "pageUrl": "http://www.amazon.com/gp/css/homepage.html?ref_=nav_youraccount_btn_b",
+      "element": {
+        "nodeName": "A",
+        "class": "nav-link nav-item"
+      },
+      "gapType": "missing_from_a11y_tree",
+      "severity": "critical",
+      "wcagViolations": [
+        "4.1.2"
+      ],
+      "evidence": "A element with interactivity signals is not exposed in the accessibility tree",
+      "suggestedFix": "Add appropriate ARIA role and ensure element is not hidden from assistive technology. Consider using semantic HTML (e.g., <button> instead of <div>)."
+    },
+    {
+      "pageUrl": "http://www.amazon.com/gp/css/homepage.html?ref_=nav_youraccount_btn_b",
+      "element": {
+        "nodeName": "A",
+        "id": "nav_prefetch_yourorders",
+        "class": "nav-link nav-item"
+      },
+      "gapType": "missing_from_a11y_tree",
+      "severity": "critical",
+      "wcagViolations": [
+        "4.1.2"
+      ],
+      "evidence": "A element with interactivity signals is not exposed in the accessibility tree",
+      "suggestedFix": "Add appropriate ARIA role and ensure element is not hidden from assistive technology. Consider using semantic HTML (e.g., <button> instead of <div>)."
+    },
+    {
+      "pageUrl": "http://www.amazon.com/gp/css/homepage.html?ref_=nav_youraccount_btn_b",
+      "element": {
+        "nodeName": "A",
+        "class": "nav-link nav-item"
+      },
+      "gapType": "missing_from_a11y_tree",
+      "severity": "critical",
+      "wcagViolations": [
+        "4.1.2"
+      ],
+      "evidence": "A element with interactivity signals is not exposed in the accessibility tree",
+      "suggestedFix": "Add appropriate ARIA role and ensure element is not hidden from assistive technology. Consider using semantic HTML (e.g., <button> instead of <div>)."
+    },
+    {
+      "pageUrl": "http://www.amazon.com/gp/css/homepage.html?ref_=nav_youraccount_btn_b",
+      "element": {
+        "nodeName": "A",
+        "class": "nav-link nav-item"
+      },
+      "gapType": "missing_from_a11y_tree",
+      "severity": "critical",
+      "wcagViolations": [
+        "4.1.2"
+      ],
+      "evidence": "A element with interactivity signals is not exposed in the accessibility tree",
+      "suggestedFix": "Add appropriate ARIA role and ensure element is not hidden from assistive technology. Consider using semantic HTML (e.g., <button> instead of <div>)."
+    },
+    {
+      "pageUrl": "http://www.amazon.com/gp/css/homepage.html?ref_=nav_youraccount_btn_b",
+      "element": {
+        "nodeName": "A",
+        "class": "nav-link nav-item"
+      },
+      "gapType": "missing_from_a11y_tree",
+      "severity": "critical",
+      "wcagViolations": [
+        "4.1.2"
+      ],
+      "evidence": "A element with interactivity signals is not exposed in the accessibility tree",
+      "suggestedFix": "Add appropriate ARIA role and ensure element is not hidden from assistive technology. Consider using semantic HTML (e.g., <button> instead of <div>)."
+    },
+    {
+      "pageUrl": "http://www.amazon.com/gp/css/homepage.html?ref_=nav_youraccount_btn_b",
+      "element": {
+        "nodeName": "A",
+        "class": "nav-link nav-item"
+      },
+      "gapType": "missing_from_a11y_tree",
+      "severity": "critical",
+      "wcagViolations": [
+        "4.1.2"
+      ],
+      "evidence": "A element with interactivity signals is not exposed in the accessibility tree",
+      "suggestedFix": "Add appropriate ARIA role and ensure element is not hidden from assistive technology. Consider using semantic HTML (e.g., <button> instead of <div>)."
+    },
+    {
+      "pageUrl": "http://www.amazon.com/gp/css/homepage.html?ref_=nav_youraccount_btn_b",
+      "element": {
+        "nodeName": "A",
+        "class": "nav-link nav-item"
+      },
+      "gapType": "missing_from_a11y_tree",
+      "severity": "critical",
+      "wcagViolations": [
+        "4.1.2"
+      ],
+      "evidence": "A element with interactivity signals is not exposed in the accessibility tree",
+      "suggestedFix": "Add appropriate ARIA role and ensure element is not hidden from assistive technology. Consider using semantic HTML (e.g., <button> instead of <div>)."
+    },
+    {
+      "pageUrl": "http://www.amazon.com/gp/css/homepage.html?ref_=nav_youraccount_btn_b",
+      "element": {
+        "nodeName": "A",
+        "class": "nav-link nav-item"
+      },
+      "gapType": "missing_from_a11y_tree",
+      "severity": "critical",
+      "wcagViolations": [
+        "4.1.2"
+      ],
+      "evidence": "A element with interactivity signals is not exposed in the accessibility tree",
+      "suggestedFix": "Add appropriate ARIA role and ensure element is not hidden from assistive technology. Consider using semantic HTML (e.g., <button> instead of <div>)."
+    },
+    {
+      "pageUrl": "http://www.amazon.com/gp/css/homepage.html?ref_=nav_youraccount_btn_b",
+      "element": {
+        "nodeName": "A",
+        "class": "nav-link nav-item"
+      },
+      "gapType": "missing_from_a11y_tree",
+      "severity": "critical",
+      "wcagViolations": [
+        "4.1.2"
+      ],
+      "evidence": "A element with interactivity signals is not exposed in the accessibility tree",
+      "suggestedFix": "Add appropriate ARIA role and ensure element is not hidden from assistive technology. Consider using semantic HTML (e.g., <button> instead of <div>)."
+    },
+    {
+      "pageUrl": "http://www.amazon.com/gp/css/homepage.html?ref_=nav_youraccount_btn_b",
+      "element": {
+        "nodeName": "A",
+        "class": "nav-link nav-item"
+      },
+      "gapType": "missing_from_a11y_tree",
+      "severity": "critical",
+      "wcagViolations": [
+        "4.1.2"
+      ],
+      "evidence": "A element with interactivity signals is not exposed in the accessibility tree",
+      "suggestedFix": "Add appropriate ARIA role and ensure element is not hidden from assistive technology. Consider using semantic HTML (e.g., <button> instead of <div>)."
+    },
+    {
+      "pageUrl": "http://www.amazon.com/gp/css/homepage.html?ref_=nav_youraccount_btn_b",
+      "element": {
+        "nodeName": "A",
+        "class": "nav-link nav-item"
+      },
+      "gapType": "missing_from_a11y_tree",
+      "severity": "critical",
+      "wcagViolations": [
+        "4.1.2"
+      ],
+      "evidence": "A element with interactivity signals is not exposed in the accessibility tree",
+      "suggestedFix": "Add appropriate ARIA role and ensure element is not hidden from assistive technology. Consider using semantic HTML (e.g., <button> instead of <div>)."
+    },
+    {
+      "pageUrl": "http://www.amazon.com/gp/css/homepage.html?ref_=nav_youraccount_btn_b",
+      "element": {
+        "nodeName": "A",
+        "class": "nav-link nav-item"
+      },
+      "gapType": "missing_from_a11y_tree",
+      "severity": "critical",
+      "wcagViolations": [
+        "4.1.2"
+      ],
+      "evidence": "A element with interactivity signals is not exposed in the accessibility tree",
+      "suggestedFix": "Add appropriate ARIA role and ensure element is not hidden from assistive technology. Consider using semantic HTML (e.g., <button> instead of <div>)."
+    },
+    {
+      "pageUrl": "http://www.amazon.com/gp/css/homepage.html?ref_=nav_youraccount_btn_b",
+      "element": {
+        "nodeName": "A",
+        "class": "nav-link nav-item"
+      },
+      "gapType": "missing_from_a11y_tree",
+      "severity": "critical",
+      "wcagViolations": [
+        "4.1.2"
+      ],
+      "evidence": "A element with interactivity signals is not exposed in the accessibility tree",
+      "suggestedFix": "Add appropriate ARIA role and ensure element is not hidden from assistive technology. Consider using semantic HTML (e.g., <button> instead of <div>)."
+    },
+    {
+      "pageUrl": "http://www.amazon.com/gp/css/homepage.html?ref_=nav_youraccount_btn_b",
+      "element": {
+        "nodeName": "A",
+        "class": "nav-link nav-item"
+      },
+      "gapType": "missing_from_a11y_tree",
+      "severity": "critical",
+      "wcagViolations": [
+        "4.1.2"
+      ],
+      "evidence": "A element with interactivity signals is not exposed in the accessibility tree",
+      "suggestedFix": "Add appropriate ARIA role and ensure element is not hidden from assistive technology. Consider using semantic HTML (e.g., <button> instead of <div>)."
+    },
+    {
+      "pageUrl": "http://www.amazon.com/gp/css/homepage.html?ref_=nav_youraccount_btn_b",
+      "element": {
+        "nodeName": "A",
+        "class": "nav-link nav-item"
+      },
+      "gapType": "missing_from_a11y_tree",
+      "severity": "critical",
+      "wcagViolations": [
+        "4.1.2"
+      ],
+      "evidence": "A element with interactivity signals is not exposed in the accessibility tree",
+      "suggestedFix": "Add appropriate ARIA role and ensure element is not hidden from assistive technology. Consider using semantic HTML (e.g., <button> instead of <div>)."
+    },
+    {
+      "pageUrl": "http://www.amazon.com/gp/css/homepage.html?ref_=nav_youraccount_btn_b",
+      "element": {
+        "nodeName": "A",
+        "class": "nav-link nav-item"
+      },
+      "gapType": "missing_from_a11y_tree",
+      "severity": "critical",
+      "wcagViolations": [
+        "4.1.2"
+      ],
+      "evidence": "A element with interactivity signals is not exposed in the accessibility tree",
+      "suggestedFix": "Add appropriate ARIA role and ensure element is not hidden from assistive technology. Consider using semantic HTML (e.g., <button> instead of <div>)."
+    },
+    {
+      "pageUrl": "http://www.amazon.com/gp/css/homepage.html?ref_=nav_youraccount_btn_b",
+      "element": {
+        "nodeName": "A",
+        "class": "nav-link nav-item"
+      },
+      "gapType": "missing_from_a11y_tree",
+      "severity": "critical",
+      "wcagViolations": [
+        "4.1.2"
+      ],
+      "evidence": "A element with interactivity signals is not exposed in the accessibility tree",
+      "suggestedFix": "Add appropriate ARIA role and ensure element is not hidden from assistive technology. Consider using semantic HTML (e.g., <button> instead of <div>)."
+    },
+    {
+      "pageUrl": "http://www.amazon.com/gp/css/homepage.html?ref_=nav_youraccount_btn_b",
+      "element": {
+        "nodeName": "A",
+        "class": "nav-link nav-item"
+      },
+      "gapType": "missing_from_a11y_tree",
+      "severity": "critical",
+      "wcagViolations": [
+        "4.1.2"
+      ],
+      "evidence": "A element with interactivity signals is not exposed in the accessibility tree",
+      "suggestedFix": "Add appropriate ARIA role and ensure element is not hidden from assistive technology. Consider using semantic HTML (e.g., <button> instead of <div>)."
+    },
+    {
+      "pageUrl": "http://www.amazon.com/gp/css/homepage.html?ref_=nav_youraccount_btn_b",
+      "element": {
+        "nodeName": "A"
+      },
+      "gapType": "missing_from_a11y_tree",
+      "severity": "critical",
+      "wcagViolations": [
+        "4.1.2"
+      ],
+      "evidence": "A element with interactivity signals is not exposed in the accessibility tree",
+      "suggestedFix": "Add appropriate ARIA role and ensure element is not hidden from assistive technology. Consider using semantic HTML (e.g., <button> instead of <div>)."
+    },
+    {
+      "pageUrl": "http://www.amazon.com/gp/css/homepage.html?ref_=nav_youraccount_btn_b",
+      "element": {
+        "nodeName": "INPUT",
+        "id": "unifiedLocation1ClickAddress",
+        "class": "nav-progressive-attribute"
+      },
+      "gapType": "missing_from_a11y_tree",
+      "severity": "critical",
+      "wcagViolations": [
+        "4.1.2"
+      ],
+      "evidence": "INPUT element with interactivity signals is not exposed in the accessibility tree",
+      "suggestedFix": "Add appropriate ARIA role and ensure element is not hidden from assistive technology. Consider using semantic HTML (e.g., <button> instead of <div>)."
+    },
+    {
+      "pageUrl": "http://www.amazon.com/gp/css/homepage.html?ref_=nav_youraccount_btn_b",
+      "element": {
+        "nodeName": "INPUT",
+        "id": "ubbShipTo",
+        "class": "nav-progressive-attribute"
+      },
+      "gapType": "missing_from_a11y_tree",
+      "severity": "critical",
+      "wcagViolations": [
+        "4.1.2"
+      ],
+      "evidence": "INPUT element with interactivity signals is not exposed in the accessibility tree",
+      "suggestedFix": "Add appropriate ARIA role and ensure element is not hidden from assistive technology. Consider using semantic HTML (e.g., <button> instead of <div>)."
+    },
+    {
+      "pageUrl": "http://www.amazon.com/gp/css/homepage.html?ref_=nav_youraccount_btn_b",
+      "element": {
+        "nodeName": "INPUT",
+        "id": "glowValidationToken",
+        "class": "nav-progressive-attribute"
+      },
+      "gapType": "missing_from_a11y_tree",
+      "severity": "critical",
+      "wcagViolations": [
+        "4.1.2"
+      ],
+      "evidence": "INPUT element with interactivity signals is not exposed in the accessibility tree",
+      "suggestedFix": "Add appropriate ARIA role and ensure element is not hidden from assistive technology. Consider using semantic HTML (e.g., <button> instead of <div>)."
+    },
+    {
+      "pageUrl": "http://www.amazon.com/gp/css/homepage.html?ref_=nav_youraccount_btn_b",
+      "element": {
+        "nodeName": "INPUT",
+        "id": "glowDestinationType",
+        "class": "nav-progressive-attribute"
+      },
+      "gapType": "missing_from_a11y_tree",
+      "severity": "critical",
+      "wcagViolations": [
+        "4.1.2"
+      ],
+      "evidence": "INPUT element with interactivity signals is not exposed in the accessibility tree",
+      "suggestedFix": "Add appropriate ARIA role and ensure element is not hidden from assistive technology. Consider using semantic HTML (e.g., <button> instead of <div>)."
+    },
+    {
+      "pageUrl": "http://www.amazon.com/gp/css/homepage.html?ref_=nav_youraccount_btn_b",
+      "element": {
+        "nodeName": "INPUT"
+      },
+      "gapType": "missing_from_a11y_tree",
+      "severity": "critical",
+      "wcagViolations": [
+        "4.1.2"
+      ],
+      "evidence": "INPUT element with interactivity signals is not exposed in the accessibility tree",
+      "suggestedFix": "Add appropriate ARIA role and ensure element is not hidden from assistive technology. Consider using semantic HTML (e.g., <button> instead of <div>)."
+    },
+    {
+      "pageUrl": "http://www.amazon.com/gp/css/homepage.html?ref_=nav_youraccount_btn_b",
+      "element": {
+        "nodeName": "NAV",
+        "id": "shortcut-menu",
+        "class": "nav-assistant"
+      },
+      "gapType": "not_focusable",
+      "severity": "critical",
+      "wcagViolations": [
+        "2.1.1",
+        "2.4.7"
+      ],
+      "evidence": "NAV element has click handlers but tabindex=\"-1\" makes it unfocusable",
+      "suggestedFix": "Add tabindex=\"0\" to make the element keyboard focusable, and ensure it can be activated with Enter/Space."
+    },
+    {
+      "pageUrl": "http://www.amazon.com/gp/css/homepage.html?ref_=nav_youraccount_btn_b",
+      "element": {
+        "nodeName": "A",
+        "id": "skippedLink"
+      },
+      "gapType": "missing_from_a11y_tree",
+      "severity": "critical",
+      "wcagViolations": [
+        "4.1.2"
+      ],
+      "evidence": "A element with interactivity signals is not exposed in the accessibility tree",
+      "suggestedFix": "Add appropriate ARIA role and ensure element is not hidden from assistive technology. Consider using semantic HTML (e.g., <button> instead of <div>)."
+    },
+    {
+      "pageUrl": "http://www.amazon.com/gp/css/homepage.html?ref_=nav_youraccount_btn_b",
+      "element": {
+        "nodeName": "DIV",
+        "id": "icp-touch-link-language",
+        "class": "icp-button"
+      },
+      "gapType": "missing_from_a11y_tree",
+      "severity": "critical",
+      "wcagViolations": [
+        "4.1.2"
+      ],
+      "evidence": "DIV element with interactivity signals is not exposed in the accessibility tree",
+      "suggestedFix": "Add appropriate ARIA role and ensure element is not hidden from assistive technology. Consider using semantic HTML (e.g., <button> instead of <div>)."
+    },
+    {
+      "pageUrl": "https://www.amazon.com/gp/css/order-history?ref_=nav_orders_first",
+      "element": {
+        "nodeName": "A",
+        "class": "a-link-normal"
+      },
+      "gapType": "missing_from_a11y_tree",
+      "severity": "critical",
+      "wcagViolations": [
+        "4.1.2"
+      ],
+      "evidence": "A element with interactivity signals is not exposed in the accessibility tree",
+      "suggestedFix": "Add appropriate ARIA role and ensure element is not hidden from assistive technology. Consider using semantic HTML (e.g., <button> instead of <div>)."
+    },
+    {
+      "pageUrl": "https://www.amazon.com/gp/css/order-history?ref_=nav_orders_first",
+      "element": {
+        "nodeName": "A",
+        "id": "auth-fpp-link-bottom",
+        "class": "a-link-normal"
+      },
+      "gapType": "missing_from_a11y_tree",
+      "severity": "critical",
+      "wcagViolations": [
+        "4.1.2"
+      ],
+      "evidence": "A element with interactivity signals is not exposed in the accessibility tree",
+      "suggestedFix": "Add appropriate ARIA role and ensure element is not hidden from assistive technology. Consider using semantic HTML (e.g., <button> instead of <div>)."
+    },
+    {
+      "pageUrl": "https://www.amazon.com/gp/css/order-history?ref_=nav_orders_first",
+      "element": {
+        "nodeName": "A",
+        "id": "ap-other-signin-issues-link",
+        "class": "a-link-normal"
+      },
+      "gapType": "missing_from_a11y_tree",
+      "severity": "critical",
+      "wcagViolations": [
+        "4.1.2"
+      ],
+      "evidence": "A element with interactivity signals is not exposed in the accessibility tree",
+      "suggestedFix": "Add appropriate ARIA role and ensure element is not hidden from assistive technology. Consider using semantic HTML (e.g., <button> instead of <div>)."
+    },
+    {
+      "pageUrl": "https://www.amazon.com/gp/css/order-history?ref_=nav_orders_first",
+      "element": {
+        "nodeName": "INPUT"
+      },
+      "gapType": "missing_from_a11y_tree",
+      "severity": "critical",
+      "wcagViolations": [
+        "4.1.2"
+      ],
+      "evidence": "INPUT element with interactivity signals is not exposed in the accessibility tree",
+      "suggestedFix": "Add appropriate ARIA role and ensure element is not hidden from assistive technology. Consider using semantic HTML (e.g., <button> instead of <div>)."
+    },
+    {
+      "pageUrl": "https://www.amazon.com/gp/css/order-history?ref_=nav_orders_first",
+      "element": {
+        "nodeName": "INPUT"
+      },
+      "gapType": "missing_from_a11y_tree",
+      "severity": "critical",
+      "wcagViolations": [
+        "4.1.2"
+      ],
+      "evidence": "INPUT element with interactivity signals is not exposed in the accessibility tree",
+      "suggestedFix": "Add appropriate ARIA role and ensure element is not hidden from assistive technology. Consider using semantic HTML (e.g., <button> instead of <div>)."
+    },
+    {
+      "pageUrl": "https://www.amazon.com/gp/css/order-history?ref_=nav_orders_first",
+      "element": {
+        "nodeName": "INPUT"
+      },
+      "gapType": "missing_from_a11y_tree",
+      "severity": "critical",
+      "wcagViolations": [
+        "4.1.2"
+      ],
+      "evidence": "INPUT element with interactivity signals is not exposed in the accessibility tree",
+      "suggestedFix": "Add appropriate ARIA role and ensure element is not hidden from assistive technology. Consider using semantic HTML (e.g., <button> instead of <div>)."
+    },
+    {
+      "pageUrl": "https://www.amazon.com/gp/css/order-history?ref_=nav_orders_first",
+      "element": {
+        "nodeName": "INPUT"
+      },
+      "gapType": "missing_from_a11y_tree",
+      "severity": "critical",
+      "wcagViolations": [
+        "4.1.2"
+      ],
+      "evidence": "INPUT element with interactivity signals is not exposed in the accessibility tree",
+      "suggestedFix": "Add appropriate ARIA role and ensure element is not hidden from assistive technology. Consider using semantic HTML (e.g., <button> instead of <div>)."
+    },
+    {
+      "pageUrl": "https://www.amazon.com/gp/css/order-history?ref_=nav_orders_first",
+      "element": {
+        "nodeName": "INPUT"
+      },
+      "gapType": "missing_from_a11y_tree",
+      "severity": "critical",
+      "wcagViolations": [
+        "4.1.2"
+      ],
+      "evidence": "INPUT element with interactivity signals is not exposed in the accessibility tree",
+      "suggestedFix": "Add appropriate ARIA role and ensure element is not hidden from assistive technology. Consider using semantic HTML (e.g., <button> instead of <div>)."
+    },
+    {
+      "pageUrl": "https://www.amazon.com/gp/css/order-history?ref_=nav_orders_first",
+      "element": {
+        "nodeName": "INPUT"
+      },
+      "gapType": "missing_from_a11y_tree",
+      "severity": "critical",
+      "wcagViolations": [
+        "4.1.2"
+      ],
+      "evidence": "INPUT element with interactivity signals is not exposed in the accessibility tree",
+      "suggestedFix": "Add appropriate ARIA role and ensure element is not hidden from assistive technology. Consider using semantic HTML (e.g., <button> instead of <div>)."
+    },
+    {
+      "pageUrl": "https://www.amazon.com/gp/css/order-history?ref_=nav_orders_first",
+      "element": {
+        "nodeName": "INPUT"
+      },
+      "gapType": "missing_from_a11y_tree",
+      "severity": "critical",
+      "wcagViolations": [
+        "4.1.2"
+      ],
+      "evidence": "INPUT element with interactivity signals is not exposed in the accessibility tree",
+      "suggestedFix": "Add appropriate ARIA role and ensure element is not hidden from assistive technology. Consider using semantic HTML (e.g., <button> instead of <div>)."
+    },
+    {
+      "pageUrl": "https://www.amazon.com/gp/css/order-history?ref_=nav_orders_first",
+      "element": {
+        "nodeName": "INPUT"
+      },
+      "gapType": "missing_from_a11y_tree",
+      "severity": "critical",
+      "wcagViolations": [
+        "4.1.2"
+      ],
+      "evidence": "INPUT element with interactivity signals is not exposed in the accessibility tree",
+      "suggestedFix": "Add appropriate ARIA role and ensure element is not hidden from assistive technology. Consider using semantic HTML (e.g., <button> instead of <div>)."
+    },
+    {
+      "pageUrl": "https://www.amazon.com/gp/css/order-history?ref_=nav_orders_first",
+      "element": {
+        "nodeName": "INPUT",
+        "id": "ap-credential-autofill-hint",
+        "class": "a-input-text hide"
+      },
+      "gapType": "missing_from_a11y_tree",
+      "severity": "critical",
+      "wcagViolations": [
+        "4.1.2"
+      ],
+      "evidence": "INPUT element with interactivity signals is not exposed in the accessibility tree",
+      "suggestedFix": "Add appropriate ARIA role and ensure element is not hidden from assistive technology. Consider using semantic HTML (e.g., <button> instead of <div>)."
+    },
+    {
+      "pageUrl": "https://www.amazon.com/gp/css/order-history?ref_=nav_orders_first",
+      "element": {
+        "nodeName": "INPUT"
+      },
+      "gapType": "missing_from_a11y_tree",
+      "severity": "critical",
+      "wcagViolations": [
+        "4.1.2"
+      ],
+      "evidence": "INPUT element with interactivity signals is not exposed in the accessibility tree",
+      "suggestedFix": "Add appropriate ARIA role and ensure element is not hidden from assistive technology. Consider using semantic HTML (e.g., <button> instead of <div>)."
+    },
+    {
+      "pageUrl": "https://www.amazon.com/gp/css/order-history?ref_=nav_orders_first",
+      "element": {
+        "nodeName": "INPUT"
+      },
+      "gapType": "missing_from_a11y_tree",
+      "severity": "critical",
+      "wcagViolations": [
+        "4.1.2"
+      ],
+      "evidence": "INPUT element with interactivity signals is not exposed in the accessibility tree",
+      "suggestedFix": "Add appropriate ARIA role and ensure element is not hidden from assistive technology. Consider using semantic HTML (e.g., <button> instead of <div>)."
+    },
+    {
+      "pageUrl": "https://www.amazon.com/gp/css/order-history?ref_=nav_orders_first",
+      "element": {
+        "nodeName": "INPUT"
+      },
+      "gapType": "missing_from_a11y_tree",
+      "severity": "critical",
+      "wcagViolations": [
+        "4.1.2"
+      ],
+      "evidence": "INPUT element with interactivity signals is not exposed in the accessibility tree",
+      "suggestedFix": "Add appropriate ARIA role and ensure element is not hidden from assistive technology. Consider using semantic HTML (e.g., <button> instead of <div>)."
+    },
+    {
+      "pageUrl": "https://www.amazon.com/gp/css/order-history?ref_=nav_orders_first",
+      "element": {
+        "nodeName": "SPAN",
+        "id": "continue",
+        "class": "a-button a-button-span12 a-button-primary"
+      },
+      "gapType": "missing_from_a11y_tree",
+      "severity": "critical",
+      "wcagViolations": [
+        "4.1.2"
+      ],
+      "evidence": "SPAN element with interactivity signals is not exposed in the accessibility tree",
+      "suggestedFix": "Add appropriate ARIA role and ensure element is not hidden from assistive technology. Consider using semantic HTML (e.g., <button> instead of <div>)."
+    }
+  ],
+  "pageBreakdown": {
+    "https://www.amazon.com": [
+      {
+        "element": {
+          "nodeName": "BUTTON",
+          "class": "vjs-play-control vjs-control vjs-button vjs-paused"
+        },
+        "gapType": "missing_from_a11y_tree",
+        "severity": "critical",
+        "evidence": "BUTTON element with interactivity signals is not exposed in the accessibility tree"
+      },
+      {
+        "element": {
+          "nodeName": "BUTTON",
+          "class": "vjs-default-button"
+        },
+        "gapType": "missing_from_a11y_tree",
+        "severity": "critical",
+        "evidence": "BUTTON element with interactivity signals is not exposed in the accessibility tree"
+      },
+      {
+        "element": {
+          "nodeName": "BUTTON",
+          "class": "vjs-done-button"
+        },
+        "gapType": "missing_from_a11y_tree",
+        "severity": "critical",
+        "evidence": "BUTTON element with interactivity signals is not exposed in the accessibility tree"
+      },
+      {
+        "element": {
+          "nodeName": "BUTTON",
+          "class": "vjs-close-button vjs-control vjs-button"
+        },
+        "gapType": "missing_from_a11y_tree",
+        "severity": "critical",
+        "evidence": "BUTTON element with interactivity signals is not exposed in the accessibility tree"
+      },
+      {
+        "element": {
+          "nodeName": "A",
+          "class": "nav-link nav-item"
+        },
+        "gapType": "missing_from_a11y_tree",
+        "severity": "critical",
+        "evidence": "A element with interactivity signals is not exposed in the accessibility tree"
+      },
+      {
+        "element": {
+          "nodeName": "A",
+          "class": "nav-link nav-item"
+        },
+        "gapType": "missing_from_a11y_tree",
+        "severity": "critical",
+        "evidence": "A element with interactivity signals is not exposed in the accessibility tree"
+      },
+      {
+        "element": {
+          "nodeName": "A",
+          "class": "nav-link nav-item"
+        },
+        "gapType": "missing_from_a11y_tree",
+        "severity": "critical",
+        "evidence": "A element with interactivity signals is not exposed in the accessibility tree"
+      },
+      {
+        "element": {
+          "nodeName": "A",
+          "id": "nav_prefetch_yourorders",
+          "class": "nav-link nav-item"
+        },
+        "gapType": "missing_from_a11y_tree",
+        "severity": "critical",
+        "evidence": "A element with interactivity signals is not exposed in the accessibility tree"
+      },
+      {
+        "element": {
+          "nodeName": "A",
+          "class": "nav-link nav-item"
+        },
+        "gapType": "missing_from_a11y_tree",
+        "severity": "critical",
+        "evidence": "A element with interactivity signals is not exposed in the accessibility tree"
+      },
+      {
+        "element": {
+          "nodeName": "A",
+          "class": "nav-link nav-item"
+        },
+        "gapType": "missing_from_a11y_tree",
+        "severity": "critical",
+        "evidence": "A element with interactivity signals is not exposed in the accessibility tree"
+      },
+      {
+        "element": {
+          "nodeName": "A",
+          "class": "nav-link nav-item"
+        },
+        "gapType": "missing_from_a11y_tree",
+        "severity": "critical",
+        "evidence": "A element with interactivity signals is not exposed in the accessibility tree"
+      },
+      {
+        "element": {
+          "nodeName": "A",
+          "class": "nav-link nav-item"
+        },
+        "gapType": "missing_from_a11y_tree",
+        "severity": "critical",
+        "evidence": "A element with interactivity signals is not exposed in the accessibility tree"
+      },
+      {
+        "element": {
+          "nodeName": "A",
+          "class": "nav-link nav-item"
+        },
+        "gapType": "missing_from_a11y_tree",
+        "severity": "critical",
+        "evidence": "A element with interactivity signals is not exposed in the accessibility tree"
+      },
+      {
+        "element": {
+          "nodeName": "A",
+          "class": "nav-link nav-item"
+        },
+        "gapType": "missing_from_a11y_tree",
+        "severity": "critical",
+        "evidence": "A element with interactivity signals is not exposed in the accessibility tree"
+      },
+      {
+        "element": {
+          "nodeName": "A",
+          "class": "nav-link nav-item"
+        },
+        "gapType": "missing_from_a11y_tree",
+        "severity": "critical",
+        "evidence": "A element with interactivity signals is not exposed in the accessibility tree"
+      },
+      {
+        "element": {
+          "nodeName": "A",
+          "class": "nav-link nav-item"
+        },
+        "gapType": "missing_from_a11y_tree",
+        "severity": "critical",
+        "evidence": "A element with interactivity signals is not exposed in the accessibility tree"
+      },
+      {
+        "element": {
+          "nodeName": "A",
+          "class": "nav-link nav-item"
+        },
+        "gapType": "missing_from_a11y_tree",
+        "severity": "critical",
+        "evidence": "A element with interactivity signals is not exposed in the accessibility tree"
+      },
+      {
+        "element": {
+          "nodeName": "A",
+          "class": "nav-link nav-item"
+        },
+        "gapType": "missing_from_a11y_tree",
+        "severity": "critical",
+        "evidence": "A element with interactivity signals is not exposed in the accessibility tree"
+      },
+      {
+        "element": {
+          "nodeName": "A",
+          "class": "nav-link nav-item"
+        },
+        "gapType": "missing_from_a11y_tree",
+        "severity": "critical",
+        "evidence": "A element with interactivity signals is not exposed in the accessibility tree"
+      },
+      {
+        "element": {
+          "nodeName": "A",
+          "class": "nav-link nav-item"
+        },
+        "gapType": "missing_from_a11y_tree",
+        "severity": "critical",
+        "evidence": "A element with interactivity signals is not exposed in the accessibility tree"
+      },
+      {
+        "element": {
+          "nodeName": "A",
+          "class": "nav-link nav-item"
+        },
+        "gapType": "missing_from_a11y_tree",
+        "severity": "critical",
+        "evidence": "A element with interactivity signals is not exposed in the accessibility tree"
+      },
+      {
+        "element": {
+          "nodeName": "A",
+          "class": "nav-link nav-item"
+        },
+        "gapType": "missing_from_a11y_tree",
+        "severity": "critical",
+        "evidence": "A element with interactivity signals is not exposed in the accessibility tree"
+      },
+      {
+        "element": {
+          "nodeName": "A",
+          "class": "nav-link nav-item"
+        },
+        "gapType": "missing_from_a11y_tree",
+        "severity": "critical",
+        "evidence": "A element with interactivity signals is not exposed in the accessibility tree"
+      },
+      {
+        "element": {
+          "nodeName": "A",
+          "class": "nav-link nav-item"
+        },
+        "gapType": "missing_from_a11y_tree",
+        "severity": "critical",
+        "evidence": "A element with interactivity signals is not exposed in the accessibility tree"
+      },
+      {
+        "element": {
+          "nodeName": "A",
+          "class": "a-link-normal _desktop-tall-hero-video_style_cta-link__25RUl"
+        },
+        "gapType": "missing_from_a11y_tree",
+        "severity": "critical",
+        "evidence": "A element with interactivity signals is not exposed in the accessibility tree"
+      },
+      {
+        "element": {
+          "nodeName": "A",
+          "class": "a-link-normal _cropped-image-link_style_centerImage__1rzYI _cropped-image-link_style_centerImage-focusable__1JvMN aok-block image-window a-text-normal"
+        },
+        "gapType": "missing_from_a11y_tree",
+        "severity": "critical",
+        "evidence": "A element with interactivity signals is not exposed in the accessibility tree"
+      },
+      {
+        "element": {
+          "nodeName": "A",
+          "class": "a-link-normal _cropped-image-link_style_centerImage__1rzYI _cropped-image-link_style_centerImage-focusable__1JvMN aok-block image-window a-text-normal"
+        },
+        "gapType": "missing_from_a11y_tree",
+        "severity": "critical",
+        "evidence": "A element with interactivity signals is not exposed in the accessibility tree"
+      },
+      {
+        "element": {
+          "nodeName": "A",
+          "class": "a-link-normal _cropped-image-link_style_centerImage__1rzYI _cropped-image-link_style_centerImage-focusable__1JvMN aok-block image-window a-text-normal"
+        },
+        "gapType": "missing_from_a11y_tree",
+        "severity": "critical",
+        "evidence": "A element with interactivity signals is not exposed in the accessibility tree"
+      },
+      {
+        "element": {
+          "nodeName": "A",
+          "class": "a-link-normal _cropped-image-link_style_centerImage__1rzYI _cropped-image-link_style_centerImage-focusable__1JvMN aok-block image-window a-text-normal"
+        },
+        "gapType": "missing_from_a11y_tree",
+        "severity": "critical",
+        "evidence": "A element with interactivity signals is not exposed in the accessibility tree"
+      },
+      {
+        "element": {
+          "nodeName": "A"
+        },
+        "gapType": "missing_from_a11y_tree",
+        "severity": "critical",
+        "evidence": "A element with interactivity signals is not exposed in the accessibility tree"
+      },
+      {
+        "element": {
+          "nodeName": "A",
+          "class": "a-link-normal _cropped-image-link_style_centerImage__1rzYI _cropped-image-link_style_centerImage-focusable__1JvMN aok-block image-window a-text-normal"
+        },
+        "gapType": "missing_from_a11y_tree",
+        "severity": "critical",
+        "evidence": "A element with interactivity signals is not exposed in the accessibility tree"
+      },
+      {
+        "element": {
+          "nodeName": "A",
+          "class": "a-link-normal _Zmx1a_centerImage_30wh- aok-block image-window"
+        },
+        "gapType": "missing_from_a11y_tree",
+        "severity": "critical",
+        "evidence": "A element with interactivity signals is not exposed in the accessibility tree"
+      },
+      {
+        "element": {
+          "nodeName": "A",
+          "class": "a-link-normal _Zmx1a_centerImage_30wh- aok-block image-window"
+        },
+        "gapType": "missing_from_a11y_tree",
+        "severity": "critical",
+        "evidence": "A element with interactivity signals is not exposed in the accessibility tree"
+      },
+      {
+        "element": {
+          "nodeName": "A",
+          "class": "a-link-normal _Zmx1a_centerImage_30wh- aok-block image-window"
+        },
+        "gapType": "missing_from_a11y_tree",
+        "severity": "critical",
+        "evidence": "A element with interactivity signals is not exposed in the accessibility tree"
+      },
+      {
+        "element": {
+          "nodeName": "A",
+          "class": "a-link-normal _Zmx1a_centerImage_30wh- aok-block image-window"
+        },
+        "gapType": "missing_from_a11y_tree",
+        "severity": "critical",
+        "evidence": "A element with interactivity signals is not exposed in the accessibility tree"
+      },
+      {
+        "element": {
+          "nodeName": "A",
+          "class": "a-link-normal aok-block"
+        },
+        "gapType": "missing_from_a11y_tree",
+        "severity": "critical",
+        "evidence": "A element with interactivity signals is not exposed in the accessibility tree"
+      },
+      {
+        "element": {
+          "nodeName": "A",
+          "class": "a-link-normal feed-carousel-control feed-left feed-control-disabled"
+        },
+        "gapType": "missing_from_a11y_tree",
+        "severity": "critical",
+        "evidence": "A element with interactivity signals is not exposed in the accessibility tree"
+      },
+      {
+        "element": {
+          "nodeName": "A",
+          "class": "a-link-normal feed-carousel-control feed-right"
+        },
+        "gapType": "missing_from_a11y_tree",
+        "severity": "critical",
+        "evidence": "A element with interactivity signals is not exposed in the accessibility tree"
+      },
+      {
+        "element": {
+          "nodeName": "A",
+          "class": "a-link-normal feed-carousel-control feed-left feed-control-disabled"
+        },
+        "gapType": "missing_from_a11y_tree",
+        "severity": "critical",
+        "evidence": "A element with interactivity signals is not exposed in the accessibility tree"
+      },
+      {
+        "element": {
+          "nodeName": "A",
+          "class": "a-link-normal feed-carousel-control feed-right"
+        },
+        "gapType": "missing_from_a11y_tree",
+        "severity": "critical",
+        "evidence": "A element with interactivity signals is not exposed in the accessibility tree"
+      },
+      {
+        "element": {
+          "nodeName": "A",
+          "class": "a-link-normal feed-carousel-control feed-left feed-control-disabled"
+        },
+        "gapType": "missing_from_a11y_tree",
+        "severity": "critical",
+        "evidence": "A element with interactivity signals is not exposed in the accessibility tree"
+      },
+      {
+        "element": {
+          "nodeName": "A",
+          "class": "a-link-normal feed-carousel-control feed-right"
+        },
+        "gapType": "missing_from_a11y_tree",
+        "severity": "critical",
+        "evidence": "A element with interactivity signals is not exposed in the accessibility tree"
+      },
+      {
+        "element": {
+          "nodeName": "A",
+          "class": "a-link-normal feed-carousel-control feed-left feed-control-disabled"
+        },
+        "gapType": "missing_from_a11y_tree",
+        "severity": "critical",
+        "evidence": "A element with interactivity signals is not exposed in the accessibility tree"
+      },
+      {
+        "element": {
+          "nodeName": "A",
+          "class": "a-link-normal feed-carousel-control feed-right"
+        },
+        "gapType": "missing_from_a11y_tree",
+        "severity": "critical",
+        "evidence": "A element with interactivity signals is not exposed in the accessibility tree"
+      },
+      {
+        "element": {
+          "nodeName": "A",
+          "class": "a-link-normal feed-carousel-control feed-left feed-control-disabled"
+        },
+        "gapType": "missing_from_a11y_tree",
+        "severity": "critical",
+        "evidence": "A element with interactivity signals is not exposed in the accessibility tree"
+      },
+      {
+        "element": {
+          "nodeName": "A",
+          "class": "a-link-normal feed-carousel-control feed-right"
+        },
+        "gapType": "missing_from_a11y_tree",
+        "severity": "critical",
+        "evidence": "A element with interactivity signals is not exposed in the accessibility tree"
+      },
+      {
+        "element": {
+          "nodeName": "A",
+          "class": "a-link-normal feed-carousel-control feed-left feed-control-disabled"
+        },
+        "gapType": "missing_from_a11y_tree",
+        "severity": "critical",
+        "evidence": "A element with interactivity signals is not exposed in the accessibility tree"
+      },
+      {
+        "element": {
+          "nodeName": "A",
+          "class": "a-link-normal feed-carousel-control feed-right"
+        },
+        "gapType": "missing_from_a11y_tree",
+        "severity": "critical",
+        "evidence": "A element with interactivity signals is not exposed in the accessibility tree"
+      },
+      {
+        "element": {
+          "nodeName": "A",
+          "class": "a-link-normal feed-carousel-control feed-left feed-control-disabled"
+        },
+        "gapType": "missing_from_a11y_tree",
+        "severity": "critical",
+        "evidence": "A element with interactivity signals is not exposed in the accessibility tree"
+      },
+      {
+        "element": {
+          "nodeName": "A",
+          "class": "a-link-normal feed-carousel-control feed-right"
+        },
+        "gapType": "missing_from_a11y_tree",
+        "severity": "critical",
+        "evidence": "A element with interactivity signals is not exposed in the accessibility tree"
+      },
+      {
+        "element": {
+          "nodeName": "INPUT",
+          "class": "a-carousel-firstvisibleitem"
+        },
+        "gapType": "missing_from_a11y_tree",
+        "severity": "critical",
+        "evidence": "INPUT element with interactivity signals is not exposed in the accessibility tree"
+      },
+      {
+        "element": {
+          "nodeName": "INPUT"
+        },
+        "gapType": "missing_from_a11y_tree",
+        "severity": "critical",
+        "evidence": "INPUT element with interactivity signals is not exposed in the accessibility tree"
+      },
+      {
+        "element": {
+          "nodeName": "SELECT",
+          "id": "searchDropdownBox",
+          "class": "nav-search-dropdown searchSelect nav-progressive-attrubute nav-progressive-search-dropdown"
+        },
+        "gapType": "no_accessible_name",
+        "severity": "serious",
+        "evidence": "Interactive SELECT element has no accessible name"
+      },
+      {
+        "element": {
+          "nodeName": "SELECT"
+        },
+        "gapType": "missing_from_a11y_tree",
+        "severity": "critical",
+        "evidence": "SELECT element with interactivity signals is not exposed in the accessibility tree"
+      },
+      {
+        "element": {
+          "nodeName": "SELECT"
+        },
+        "gapType": "missing_from_a11y_tree",
+        "severity": "critical",
+        "evidence": "SELECT element with interactivity signals is not exposed in the accessibility tree"
+      },
+      {
+        "element": {
+          "nodeName": "SELECT"
+        },
+        "gapType": "missing_from_a11y_tree",
+        "severity": "critical",
+        "evidence": "SELECT element with interactivity signals is not exposed in the accessibility tree"
+      },
+      {
+        "element": {
+          "nodeName": "SELECT"
+        },
+        "gapType": "missing_from_a11y_tree",
+        "severity": "critical",
+        "evidence": "SELECT element with interactivity signals is not exposed in the accessibility tree"
+      },
+      {
+        "element": {
+          "nodeName": "SELECT"
+        },
+        "gapType": "missing_from_a11y_tree",
+        "severity": "critical",
+        "evidence": "SELECT element with interactivity signals is not exposed in the accessibility tree"
+      },
+      {
+        "element": {
+          "nodeName": "SELECT"
+        },
+        "gapType": "missing_from_a11y_tree",
+        "severity": "critical",
+        "evidence": "SELECT element with interactivity signals is not exposed in the accessibility tree"
+      },
+      {
+        "element": {
+          "nodeName": "SELECT"
+        },
+        "gapType": "missing_from_a11y_tree",
+        "severity": "critical",
+        "evidence": "SELECT element with interactivity signals is not exposed in the accessibility tree"
+      },
+      {
+        "element": {
+          "nodeName": "SELECT"
+        },
+        "gapType": "missing_from_a11y_tree",
+        "severity": "critical",
+        "evidence": "SELECT element with interactivity signals is not exposed in the accessibility tree"
+      },
+      {
+        "element": {
+          "nodeName": "SELECT"
+        },
+        "gapType": "missing_from_a11y_tree",
+        "severity": "critical",
+        "evidence": "SELECT element with interactivity signals is not exposed in the accessibility tree"
+      },
+      {
+        "element": {
+          "nodeName": "NAV",
+          "id": "shortcut-menu",
+          "class": "nav-assistant"
+        },
+        "gapType": "not_focusable",
+        "severity": "critical",
+        "evidence": "NAV element has click handlers but tabindex=\"-1\" makes it unfocusable"
+      },
+      {
+        "element": {
+          "nodeName": "A",
+          "id": "skippedLink"
+        },
+        "gapType": "missing_from_a11y_tree",
+        "severity": "critical",
+        "evidence": "A element with interactivity signals is not exposed in the accessibility tree"
+      },
+      {
+        "element": {
+          "nodeName": "DIV",
+          "id": "desktopTallHeroVideo-560e2033-13ab-470e-932a-f40f5b97ef10",
+          "class": "video-js _desktop-tall-hero-video_style_video-js-tall-hero-skin__WzPOh vjs-fluid desktopTallHeroVideo-560e2033-13ab-470e-932a-f40f5b97ef10-dimensions vjs-controls-enabled vjs-workinghover vjs-v7 vjs-user-active vjs-paused"
+        },
+        "gapType": "missing_from_a11y_tree",
+        "severity": "critical",
+        "evidence": "DIV element with interactivity signals is not exposed in the accessibility tree"
+      },
+      {
+        "element": {
+          "nodeName": "VIDEO",
+          "id": "desktopTallHeroVideo-560e2033-13ab-470e-932a-f40f5b97ef10_html5_api",
+          "class": "vjs-tech"
+        },
+        "gapType": "missing_from_a11y_tree",
+        "severity": "critical",
+        "evidence": "VIDEO element with interactivity signals is not exposed in the accessibility tree"
+      },
+      {
+        "element": {
+          "nodeName": "DIV",
+          "id": "icp-touch-link-language",
+          "class": "icp-button"
+        },
+        "gapType": "missing_from_a11y_tree",
+        "severity": "critical",
+        "evidence": "DIV element with interactivity signals is not exposed in the accessibility tree"
+      }
+    ],
+    "https://www.amazon.com/ref=nav_logo": [
+      {
+        "element": {
+          "nodeName": "A",
+          "class": "nav-action-signin-button"
+        },
+        "gapType": "missing_from_a11y_tree",
+        "severity": "critical",
+        "evidence": "A element with interactivity signals is not exposed in the accessibility tree"
+      },
+      {
+        "element": {
+          "nodeName": "A",
+          "class": "nav-a"
+        },
+        "gapType": "missing_from_a11y_tree",
+        "severity": "critical",
+        "evidence": "A element with interactivity signals is not exposed in the accessibility tree"
+      },
+      {
+        "element": {
+          "nodeName": "A",
+          "class": "nav-link nav-item"
+        },
+        "gapType": "missing_from_a11y_tree",
+        "severity": "critical",
+        "evidence": "A element with interactivity signals is not exposed in the accessibility tree"
+      },
+      {
+        "element": {
+          "nodeName": "A",
+          "class": "nav-link nav-item"
+        },
+        "gapType": "missing_from_a11y_tree",
+        "severity": "critical",
+        "evidence": "A element with interactivity signals is not exposed in the accessibility tree"
+      },
+      {
+        "element": {
+          "nodeName": "A",
+          "class": "nav-link nav-item"
+        },
+        "gapType": "missing_from_a11y_tree",
+        "severity": "critical",
+        "evidence": "A element with interactivity signals is not exposed in the accessibility tree"
+      },
+      {
+        "element": {
+          "nodeName": "A",
+          "id": "nav_prefetch_yourorders",
+          "class": "nav-link nav-item"
+        },
+        "gapType": "missing_from_a11y_tree",
+        "severity": "critical",
+        "evidence": "A element with interactivity signals is not exposed in the accessibility tree"
+      },
+      {
+        "element": {
+          "nodeName": "A",
+          "class": "nav-link nav-item"
+        },
+        "gapType": "missing_from_a11y_tree",
+        "severity": "critical",
+        "evidence": "A element with interactivity signals is not exposed in the accessibility tree"
+      },
+      {
+        "element": {
+          "nodeName": "A",
+          "class": "nav-link nav-item"
+        },
+        "gapType": "missing_from_a11y_tree",
+        "severity": "critical",
+        "evidence": "A element with interactivity signals is not exposed in the accessibility tree"
+      },
+      {
+        "element": {
+          "nodeName": "A",
+          "class": "nav-link nav-item"
+        },
+        "gapType": "missing_from_a11y_tree",
+        "severity": "critical",
+        "evidence": "A element with interactivity signals is not exposed in the accessibility tree"
+      },
+      {
+        "element": {
+          "nodeName": "A",
+          "class": "nav-link nav-item"
+        },
+        "gapType": "missing_from_a11y_tree",
+        "severity": "critical",
+        "evidence": "A element with interactivity signals is not exposed in the accessibility tree"
+      },
+      {
+        "element": {
+          "nodeName": "A",
+          "class": "nav-link nav-item"
+        },
+        "gapType": "missing_from_a11y_tree",
+        "severity": "critical",
+        "evidence": "A element with interactivity signals is not exposed in the accessibility tree"
+      },
+      {
+        "element": {
+          "nodeName": "A",
+          "class": "nav-link nav-item"
+        },
+        "gapType": "missing_from_a11y_tree",
+        "severity": "critical",
+        "evidence": "A element with interactivity signals is not exposed in the accessibility tree"
+      },
+      {
+        "element": {
+          "nodeName": "A",
+          "class": "nav-link nav-item"
+        },
+        "gapType": "missing_from_a11y_tree",
+        "severity": "critical",
+        "evidence": "A element with interactivity signals is not exposed in the accessibility tree"
+      },
+      {
+        "element": {
+          "nodeName": "A",
+          "class": "nav-link nav-item"
+        },
+        "gapType": "missing_from_a11y_tree",
+        "severity": "critical",
+        "evidence": "A element with interactivity signals is not exposed in the accessibility tree"
+      },
+      {
+        "element": {
+          "nodeName": "A",
+          "class": "nav-link nav-item"
+        },
+        "gapType": "missing_from_a11y_tree",
+        "severity": "critical",
+        "evidence": "A element with interactivity signals is not exposed in the accessibility tree"
+      },
+      {
+        "element": {
+          "nodeName": "A",
+          "class": "nav-link nav-item"
+        },
+        "gapType": "missing_from_a11y_tree",
+        "severity": "critical",
+        "evidence": "A element with interactivity signals is not exposed in the accessibility tree"
+      },
+      {
+        "element": {
+          "nodeName": "A",
+          "class": "nav-link nav-item"
+        },
+        "gapType": "missing_from_a11y_tree",
+        "severity": "critical",
+        "evidence": "A element with interactivity signals is not exposed in the accessibility tree"
+      },
+      {
+        "element": {
+          "nodeName": "A",
+          "class": "nav-link nav-item"
+        },
+        "gapType": "missing_from_a11y_tree",
+        "severity": "critical",
+        "evidence": "A element with interactivity signals is not exposed in the accessibility tree"
+      },
+      {
+        "element": {
+          "nodeName": "A",
+          "class": "nav-link nav-item"
+        },
+        "gapType": "missing_from_a11y_tree",
+        "severity": "critical",
+        "evidence": "A element with interactivity signals is not exposed in the accessibility tree"
+      },
+      {
+        "element": {
+          "nodeName": "A",
+          "class": "nav-link nav-item"
+        },
+        "gapType": "missing_from_a11y_tree",
+        "severity": "critical",
+        "evidence": "A element with interactivity signals is not exposed in the accessibility tree"
+      },
+      {
+        "element": {
+          "nodeName": "A",
+          "class": "nav-link nav-item"
+        },
+        "gapType": "missing_from_a11y_tree",
+        "severity": "critical",
+        "evidence": "A element with interactivity signals is not exposed in the accessibility tree"
+      },
+      {
+        "element": {
+          "nodeName": "A",
+          "class": "nav-link nav-item"
+        },
+        "gapType": "missing_from_a11y_tree",
+        "severity": "critical",
+        "evidence": "A element with interactivity signals is not exposed in the accessibility tree"
+      },
+      {
+        "element": {
+          "nodeName": "A",
+          "class": "a-link-normal _cropped-image-link_style_centerImage__1rzYI _cropped-image-link_style_centerImage-focusable__1JvMN aok-block image-window a-text-normal"
+        },
+        "gapType": "missing_from_a11y_tree",
+        "severity": "critical",
+        "evidence": "A element with interactivity signals is not exposed in the accessibility tree"
+      },
+      {
+        "element": {
+          "nodeName": "A",
+          "class": "a-link-normal _cropped-image-link_style_centerImage__1rzYI _cropped-image-link_style_centerImage-focusable__1JvMN aok-block image-window a-text-normal"
+        },
+        "gapType": "missing_from_a11y_tree",
+        "severity": "critical",
+        "evidence": "A element with interactivity signals is not exposed in the accessibility tree"
+      },
+      {
+        "element": {
+          "nodeName": "A",
+          "class": "a-link-normal _cropped-image-link_style_centerImage__1rzYI _cropped-image-link_style_centerImage-focusable__1JvMN aok-block image-window a-text-normal"
+        },
+        "gapType": "missing_from_a11y_tree",
+        "severity": "critical",
+        "evidence": "A element with interactivity signals is not exposed in the accessibility tree"
+      },
+      {
+        "element": {
+          "nodeName": "A",
+          "class": "a-link-normal _cropped-image-link_style_centerImage__1rzYI _cropped-image-link_style_centerImage-focusable__1JvMN aok-block image-window a-text-normal"
+        },
+        "gapType": "missing_from_a11y_tree",
+        "severity": "critical",
+        "evidence": "A element with interactivity signals is not exposed in the accessibility tree"
+      },
+      {
+        "element": {
+          "nodeName": "A",
+          "class": "a-link-normal _cropped-image-link_style_centerImage__1rzYI _cropped-image-link_style_centerImage-focusable__1JvMN aok-block image-window a-text-normal"
+        },
+        "gapType": "missing_from_a11y_tree",
+        "severity": "critical",
+        "evidence": "A element with interactivity signals is not exposed in the accessibility tree"
+      },
+      {
+        "element": {
+          "nodeName": "A"
+        },
+        "gapType": "missing_from_a11y_tree",
+        "severity": "critical",
+        "evidence": "A element with interactivity signals is not exposed in the accessibility tree"
+      },
+      {
+        "element": {
+          "nodeName": "A",
+          "class": "a-link-normal _cropped-image-link_style_centerImage__1rzYI _cropped-image-link_style_centerImage-focusable__1JvMN aok-block image-window a-text-normal"
+        },
+        "gapType": "missing_from_a11y_tree",
+        "severity": "critical",
+        "evidence": "A element with interactivity signals is not exposed in the accessibility tree"
+      },
+      {
+        "element": {
+          "nodeName": "A",
+          "class": "a-link-normal _Zmx1a_centerImage_30wh- aok-block image-window"
+        },
+        "gapType": "missing_from_a11y_tree",
+        "severity": "critical",
+        "evidence": "A element with interactivity signals is not exposed in the accessibility tree"
+      },
+      {
+        "element": {
+          "nodeName": "A",
+          "class": "a-link-normal _Zmx1a_centerImage_30wh- aok-block image-window"
+        },
+        "gapType": "missing_from_a11y_tree",
+        "severity": "critical",
+        "evidence": "A element with interactivity signals is not exposed in the accessibility tree"
+      },
+      {
+        "element": {
+          "nodeName": "A",
+          "class": "a-link-normal _Zmx1a_centerImage_30wh- aok-block image-window"
+        },
+        "gapType": "missing_from_a11y_tree",
+        "severity": "critical",
+        "evidence": "A element with interactivity signals is not exposed in the accessibility tree"
+      },
+      {
+        "element": {
+          "nodeName": "A",
+          "class": "a-link-normal _Zmx1a_centerImage_30wh- aok-block image-window"
+        },
+        "gapType": "missing_from_a11y_tree",
+        "severity": "critical",
+        "evidence": "A element with interactivity signals is not exposed in the accessibility tree"
+      },
+      {
+        "element": {
+          "nodeName": "A",
+          "class": "a-link-normal aok-block"
+        },
+        "gapType": "missing_from_a11y_tree",
+        "severity": "critical",
+        "evidence": "A element with interactivity signals is not exposed in the accessibility tree"
+      },
+      {
+        "element": {
+          "nodeName": "A",
+          "class": "a-link-normal feed-carousel-control feed-left feed-control-disabled"
+        },
+        "gapType": "missing_from_a11y_tree",
+        "severity": "critical",
+        "evidence": "A element with interactivity signals is not exposed in the accessibility tree"
+      },
+      {
+        "element": {
+          "nodeName": "A",
+          "class": "a-link-normal feed-carousel-control feed-right"
+        },
+        "gapType": "missing_from_a11y_tree",
+        "severity": "critical",
+        "evidence": "A element with interactivity signals is not exposed in the accessibility tree"
+      },
+      {
+        "element": {
+          "nodeName": "A",
+          "class": "a-link-normal feed-carousel-control feed-left feed-control-disabled"
+        },
+        "gapType": "missing_from_a11y_tree",
+        "severity": "critical",
+        "evidence": "A element with interactivity signals is not exposed in the accessibility tree"
+      },
+      {
+        "element": {
+          "nodeName": "A",
+          "class": "a-link-normal feed-carousel-control feed-right"
+        },
+        "gapType": "missing_from_a11y_tree",
+        "severity": "critical",
+        "evidence": "A element with interactivity signals is not exposed in the accessibility tree"
+      },
+      {
+        "element": {
+          "nodeName": "A",
+          "class": "a-link-normal feed-carousel-control feed-left feed-control-disabled"
+        },
+        "gapType": "missing_from_a11y_tree",
+        "severity": "critical",
+        "evidence": "A element with interactivity signals is not exposed in the accessibility tree"
+      },
+      {
+        "element": {
+          "nodeName": "A",
+          "class": "a-link-normal feed-carousel-control feed-right"
+        },
+        "gapType": "missing_from_a11y_tree",
+        "severity": "critical",
+        "evidence": "A element with interactivity signals is not exposed in the accessibility tree"
+      },
+      {
+        "element": {
+          "nodeName": "A",
+          "class": "a-link-normal feed-carousel-control feed-left feed-control-disabled"
+        },
+        "gapType": "missing_from_a11y_tree",
+        "severity": "critical",
+        "evidence": "A element with interactivity signals is not exposed in the accessibility tree"
+      },
+      {
+        "element": {
+          "nodeName": "A",
+          "class": "a-link-normal feed-carousel-control feed-right"
+        },
+        "gapType": "missing_from_a11y_tree",
+        "severity": "critical",
+        "evidence": "A element with interactivity signals is not exposed in the accessibility tree"
+      },
+      {
+        "element": {
+          "nodeName": "A",
+          "class": "a-link-normal feed-carousel-control feed-left feed-control-disabled"
+        },
+        "gapType": "missing_from_a11y_tree",
+        "severity": "critical",
+        "evidence": "A element with interactivity signals is not exposed in the accessibility tree"
+      },
+      {
+        "element": {
+          "nodeName": "A",
+          "class": "a-link-normal feed-carousel-control feed-right"
+        },
+        "gapType": "missing_from_a11y_tree",
+        "severity": "critical",
+        "evidence": "A element with interactivity signals is not exposed in the accessibility tree"
+      },
+      {
+        "element": {
+          "nodeName": "A",
+          "class": "a-link-normal feed-carousel-control feed-left feed-control-disabled"
+        },
+        "gapType": "missing_from_a11y_tree",
+        "severity": "critical",
+        "evidence": "A element with interactivity signals is not exposed in the accessibility tree"
+      },
+      {
+        "element": {
+          "nodeName": "A",
+          "class": "a-link-normal feed-carousel-control feed-right"
+        },
+        "gapType": "missing_from_a11y_tree",
+        "severity": "critical",
+        "evidence": "A element with interactivity signals is not exposed in the accessibility tree"
+      },
+      {
+        "element": {
+          "nodeName": "A",
+          "class": "a-link-normal feed-carousel-control feed-left feed-control-disabled"
+        },
+        "gapType": "missing_from_a11y_tree",
+        "severity": "critical",
+        "evidence": "A element with interactivity signals is not exposed in the accessibility tree"
+      },
+      {
+        "element": {
+          "nodeName": "A",
+          "class": "a-link-normal feed-carousel-control feed-right"
+        },
+        "gapType": "missing_from_a11y_tree",
+        "severity": "critical",
+        "evidence": "A element with interactivity signals is not exposed in the accessibility tree"
+      },
+      {
+        "element": {
+          "nodeName": "A"
+        },
+        "gapType": "missing_from_a11y_tree",
+        "severity": "critical",
+        "evidence": "A element with interactivity signals is not exposed in the accessibility tree"
+      },
+      {
+        "element": {
+          "nodeName": "INPUT",
+          "id": "unifiedLocation1ClickAddress",
+          "class": "nav-progressive-attribute"
+        },
+        "gapType": "missing_from_a11y_tree",
+        "severity": "critical",
+        "evidence": "INPUT element with interactivity signals is not exposed in the accessibility tree"
+      },
+      {
+        "element": {
+          "nodeName": "INPUT",
+          "id": "ubbShipTo",
+          "class": "nav-progressive-attribute"
+        },
+        "gapType": "missing_from_a11y_tree",
+        "severity": "critical",
+        "evidence": "INPUT element with interactivity signals is not exposed in the accessibility tree"
+      },
+      {
+        "element": {
+          "nodeName": "INPUT",
+          "id": "glowValidationToken",
+          "class": "nav-progressive-attribute"
+        },
+        "gapType": "missing_from_a11y_tree",
+        "severity": "critical",
+        "evidence": "INPUT element with interactivity signals is not exposed in the accessibility tree"
+      },
+      {
+        "element": {
+          "nodeName": "INPUT",
+          "id": "glowDestinationType",
+          "class": "nav-progressive-attribute"
+        },
+        "gapType": "missing_from_a11y_tree",
+        "severity": "critical",
+        "evidence": "INPUT element with interactivity signals is not exposed in the accessibility tree"
+      },
+      {
+        "element": {
+          "nodeName": "INPUT",
+          "class": "a-carousel-firstvisibleitem"
+        },
+        "gapType": "missing_from_a11y_tree",
+        "severity": "critical",
+        "evidence": "INPUT element with interactivity signals is not exposed in the accessibility tree"
+      },
+      {
+        "element": {
+          "nodeName": "INPUT"
+        },
+        "gapType": "missing_from_a11y_tree",
+        "severity": "critical",
+        "evidence": "INPUT element with interactivity signals is not exposed in the accessibility tree"
+      },
+      {
+        "element": {
+          "nodeName": "SELECT",
+          "id": "searchDropdownBox",
+          "class": "nav-search-dropdown searchSelect nav-progressive-attrubute nav-progressive-search-dropdown"
+        },
+        "gapType": "no_accessible_name",
+        "severity": "serious",
+        "evidence": "Interactive SELECT element has no accessible name"
+      },
+      {
+        "element": {
+          "nodeName": "NAV",
+          "id": "shortcut-menu",
+          "class": "nav-assistant"
+        },
+        "gapType": "not_focusable",
+        "severity": "critical",
+        "evidence": "NAV element has click handlers but tabindex=\"-1\" makes it unfocusable"
+      },
+      {
+        "element": {
+          "nodeName": "A",
+          "id": "skippedLink"
+        },
+        "gapType": "missing_from_a11y_tree",
+        "severity": "critical",
+        "evidence": "A element with interactivity signals is not exposed in the accessibility tree"
+      },
+      {
+        "element": {
+          "nodeName": "DIV",
+          "id": "icp-touch-link-language",
+          "class": "icp-button"
+        },
+        "gapType": "missing_from_a11y_tree",
+        "severity": "critical",
+        "evidence": "DIV element with interactivity signals is not exposed in the accessibility tree"
+      }
+    ],
+    "https://www.amazon.com/customer-preferences/edit?ie=UTF8&preferencesReturnUrl=%2F&ref_=topnav_lang": [
+      {
+        "element": {
+          "nodeName": "A",
+          "class": "nav-action-signin-button"
+        },
+        "gapType": "missing_from_a11y_tree",
+        "severity": "critical",
+        "evidence": "A element with interactivity signals is not exposed in the accessibility tree"
+      },
+      {
+        "element": {
+          "nodeName": "A",
+          "class": "nav-a"
+        },
+        "gapType": "missing_from_a11y_tree",
+        "severity": "critical",
+        "evidence": "A element with interactivity signals is not exposed in the accessibility tree"
+      },
+      {
+        "element": {
+          "nodeName": "A",
+          "class": "nav-link nav-item"
+        },
+        "gapType": "missing_from_a11y_tree",
+        "severity": "critical",
+        "evidence": "A element with interactivity signals is not exposed in the accessibility tree"
+      },
+      {
+        "element": {
+          "nodeName": "A",
+          "class": "nav-link nav-item"
+        },
+        "gapType": "missing_from_a11y_tree",
+        "severity": "critical",
+        "evidence": "A element with interactivity signals is not exposed in the accessibility tree"
+      },
+      {
+        "element": {
+          "nodeName": "A",
+          "class": "nav-link nav-item"
+        },
+        "gapType": "missing_from_a11y_tree",
+        "severity": "critical",
+        "evidence": "A element with interactivity signals is not exposed in the accessibility tree"
+      },
+      {
+        "element": {
+          "nodeName": "A",
+          "id": "nav_prefetch_yourorders",
+          "class": "nav-link nav-item"
+        },
+        "gapType": "missing_from_a11y_tree",
+        "severity": "critical",
+        "evidence": "A element with interactivity signals is not exposed in the accessibility tree"
+      },
+      {
+        "element": {
+          "nodeName": "A",
+          "class": "nav-link nav-item"
+        },
+        "gapType": "missing_from_a11y_tree",
+        "severity": "critical",
+        "evidence": "A element with interactivity signals is not exposed in the accessibility tree"
+      },
+      {
+        "element": {
+          "nodeName": "A",
+          "class": "nav-link nav-item"
+        },
+        "gapType": "missing_from_a11y_tree",
+        "severity": "critical",
+        "evidence": "A element with interactivity signals is not exposed in the accessibility tree"
+      },
+      {
+        "element": {
+          "nodeName": "A",
+          "class": "nav-link nav-item"
+        },
+        "gapType": "missing_from_a11y_tree",
+        "severity": "critical",
+        "evidence": "A element with interactivity signals is not exposed in the accessibility tree"
+      },
+      {
+        "element": {
+          "nodeName": "A",
+          "class": "nav-link nav-item"
+        },
+        "gapType": "missing_from_a11y_tree",
+        "severity": "critical",
+        "evidence": "A element with interactivity signals is not exposed in the accessibility tree"
+      },
+      {
+        "element": {
+          "nodeName": "A",
+          "class": "nav-link nav-item"
+        },
+        "gapType": "missing_from_a11y_tree",
+        "severity": "critical",
+        "evidence": "A element with interactivity signals is not exposed in the accessibility tree"
+      },
+      {
+        "element": {
+          "nodeName": "A",
+          "class": "nav-link nav-item"
+        },
+        "gapType": "missing_from_a11y_tree",
+        "severity": "critical",
+        "evidence": "A element with interactivity signals is not exposed in the accessibility tree"
+      },
+      {
+        "element": {
+          "nodeName": "A",
+          "class": "nav-link nav-item"
+        },
+        "gapType": "missing_from_a11y_tree",
+        "severity": "critical",
+        "evidence": "A element with interactivity signals is not exposed in the accessibility tree"
+      },
+      {
+        "element": {
+          "nodeName": "A",
+          "class": "nav-link nav-item"
+        },
+        "gapType": "missing_from_a11y_tree",
+        "severity": "critical",
+        "evidence": "A element with interactivity signals is not exposed in the accessibility tree"
+      },
+      {
+        "element": {
+          "nodeName": "A",
+          "class": "nav-link nav-item"
+        },
+        "gapType": "missing_from_a11y_tree",
+        "severity": "critical",
+        "evidence": "A element with interactivity signals is not exposed in the accessibility tree"
+      },
+      {
+        "element": {
+          "nodeName": "A",
+          "class": "nav-link nav-item"
+        },
+        "gapType": "missing_from_a11y_tree",
+        "severity": "critical",
+        "evidence": "A element with interactivity signals is not exposed in the accessibility tree"
+      },
+      {
+        "element": {
+          "nodeName": "A",
+          "class": "nav-link nav-item"
+        },
+        "gapType": "missing_from_a11y_tree",
+        "severity": "critical",
+        "evidence": "A element with interactivity signals is not exposed in the accessibility tree"
+      },
+      {
+        "element": {
+          "nodeName": "A",
+          "class": "nav-link nav-item"
+        },
+        "gapType": "missing_from_a11y_tree",
+        "severity": "critical",
+        "evidence": "A element with interactivity signals is not exposed in the accessibility tree"
+      },
+      {
+        "element": {
+          "nodeName": "A",
+          "class": "nav-link nav-item"
+        },
+        "gapType": "missing_from_a11y_tree",
+        "severity": "critical",
+        "evidence": "A element with interactivity signals is not exposed in the accessibility tree"
+      },
+      {
+        "element": {
+          "nodeName": "A",
+          "class": "nav-link nav-item"
+        },
+        "gapType": "missing_from_a11y_tree",
+        "severity": "critical",
+        "evidence": "A element with interactivity signals is not exposed in the accessibility tree"
+      },
+      {
+        "element": {
+          "nodeName": "A",
+          "class": "nav-link nav-item"
+        },
+        "gapType": "missing_from_a11y_tree",
+        "severity": "critical",
+        "evidence": "A element with interactivity signals is not exposed in the accessibility tree"
+      },
+      {
+        "element": {
+          "nodeName": "A",
+          "class": "nav-link nav-item"
+        },
+        "gapType": "missing_from_a11y_tree",
+        "severity": "critical",
+        "evidence": "A element with interactivity signals is not exposed in the accessibility tree"
+      },
+      {
+        "element": {
+          "nodeName": "A"
+        },
+        "gapType": "missing_from_a11y_tree",
+        "severity": "critical",
+        "evidence": "A element with interactivity signals is not exposed in the accessibility tree"
+      },
+      {
+        "element": {
+          "nodeName": "INPUT",
+          "id": "unifiedLocation1ClickAddress",
+          "class": "nav-progressive-attribute"
+        },
+        "gapType": "missing_from_a11y_tree",
+        "severity": "critical",
+        "evidence": "INPUT element with interactivity signals is not exposed in the accessibility tree"
+      },
+      {
+        "element": {
+          "nodeName": "INPUT",
+          "id": "ubbShipTo",
+          "class": "nav-progressive-attribute"
+        },
+        "gapType": "missing_from_a11y_tree",
+        "severity": "critical",
+        "evidence": "INPUT element with interactivity signals is not exposed in the accessibility tree"
+      },
+      {
+        "element": {
+          "nodeName": "INPUT",
+          "id": "glowValidationToken",
+          "class": "nav-progressive-attribute"
+        },
+        "gapType": "missing_from_a11y_tree",
+        "severity": "critical",
+        "evidence": "INPUT element with interactivity signals is not exposed in the accessibility tree"
+      },
+      {
+        "element": {
+          "nodeName": "INPUT",
+          "id": "glowDestinationType",
+          "class": "nav-progressive-attribute"
+        },
+        "gapType": "missing_from_a11y_tree",
+        "severity": "critical",
+        "evidence": "INPUT element with interactivity signals is not exposed in the accessibility tree"
+      },
+      {
+        "element": {
+          "nodeName": "INPUT"
+        },
+        "gapType": "missing_from_a11y_tree",
+        "severity": "critical",
+        "evidence": "INPUT element with interactivity signals is not exposed in the accessibility tree"
+      },
+      {
+        "element": {
+          "nodeName": "INPUT"
+        },
+        "gapType": "missing_from_a11y_tree",
+        "severity": "critical",
+        "evidence": "INPUT element with interactivity signals is not exposed in the accessibility tree"
+      },
+      {
+        "element": {
+          "nodeName": "SELECT",
+          "id": "searchDropdownBox",
+          "class": "nav-search-dropdown searchSelect nav-progressive-attrubute nav-progressive-search-dropdown"
+        },
+        "gapType": "no_accessible_name",
+        "severity": "serious",
+        "evidence": "Interactive SELECT element has no accessible name"
+      },
+      {
+        "element": {
+          "nodeName": "NAV",
+          "id": "shortcut-menu",
+          "class": "nav-assistant"
+        },
+        "gapType": "not_focusable",
+        "severity": "critical",
+        "evidence": "NAV element has click handlers but tabindex=\"-1\" makes it unfocusable"
+      },
+      {
+        "element": {
+          "nodeName": "A",
+          "id": "skippedLink"
+        },
+        "gapType": "missing_from_a11y_tree",
+        "severity": "critical",
+        "evidence": "A element with interactivity signals is not exposed in the accessibility tree"
+      },
+      {
+        "element": {
+          "nodeName": "SPAN",
+          "id": "icp-save-button",
+          "class": "a-button a-spacing-top-mini a-button-primary"
+        },
+        "gapType": "missing_from_a11y_tree",
+        "severity": "critical",
+        "evidence": "SPAN element with interactivity signals is not exposed in the accessibility tree"
+      },
+      {
+        "element": {
+          "nodeName": "DIV",
+          "id": "icp-touch-link-language",
+          "class": "icp-button"
+        },
+        "gapType": "missing_from_a11y_tree",
+        "severity": "critical",
+        "evidence": "DIV element with interactivity signals is not exposed in the accessibility tree"
+      }
+    ],
+    "http://www.amazon.com/gp/css/homepage.html?ref_=nav_youraccount_btn_b": [
+      {
+        "element": {
+          "nodeName": "A",
+          "class": "nav-action-signin-button"
+        },
+        "gapType": "missing_from_a11y_tree",
+        "severity": "critical",
+        "evidence": "A element with interactivity signals is not exposed in the accessibility tree"
+      },
+      {
+        "element": {
+          "nodeName": "A",
+          "class": "nav-a"
+        },
+        "gapType": "missing_from_a11y_tree",
+        "severity": "critical",
+        "evidence": "A element with interactivity signals is not exposed in the accessibility tree"
+      },
+      {
+        "element": {
+          "nodeName": "A",
+          "class": "nav-link nav-item"
+        },
+        "gapType": "missing_from_a11y_tree",
+        "severity": "critical",
+        "evidence": "A element with interactivity signals is not exposed in the accessibility tree"
+      },
+      {
+        "element": {
+          "nodeName": "A",
+          "class": "nav-link nav-item"
+        },
+        "gapType": "missing_from_a11y_tree",
+        "severity": "critical",
+        "evidence": "A element with interactivity signals is not exposed in the accessibility tree"
+      },
+      {
+        "element": {
+          "nodeName": "A",
+          "class": "nav-link nav-item"
+        },
+        "gapType": "missing_from_a11y_tree",
+        "severity": "critical",
+        "evidence": "A element with interactivity signals is not exposed in the accessibility tree"
+      },
+      {
+        "element": {
+          "nodeName": "A",
+          "id": "nav_prefetch_yourorders",
+          "class": "nav-link nav-item"
+        },
+        "gapType": "missing_from_a11y_tree",
+        "severity": "critical",
+        "evidence": "A element with interactivity signals is not exposed in the accessibility tree"
+      },
+      {
+        "element": {
+          "nodeName": "A",
+          "class": "nav-link nav-item"
+        },
+        "gapType": "missing_from_a11y_tree",
+        "severity": "critical",
+        "evidence": "A element with interactivity signals is not exposed in the accessibility tree"
+      },
+      {
+        "element": {
+          "nodeName": "A",
+          "class": "nav-link nav-item"
+        },
+        "gapType": "missing_from_a11y_tree",
+        "severity": "critical",
+        "evidence": "A element with interactivity signals is not exposed in the accessibility tree"
+      },
+      {
+        "element": {
+          "nodeName": "A",
+          "class": "nav-link nav-item"
+        },
+        "gapType": "missing_from_a11y_tree",
+        "severity": "critical",
+        "evidence": "A element with interactivity signals is not exposed in the accessibility tree"
+      },
+      {
+        "element": {
+          "nodeName": "A",
+          "class": "nav-link nav-item"
+        },
+        "gapType": "missing_from_a11y_tree",
+        "severity": "critical",
+        "evidence": "A element with interactivity signals is not exposed in the accessibility tree"
+      },
+      {
+        "element": {
+          "nodeName": "A",
+          "class": "nav-link nav-item"
+        },
+        "gapType": "missing_from_a11y_tree",
+        "severity": "critical",
+        "evidence": "A element with interactivity signals is not exposed in the accessibility tree"
+      },
+      {
+        "element": {
+          "nodeName": "A",
+          "class": "nav-link nav-item"
+        },
+        "gapType": "missing_from_a11y_tree",
+        "severity": "critical",
+        "evidence": "A element with interactivity signals is not exposed in the accessibility tree"
+      },
+      {
+        "element": {
+          "nodeName": "A",
+          "class": "nav-link nav-item"
+        },
+        "gapType": "missing_from_a11y_tree",
+        "severity": "critical",
+        "evidence": "A element with interactivity signals is not exposed in the accessibility tree"
+      },
+      {
+        "element": {
+          "nodeName": "A",
+          "class": "nav-link nav-item"
+        },
+        "gapType": "missing_from_a11y_tree",
+        "severity": "critical",
+        "evidence": "A element with interactivity signals is not exposed in the accessibility tree"
+      },
+      {
+        "element": {
+          "nodeName": "A",
+          "class": "nav-link nav-item"
+        },
+        "gapType": "missing_from_a11y_tree",
+        "severity": "critical",
+        "evidence": "A element with interactivity signals is not exposed in the accessibility tree"
+      },
+      {
+        "element": {
+          "nodeName": "A",
+          "class": "nav-link nav-item"
+        },
+        "gapType": "missing_from_a11y_tree",
+        "severity": "critical",
+        "evidence": "A element with interactivity signals is not exposed in the accessibility tree"
+      },
+      {
+        "element": {
+          "nodeName": "A",
+          "class": "nav-link nav-item"
+        },
+        "gapType": "missing_from_a11y_tree",
+        "severity": "critical",
+        "evidence": "A element with interactivity signals is not exposed in the accessibility tree"
+      },
+      {
+        "element": {
+          "nodeName": "A",
+          "class": "nav-link nav-item"
+        },
+        "gapType": "missing_from_a11y_tree",
+        "severity": "critical",
+        "evidence": "A element with interactivity signals is not exposed in the accessibility tree"
+      },
+      {
+        "element": {
+          "nodeName": "A",
+          "class": "nav-link nav-item"
+        },
+        "gapType": "missing_from_a11y_tree",
+        "severity": "critical",
+        "evidence": "A element with interactivity signals is not exposed in the accessibility tree"
+      },
+      {
+        "element": {
+          "nodeName": "A",
+          "class": "nav-link nav-item"
+        },
+        "gapType": "missing_from_a11y_tree",
+        "severity": "critical",
+        "evidence": "A element with interactivity signals is not exposed in the accessibility tree"
+      },
+      {
+        "element": {
+          "nodeName": "A",
+          "class": "nav-link nav-item"
+        },
+        "gapType": "missing_from_a11y_tree",
+        "severity": "critical",
+        "evidence": "A element with interactivity signals is not exposed in the accessibility tree"
+      },
+      {
+        "element": {
+          "nodeName": "A",
+          "class": "nav-link nav-item"
+        },
+        "gapType": "missing_from_a11y_tree",
+        "severity": "critical",
+        "evidence": "A element with interactivity signals is not exposed in the accessibility tree"
+      },
+      {
+        "element": {
+          "nodeName": "A"
+        },
+        "gapType": "missing_from_a11y_tree",
+        "severity": "critical",
+        "evidence": "A element with interactivity signals is not exposed in the accessibility tree"
+      },
+      {
+        "element": {
+          "nodeName": "INPUT",
+          "id": "unifiedLocation1ClickAddress",
+          "class": "nav-progressive-attribute"
+        },
+        "gapType": "missing_from_a11y_tree",
+        "severity": "critical",
+        "evidence": "INPUT element with interactivity signals is not exposed in the accessibility tree"
+      },
+      {
+        "element": {
+          "nodeName": "INPUT",
+          "id": "ubbShipTo",
+          "class": "nav-progressive-attribute"
+        },
+        "gapType": "missing_from_a11y_tree",
+        "severity": "critical",
+        "evidence": "INPUT element with interactivity signals is not exposed in the accessibility tree"
+      },
+      {
+        "element": {
+          "nodeName": "INPUT",
+          "id": "glowValidationToken",
+          "class": "nav-progressive-attribute"
+        },
+        "gapType": "missing_from_a11y_tree",
+        "severity": "critical",
+        "evidence": "INPUT element with interactivity signals is not exposed in the accessibility tree"
+      },
+      {
+        "element": {
+          "nodeName": "INPUT",
+          "id": "glowDestinationType",
+          "class": "nav-progressive-attribute"
+        },
+        "gapType": "missing_from_a11y_tree",
+        "severity": "critical",
+        "evidence": "INPUT element with interactivity signals is not exposed in the accessibility tree"
+      },
+      {
+        "element": {
+          "nodeName": "INPUT"
+        },
+        "gapType": "missing_from_a11y_tree",
+        "severity": "critical",
+        "evidence": "INPUT element with interactivity signals is not exposed in the accessibility tree"
+      },
+      {
+        "element": {
+          "nodeName": "SELECT",
+          "id": "searchDropdownBox",
+          "class": "nav-search-dropdown searchSelect nav-progressive-attrubute nav-progressive-search-dropdown"
+        },
+        "gapType": "no_accessible_name",
+        "severity": "serious",
+        "evidence": "Interactive SELECT element has no accessible name"
+      },
+      {
+        "element": {
+          "nodeName": "NAV",
+          "id": "shortcut-menu",
+          "class": "nav-assistant"
+        },
+        "gapType": "not_focusable",
+        "severity": "critical",
+        "evidence": "NAV element has click handlers but tabindex=\"-1\" makes it unfocusable"
+      },
+      {
+        "element": {
+          "nodeName": "A",
+          "id": "skippedLink"
+        },
+        "gapType": "missing_from_a11y_tree",
+        "severity": "critical",
+        "evidence": "A element with interactivity signals is not exposed in the accessibility tree"
+      },
+      {
+        "element": {
+          "nodeName": "DIV",
+          "id": "icp-touch-link-language",
+          "class": "icp-button"
+        },
+        "gapType": "missing_from_a11y_tree",
+        "severity": "critical",
+        "evidence": "DIV element with interactivity signals is not exposed in the accessibility tree"
+      }
+    ],
+    "https://www.amazon.com/gp/css/order-history?ref_=nav_orders_first": [
+      {
+        "element": {
+          "nodeName": "A",
+          "class": "a-link-normal"
+        },
+        "gapType": "missing_from_a11y_tree",
+        "severity": "critical",
+        "evidence": "A element with interactivity signals is not exposed in the accessibility tree"
+      },
+      {
+        "element": {
+          "nodeName": "A",
+          "id": "auth-fpp-link-bottom",
+          "class": "a-link-normal"
+        },
+        "gapType": "missing_from_a11y_tree",
+        "severity": "critical",
+        "evidence": "A element with interactivity signals is not exposed in the accessibility tree"
+      },
+      {
+        "element": {
+          "nodeName": "A",
+          "id": "ap-other-signin-issues-link",
+          "class": "a-link-normal"
+        },
+        "gapType": "missing_from_a11y_tree",
+        "severity": "critical",
+        "evidence": "A element with interactivity signals is not exposed in the accessibility tree"
+      },
+      {
+        "element": {
+          "nodeName": "INPUT"
+        },
+        "gapType": "missing_from_a11y_tree",
+        "severity": "critical",
+        "evidence": "INPUT element with interactivity signals is not exposed in the accessibility tree"
+      },
+      {
+        "element": {
+          "nodeName": "INPUT"
+        },
+        "gapType": "missing_from_a11y_tree",
+        "severity": "critical",
+        "evidence": "INPUT element with interactivity signals is not exposed in the accessibility tree"
+      },
+      {
+        "element": {
+          "nodeName": "INPUT"
+        },
+        "gapType": "missing_from_a11y_tree",
+        "severity": "critical",
+        "evidence": "INPUT element with interactivity signals is not exposed in the accessibility tree"
+      },
+      {
+        "element": {
+          "nodeName": "INPUT"
+        },
+        "gapType": "missing_from_a11y_tree",
+        "severity": "critical",
+        "evidence": "INPUT element with interactivity signals is not exposed in the accessibility tree"
+      },
+      {
+        "element": {
+          "nodeName": "INPUT"
+        },
+        "gapType": "missing_from_a11y_tree",
+        "severity": "critical",
+        "evidence": "INPUT element with interactivity signals is not exposed in the accessibility tree"
+      },
+      {
+        "element": {
+          "nodeName": "INPUT"
+        },
+        "gapType": "missing_from_a11y_tree",
+        "severity": "critical",
+        "evidence": "INPUT element with interactivity signals is not exposed in the accessibility tree"
+      },
+      {
+        "element": {
+          "nodeName": "INPUT"
+        },
+        "gapType": "missing_from_a11y_tree",
+        "severity": "critical",
+        "evidence": "INPUT element with interactivity signals is not exposed in the accessibility tree"
+      },
+      {
+        "element": {
+          "nodeName": "INPUT"
+        },
+        "gapType": "missing_from_a11y_tree",
+        "severity": "critical",
+        "evidence": "INPUT element with interactivity signals is not exposed in the accessibility tree"
+      },
+      {
+        "element": {
+          "nodeName": "INPUT",
+          "id": "ap-credential-autofill-hint",
+          "class": "a-input-text hide"
+        },
+        "gapType": "missing_from_a11y_tree",
+        "severity": "critical",
+        "evidence": "INPUT element with interactivity signals is not exposed in the accessibility tree"
+      },
+      {
+        "element": {
+          "nodeName": "INPUT"
+        },
+        "gapType": "missing_from_a11y_tree",
+        "severity": "critical",
+        "evidence": "INPUT element with interactivity signals is not exposed in the accessibility tree"
+      },
+      {
+        "element": {
+          "nodeName": "INPUT"
+        },
+        "gapType": "missing_from_a11y_tree",
+        "severity": "critical",
+        "evidence": "INPUT element with interactivity signals is not exposed in the accessibility tree"
+      },
+      {
+        "element": {
+          "nodeName": "INPUT"
+        },
+        "gapType": "missing_from_a11y_tree",
+        "severity": "critical",
+        "evidence": "INPUT element with interactivity signals is not exposed in the accessibility tree"
+      },
+      {
+        "element": {
+          "nodeName": "SPAN",
+          "id": "continue",
+          "class": "a-button a-button-span12 a-button-primary"
+        },
+        "gapType": "missing_from_a11y_tree",
+        "severity": "critical",
+        "evidence": "SPAN element with interactivity signals is not exposed in the accessibility tree"
+      }
+    ]
+  }
+}

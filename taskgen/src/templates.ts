@@ -1,13 +1,13 @@
 /**
- * Task Templates - Structured step-by-step task templates for accessibility testing.
+ * Task Templates - Journey-based task templates for accessibility testing.
  *
- * Each template generates goals with numbered steps that guide the agent through
- * specific accessibility testing scenarios.
+ * All tasks are journeys that simulate real user behavior while covering
+ * accessibility requirements. Each journey explores a page or flow comprehensively.
  *
  * Goal Structure:
  * - Each step is numbered (1. 2. 3.)
  * - Steps start with action verbs (Navigate to, Click, Type, Report)
- * - Final step reports success/failure with specific reason
+ * - Final step reports success/failure with specific findings
  */
 
 import { TaskStep, AccessibilityTask, ElementNode, PageElementGraph } from './types';
@@ -15,7 +15,7 @@ import { TaskStep, AccessibilityTask, ElementNode, PageElementGraph } from './ty
 // ==================== Template Types ====================
 
 export interface TaskTemplate {
-  type: 'atomic' | 'journey';
+  type: 'journey';
   name: string;
   description: string;
   wcagCriteria: string[];
@@ -33,236 +33,111 @@ export interface TemplateContext {
   searchQuery?: string;
   email?: string;
   password?: string;
+  // Element summaries for comprehensive exploration
+  headingCount?: number;
+  landmarkCount?: number;
+  linkCount?: number;
+  buttonCount?: number;
+  formFieldCount?: number;
+  headingNames?: string;
+  landmarkNames?: string;
 }
-
-// ==================== Atomic Task Templates ====================
-
-export const ATOMIC_TEMPLATES: Record<string, TaskTemplate> = {
-  headings: {
-    type: 'atomic',
-    name: 'Heading Navigation',
-    description: 'Navigate through all headings and verify hierarchy',
-    wcagCriteria: ['1.3.1', '2.4.6'],
-    generateGoal: (ctx) => {
-      const headingNames = ctx.elements
-        .filter((e) => e.typeFlags.headingLevel)
-        .slice(0, 5)
-        .map((e) => e.name || `heading level ${e.typeFlags.headingLevel}`)
-        .join(', ');
-
-      return [
-        `1. Navigate to first heading using H key.`,
-        `2. Note the heading level and text.`,
-        `3. Navigate to next heading using H key.`,
-        `4. Continue navigating through all headings (expected: ${headingNames || 'various headings'}).`,
-        `5. Report success with the reason listing all headings found (e.g., "h1: Title, h2: Section1, h2: Section2") and any hierarchy issues (e.g., h1 followed by h4 skipping h2/h3).`,
-      ].join(' ');
-    },
-    generateSteps: (ctx) => [
-      { stepNumber: 1, action: 'navigate', target: 'first heading', key: 'h' },
-      { stepNumber: 2, action: 'traverse', key: 'h' },
-      { stepNumber: 3, action: 'report', expectedOutcome: 'list of all headings with levels and hierarchy analysis' },
-    ],
-  },
-
-  landmarks: {
-    type: 'atomic',
-    name: 'Landmark Navigation',
-    description: 'Navigate through all landmarks and verify page structure',
-    wcagCriteria: ['1.3.1', '2.4.1'],
-    generateGoal: (ctx) => {
-      const landmarkNames = ctx.elements
-        .filter((e) => e.typeFlags.isLandmark)
-        .map((e) => e.typeFlags.landmarkRole || 'region')
-        .join(', ');
-
-      return [
-        `1. Navigate to banner landmark using D key.`,
-        `2. Navigate to navigation landmark using D key.`,
-        `3. Navigate to main landmark using D key.`,
-        `4. Navigate to contentinfo landmark using D key.`,
-        `5. Continue through all landmarks on the page.`,
-        `6. Report success with the reason listing all landmarks found (expected: ${landmarkNames || 'banner, navigation, main, contentinfo'}) and any missing required landmarks.`,
-      ].join(' ');
-    },
-    generateSteps: (ctx) => [
-      { stepNumber: 1, action: 'navigate', target: 'banner landmark', key: 'd' },
-      { stepNumber: 2, action: 'navigate', target: 'navigation landmark', key: 'd' },
-      { stepNumber: 3, action: 'navigate', target: 'main landmark', key: 'd' },
-      { stepNumber: 4, action: 'navigate', target: 'contentinfo landmark', key: 'd' },
-      { stepNumber: 5, action: 'report', expectedOutcome: 'list of all landmarks and missing required landmarks' },
-    ],
-  },
-
-  buttons: {
-    type: 'atomic',
-    name: 'Button Accessibility',
-    description: 'Find and verify all buttons have accessible names',
-    wcagCriteria: ['4.1.2', '2.1.1'],
-    generateGoal: (ctx) => {
-      const buttonCount = ctx.elements.filter((e) => e.typeFlags.isButton).length;
-      const buttonNames = ctx.elements
-        .filter((e) => e.typeFlags.isButton)
-        .slice(0, 3)
-        .map((e) => e.name || '[unnamed]')
-        .join(', ');
-
-      return [
-        `1. Navigate to first button on page using B key.`,
-        `2. Note the button's accessible name.`,
-        `3. Navigate to next button using B key.`,
-        `4. Continue through all buttons (expected count: ${buttonCount}, examples: ${buttonNames || 'various buttons'}).`,
-        `5. For each button, verify it has a descriptive accessible name.`,
-        `6. Report success with the reason listing all buttons found and any that lacked accessible names or had generic names like "button" or "click here".`,
-      ].join(' ');
-    },
-    generateSteps: (ctx) => [
-      { stepNumber: 1, action: 'navigate', target: 'first button', key: 'b' },
-      { stepNumber: 2, action: 'traverse', key: 'b' },
-      { stepNumber: 3, action: 'report', expectedOutcome: 'list of buttons with their accessible names' },
-    ],
-  },
-
-  forms: {
-    type: 'atomic',
-    name: 'Form Field Accessibility',
-    description: 'Navigate through form fields and verify labels',
-    wcagCriteria: ['1.3.1', '4.1.2', '3.3.2'],
-    generateGoal: (ctx) => {
-      const formFields = ctx.elements.filter((e) => e.typeFlags.isFormField);
-      const fieldNames = formFields
-        .slice(0, 3)
-        .map((e) => e.name || e.role)
-        .join(', ');
-
-      return [
-        `1. Navigate to ${ctx.formName || 'the form'} using landmarks or headings.`,
-        `2. Navigate to first form field using F key or Tab.`,
-        `3. Note the field's accessible label/name.`,
-        `4. Type sample data into text fields (use "test" for text, "test@example.com" for email).`,
-        `5. Navigate to next field using Tab.`,
-        `6. Continue through all form fields (expected: ${fieldNames || 'various fields'}).`,
-        `7. Navigate to and click Submit button.`,
-        `8. Report success with the reason listing all form fields found, any unlabeled fields, and the form submission result.`,
-      ].join(' ');
-    },
-    generateSteps: (ctx) => [
-      { stepNumber: 1, action: 'navigate', target: ctx.formName || 'form' },
-      { stepNumber: 2, action: 'navigate', target: 'first form field', key: 'f' },
-      { stepNumber: 3, action: 'type', target: 'text field', text: 'test' },
-      { stepNumber: 4, action: 'traverse', key: 'Tab' },
-      { stepNumber: 5, action: 'navigate_click', target: 'Submit button' },
-      { stepNumber: 6, action: 'report', expectedOutcome: 'form fields found and submission result' },
-    ],
-  },
-
-  links: {
-    type: 'atomic',
-    name: 'Link Accessibility',
-    description: 'Navigate through links and verify descriptive text',
-    wcagCriteria: ['2.4.4', '2.1.1', '2.4.7'],
-    generateGoal: (ctx) => {
-      const linkCount = ctx.elements.filter((e) => e.typeFlags.isLink).length;
-
-      return [
-        `1. Navigate to first link on page using K key.`,
-        `2. Note the link's accessible name and whether it's descriptive.`,
-        `3. Navigate to next link using K key.`,
-        `4. Continue through all links (expected count: approximately ${linkCount}).`,
-        `5. For each link, assess if the link text alone conveys the destination/purpose.`,
-        `6. Report success with the reason listing link names that are non-descriptive (e.g., "click here", "read more", "link") and total link count.`,
-      ].join(' ');
-    },
-    generateSteps: (ctx) => [
-      { stepNumber: 1, action: 'navigate', target: 'first link', key: 'k' },
-      { stepNumber: 2, action: 'traverse', key: 'k' },
-      { stepNumber: 3, action: 'report', expectedOutcome: 'list of non-descriptive link names' },
-    ],
-  },
-
-  tables: {
-    type: 'atomic',
-    name: 'Table Accessibility',
-    description: 'Navigate through tables and verify header associations',
-    wcagCriteria: ['1.3.1', '1.3.2'],
-    generateGoal: (ctx) => {
-      const tableCount = ctx.elements.filter((e) => e.typeFlags.isTable).length;
-
-      return [
-        `1. Navigate to table using T key.`,
-        `2. Navigate through table headers (th elements).`,
-        `3. Navigate through first row of data cells.`,
-        `4. Verify screen reader announces header associations with data cells.`,
-        `5. Navigate to next row and verify header associations.`,
-        `6. If multiple tables exist (found: ${tableCount}), navigate to next table using T key.`,
-        `7. Report success with the reason describing table structure (number of headers, rows, columns) and any missing header associations or scope attributes.`,
-      ].join(' ');
-    },
-    generateSteps: (ctx) => [
-      { stepNumber: 1, action: 'navigate', target: 'table', key: 't' },
-      { stepNumber: 2, action: 'traverse', key: 'ArrowDown' },
-      { stepNumber: 3, action: 'report', expectedOutcome: 'table structure and header associations' },
-    ],
-  },
-
-  navigation: {
-    type: 'atomic',
-    name: 'Navigation Menu',
-    description: 'Navigate through all navigation links',
-    wcagCriteria: ['2.4.4', '2.1.1', '2.4.7'],
-    generateGoal: (ctx) => {
-      const navLinks = ctx.elements
-        .filter((e) => e.typeFlags.isLink)
-        .slice(0, 5)
-        .map((e) => e.name)
-        .filter(Boolean)
-        .join(', ');
-
-      return [
-        `1. Navigate to main navigation landmark using D key.`,
-        `2. Navigate to first navigation link.`,
-        `3. Note the link's accessible name.`,
-        `4. Navigate to and click the first nav link.`,
-        `5. Use browser back or navigate back to ${ctx.pageTitle || 'the page'}.`,
-        `6. Navigate to and click the second nav link.`,
-        `7. Continue for remaining navigation links (expected: ${navLinks || 'various links'}).`,
-        `8. Report success with the reason listing all navigation links visited and their destinations.`,
-      ].join(' ');
-    },
-    generateSteps: (ctx) => [
-      { stepNumber: 1, action: 'navigate', target: 'navigation landmark', key: 'd' },
-      { stepNumber: 2, action: 'navigate_click', target: 'first nav link' },
-      { stepNumber: 3, action: 'navigate_click', target: 'second nav link' },
-      { stepNumber: 4, action: 'report', expectedOutcome: 'navigation links and destinations' },
-    ],
-  },
-
-  fullPageTraversal: {
-    type: 'atomic',
-    name: 'Full Page Traversal',
-    description: 'Traverse all elements on a page',
-    wcagCriteria: ['4.1.2', '2.1.1'],
-    generateGoal: (ctx) => {
-      return [
-        `1. Navigate to main landmark using D key.`,
-        `2. Navigate through all elements using Arrow Down key.`,
-        `3. For each interactive element encountered, note its name and role.`,
-        `4. Continue until reaching the end of the page or footer.`,
-        `5. Navigate back to top using Arrow Up repeatedly or page reload.`,
-        `6. Report success with the reason listing total elements traversed, interactive elements found, and any elements without accessible names.`,
-      ].join(' ');
-    },
-    generateSteps: (ctx) => [
-      { stepNumber: 1, action: 'navigate', target: 'main landmark', key: 'd' },
-      { stepNumber: 2, action: 'traverse', key: 'ArrowDown' },
-      { stepNumber: 3, action: 'report', expectedOutcome: 'total elements and any without accessible names' },
-    ],
-  },
-};
 
 // ==================== Journey Task Templates ====================
 
 export const JOURNEY_TEMPLATES: Record<string, TaskTemplate> = {
+  /**
+   * Comprehensive page exploration - covers landmarks, headings, and interactive elements
+   */
+  explorePageStructure: {
+    type: 'journey',
+    name: 'Explore Page Structure',
+    description: 'Explore the full page structure including landmarks, headings, and key interactive elements',
+    wcagCriteria: ['1.3.1', '2.4.1', '2.4.6', '4.1.2'],
+    generateGoal: (ctx) => {
+      return [
+        `1. Navigate to ${ctx.pageUrl}.`,
+        `2. Navigate through all landmarks using D key (expected: ${ctx.landmarkNames || 'banner, navigation, main, contentinfo'}).`,
+        `3. Return to top using Control+Home.`,
+        `4. Navigate through all headings using H key to understand page structure${ctx.headingNames ? ` (expected: ${ctx.headingNames})` : ''}.`,
+        `5. Navigate to main content area.`,
+        `6. Explore interactive elements (links, buttons) in the main content using Tab.`,
+        `7. Report success with: (a) landmarks found and any missing required ones (main, navigation), (b) heading hierarchy and any issues, (c) any interactive elements without accessible names.`,
+      ].join(' ');
+    },
+    generateSteps: (ctx) => [
+      { stepNumber: 1, action: 'navigate', target: ctx.pageUrl },
+      { stepNumber: 2, action: 'traverse', key: 'd' },
+      { stepNumber: 3, action: 'navigate', target: 'top', key: 'Control+Home' },
+      { stepNumber: 4, action: 'traverse', key: 'h' },
+      { stepNumber: 5, action: 'navigate', target: 'main', key: 'd' },
+      { stepNumber: 6, action: 'traverse', key: 'Tab' },
+      { stepNumber: 7, action: 'report', expectedOutcome: 'page structure analysis' },
+    ],
+  },
+
+  /**
+   * Explore navigation menu and verify all links work
+   */
+  exploreNavigation: {
+    type: 'journey',
+    name: 'Explore Navigation',
+    description: 'Navigate through the main navigation menu and verify link destinations',
+    wcagCriteria: ['2.4.4', '2.1.1', '2.4.7'],
+    generateGoal: (ctx) => {
+      return [
+        `1. Navigate to ${ctx.pageUrl}.`,
+        `2. Navigate to navigation landmark using D key.`,
+        `3. Navigate through navigation links using Tab or K key.`,
+        `4. Click the first navigation link and verify page loads.`,
+        `5. Navigate back using browser back or navigation.`,
+        `6. Click the second navigation link and verify page loads.`,
+        `7. Continue testing at least 3-5 navigation links.`,
+        `8. Report success with: (a) all navigation links found and their destinations, (b) any links with vague names like "click here" or "read more", (c) any broken links or navigation issues.`,
+      ].join(' ');
+    },
+    generateSteps: (ctx) => [
+      { stepNumber: 1, action: 'navigate', target: ctx.pageUrl },
+      { stepNumber: 2, action: 'navigate', target: 'navigation', key: 'd' },
+      { stepNumber: 3, action: 'traverse', key: 'Tab' },
+      { stepNumber: 4, action: 'navigate_click', target: 'first nav link' },
+      { stepNumber: 5, action: 'navigate_click', target: 'second nav link' },
+      { stepNumber: 6, action: 'report', expectedOutcome: 'navigation analysis' },
+    ],
+  },
+
+  /**
+   * Form interaction journey
+   */
+  interactWithForm: {
+    type: 'journey',
+    name: 'Form Interaction',
+    description: 'Find and interact with a form, testing all fields and submission',
+    wcagCriteria: ['1.3.1', '4.1.2', '3.3.2', '2.1.1'],
+    generateGoal: (ctx) => {
+      return [
+        `1. Navigate to ${ctx.pageUrl}.`,
+        `2. Navigate to ${ctx.formName || 'the form'} using landmarks, headings, or Tab navigation.`,
+        `3. Navigate through all form fields using Tab key.`,
+        `4. For each text field, verify it has a label and type sample data ("Test" for text, "test@example.com" for email, "TestPassword123" for password).`,
+        `5. For checkboxes/radio buttons, verify labels and toggle state.`,
+        `6. Navigate to and click the Submit/Send button.`,
+        `7. Report success with: (a) all form fields found and their labels, (b) any fields missing labels, (c) form submission result or validation errors, (d) any keyboard navigation issues.`,
+      ].join(' ');
+    },
+    generateSteps: (ctx) => [
+      { stepNumber: 1, action: 'navigate', target: ctx.pageUrl },
+      { stepNumber: 2, action: 'navigate', target: ctx.formName || 'form' },
+      { stepNumber: 3, action: 'traverse', key: 'Tab' },
+      { stepNumber: 4, action: 'type', target: 'text fields', text: 'test data' },
+      { stepNumber: 5, action: 'navigate_click', target: 'Submit button' },
+      { stepNumber: 6, action: 'report', expectedOutcome: 'form interaction results' },
+    ],
+  },
+
+  /**
+   * Login flow
+   */
   login: {
     type: 'journey',
     name: 'Login Flow',
@@ -270,142 +145,315 @@ export const JOURNEY_TEMPLATES: Record<string, TaskTemplate> = {
     wcagCriteria: ['2.1.1', '4.1.2', '3.3.2'],
     generateGoal: (ctx) => {
       return [
-        `1. Navigate to and click Login link.`,
-        `2. Navigate to username/email field and type '${ctx.email || 'test@example.com'}'.`,
-        `3. Navigate to password field and type '${ctx.password || 'TestPassword123'}'.`,
-        `4. Navigate to and click Sign In/Login button.`,
-        `5. Report success with the reason as the authenticated page URL or any error message displayed.`,
+        `1. Navigate to ${ctx.pageUrl}.`,
+        `2. Navigate to and click Login/Sign In link.`,
+        `3. Navigate to username/email field and type '${ctx.email || 'test@example.com'}'.`,
+        `4. Navigate to password field and type '${ctx.password || 'TestPassword123'}'.`,
+        `5. Navigate to and click Sign In/Login/Submit button.`,
+        `6. Report success with: (a) whether login form was keyboard accessible, (b) whether fields had proper labels, (c) the result (authenticated page URL or error message).`,
       ].join(' ');
     },
     generateSteps: (ctx) => [
-      { stepNumber: 1, action: 'navigate_click', target: 'Login link' },
-      { stepNumber: 2, action: 'type', target: 'email field', text: ctx.email || 'test@example.com' },
-      { stepNumber: 3, action: 'type', target: 'password field', text: ctx.password || 'TestPassword123' },
-      { stepNumber: 4, action: 'navigate_click', target: 'Sign In button' },
-      { stepNumber: 5, action: 'report', expectedOutcome: 'authenticated page URL or error message' },
+      { stepNumber: 1, action: 'navigate', target: ctx.pageUrl },
+      { stepNumber: 2, action: 'navigate_click', target: 'Login link' },
+      { stepNumber: 3, action: 'type', target: 'email field', text: ctx.email || 'test@example.com' },
+      { stepNumber: 4, action: 'type', target: 'password field', text: ctx.password || 'TestPassword123' },
+      { stepNumber: 5, action: 'navigate_click', target: 'Sign In button' },
+      { stepNumber: 6, action: 'report', expectedOutcome: 'login result' },
     ],
   },
 
+  /**
+   * Search flow
+   */
   search: {
     type: 'journey',
     name: 'Search Flow',
-    description: 'Use search functionality with keyboard navigation',
+    description: 'Use search functionality and interact with results',
     wcagCriteria: ['2.1.1', '4.1.2', '1.3.1'],
     generateGoal: (ctx) => {
       return [
-        `1. Navigate to search input field.`,
-        `2. Type '${ctx.searchQuery || 'accessibility'}'.`,
-        `3. Navigate to and click Search button (or press Enter to submit).`,
-        `4. Navigate to first search result.`,
-        `5. Navigate to and click first result link.`,
-        `6. Report success with the reason as the number of results found and destination URL.`,
+        `1. Navigate to ${ctx.pageUrl}.`,
+        `2. Navigate to search input field (may be in header or navigation).`,
+        `3. Type '${ctx.searchQuery || 'test'}'.`,
+        `4. Submit search using Enter or by clicking Search button.`,
+        `5. Navigate through search results using headings or Tab.`,
+        `6. Click on the first search result.`,
+        `7. Report success with: (a) whether search was keyboard accessible, (b) number of results found, (c) whether results were navigable, (d) destination of first result.`,
       ].join(' ');
     },
     generateSteps: (ctx) => [
-      { stepNumber: 1, action: 'navigate', target: 'search input' },
-      { stepNumber: 2, action: 'type', target: 'search input', text: ctx.searchQuery || 'accessibility' },
-      { stepNumber: 3, action: 'activate', target: 'search', key: 'Enter' },
-      { stepNumber: 4, action: 'navigate_click', target: 'first result' },
-      { stepNumber: 5, action: 'report', expectedOutcome: 'number of results and destination URL' },
+      { stepNumber: 1, action: 'navigate', target: ctx.pageUrl },
+      { stepNumber: 2, action: 'navigate', target: 'search input' },
+      { stepNumber: 3, action: 'type', target: 'search input', text: ctx.searchQuery || 'test' },
+      { stepNumber: 4, action: 'activate', target: 'search', key: 'Enter' },
+      { stepNumber: 5, action: 'traverse', key: 'Tab' },
+      { stepNumber: 6, action: 'navigate_click', target: 'first result' },
+      { stepNumber: 7, action: 'report', expectedOutcome: 'search results analysis' },
     ],
   },
 
-  navigation: {
-    type: 'journey',
-    name: 'Page Navigation',
-    description: 'Navigate from one page to another using keyboard',
-    wcagCriteria: ['2.1.1', '2.4.4', '2.4.7'],
-    generateGoal: (ctx) => {
-      return [
-        `1. Navigate to main navigation using D key.`,
-        `2. Navigate to and click ${ctx.targetUrl ? 'target page' : 'first navigation'} link.`,
-        `3. Verify the page loads and main content is accessible.`,
-        `4. Navigate to main landmark on new page.`,
-        `5. Navigate through first few elements to verify page structure.`,
-        `6. Report success with the reason as the destination URL and confirmation that main content is keyboard accessible.`,
-      ].join(' ');
-    },
-    generateSteps: (ctx) => [
-      { stepNumber: 1, action: 'navigate', target: 'navigation landmark', key: 'd' },
-      { stepNumber: 2, action: 'navigate_click', target: 'target link' },
-      { stepNumber: 3, action: 'navigate', target: 'main landmark', key: 'd' },
-      { stepNumber: 4, action: 'report', expectedOutcome: 'destination URL and main content accessibility' },
-    ],
-  },
-
-  addToCart: {
-    type: 'journey',
-    name: 'Add to Cart',
-    description: 'Add a product to cart using keyboard navigation',
-    wcagCriteria: ['2.1.1', '4.1.2', '3.3.2'],
-    generateGoal: (ctx) => {
-      return [
-        `1. Navigate to and click Products/Shop link in navigation.`,
-        `2. Navigate to first product in the listing.`,
-        `3. Navigate to and click product link or image.`,
-        `4. Navigate to and click Add to Cart button.`,
-        `5. Navigate to and click Cart/Checkout link.`,
-        `6. Report success with the reason as the cart contents announced by screen reader.`,
-      ].join(' ');
-    },
-    generateSteps: (ctx) => [
-      { stepNumber: 1, action: 'navigate_click', target: 'Products link' },
-      { stepNumber: 2, action: 'navigate_click', target: 'first product' },
-      { stepNumber: 3, action: 'navigate_click', target: 'Add to Cart button' },
-      { stepNumber: 4, action: 'navigate_click', target: 'Cart link' },
-      { stepNumber: 5, action: 'report', expectedOutcome: 'cart contents' },
-    ],
-  },
-
-  checkout: {
-    type: 'journey',
-    name: 'Checkout Flow',
-    description: 'Complete a checkout flow using keyboard navigation',
-    wcagCriteria: ['2.1.1', '4.1.2', '3.3.2', '3.3.1'],
-    generateGoal: (ctx) => {
-      return [
-        `1. Navigate to Cart/Checkout link and click.`,
-        `2. Navigate to and click Proceed to Checkout button.`,
-        `3. Navigate through shipping form fields using Tab.`,
-        `4. Fill in required shipping fields (name, address, etc.) using test data.`,
-        `5. Navigate to and click Continue/Next button.`,
-        `6. Navigate through payment form if present.`,
-        `7. Navigate to and click Place Order/Complete button.`,
-        `8. Report success with the reason as order confirmation or any validation errors encountered.`,
-      ].join(' ');
-    },
-    generateSteps: (ctx) => [
-      { stepNumber: 1, action: 'navigate_click', target: 'Cart link' },
-      { stepNumber: 2, action: 'navigate_click', target: 'Checkout button' },
-      { stepNumber: 3, action: 'traverse', key: 'Tab' },
-      { stepNumber: 4, action: 'type', target: 'name field', text: 'Test User' },
-      { stepNumber: 5, action: 'navigate_click', target: 'Place Order button' },
-      { stepNumber: 6, action: 'report', expectedOutcome: 'order confirmation or validation errors' },
-    ],
-  },
-
+  /**
+   * Contact form submission
+   */
   contactForm: {
     type: 'journey',
     name: 'Contact Form',
-    description: 'Submit a contact form using keyboard navigation',
+    description: 'Find and submit a contact form',
     wcagCriteria: ['2.1.1', '4.1.2', '3.3.2'],
     generateGoal: (ctx) => {
       return [
-        `1. Navigate to and click Contact link.`,
-        `2. Navigate to name field and type 'Test User'.`,
-        `3. Navigate to email field and type 'test@example.com'.`,
-        `4. Navigate to message/textarea field and type 'This is a test message for accessibility testing.'.`,
-        `5. Navigate to and click Submit/Send button.`,
-        `6. Report success with the reason as the confirmation message or any validation errors.`,
+        `1. Navigate to ${ctx.pageUrl}.`,
+        `2. Navigate to and click Contact link (may be in navigation or footer).`,
+        `3. Navigate to contact form.`,
+        `4. Navigate to name field and type 'Test User'.`,
+        `5. Navigate to email field and type 'test@example.com'.`,
+        `6. Navigate to message/textarea field and type 'This is a test message for accessibility testing.'.`,
+        `7. Navigate to and click Submit/Send button.`,
+        `8. Report success with: (a) all form fields found, (b) any fields missing labels, (c) confirmation message or validation errors.`,
       ].join(' ');
     },
     generateSteps: (ctx) => [
-      { stepNumber: 1, action: 'navigate_click', target: 'Contact link' },
-      { stepNumber: 2, action: 'type', target: 'name field', text: 'Test User' },
-      { stepNumber: 3, action: 'type', target: 'email field', text: 'test@example.com' },
-      { stepNumber: 4, action: 'type', target: 'message field', text: 'This is a test message for accessibility testing.' },
-      { stepNumber: 5, action: 'navigate_click', target: 'Submit button' },
-      { stepNumber: 6, action: 'report', expectedOutcome: 'confirmation message or validation errors' },
+      { stepNumber: 1, action: 'navigate', target: ctx.pageUrl },
+      { stepNumber: 2, action: 'navigate_click', target: 'Contact link' },
+      { stepNumber: 3, action: 'type', target: 'name field', text: 'Test User' },
+      { stepNumber: 4, action: 'type', target: 'email field', text: 'test@example.com' },
+      { stepNumber: 5, action: 'type', target: 'message field', text: 'This is a test message.' },
+      { stepNumber: 6, action: 'navigate_click', target: 'Submit button' },
+      { stepNumber: 7, action: 'report', expectedOutcome: 'form submission result' },
+    ],
+  },
+
+  /**
+   * Registration flow
+   */
+  registration: {
+    type: 'journey',
+    name: 'Registration Flow',
+    description: 'Complete a user registration flow',
+    wcagCriteria: ['2.1.1', '4.1.2', '3.3.2', '3.3.1'],
+    generateGoal: (ctx) => {
+      return [
+        `1. Navigate to ${ctx.pageUrl}.`,
+        `2. Navigate to and click Register/Sign Up/Create Account link.`,
+        `3. Navigate through registration form fields using Tab.`,
+        `4. Fill in name field with 'Test User'.`,
+        `5. Fill in email field with 'test@example.com'.`,
+        `6. Fill in password field with 'TestPassword123'.`,
+        `7. Fill in confirm password if present with 'TestPassword123'.`,
+        `8. Check any required checkboxes (terms, etc.) if present.`,
+        `9. Navigate to and click Register/Submit button.`,
+        `10. Report success with: (a) all fields found and their labels, (b) any validation errors, (c) registration result.`,
+      ].join(' ');
+    },
+    generateSteps: (ctx) => [
+      { stepNumber: 1, action: 'navigate', target: ctx.pageUrl },
+      { stepNumber: 2, action: 'navigate_click', target: 'Register link' },
+      { stepNumber: 3, action: 'traverse', key: 'Tab' },
+      { stepNumber: 4, action: 'type', target: 'fields', text: 'test data' },
+      { stepNumber: 5, action: 'navigate_click', target: 'Register button' },
+      { stepNumber: 6, action: 'report', expectedOutcome: 'registration result' },
+    ],
+  },
+
+  /**
+   * E-commerce: Add to cart
+   */
+  addToCart: {
+    type: 'journey',
+    name: 'Add to Cart',
+    description: 'Browse products and add one to cart',
+    wcagCriteria: ['2.1.1', '4.1.2', '3.3.2'],
+    generateGoal: (ctx) => {
+      return [
+        `1. Navigate to ${ctx.pageUrl}.`,
+        `2. Navigate to Products/Shop/Store link in navigation and click.`,
+        `3. Navigate through product listings using headings or Tab.`,
+        `4. Click on a product to view details.`,
+        `5. Navigate to and click Add to Cart button.`,
+        `6. Navigate to Cart/Basket link and click.`,
+        `7. Report success with: (a) whether products were keyboard navigable, (b) whether Add to Cart was accessible, (c) cart contents after adding.`,
+      ].join(' ');
+    },
+    generateSteps: (ctx) => [
+      { stepNumber: 1, action: 'navigate', target: ctx.pageUrl },
+      { stepNumber: 2, action: 'navigate_click', target: 'Products link' },
+      { stepNumber: 3, action: 'traverse', key: 'Tab' },
+      { stepNumber: 4, action: 'navigate_click', target: 'product' },
+      { stepNumber: 5, action: 'navigate_click', target: 'Add to Cart' },
+      { stepNumber: 6, action: 'navigate_click', target: 'Cart' },
+      { stepNumber: 7, action: 'report', expectedOutcome: 'cart contents' },
+    ],
+  },
+
+  /**
+   * E-commerce: Checkout flow
+   */
+  checkout: {
+    type: 'journey',
+    name: 'Checkout Flow',
+    description: 'Complete a checkout flow from cart',
+    wcagCriteria: ['2.1.1', '4.1.2', '3.3.2', '3.3.1'],
+    generateGoal: (ctx) => {
+      return [
+        `1. Navigate to ${ctx.pageUrl}.`,
+        `2. Navigate to Cart link and click.`,
+        `3. Navigate to and click Checkout/Proceed button.`,
+        `4. Navigate through shipping/billing form fields using Tab.`,
+        `5. Fill in required fields (name: 'Test User', address: '123 Test St', city: 'Test City', zip: '12345').`,
+        `6. Navigate to and click Continue/Next/Place Order button.`,
+        `7. Report success with: (a) checkout form accessibility, (b) any fields missing labels, (c) any validation errors, (d) order result or how far you got.`,
+      ].join(' ');
+    },
+    generateSteps: (ctx) => [
+      { stepNumber: 1, action: 'navigate', target: ctx.pageUrl },
+      { stepNumber: 2, action: 'navigate_click', target: 'Cart' },
+      { stepNumber: 3, action: 'navigate_click', target: 'Checkout' },
+      { stepNumber: 4, action: 'traverse', key: 'Tab' },
+      { stepNumber: 5, action: 'type', target: 'form fields', text: 'test data' },
+      { stepNumber: 6, action: 'navigate_click', target: 'Place Order' },
+      { stepNumber: 7, action: 'report', expectedOutcome: 'checkout result' },
+    ],
+  },
+
+  /**
+   * Explore a specific content page (article, blog post, etc.)
+   */
+  exploreContentPage: {
+    type: 'journey',
+    name: 'Explore Content Page',
+    description: 'Navigate through a content page reading experience',
+    wcagCriteria: ['1.3.1', '2.4.6', '2.4.4', '2.1.1'],
+    generateGoal: (ctx) => {
+      return [
+        `1. Navigate to ${ctx.pageUrl}.`,
+        `2. Navigate through page headings using H key to understand content structure.`,
+        `3. Navigate to main content landmark using D key.`,
+        `4. Read through content using Arrow Down key.`,
+        `5. Navigate through any links in the content using K key.`,
+        `6. Check for any images and verify they have alt text descriptions announced.`,
+        `7. Navigate to related content or footer.`,
+        `8. Report success with: (a) heading structure (levels and hierarchy), (b) any links with vague names, (c) any images without alt text, (d) overall keyboard navigability.`,
+      ].join(' ');
+    },
+    generateSteps: (ctx) => [
+      { stepNumber: 1, action: 'navigate', target: ctx.pageUrl },
+      { stepNumber: 2, action: 'traverse', key: 'h' },
+      { stepNumber: 3, action: 'navigate', target: 'main', key: 'd' },
+      { stepNumber: 4, action: 'traverse', key: 'ArrowDown' },
+      { stepNumber: 5, action: 'traverse', key: 'k' },
+      { stepNumber: 6, action: 'report', expectedOutcome: 'content accessibility analysis' },
+    ],
+  },
+
+  /**
+   * Footer exploration
+   */
+  exploreFooter: {
+    type: 'journey',
+    name: 'Explore Footer',
+    description: 'Navigate and explore footer content and links',
+    wcagCriteria: ['2.4.1', '2.4.4', '2.1.1'],
+    generateGoal: (ctx) => {
+      return [
+        `1. Navigate to ${ctx.pageUrl}.`,
+        `2. Navigate to contentinfo/footer landmark using D key.`,
+        `3. Navigate through footer links using Tab or K key.`,
+        `4. Identify footer sections (About, Contact, Legal, Social, etc.).`,
+        `5. Click on at least 2-3 footer links to verify they work.`,
+        `6. Report success with: (a) footer landmark presence, (b) footer links found and their organization, (c) any links with accessibility issues.`,
+      ].join(' ');
+    },
+    generateSteps: (ctx) => [
+      { stepNumber: 1, action: 'navigate', target: ctx.pageUrl },
+      { stepNumber: 2, action: 'navigate', target: 'contentinfo', key: 'd' },
+      { stepNumber: 3, action: 'traverse', key: 'Tab' },
+      { stepNumber: 4, action: 'navigate_click', target: 'footer link' },
+      { stepNumber: 5, action: 'report', expectedOutcome: 'footer accessibility analysis' },
+    ],
+  },
+
+  /**
+   * Navigate between pages
+   */
+  navigateBetweenPages: {
+    type: 'journey',
+    name: 'Navigate Between Pages',
+    description: 'Navigate from homepage to multiple internal pages',
+    wcagCriteria: ['2.1.1', '2.4.4', '2.4.7'],
+    generateGoal: (ctx) => {
+      return [
+        `1. Navigate to ${ctx.pageUrl}.`,
+        `2. Navigate to main navigation using D key.`,
+        `3. Click on ${ctx.targetUrl ? `"${ctx.targetUrl}"` : 'the first navigation link'}.`,
+        `4. Verify new page loads and has proper structure (main landmark, headings).`,
+        `5. Navigate back using browser back or navigation link.`,
+        `6. Click on a different navigation link.`,
+        `7. Verify that page has proper landmark structure.`,
+        `8. Report success with: (a) pages visited, (b) whether each page had proper landmarks and headings, (c) any navigation issues encountered.`,
+      ].join(' ');
+    },
+    generateSteps: (ctx) => [
+      { stepNumber: 1, action: 'navigate', target: ctx.pageUrl },
+      { stepNumber: 2, action: 'navigate', target: 'navigation', key: 'd' },
+      { stepNumber: 3, action: 'navigate_click', target: ctx.targetUrl || 'first nav link' },
+      { stepNumber: 4, action: 'navigate', target: 'main', key: 'd' },
+      { stepNumber: 5, action: 'report', expectedOutcome: 'multi-page navigation analysis' },
+    ],
+  },
+
+  /**
+   * Interactive components (tabs, accordions, modals)
+   */
+  testInteractiveComponents: {
+    type: 'journey',
+    name: 'Test Interactive Components',
+    description: 'Find and test interactive components like tabs, accordions, modals',
+    wcagCriteria: ['2.1.1', '4.1.2', '2.4.3'],
+    generateGoal: (ctx) => {
+      return [
+        `1. Navigate to ${ctx.pageUrl}.`,
+        `2. Navigate through page using Tab to find interactive components (tabs, accordions, dropdowns, modals).`,
+        `3. For any tabs found: navigate between tabs using Arrow keys, verify content changes.`,
+        `4. For any accordions found: activate with Enter/Space, verify content expands.`,
+        `5. For any buttons that open modals: activate and verify modal opens, try to close with Escape.`,
+        `6. For any dropdowns: open with Enter/Space, navigate options with Arrow keys.`,
+        `7. Report success with: (a) interactive components found, (b) whether each was keyboard operable, (c) any focus management issues, (d) any components that trapped focus.`,
+      ].join(' ');
+    },
+    generateSteps: (ctx) => [
+      { stepNumber: 1, action: 'navigate', target: ctx.pageUrl },
+      { stepNumber: 2, action: 'traverse', key: 'Tab' },
+      { stepNumber: 3, action: 'activate', target: 'interactive component', key: 'Enter' },
+      { stepNumber: 4, action: 'traverse', key: 'ArrowDown' },
+      { stepNumber: 5, action: 'report', expectedOutcome: 'interactive components analysis' },
+    ],
+  },
+
+  /**
+   * Media content (videos, audio)
+   */
+  testMediaContent: {
+    type: 'journey',
+    name: 'Test Media Content',
+    description: 'Find and test media players and content',
+    wcagCriteria: ['1.2.1', '1.2.2', '2.1.1'],
+    generateGoal: (ctx) => {
+      return [
+        `1. Navigate to ${ctx.pageUrl}.`,
+        `2. Navigate through page to find video or audio players.`,
+        `3. Navigate to video/audio player controls using Tab.`,
+        `4. Test play/pause using Space or Enter.`,
+        `5. Test volume controls if present.`,
+        `6. Look for captions/subtitles controls.`,
+        `7. Report success with: (a) media players found, (b) whether controls were keyboard accessible, (c) whether captions were available, (d) any accessibility issues with media.`,
+      ].join(' ');
+    },
+    generateSteps: (ctx) => [
+      { stepNumber: 1, action: 'navigate', target: ctx.pageUrl },
+      { stepNumber: 2, action: 'traverse', key: 'Tab' },
+      { stepNumber: 3, action: 'activate', target: 'play button', key: 'Space' },
+      { stepNumber: 4, action: 'report', expectedOutcome: 'media accessibility analysis' },
     ],
   },
 };
@@ -443,13 +491,6 @@ export function buildTaskFromTemplate(
     dependencies: [],
     attempts: 0,
   };
-}
-
-/**
- * Get all available atomic templates.
- */
-export function getAtomicTemplates(): TaskTemplate[] {
-  return Object.values(ATOMIC_TEMPLATES);
 }
 
 /**

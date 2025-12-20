@@ -14,13 +14,16 @@ export { CoverageAlgorithm } from './coverage';
 export { TaskGenerator } from './task-generator';
 export { CoverageTracker, AgentTrace, AgentStep, PerceptualSnapshot } from './coverage-tracker';
 
+// Gap detection modules
+export { DOMCrawler } from './dom-crawler';
+export { GapDetector } from './gap-detector';
+export { GapTaskGenerator } from './gap-task-generator';
+
 // Templates
 export {
-  ATOMIC_TEMPLATES,
   JOURNEY_TEMPLATES,
   buildTaskFromTemplate,
   generateTaskId,
-  getAtomicTemplates,
   getJourneyTemplates,
 } from './templates';
 

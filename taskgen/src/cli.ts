@@ -24,20 +24,24 @@ interface CliArgs {
   detailed: boolean;
   headless: boolean;
   help: boolean;
+  gapDetection: boolean;
+  gapReport: string;
 }
 
 function parseArgs(args: string[]): CliArgs {
   const result: CliArgs = {
     url: '',
-    output: 'generated-tests.json',
+    output: 'data/generated-tests.json',
     maxPages: 20,
     maxDepth: 2,
     includeJourneys: true,
     exportGraph: false,
-    graphOutput: 'element-graph.json',
+    graphOutput: 'data/element-graph.json',
     detailed: false,
     headless: true,
     help: false,
+    gapDetection: false,
+    gapReport: '',
   };
 
   for (let i = 0; i < args.length; i++) {
@@ -50,7 +54,7 @@ function parseArgs(args: string[]): CliArgs {
         break;
       case '--output':
       case '-o':
-        result.output = args[++i] || 'generated-tests.json';
+        result.output = args[++i] || 'data/generated-tests.json';
         break;
       case '--max-pages':
       case '-m':
@@ -67,13 +71,20 @@ function parseArgs(args: string[]): CliArgs {
         result.exportGraph = true;
         break;
       case '--graph-output':
-        result.graphOutput = args[++i] || 'element-graph.json';
+        result.graphOutput = args[++i] || 'data/element-graph.json';
         break;
       case '--detailed':
         result.detailed = true;
         break;
       case '--no-headless':
         result.headless = false;
+        break;
+      case '--gap-detection':
+        result.gapDetection = true;
+        break;
+      case '--gap-report':
+        result.gapReport = args[++i] || 'data/gap-report.json';
+        result.gapDetection = true; // Implicitly enable gap detection
         break;
       case '--help':
       case '-h':
@@ -103,14 +114,16 @@ Usage:
 
 Options:
   -u, --url <url>          Target website URL (required)
-  -o, --output <file>      Output file for generated tasks (default: generated-tests.json)
+  -o, --output <file>      Output file for generated tasks (default: data/generated-tests.json)
   -m, --max-pages <n>      Maximum pages to crawl (default: 20)
   -d, --max-depth <n>      Maximum crawl depth (default: 2)
   --no-journeys            Exclude user journey tasks (only atomic tasks)
   --export-graph           Export the element graph to JSON
-  --graph-output <file>    Element graph output file (default: element-graph.json)
+  --graph-output <file>    Element graph output file (default: data/element-graph.json)
   --detailed               Export detailed task metadata (not just url/goal)
   --no-headless            Run browser in visible mode (for debugging)
+  --gap-detection          Enable accessibility gap detection (finds inaccessible elements)
+  --gap-report <file>      Output file for gap detection report (implies --gap-detection)
   -h, --help               Show this help message
 
 Examples:
@@ -128,6 +141,12 @@ Examples:
 
   # Crawl more pages
   npm run taskgen -- --url https://example.com --max-pages 50 --max-depth 3
+
+  # Enable gap detection to find inaccessible elements
+  npm run taskgen -- --url https://example.com --gap-detection
+
+  # Generate gap report
+  npm run taskgen -- --url https://example.com --gap-report gaps.json
 
 Output Format:
   The generated tasks are JSON objects with:
@@ -174,7 +193,11 @@ async function main(): Promise<void> {
   console.log(`Max pages: ${args.maxPages}`);
   console.log(`Max depth: ${args.maxDepth}`);
   console.log(`Include journeys: ${args.includeJourneys}`);
+  console.log(`Gap detection: ${args.gapDetection ? 'enabled' : 'disabled'}`);
   console.log(`Output file: ${args.output}`);
+  if (args.gapReport) {
+    console.log(`Gap report: ${args.gapReport}`);
+  }
   console.log('='.repeat(60));
   console.log('');
 
@@ -191,10 +214,12 @@ async function main(): Promise<void> {
       coverageThreshold: 80,
       includeJourneyTasks: args.includeJourneys,
       includeAtomicTasks: true,
+      enableGapDetection: args.gapDetection,
+      gapReportPath: args.gapReport || undefined,
     };
 
     // Generate tasks
-    const { graph, tasks, estimatedCoverage } = await orchestrator.generateInitialTasks(config);
+    const { graph, tasks, estimatedCoverage, gapReport } = await orchestrator.generateInitialTasks(config);
 
     // Export tasks
     if (args.detailed) {
@@ -222,10 +247,33 @@ async function main(): Promise<void> {
     console.log(`Tasks generated: ${tasks.length}`);
     console.log(`Estimated coverage: ${estimatedCoverage.coveragePercent.toFixed(1)}%`);
     console.log(`Duration: ${(duration / 1000).toFixed(1)}s`);
+
+    // Gap detection results
+    if (gapReport) {
+      console.log('');
+      console.log('Gap Detection Results:');
+      console.log(`  Total accessibility gaps: ${gapReport.totalGaps}`);
+      console.log(`  - Critical: ${gapReport.gapsBySeverity['critical'] || 0}`);
+      console.log(`  - Serious: ${gapReport.gapsBySeverity['serious'] || 0}`);
+      console.log(`  - Moderate: ${gapReport.gapsBySeverity['moderate'] || 0}`);
+      console.log(`  - Minor: ${gapReport.gapsBySeverity['minor'] || 0}`);
+      if (gapReport.totalGaps > 0) {
+        console.log('  Gap types:');
+        for (const [type, count] of Object.entries(gapReport.gapsByType)) {
+          if (count > 0) {
+            console.log(`    - ${type}: ${count}`);
+          }
+        }
+      }
+    }
+
     console.log('');
     console.log(`Tasks exported to: ${args.output}`);
     if (args.exportGraph) {
       console.log(`Graph exported to: ${args.graphOutput}`);
+    }
+    if (args.gapReport) {
+      console.log(`Gap report exported to: ${args.gapReport}`);
     }
     console.log('='.repeat(60));
 

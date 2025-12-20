@@ -39,7 +39,8 @@
     "generate-sitemap": "tsx scripts/generateSitemap.ts",
     "start:ui": "tsx -r tsconfig-paths/register ui/server.ts",
     "taskgen": "tsx -r tsconfig-paths/register taskgen/src/cli.ts",
-    "taskgen:detailed": "tsx -r tsconfig-paths/register taskgen/src/cli.ts --detailed"
+    "taskgen:detailed": "tsx -r tsconfig-paths/register taskgen/src/cli.ts --detailed",
+    "taskgen:run": "tsx -r tsconfig-paths/register scripts/runTaskgenTests.ts"
   },
   "devDependencies": {
     "@types/node": "^20.19.25",
