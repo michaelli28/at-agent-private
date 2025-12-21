@@ -3,10 +3,11 @@ import express from 'express';
 import { WebSocketServer, WebSocket } from 'ws';
 import http from 'http';
 import path from 'path';
-import { firefox, Browser, Page } from 'playwright';
+import { chromium, Browser, Page, BrowserContext } from 'playwright';
 import { BrowserClient, ScreenReaderDriver } from '@adf/virtual-screen-reader';
 import { AgentOpenrouter } from '../agent/src/AgentOpenrouter';
 import { AgentMinimal, DebugEvent as MinimalDebugEvent } from '../agent/src/AgentMinimal';
+import { AgentStepwise } from '../agent/src/AgentStepwise';
 import { DebugEvent } from '../agent/src/types';
 import {
   loadTestCases,
@@ -32,6 +33,7 @@ interface DebugSession {
   driver: ScreenReaderDriver | null;
   // For minimal agent (AgentMinimal)
   browser: Browser | null;
+  context: BrowserContext | null;
   page: Page | null;
   // Common
   isRunning: boolean;
@@ -61,6 +63,7 @@ wss.on('connection', (ws) => {
     client: null,
     driver: null,
     browser: null,
+    context: null,
     page: null,
     isRunning: false,
     manualOversight: false,
@@ -151,14 +154,14 @@ async function handleMessage(ws: WebSocket, data: any) {
 async function runAgent(
   ws: WebSocket,
   session: DebugSession,
-  data: { url: string; goal: string; model?: string; apiKey?: string; manualOversight?: boolean; agentType?: 'full' | 'minimal'; navigationMode?: 'default' | 'pagerank' }
+  data: { url: string; goal: string; model?: string; apiKey?: string; manualOversight?: boolean; agentType?: 'full' | 'minimal'; stepwise?: boolean; navigationMode?: 'default' | 'pagerank' }
 ) {
   if (session.isRunning) {
     send(ws, { type: 'error', message: 'Agent is already running' });
     return;
   }
 
-  const { url, goal, model, apiKey, manualOversight, agentType = 'full', navigationMode = 'default' } = data;
+  const { url, goal, model, apiKey, manualOversight, agentType = 'full', stepwise = false, navigationMode = 'default' } = data;
 
   if (!url || !goal) {
     send(ws, { type: 'error', message: 'URL and goal are required' });
@@ -177,11 +180,36 @@ async function runAgent(
   };
 
   try {
+    // Manual oversight callback - waits for user confirmation before each LLM call
+    const beforeLlmRequest = session.manualOversight
+      ? async (loopCount: number, messages: unknown[]) => {
+          send(ws, {
+            type: 'awaiting_confirmation',
+            loopCount,
+            messageCount: (messages as any[]).length
+          });
+          return new Promise<void>((resolve, reject) => {
+            session.pendingConfirmation = { resolve, reject };
+          });
+        }
+      : undefined;
+
     if (agentType === 'minimal') {
-      // ========== MINIMAL AGENT (Playwright only) ==========
-      send(ws, { type: 'status', message: 'Launching browser (minimal mode)...' });
-      session.browser = await firefox.launch({ headless: false });
-      session.page = await session.browser.newPage();
+      // ========== MINIMAL MODE (Playwright only) ==========
+      const modeLabel = stepwise ? 'stepwise + minimal' : 'minimal';
+      send(ws, { type: 'status', message: `Launching browser (${modeLabel} mode)...` });
+      // Use same browser settings as full screen reader mode
+      session.browser = await chromium.launch({
+        headless: false,
+        channel: 'chrome',
+        ignoreDefaultArgs: ['--enable-automation'],
+        args: ['--start-maximized'],
+      });
+      session.context = await session.browser.newContext({
+        viewport: null,
+        hasTouch: false,
+      });
+      session.page = await session.context.newPage();
       await session.page.goto(url, { waitUntil: 'domcontentloaded' });
 
       // Send initial screenshot
@@ -193,59 +221,84 @@ async function runAgent(
         console.error('Failed to capture screenshot:', e);
       }
 
-      // Manual oversight callback for minimal agent
-      const beforeLlmRequest = session.manualOversight
-        ? async (loopCount: number, messages: unknown[]) => {
-            send(ws, {
-              type: 'awaiting_confirmation',
-              loopCount,
-              messageCount: (messages as any[]).length
-            });
-            return new Promise<void>((resolve, reject) => {
-              session.pendingConfirmation = { resolve, reject };
-            });
+      if (stepwise) {
+        // Stepwise + Minimal
+        const agent = new AgentStepwise({
+          navigationMode: 'minimal',
+          page: session.page,
+          apiKey: apiKey || process.env['OPENROUTER_API_KEY'],
+          model: model || 'google/gemini-2.0-flash-001',
+          onLog: (msg) => console.log(msg),
+          onDebug,
+          beforeLlmRequest,
+        });
+
+        send(ws, { type: 'status', message: 'Starting stepwise + minimal agent...' });
+        const trace = await agent.run(goal);
+
+        // Final screenshot
+        if (session.page) {
+          try {
+            const buffer = await session.page.screenshot();
+            const base64 = buffer.toString('base64');
+            const currentUrl = session.page.url();
+            send(ws, { type: 'screenshot', screenshot: base64, url: currentUrl });
+          } catch (e) {
+            console.error('Failed to capture final screenshot:', e);
           }
-        : undefined;
-
-      // Create minimal agent
-      const agent = new AgentMinimal({
-        page: session.page,
-        apiKey: apiKey || process.env['OPENROUTER_API_KEY'],
-        model: model || 'google/gemini-2.0-flash-001',
-        onLog: (msg) => console.log(msg),
-        onDebug,
-        beforeLlmRequest,
-        navigationMode,
-        entryUrl: url,
-      });
-
-      // Run the agent
-      send(ws, { type: 'status', message: 'Starting minimal agent...' });
-      const trace = await agent.run(goal);
-
-      // Final screenshot
-      if (session.page) {
-        try {
-          const buffer = await session.page.screenshot();
-          const base64 = buffer.toString('base64');
-          const currentUrl = session.page.url();
-          send(ws, { type: 'screenshot', screenshot: base64, url: currentUrl });
-        } catch (e) {
-          console.error('Failed to capture final screenshot:', e);
         }
+
+        // Send completion
+        const totalSteps = trace.stepTraces.reduce((sum, st) => sum + st.steps.length, 0);
+        send(ws, {
+          type: 'complete',
+          success: trace.success,
+          error: trace.error,
+          reason: trace.reason,
+          totalSteps,
+          parsedSteps: trace.parsedSteps.length,
+          failedAtStep: trace.failedAtStep,
+        });
+      } else {
+        // Direct Minimal
+        const agent = new AgentMinimal({
+          page: session.page,
+          apiKey: apiKey || process.env['OPENROUTER_API_KEY'],
+          model: model || 'google/gemini-2.0-flash-001',
+          onLog: (msg) => console.log(msg),
+          onDebug,
+          beforeLlmRequest,
+          navigationMode,
+        });
+
+        send(ws, { type: 'status', message: 'Starting minimal agent...' });
+        const trace = await agent.run(goal);
+
+        // Final screenshot
+        if (session.page) {
+          try {
+            const buffer = await session.page.screenshot();
+            const base64 = buffer.toString('base64');
+            const currentUrl = session.page.url();
+            send(ws, { type: 'screenshot', screenshot: base64, url: currentUrl });
+          } catch (e) {
+            console.error('Failed to capture final screenshot:', e);
+          }
+        }
+
+        // Send completion
+        send(ws, {
+          type: 'complete',
+          success: trace.success,
+          error: trace.error,
+          reason: trace.reason,
+          totalSteps: trace.steps.length
+        });
       }
-
-      // Send completion
-      send(ws, {
-        type: 'complete',
-        success: trace.success,
-        error: trace.error,
-        totalSteps: trace.steps.length
-      });
-
     } else {
-      // ========== FULL AGENT (BrowserClient + ScreenReaderDriver) ==========
-      send(ws, { type: 'status', message: 'Launching browser...' });
+      // ========== FULL MODE (BrowserClient + ScreenReaderDriver) ==========
+      const modeLabel = stepwise ? 'stepwise + full' : 'full';
+      send(ws, { type: 'status', message: `Launching browser (${modeLabel} mode)...` });
       session.client = new BrowserClient();
       await session.client.launch(false); // headed mode
       await session.client.goto(url);
@@ -262,7 +315,7 @@ async function runAgent(
         console.error('Failed to capture screenshot:', e);
       }
 
-      // Step handler - also sends screenshot after each step
+      // Step handler - sends screenshot after each step
       const onStep = async () => {
         if (session.client) {
           try {
@@ -278,57 +331,84 @@ async function runAgent(
         }
       };
 
-      // Manual oversight callback - waits for user confirmation before each LLM call
-      const beforeLlmRequest = session.manualOversight
-        ? async (loopCount: number, messages: unknown[]) => {
-            send(ws, {
-              type: 'awaiting_confirmation',
-              loopCount,
-              messageCount: (messages as any[]).length
-            });
-            return new Promise<void>((resolve, reject) => {
-              session.pendingConfirmation = { resolve, reject };
-            });
+      if (stepwise) {
+        // Stepwise + Full
+        const agent = new AgentStepwise({
+          navigationMode: 'full',
+          driver: session.driver,
+          apiKey: apiKey || process.env['OPENROUTER_API_KEY'],
+          model: model || 'google/gemini-2.0-flash-001',
+          onLog: (msg) => console.log(msg),
+          onDebug,
+          beforeLlmRequest,
+          onStep,
+        });
+
+        send(ws, { type: 'status', message: 'Starting stepwise + full agent...' });
+        const trace = await agent.run(goal);
+
+        // Final screenshot
+        if (session.client) {
+          try {
+            const buffer = await session.client.screenshot();
+            const base64 = buffer.toString('base64');
+            const page = session.client.getPage();
+            const currentUrl = page ? page.url() : url;
+            send(ws, { type: 'screenshot', screenshot: base64, url: currentUrl });
+          } catch (e) {
+            console.error('Failed to capture final screenshot:', e);
           }
-        : undefined;
-
-      // Create agent with debug callback
-      const agent = new AgentOpenrouter({
-        driver: session.driver,
-        onStep,
-        apiKey: apiKey || process.env['OPENROUTER_API_KEY'],
-        model: model || 'google/gemini-2.0-flash-001',
-        onDebug,
-        beforeLlmRequest,
-        navigationMode,
-        entryUrl: url,
-      });
-
-      // Run the agent
-      send(ws, { type: 'status', message: 'Starting agent...' });
-      const trace = await agent.run(goal);
-
-      // Final screenshot
-      if (session.client) {
-        try {
-          const buffer = await session.client.screenshot();
-          const base64 = buffer.toString('base64');
-          const page = session.client.getPage();
-          const currentUrl = page ? page.url() : url;
-          send(ws, { type: 'screenshot', screenshot: base64, url: currentUrl });
-        } catch (e) {
-          console.error('Failed to capture final screenshot:', e);
         }
-      }
 
-      // Send completion
-      send(ws, {
-        type: 'complete',
-        success: trace.success,
-        error: trace.error,
-        reason: trace.reason,
-        totalSteps: trace.steps.length
-      });
+        // Send completion
+        const totalSteps = trace.stepTraces.reduce((sum, st) => sum + st.steps.length, 0);
+        send(ws, {
+          type: 'complete',
+          success: trace.success,
+          error: trace.error,
+          reason: trace.reason,
+          totalSteps,
+          parsedSteps: trace.parsedSteps.length,
+          failedAtStep: trace.failedAtStep,
+        });
+      } else {
+        // Direct Full
+        const agent = new AgentOpenrouter({
+          driver: session.driver,
+          onStep,
+          apiKey: apiKey || process.env['OPENROUTER_API_KEY'],
+          model: model || 'google/gemini-2.0-flash-001',
+          onDebug,
+          beforeLlmRequest,
+          navigationMode,
+          entryUrl: url,
+        });
+
+        send(ws, { type: 'status', message: 'Starting full agent...' });
+        const trace = await agent.run(goal);
+
+        // Final screenshot
+        if (session.client) {
+          try {
+            const buffer = await session.client.screenshot();
+            const base64 = buffer.toString('base64');
+            const page = session.client.getPage();
+            const currentUrl = page ? page.url() : url;
+            send(ws, { type: 'screenshot', screenshot: base64, url: currentUrl });
+          } catch (e) {
+            console.error('Failed to capture final screenshot:', e);
+          }
+        }
+
+        // Send completion
+        send(ws, {
+          type: 'complete',
+          success: trace.success,
+          error: trace.error,
+          reason: trace.reason,
+          totalSteps: trace.steps.length
+        });
+      }
     }
 
   } catch (error: any) {
@@ -355,6 +435,7 @@ async function handleRunBenchmark(
     apiKey?: string;
     name?: string;
     agentType?: 'full' | 'minimal';
+    stepwise?: boolean;
   }
 ) {
   if (session.isRunning) {
@@ -362,7 +443,7 @@ async function handleRunBenchmark(
     return;
   }
 
-  const { testCaseIds, models, runsPerTestCase, apiKey, name, agentType = 'full' } = data;
+  const { testCaseIds, models, runsPerTestCase, apiKey, name, agentType = 'full', stepwise = false } = data;
 
   if (!testCaseIds || testCaseIds.length === 0) {
     send(ws, { type: 'error', message: 'At least one test case ID is required' });
@@ -385,6 +466,7 @@ async function handleRunBenchmark(
       apiKey: apiKey || process.env['OPENROUTER_API_KEY'],
       name,
       agentType,
+      stepwise,
       abortSignal: session.benchmarkAbortController.signal,
       onEvent: (event: BenchmarkEvent) => {
         send(ws, { type: 'benchmark_event', event });

@@ -1,7 +1,9 @@
-import { Page } from 'playwright';
+import { Page, CDPSession } from 'playwright';
 import * as fs from 'fs';
 import * as path from 'path';
 import { PageFinder, PageRankResult } from './PageFinder';
+import { AXTreeNavigator } from '../../virtual-screen-reader/src/AXTreeNavigator';
+import { AXNode } from '../../virtual-screen-reader/src/types';
 
 export type NavigationMode = 'default' | 'pagerank';
 
@@ -46,11 +48,17 @@ export interface MinimalStep {
   success: boolean;
 }
 
-// Page element for tab map
+// Page element from accessibility tree
 interface PageElement {
   position: number;
   name: string;
   role: string;
+  backendNodeId: number; // CDP backend DOM node ID for direct focus
+  states?: {
+    expanded?: boolean;
+    hasPopup?: boolean | string;
+    level?: number; // For headings
+  };
 }
 
 export interface MinimalTrace {
@@ -237,10 +245,15 @@ export class AgentMinimal {
   private onDebug?: DebugEventCallback;
   private beforeLlmRequest?: BeforeLlmRequestCallback;
 
+  // CDP session for accessibility tree access
+  private cdpSession: CDPSession | null = null;
+  private axNavigator: AXTreeNavigator = new AXTreeNavigator();
+
   // Page element scanning state
   private currentPageElements: PageElement[] = [];
   private currentPosition: number = 0;
   private lastUrl: string = '';
+  private elementsChangedSinceLastObservation: boolean = true; // Start true to include in first observation
 
   // PageRank navigation properties
   private navigationMode: NavigationMode;
@@ -360,125 +373,152 @@ export class AgentMinimal {
   }
 
   /**
-   * Scan all interactive elements on the page using DOM queries.
-   * This doesn't move focus, so it won't disrupt dropdowns/modals.
+   * Ensure CDP session is initialized for accessibility tree access.
+   */
+  private async ensureCDPSession(): Promise<CDPSession> {
+    if (!this.cdpSession) {
+      // Get CDP session from Playwright's Chrome DevTools Protocol
+      this.cdpSession = await this.page.context().newCDPSession(this.page);
+    }
+    return this.cdpSession;
+  }
+
+  /**
+   * Wait for the AX tree to stabilize after DOM changes.
+   * Polls the AX tree until the node count stops changing.
+   * Returns early if tree stabilizes, otherwise waits up to maxWaitMs.
+   */
+  private async waitForAXTreeStable(maxWaitMs = 1000, checkIntervalMs = 100): Promise<void> {
+    const cdp = await this.ensureCDPSession();
+    let lastNodeCount = -1;
+    let stableChecks = 0;
+    const requiredStableChecks = 2; // Tree must be stable for 2 consecutive checks
+    const startTime = Date.now();
+
+    while (Date.now() - startTime < maxWaitMs) {
+      // Force refresh and get tree
+      await cdp.send('Accessibility.disable').catch(() => {});
+      await cdp.send('Accessibility.enable');
+      const result = await cdp.send('Accessibility.getFullAXTree');
+      const nodes = (result as unknown as { nodes: AXNode[] }).nodes;
+
+      // Count non-ignored nodes (these are the ones that matter)
+      const currentCount = nodes.filter(n => !n.ignored).length;
+
+      if (currentCount === lastNodeCount) {
+        stableChecks++;
+        if (stableChecks >= requiredStableChecks) {
+          this.log(`[AX Tree]: Stabilized at ${currentCount} nodes after ${Date.now() - startTime}ms`);
+          return;
+        }
+      } else {
+        stableChecks = 0;
+        lastNodeCount = currentCount;
+      }
+
+      await new Promise(resolve => setTimeout(resolve, checkIntervalMs));
+    }
+
+    this.log(`[AX Tree]: Timeout waiting for stability (last count: ${lastNodeCount})`);
+  }
+
+  /**
+   * Scan all accessible elements using the Accessibility Tree via CDP.
+   * This captures ALL meaningful elements including those inside dropdowns,
+   * hidden content with aria-expanded, etc.
    */
   private async scanPageElements(): Promise<PageElement[]> {
-    const elements = await this.page.evaluate(() => {
-      // Selector for interactive elements
-      const selector = [
-        'a[href]',
-        'button',
-        'input:not([type="hidden"])',
-        'select',
-        'textarea',
-        '[tabindex]:not([tabindex="-1"])',
-        '[role="button"]',
-        '[role="link"]',
-        '[role="menuitem"]',
-        '[role="option"]',
-        '[role="checkbox"]',
-        '[role="radio"]',
-        '[role="tab"]',
-        '[role="combobox"]',
-        '[role="listbox"]',
-        '[role="menu"]',
-        '[contenteditable="true"]',
-      ].join(', ');
+    const elements: PageElement[] = [];
 
-      const allElements = Array.from(document.querySelectorAll(selector));
+    try {
+      const cdp = await this.ensureCDPSession();
 
-      // Filter to visible, enabled elements
-      const visible = allElements.filter(el => {
-        const style = window.getComputedStyle(el);
-        const rect = el.getBoundingClientRect();
-        const isVisible = style.display !== 'none' &&
-          style.visibility !== 'hidden' &&
-          style.opacity !== '0' &&
-          rect.width > 0 &&
-          rect.height > 0;
-        const isDisabled = (el as HTMLButtonElement).disabled ||
-          el.getAttribute('aria-disabled') === 'true';
-        return isVisible && !isDisabled;
-      });
+      // Force refresh of accessibility tree by toggling the domain
+      // This ensures we get the latest state after DOM changes
+      await cdp.send('Accessibility.disable').catch(() => {});
+      await cdp.send('Accessibility.enable');
 
-      // Sort by tab order: positive tabindex first (ascending), then tabindex=0/none in DOM order
-      const withTabIndex: Element[] = [];
-      const withoutTabIndex: Element[] = [];
+      // Get the full accessibility tree from CDP
+      // Cast through unknown because CDP types differ slightly from our AXNode interface
+      const result = await cdp.send('Accessibility.getFullAXTree');
+      const nodes = (result as unknown as { nodes: AXNode[] }).nodes;
 
-      visible.forEach(el => {
-        const tabindex = parseInt(el.getAttribute('tabindex') || '0', 10);
-        if (tabindex > 0) {
-          withTabIndex.push(el);
-        } else {
-          withoutTabIndex.push(el);
+      // Debug: log node counts
+      const ignoredCount = nodes.filter(n => n.ignored).length;
+      this.log(`[Scan]: Total AX nodes: ${nodes.length}, Ignored: ${ignoredCount}`);
+
+      // Build navigable tree and filter to interesting nodes
+      this.axNavigator.buildNavigableTree(nodes);
+      const interestingNodes = this.axNavigator.getAllInterestingNodes();
+
+      // Convert to PageElement format
+      for (let i = 0; i < interestingNodes.length; i++) {
+        const node = interestingNodes[i];
+
+        // Skip nodes without a backend DOM node ID (can't focus them)
+        if (node.backendDOMNodeId === undefined) {
+          continue;
         }
-      });
 
-      // Sort positive tabindex elements
-      withTabIndex.sort((a, b) => {
-        const aIdx = parseInt(a.getAttribute('tabindex') || '0', 10);
-        const bIdx = parseInt(b.getAttribute('tabindex') || '0', 10);
-        return aIdx - bIdx;
-      });
+        elements.push({
+          position: elements.length + 1, // 1-indexed
+          name: node.computedName || '',
+          role: node.computedRole,
+          backendNodeId: node.backendDOMNodeId,
+          states: {
+            expanded: node.states.expanded,
+            hasPopup: node.states.hasPopup,
+            level: node.states.level,
+          },
+        });
+      }
 
-      // Combine: positive tabindex first, then DOM order
-      const sorted = [...withTabIndex, ...withoutTabIndex];
+      this.log(`[Scan]: Found ${elements.length} accessible elements (via AX tree)`);
+    } catch (error: any) {
+      this.log(`[Scan]: Error getting accessibility tree: ${error.message}`);
+      // Return empty list on error
+    }
 
-      // Map to element info
-      return sorted.map((el, i) => {
-        const role = el.getAttribute('role') || el.tagName.toLowerCase();
-        const name = el.getAttribute('aria-label') ||
-          el.getAttribute('title') ||
-          el.getAttribute('placeholder') ||
-          (el as HTMLElement).innerText?.trim().slice(0, 100) ||
-          el.getAttribute('name') ||
-          '';
-        return { position: i + 1, name: name.replace(/\n+/g, ' ').trim(), role };
-      });
-    });
+    // Reset position since we're starting fresh
+    this.currentPosition = 0;
+    // Mark that elements changed so they'll be included in next observation
+    this.elementsChangedSinceLastObservation = true;
+    this.log(`[Scan]: Completed - flag set to true, ${elements.length} elements`);
 
-    this.log(`[Scan]: Found ${elements.length} interactive elements`);
     return elements;
   }
 
   /**
-   * Format page elements as a string for the system prompt.
+   * Format page elements as a simple numbered list for the LLM.
+   * Format: "position. name, role [modifiers]"
    */
   private formatPageElements(): string {
     if (this.currentPageElements.length === 0) {
-      return '<page_elements count="0">No interactive elements found</page_elements>';
+      return 'No interactive elements found on page.';
     }
 
     const lines = this.currentPageElements.map(el => {
-      const display = el.name ? `${el.name}, ${el.role}` : el.role;
+      // Base format: "name, role" or just "role" if no name
+      let display = el.name ? `${el.name}, ${el.role}` : el.role;
+
+      // Add modifiers for important states
+      if (el.states?.hasPopup) display += ' [popup]';
+      // Only show heading level for actual headings
+      if (el.states?.level && el.role === 'heading') display += ` [h${el.states.level}]`;
+
       return `${el.position}. ${display}`;
     });
 
-    return `<page_elements count="${this.currentPageElements.length}">\n${lines.join('\n')}\n</page_elements>`;
+    return `Interactive elements (${this.currentPageElements.length}):\n${lines.join('\n')}`;
   }
 
   /**
-   * Build the system message with goal and current page elements.
+   * Build the system message (static, does not include page elements).
+   * Page elements are included in observation messages instead.
    */
   private buildSystemMessage(goal: string): { role: string; content: string } {
     const activePrompt = this.navigationMode === 'pagerank' ? PAGERANK_SYSTEM_PROMPT : SYSTEM_PROMPT;
-
-    let content = `${activePrompt}\n\n<goal>${goal}</goal>`;
-
-    // In PageRank mode, only show suggested pages (no element list)
-    // In default mode, show the element list
-    if (this.navigationMode === 'pagerank') {
-      if (this.currentSuggestions.length > 0) {
-        const suggestionsText = this.currentSuggestions
-          .map((s, i) => `${i + 1}. ${s.title} - ${s.url}`)
-          .join('\n');
-        content += `\n\n<suggested_pages>\n${suggestionsText}\n</suggested_pages>`;
-      }
-    } else {
-      const elements = this.formatPageElements();
-      content += `\n\n${elements}`;
-    }
+    const content = `${activePrompt}\n\n<goal>${goal}</goal>`;
 
     return {
       role: 'system',
@@ -487,7 +527,38 @@ export class AgentMinimal {
   }
 
   /**
-   * Move to a specific position using Tab/Shift+Tab key presses.
+   * Build an observation message with current page state.
+   * Only includes page_elements when they've changed to save tokens.
+   */
+  private buildObservationMessage(focusedElement: string): { role: string; content: string } {
+    const currentUrl = this.page.url();
+    let content = `<url>${currentUrl}</url>\n`;
+
+    if (this.navigationMode === 'pagerank') {
+      // PageRank mode: include suggested pages
+      if (this.currentSuggestions.length > 0) {
+        const suggestionsText = this.currentSuggestions
+          .map((s, i) => `${i + 1}. ${s.title} - ${s.url}`)
+          .join('\n');
+        content += `<suggested_pages>\n${suggestionsText}\n</suggested_pages>\n`;
+      }
+      content += `<status>${focusedElement}</status>`;
+    } else {
+      // Default mode: only include page elements when they've changed
+      if (this.elementsChangedSinceLastObservation) {
+        this.log(`[Observation]: Including page_elements (${this.currentPageElements.length} items)`);
+        content += `${this.formatPageElements()}\n`;
+        this.elementsChangedSinceLastObservation = false;
+      }
+      content += `Currently focused: [${this.currentPosition}] ${focusedElement}`;
+    }
+
+    return { role: 'user', content };
+  }
+
+  /**
+   * Move to a specific position by directly focusing the element.
+   * Uses CDP DOM.focus with backendNodeId for direct element access.
    */
   private async moveToPosition(targetPosition: number): Promise<{ success: boolean; error?: string }> {
     const maxPosition = this.currentPageElements.length;
@@ -496,36 +567,31 @@ export class AgentMinimal {
       return { success: false, error: `Invalid position ${targetPosition}. Valid range: 1-${maxPosition}` };
     }
 
-    // If not positioned yet (position 0), start from body and tab to target
-    if (this.currentPosition === 0) {
-      await this.page.evaluate(() => {
-        (document.activeElement as HTMLElement)?.blur();
-        document.body.focus();
-      });
-      for (let i = 0; i < targetPosition; i++) {
-        await this.page.keyboard.press('Tab');
-      }
-      this.currentPosition = targetPosition;
-      return { success: true };
-    }
-
     // Already at target
     if (targetPosition === this.currentPosition) {
       return { success: true };
     }
 
-    // Calculate direction and number of presses
-    const diff = targetPosition - this.currentPosition;
-    const key = diff > 0 ? 'Tab' : 'Shift+Tab';
-    const presses = Math.abs(diff);
-
-    // Execute the key presses
-    for (let i = 0; i < presses; i++) {
-      await this.page.keyboard.press(key);
+    // Find the element in our list
+    const element = this.currentPageElements.find(el => el.position === targetPosition);
+    if (!element) {
+      return { success: false, error: `Could not find element at position ${targetPosition}` };
     }
 
-    this.currentPosition = targetPosition;
-    return { success: true };
+    try {
+      const cdp = await this.ensureCDPSession();
+
+      // Focus the element using CDP DOM.focus with backendNodeId
+      await cdp.send('DOM.focus', { backendNodeId: element.backendNodeId });
+
+      // Scroll the element into view using CDP
+      await cdp.send('DOM.scrollIntoViewIfNeeded', { backendNodeId: element.backendNodeId });
+
+      this.currentPosition = targetPosition;
+      return { success: true };
+    } catch (error: any) {
+      return { success: false, error: `Failed to focus element: ${error.message}` };
+    }
   }
 
   private async callLLMWithRetry(messages: any[], tools: any[], maxRetries = 3): Promise<OpenRouterResponse> {
@@ -547,6 +613,7 @@ export class AgentMinimal {
             messages,
             stream: false,
             parallel_tool_calls: true,
+            tool_choice: 'required',
           }),
         });
 
@@ -629,20 +696,11 @@ export class AgentMinimal {
     this.currentPageElements = await this.scanPageElements();
     this.currentPosition = 0; // Not positioned yet
 
-    // Build system message with page elements
+    // Build static system message (page elements go in observation messages)
     const systemMessage = this.buildSystemMessage(goal);
 
-    // Initial message differs by navigation mode
-    let initialContent: string;
-    if (this.navigationMode === 'pagerank') {
-      initialContent = `<url>${this.lastUrl}</url>\n<status>Ready. Use navigate_to_page to go to a suggested page.</status>`;
-    } else {
-      initialContent = `<url>${this.lastUrl}</url>\n<focused_element>No element focused yet. Use move_to_position to focus an element.</focused_element>`;
-    }
-    const initialMessage = {
-      role: 'user',
-      content: initialContent,
-    };
+    // Initial observation includes page elements
+    const initialMessage = this.buildObservationMessage('No element focused yet. Use move_to_position to focus an element.');
 
     const messages: any[] = [systemMessage, initialMessage];
     const steps: MinimalStep[] = [];
@@ -705,11 +763,18 @@ export class AgentMinimal {
         },
       }));
 
+      // Preserve reasoning_details for models that require it (e.g., Gemini)
       const message: any = {
         role: rawMessage.role,
         content: rawMessage.content,
         tool_calls: toolCalls,
       };
+
+      // Include reasoning_details if present (required by OpenRouter for some models)
+      if ((rawMessage as any).reasoning_details) {
+        message.reasoning_details = (rawMessage as any).reasoning_details;
+      }
+
       messages.push(message);
 
       // Emit LLM response
@@ -811,7 +876,7 @@ export class AgentMinimal {
               // Rescan page elements
               await this.waitForDOMStable();
               this.currentPageElements = await this.scanPageElements();
-              messages[0] = this.buildSystemMessage(goal);
+              alreadyRescanned = true;
 
               const toolResponse = {
                 status: 'ok',
@@ -862,9 +927,6 @@ export class AgentMinimal {
               this.currentSuggestions.slice(0, 10).forEach((s, i) => {
                 this.log(`  ${i + 1}. ${s.title} (score: ${s.score.toFixed(3)})`);
               });
-
-              // Update system message with new suggestions
-              messages[0] = this.buildSystemMessage(goal);
 
               const toolResponse = {
                 status: 'ok',
@@ -940,10 +1002,11 @@ export class AgentMinimal {
                   this.log(`[Navigation]: New page detected`);
                 }
 
-                // Wait for DOM to stabilize, then rescan immediately
-                await this.waitForDOMStable();
+                // Wait for DOM to stabilize, then wait for AX tree to catch up
+                await this.waitForDOMStable(3000, 200);
+                await this.waitForAXTreeStable(1000, 100);
+
                 this.currentPageElements = await this.scanPageElements();
-                messages[0] = this.buildSystemMessage(goal);
                 alreadyRescanned = true;
                 this.log(`[Rescan after Enter]: ${this.currentPageElements.length} elements`);
 
@@ -964,10 +1027,11 @@ export class AgentMinimal {
                 this.currentPosition = 0;
                 this.log(`[Navigation]: Went back`);
 
-                // Wait for DOM to stabilize, then rescan immediately
-                await this.waitForDOMStable();
+                // Wait for DOM to stabilize, then wait for AX tree to catch up
+                await this.waitForDOMStable(3000, 200);
+                await this.waitForAXTreeStable(1000, 100);
+
                 this.currentPageElements = await this.scanPageElements();
-                messages[0] = this.buildSystemMessage(goal);
                 alreadyRescanned = true;
                 this.log(`[Rescan after Back]: ${this.currentPageElements.length} elements`);
 
@@ -1006,39 +1070,36 @@ export class AgentMinimal {
           });
         }
 
-        // If we haven't rescanned yet (e.g., after type_text), do it now
+        // Only rescan if URL changed (navigation occurred) and we haven't already rescanned
+        // Don't rescan after every action - it destroys focus and scrolls the page
+        // Compare base URL only (ignore hash changes - some SPAs update hash on focus)
         if (!alreadyRescanned) {
-          await this.waitForDOMStable();
-          const previousCount = this.currentPageElements.length;
-          this.currentPageElements = await this.scanPageElements();
-          messages[0] = this.buildSystemMessage(goal);
-
-          if (this.currentPageElements.length !== previousCount) {
-            this.log(`[Rescan]: Elements changed ${previousCount} -> ${this.currentPageElements.length}`);
+          const currentUrl = this.page.url();
+          const currentBase = currentUrl.split('#')[0];
+          const lastBase = this.lastUrl.split('#')[0];
+          if (currentBase !== lastBase) {
+            this.log(`[Navigation detected]: ${this.lastUrl} -> ${currentUrl}`);
+            this.lastUrl = currentUrl;
+            this.currentPosition = 0;
+            await this.waitForDOMStable(3000, 200);
+            await this.waitForAXTreeStable(1000, 100);
+            this.currentPageElements = await this.scanPageElements();
+          } else if (currentUrl !== this.lastUrl) {
+            // Hash changed but base URL same - just update lastUrl, no rescan
+            this.lastUrl = currentUrl;
           }
         }
 
-        const currentUrl = this.page.url();
         lastObservation = await this.getFocusedElementInfoWithRetry();
 
-        // Single observation message after all tool calls
-        // PageRank mode uses simplified format without position reference
-        let observationContent: string;
-        if (this.navigationMode === 'pagerank') {
-          observationContent = `<url>${currentUrl}</url>\n<status>${lastObservation}</status>`;
-        } else {
-          observationContent = `<url>${currentUrl}</url>\n<focused_element position="${this.currentPosition}">${lastObservation}</focused_element>`;
-        }
-        messages.push({
-          role: 'user',
-          content: observationContent,
-        });
+        // Single observation message after all tool calls (includes page elements)
+        messages.push(this.buildObservationMessage(lastObservation));
 
         this.emitDebug('observation', {
           type: 'step',
           loopCount,
           observation: lastObservation,
-          url: currentUrl,
+          url: this.page.url(),
           position: this.navigationMode === 'pagerank' ? undefined : this.currentPosition,
         });
 

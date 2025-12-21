@@ -1,10 +1,11 @@
 import * as fs from 'fs';
 import * as path from 'path';
 import { v4 as uuidv4 } from 'uuid';
-import { firefox, Browser, Page } from 'playwright';
+import { chromium, Browser, BrowserContext, Page } from 'playwright';
 import { BrowserClient, ScreenReaderDriver } from '@adf/virtual-screen-reader';
 import { AgentOpenrouter } from '../src/AgentOpenrouter';
 import { AgentMinimal, MinimalTrace } from '../src/AgentMinimal';
+import { AgentStepwise, StepwiseTrace } from '../src/AgentStepwise';
 import { AgentTrace } from '../src/types';
 import {
   TestCase,
@@ -134,6 +135,8 @@ export interface BenchmarkOptions {
   onEvent?: (event: BenchmarkEvent) => void;
   name?: string;
   agentType?: BenchmarkAgentType;
+  /** When true, uses AgentStepwise to parse goal into steps and run each independently */
+  stepwise?: boolean;
   abortSignal?: AbortSignal;
 }
 
@@ -147,6 +150,7 @@ export async function runBenchmark(options: BenchmarkOptions): Promise<Benchmark
     onEvent,
     name,
     agentType = 'full',
+    stepwise = false,
     abortSignal,
   } = options;
 
@@ -219,7 +223,7 @@ export async function runBenchmark(options: BenchmarkOptions): Promise<Benchmark
           });
         };
 
-        const run = await runSingleTest(testCase, model, apiKey, onLog, agentType);
+        const run = await runSingleTest(testCase, model, apiKey, onLog, agentType, stepwise);
         testCaseRuns.push(run);
         allRuns.push(run);
 
@@ -250,13 +254,37 @@ export async function runBenchmark(options: BenchmarkOptions): Promise<Benchmark
   return report;
 }
 
+// Convert StepwiseTrace to AgentTrace format
+function convertStepwiseTrace(stepwiseTrace: StepwiseTrace): AgentTrace {
+  // Flatten all steps from all step traces
+  const allSteps = stepwiseTrace.stepTraces.flatMap(st =>
+    st.steps.map(s => ({
+      stepNumber: s.stepNumber,
+      thought: s.thought,
+      action: s.action,
+      observation: s.observation,
+      success: s.success,
+    }))
+  );
+
+  return {
+    goal: stepwiseTrace.goal,
+    success: stepwiseTrace.success,
+    steps: allSteps,
+    error: stepwiseTrace.error,
+    reason: stepwiseTrace.reason,
+    totalTokens: stepwiseTrace.totalTokens,
+  };
+}
+
 // Run a single test
 async function runSingleTest(
   testCase: TestCase,
   model: string,
   apiKey?: string,
   onLog?: (message: string) => void,
-  agentType: BenchmarkAgentType = 'full'
+  agentType: BenchmarkAgentType = 'full',
+  stepwise: boolean = false
 ): Promise<BenchmarkRun> {
   const runId = uuidv4();
   const startTime = Date.now();
@@ -271,13 +299,24 @@ async function runSingleTest(
 
   // Resources for minimal agent
   let browser: Browser | null = null;
+  let context: BrowserContext | null = null;
   let page: Page | null = null;
 
   try {
     if (agentType === 'minimal') {
-      // ========== MINIMAL AGENT (Playwright only) ==========
-      browser = await firefox.launch({ headless: false });
-      page = await browser.newPage();
+      // ========== MINIMAL MODE (Playwright only) ==========
+      // Use same browser settings as full screen reader mode
+      browser = await chromium.launch({
+        headless: false,
+        channel: 'chrome',
+        ignoreDefaultArgs: ['--enable-automation'],
+        args: ['--start-maximized'],
+      });
+      context = await browser.newContext({
+        viewport: null,
+        hasTouch: false,
+      });
+      page = await context.newPage();
       await page.goto(testCase.url, { waitUntil: 'domcontentloaded' });
 
       // Capture initial screenshot
@@ -288,31 +327,43 @@ async function runSingleTest(
         // Ignore screenshot errors
       }
 
-      // Create minimal agent
-      const agent = new AgentMinimal({
-        page,
-        apiKey: apiKey || process.env['OPENROUTER_API_KEY'],
-        model,
-        onLog,
-      });
+      if (stepwise) {
+        // Stepwise + Minimal: Use AgentStepwise with minimal navigation
+        const agent = new AgentStepwise({
+          navigationMode: 'minimal',
+          page,
+          apiKey: apiKey || process.env['OPENROUTER_API_KEY'],
+          model,
+          onLog,
+        });
 
-      // Run agent
-      const minimalTrace: MinimalTrace = await agent.run(testCase.goal);
+        const stepwiseTrace: StepwiseTrace = await agent.run(testCase.goal);
+        trace = convertStepwiseTrace(stepwiseTrace);
+      } else {
+        // Direct Minimal: Use AgentMinimal
+        const agent = new AgentMinimal({
+          page,
+          apiKey: apiKey || process.env['OPENROUTER_API_KEY'],
+          model,
+          onLog,
+        });
 
-      // Convert MinimalTrace to AgentTrace format
-      // Note: MinimalStep has simpler types than AgentStep, so we cast
-      trace = {
-        goal: minimalTrace.goal,
-        success: minimalTrace.success,
-        steps: minimalTrace.steps.map(s => ({
-          stepNumber: s.stepNumber,
-          thought: s.thought,
-          action: { type: s.action } as any,
-          observation: { text: s.observation } as any,
-          result: { success: s.success } as any,
-        })),
-        error: minimalTrace.error,
-      };
+        const minimalTrace: MinimalTrace = await agent.run(testCase.goal);
+        trace = {
+          goal: minimalTrace.goal,
+          success: minimalTrace.success,
+          steps: minimalTrace.steps.map(s => ({
+            stepNumber: s.stepNumber,
+            thought: s.thought,
+            action: { type: s.action } as any,
+            observation: { text: s.observation } as any,
+            result: { success: s.success } as any,
+          })),
+          error: minimalTrace.error,
+          reason: minimalTrace.reason,
+          totalTokens: minimalTrace.totalTokens,
+        };
+      }
 
       // Capture final screenshot
       try {
@@ -322,7 +373,7 @@ async function runSingleTest(
         // Ignore screenshot errors
       }
     } else {
-      // ========== FULL AGENT (BrowserClient + ScreenReaderDriver) ==========
+      // ========== FULL MODE (BrowserClient + ScreenReaderDriver) ==========
       client = new BrowserClient();
       await client.launch(false); // headed mode
       await client.goto(testCase.url);
@@ -338,16 +389,29 @@ async function runSingleTest(
         // Ignore screenshot errors
       }
 
-      // Create agent
-      const agent = new AgentOpenrouter({
-        driver,
-        apiKey: apiKey || process.env['OPENROUTER_API_KEY'],
-        model,
-        onLog,
-      });
+      if (stepwise) {
+        // Stepwise + Full: Use AgentStepwise with full screen reader navigation
+        const agent = new AgentStepwise({
+          navigationMode: 'full',
+          driver,
+          apiKey: apiKey || process.env['OPENROUTER_API_KEY'],
+          model,
+          onLog,
+        });
 
-      // Run agent
-      trace = await agent.run(testCase.goal);
+        const stepwiseTrace: StepwiseTrace = await agent.run(testCase.goal);
+        trace = convertStepwiseTrace(stepwiseTrace);
+      } else {
+        // Direct Full: Use AgentOpenrouter
+        const agent = new AgentOpenrouter({
+          driver,
+          apiKey: apiKey || process.env['OPENROUTER_API_KEY'],
+          model,
+          onLog,
+        });
+
+        trace = await agent.run(testCase.goal);
+      }
 
       // Capture final screenshot
       try {

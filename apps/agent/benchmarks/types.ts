@@ -102,8 +102,14 @@ export interface BenchmarkReport {
   };
 }
 
-// Agent type for benchmarks
+// Navigation mode for agent
+// - 'full': Uses AgentOpenrouter with screen reader
+// - 'minimal': Uses AgentMinimal with tab-based navigation
 export type BenchmarkAgentType = 'full' | 'minimal';
+
+// Execution mode options
+// When stepwise=true, uses AgentStepwise to parse goal into steps and run each independently
+// The underlying navigation uses the selected agentType (full or minimal)
 
 // Event for real-time updates
 export type BenchmarkEvent =

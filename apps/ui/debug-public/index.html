@@ -966,6 +966,10 @@
                 </div>
             </div>
             <div class="toggle-group">
+                <span class="toggle-label">Stepwise Mode</span>
+                <div class="toggle" id="stepwiseToggle" title="Parse goal into steps and run each with fresh context (saves tokens)"></div>
+            </div>
+            <div class="toggle-group">
                 <span class="toggle-label">Manual Oversight</span>
                 <div class="toggle" id="oversightToggle" title="Pause before each LLM request for manual approval"></div>
             </div>
@@ -1050,6 +1054,13 @@
                                     <div class="checkbox-item selected" data-agenttype="full">Full (Screen Reader)</div>
                                     <div class="checkbox-item" data-agenttype="minimal">Minimal (Tab Only)</div>
                                 </div>
+                            </div>
+                            <div class="input-group">
+                                <label style="display: flex; align-items: center; gap: 8px; cursor: pointer;">
+                                    <input type="checkbox" id="benchmarkStepwise" style="width: 16px; height: 16px;">
+                                    <span>Stepwise Mode</span>
+                                    <span style="font-size: 10px; color: #666;">(parse goal into steps, fresh context each)</span>
+                                </label>
                             </div>
                             <div class="benchmark-actions">
                                 <button class="btn btn-primary" id="runBenchmarkBtn">Run Benchmark</button>
@@ -1219,6 +1230,7 @@
         let messages = [];
         let stats = { events: 0, observations: 0, loops: 0, tools: 0, tokens: 0 };
         let currentFilter = 'all';
+        let stepwiseMode = false;
         let manualOversight = false;
         let pagerankMode = false;
 
@@ -1248,6 +1260,7 @@
         const messagesView = document.getElementById('messagesView');
         const previewContent = document.getElementById('previewContent');
         const previewUrl = document.getElementById('previewUrl');
+        const stepwiseToggle = document.getElementById('stepwiseToggle');
         const oversightToggle = document.getElementById('oversightToggle');
         const pagerankToggle = document.getElementById('pagerankToggle');
         const confirmationBanner = document.getElementById('confirmationBanner');
@@ -1259,6 +1272,7 @@
         const testCaseCheckboxes = document.getElementById('testCaseCheckboxes');
         const modelCheckboxes = document.getElementById('modelCheckboxes');
         const benchmarkAgentTypeEl = document.getElementById('benchmarkAgentType');
+        const benchmarkStepwiseCheckbox = document.getElementById('benchmarkStepwise');
         const runsPerTestCaseInput = document.getElementById('runsPerTestCase');
         const runBenchmarkBtn = document.getElementById('runBenchmarkBtn');
         const stopBenchmarkBtn = document.getElementById('stopBenchmarkBtn');
@@ -1586,13 +1600,20 @@
             }
 
             const navigationMode = pagerankMode ? 'pagerank' : 'default';
-            ws.send(JSON.stringify({ type: 'run', url, goal, model, manualOversight, agentType, navigationMode }));
+            ws.send(JSON.stringify({ type: 'run', url, goal, model, manualOversight, agentType, stepwise: stepwiseMode, navigationMode }));
             statusDot.classList.add('running');
             const agentLabel = agentType === 'minimal' ? 'minimal' : 'full';
+            const stepwiseLabel = stepwiseMode ? 'stepwise + ' : '';
             const pagerankLabel = pagerankMode ? ' (PageRank)' : '';
-            statusText.textContent = manualOversight ? `Starting ${agentLabel} agent${pagerankLabel} (manual oversight enabled)...` : `Running ${agentLabel} agent${pagerankLabel}...`;
+            statusText.textContent = manualOversight ? `Starting ${stepwiseLabel}${agentLabel} agent${pagerankLabel} (manual oversight enabled)...` : `Running ${stepwiseLabel}${agentLabel} agent${pagerankLabel}...`;
             runBtn.style.display = 'none';
             stopBtn.style.display = '';
+        }
+
+        // Toggle stepwise mode
+        function toggleStepwise() {
+            stepwiseMode = !stepwiseMode;
+            stepwiseToggle.classList.toggle('active', stepwiseMode);
         }
 
         // Toggle manual oversight
@@ -1786,7 +1807,8 @@
                 models: Array.from(selectedModels),
                 runsPerTestCase,
                 name,
-                agentType: selectedBenchmarkAgentType
+                agentType: selectedBenchmarkAgentType,
+                stepwise: benchmarkStepwiseCheckbox.checked
             }));
         }
 
@@ -2087,6 +2109,7 @@
         runBtn.onclick = run;
         stopBtn.onclick = stop;
         clearBtn.onclick = clearEvents;
+        stepwiseToggle.onclick = toggleStepwise;
         oversightToggle.onclick = toggleOversight;
         pagerankToggle.onclick = togglePagerank;
         confirmBtn.onclick = confirm;

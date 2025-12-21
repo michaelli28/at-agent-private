@@ -13,7 +13,7 @@
  *   MODEL - Optional model override (default: google/gemini-2.0-flash-001)
  */
 
-import { firefox } from 'playwright';
+import { chromium } from 'playwright';
 import { AgentMinimal } from './AgentMinimal';
 
 async function main() {
@@ -39,8 +39,18 @@ async function main() {
   console.log(`   Goal: ${goal}`);
   console.log(`   Model: ${model || 'google/gemini-2.0-flash-001'}\n`);
 
-  const browser = await firefox.launch({ headless: false });
-  const page = await browser.newPage();
+  // Use same browser settings as full screen reader mode
+  const browser = await chromium.launch({
+    headless: false,
+    channel: 'chrome',
+    ignoreDefaultArgs: ['--enable-automation'],
+    args: ['--start-maximized'],
+  });
+  const context = await browser.newContext({
+    viewport: null,
+    hasTouch: false,
+  });
+  const page = await context.newPage();
 
   try {
     await page.goto(url, { waitUntil: 'domcontentloaded' });
