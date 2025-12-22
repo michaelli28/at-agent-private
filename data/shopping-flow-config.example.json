@@ -1,0 +1,52 @@
+{
+  "$comment": "Example configuration for shopping flow accessibility testing",
+  "examples": [
+    {
+      "name": "Basic Amazon test",
+      "command": "npm run shopping-flow https://www.amazon.com --search \"wireless headphones\" --output amazon-report.html"
+    },
+    {
+      "name": "Test with specific product selection",
+      "command": "npm run shopping-flow https://target.com --search \"running shoes\" --product-index 2 --quantity 1"
+    },
+    {
+      "name": "Full checkout flow test (headed mode for debugging)",
+      "command": "npm run shopping-flow https://shop.example.com --search \"t-shirt\" --checkout --headed"
+    },
+    {
+      "name": "Using Gemini instead of OpenAI",
+      "command": "npm run shopping-flow https://bestbuy.com --search \"laptop\" --gemini"
+    }
+  ],
+  "wcagCriteriaTestedByStep": {
+    "search": [
+      "2.1.1 - Keyboard (search input reachable)",
+      "3.3.2 - Labels or Instructions (search field labeled)",
+      "4.1.2 - Name, Role, Value (search button accessible)"
+    ],
+    "results": [
+      "1.1.1 - Non-text Content (product image alt text)",
+      "2.1.1 - Keyboard (product links, filter controls)",
+      "1.3.1 - Info and Relationships (heading structure)"
+    ],
+    "product": [
+      "1.1.1 - Non-text Content (product gallery images)",
+      "2.1.1 - Keyboard (options, quantity, add to cart)",
+      "4.1.3 - Status Messages (cart update announcement)"
+    ],
+    "cart": [
+      "2.1.1 - Keyboard (cart link, quantity controls, checkout)",
+      "1.3.1 - Info and Relationships (cart item details)"
+    ],
+    "checkout": [
+      "3.3.2 - Labels or Instructions (form fields)",
+      "2.4.7 - Focus Visible (form field focus)",
+      "2.4.3 - Focus Order (logical tab order)",
+      "3.3.1 - Error Identification (form errors)"
+    ]
+  },
+  "environmentVariables": {
+    "OPENAI_API_KEY": "Required for OpenAI provider (default)",
+    "GOOGLE_API_KEY": "Required for Gemini provider (--gemini flag)"
+  }
+}

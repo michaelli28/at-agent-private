@@ -62,7 +62,8 @@
     "taskgen": "tsx -r tsconfig-paths/register taskgen/src/cli.ts",
     "taskgen:detailed": "tsx -r tsconfig-paths/register taskgen/src/cli.ts --detailed",
     "taskgen:run": "tsx -r tsconfig-paths/register scripts/runTaskgenTests.ts",
-    "test:scan": "tsx apps/agent/test-scan.ts"
+    "test:scan": "tsx apps/agent/test-scan.ts",
+    "shopping-flow": "tsx -r tsconfig-paths/register scripts/runShoppingFlow.ts"
   },
   "devDependencies": {
     "@types/node": "^20.19.25",

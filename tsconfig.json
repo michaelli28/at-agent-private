@@ -17,6 +17,8 @@
       "@adf/virtual-screen-reader": ["apps/virtual-screen-reader/src/index.ts"],
       "@adf/virtual-screen-reader/*": ["apps/virtual-screen-reader/src/*"],
       "@adf/ui/*": ["apps/ui/src/*"],
+      "@adf/shopping": ["shopping/index.ts"],
+      "@adf/shopping/*": ["shopping/*"],
       "@langchain/core/*": ["node_modules/@langchain/core/dist/*"],
     },
   },
