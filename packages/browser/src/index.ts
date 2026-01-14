@@ -1,2 +1,2 @@
-export * from './types';
-export * from './playwrightClient';
+// @at-agent/browser - Playwright wrapper for accessibility testing
+export {}
