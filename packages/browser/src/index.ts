@@ -1,2 +1,13 @@
 // @at-agent/browser - Playwright wrapper for accessibility testing
-export {}
+export {
+  BrowserOptionsSchema,
+  type BrowserOptions,
+  ElementLocationSchema,
+  type ElementLocation,
+  ElementDataSchema,
+  type ElementData,
+  AccessibilityNodeSchema,
+  type AccessibilityNode,
+  ScreenshotOptionsSchema,
+  type ScreenshotOptions,
+} from './types.js'
