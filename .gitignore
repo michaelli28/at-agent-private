@@ -66,3 +66,6 @@ scripts/prompts
 # Test artifacts
 coverage/
 *.lcov
+
+# Worktrees
+.worktrees/
