@@ -13,6 +13,7 @@
   "workspaces": [
     "packages/accessibility",
     "packages/browser",
+    "packages/agent",
     "packages/shared",
     "packages/drivers",
     "packages/evaluation",
