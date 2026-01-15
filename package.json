@@ -34,8 +34,11 @@
   ],
   "scripts": {
     "build": "npm run build --workspaces --if-present",
+    "build:packages": "npm run build -w @at-agent/browser && npm run build -w @at-agent/accessibility && npm run build -w @at-agent/agent && npm run build -w @at-agent/cli",
     "build:cli": "esbuild scripts/runAgentCli.ts --bundle --platform=node --target=node20 --outfile=dist/runAgentCli.js --external:playwright --external:@langchain/* --external:langchain --external:openai --external:dotenv --external:tiktoken",
     "test": "npm run test --workspaces --if-present",
+    "test:packages": "npm run test -w @at-agent/browser && npm run test -w @at-agent/accessibility && npm run test -w @at-agent/agent && npm run test -w @at-agent/cli",
+    "at-agent": "node packages/cli/dist/index.js",
     "lint": "eslint . --ext .ts,.tsx",
     "dev:sr": "tsx -r tsconfig-paths/register scripts/runScreenReaderDev.ts",
     "test:regression": "tsx -r tsconfig-paths/register scripts/runRegression.ts",
