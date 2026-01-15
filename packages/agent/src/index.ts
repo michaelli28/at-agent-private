@@ -16,3 +16,4 @@ export {
 
 export { createOpenAIClient, generateAction } from './openai.js'
 export { executeAction } from './tools.js'
+export { Agent } from './agent.js'
