@@ -1,2 +1,15 @@
 // @at-agent/agent - AI-powered accessibility testing agent
-export {}
+export {
+  ActionTypeSchema,
+  type ActionType,
+  ActionSchema,
+  type Action,
+  ActionResultSchema,
+  type ActionResult,
+  StepSchema,
+  type Step,
+  AgentOptionsSchema,
+  type AgentOptions,
+  AgentResultSchema,
+  type AgentResult,
+} from './types.js'
