@@ -1,3 +1,6 @@
 #!/usr/bin/env node
 // @at-agent/cli - Accessibility testing command-line interface
-console.log('at-agent CLI')
+import { createProgram } from './cli.js'
+
+const program = createProgram()
+program.parse(process.argv)
