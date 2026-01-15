@@ -6,10 +6,10 @@ SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
 # Create mock GITHUB_STEP_SUMMARY
 export GITHUB_STEP_SUMMARY=$(mktemp)
 
-# Test with sample data
+# Test with sample data matching CLI output format
 export AUDIT_URL="https://example.com"
 export FAIL_ON="serious"
-export AUDIT_JSON='{"summary":{"total":8,"byImpact":{"critical":0,"serious":2,"moderate":5,"minor":1}},"violations":[{"rule":"color-contrast","impact":"serious","nodes":[{},{}],"help":"Elements must have sufficient color contrast"},{"rule":"image-alt","impact":"moderate","nodes":[{},{},{}],"help":"Images must have alternate text"}]}'
+export AUDIT_JSON='{"summary":{"totalViolations":8,"byImpact":{"critical":0,"serious":2,"moderate":5,"minor":1}},"auditResult":{"violations":[{"id":"color-contrast","impact":"serious","nodes":[{},{}],"help":"Elements must have sufficient color contrast"},{"id":"image-alt","impact":"moderate","nodes":[{},{},{}],"help":"Images must have alternate text"}]}}'
 
 bash "$SCRIPT_DIR/audit-summary.sh"
 

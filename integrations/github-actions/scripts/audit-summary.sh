@@ -6,8 +6,8 @@ URL="${AUDIT_URL:-unknown}"
 FAIL_ON="${FAIL_ON:-serious}"
 JSON="${AUDIT_JSON:-{}}"
 
-# Parse counts
-TOTAL=$(echo "$JSON" | jq -r '.summary.total // 0')
+# Parse counts (CLI outputs summary.totalViolations, not summary.total)
+TOTAL=$(echo "$JSON" | jq -r '.summary.totalViolations // 0')
 CRITICAL=$(echo "$JSON" | jq -r '.summary.byImpact.critical // 0')
 SERIOUS=$(echo "$JSON" | jq -r '.summary.byImpact.serious // 0')
 MODERATE=$(echo "$JSON" | jq -r '.summary.byImpact.moderate // 0')
@@ -45,8 +45,8 @@ cat >> "$GITHUB_STEP_SUMMARY" << EOF
 
 EOF
 
-# Add top violations table if any exist
-VIOLATION_COUNT=$(echo "$JSON" | jq -r '.violations | length')
+# Add top violations table if any exist (CLI uses auditResult.violations with .id not .rule)
+VIOLATION_COUNT=$(echo "$JSON" | jq -r '.auditResult.violations | length')
 if [ "$VIOLATION_COUNT" -gt 0 ]; then
   cat >> "$GITHUB_STEP_SUMMARY" << EOF
 ### Top Violations
@@ -55,5 +55,5 @@ if [ "$VIOLATION_COUNT" -gt 0 ]; then
 |------|--------|-------|------|
 EOF
 
-  echo "$JSON" | jq -r '.violations[:5][] | "| \(.rule) | \(.impact) | \(.nodes | length) | \(.help) |"' >> "$GITHUB_STEP_SUMMARY"
+  echo "$JSON" | jq -r '.auditResult.violations[:5][] | "| \(.id) | \(.impact) | \(.nodes | length) | \(.help) |"' >> "$GITHUB_STEP_SUMMARY"
 fi
