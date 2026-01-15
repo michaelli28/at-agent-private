@@ -82,7 +82,7 @@ export class ScreenReaderSimulator {
     return headings
   }
 
-  private getHeadingLevel(node: AccessibilityNode): number {
+  private getHeadingLevel(_node: AccessibilityNode): number {
     // Try to determine heading level from the node
     // Default to 1 for main headings
     return 1
