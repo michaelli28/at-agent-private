@@ -15,3 +15,4 @@ export {
 } from './types.js'
 
 export { createOpenAIClient, generateAction } from './openai.js'
+export { executeAction } from './tools.js'
