@@ -1,5 +1,6 @@
 import { describe, it, expect, afterEach } from 'vitest'
 import { BrowserClient } from './client.js'
+import { BrowserPage } from './page.js'
 
 describe('BrowserClient', () => {
   let client: BrowserClient | null = null
@@ -43,6 +44,20 @@ describe('BrowserClient', () => {
     it('is safe to call close when not launched', async () => {
       client = new BrowserClient()
       await expect(client.close()).resolves.not.toThrow()
+    })
+  })
+
+  describe('newPage', () => {
+    it('creates a new page', async () => {
+      client = new BrowserClient()
+      await client.launch()
+      const page = await client.newPage()
+      expect(page).toBeInstanceOf(BrowserPage)
+    })
+
+    it('throws if browser not launched', async () => {
+      client = new BrowserClient()
+      await expect(client.newPage()).rejects.toThrow('Browser not launched')
     })
   })
 })

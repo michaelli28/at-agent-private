@@ -1,5 +1,6 @@
 import { chromium, Browser } from 'playwright'
 import { BrowserOptionsSchema, type BrowserOptions } from './types.js'
+import { BrowserPage } from './page.js'
 
 export class BrowserClient {
   private browser: Browser | null = null
@@ -28,5 +29,13 @@ export class BrowserClient {
 
   isLaunched(): boolean {
     return this.browser !== null
+  }
+
+  async newPage(): Promise<BrowserPage> {
+    if (!this.browser) {
+      throw new Error('Browser not launched')
+    }
+    const page = await this.browser.newPage()
+    return new BrowserPage(page)
   }
 }
