@@ -37,4 +37,31 @@ describe('BrowserPage', () => {
       await page.close()
     })
   })
+
+  describe('queries', () => {
+    it('finds elements by role', async () => {
+      page = await client.newPage()
+      await page.goto('https://example.com')
+      const links = await page.getByRole('link')
+      expect(links.length).toBeGreaterThan(0)
+      expect(links[0].role).toBe('link')
+      await page.close()
+    })
+
+    it('finds elements by role and name', async () => {
+      page = await client.newPage()
+      await page.goto('https://example.com')
+      const links = await page.getByRole('link', { name: 'Learn more' })
+      expect(links.length).toBe(1)
+      await page.close()
+    })
+
+    it('returns empty array when no matches', async () => {
+      page = await client.newPage()
+      await page.goto('https://example.com')
+      const buttons = await page.getByRole('button')
+      expect(buttons).toEqual([])
+      await page.close()
+    })
+  })
 })
