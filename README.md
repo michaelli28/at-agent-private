@@ -2,163 +2,161 @@
 
 AI-powered accessibility testing agent.
 
-## Setup
+## Quick Start
 
 ```bash
-# Install dependencies (macOS)
-brew install bazelisk python@3.11 openjdk@17
-curl -o- https://raw.githubusercontent.com/nvm-sh/nvm/v0.40.1/install.sh | bash
-nvm install 20 && nvm use 20
-corepack enable && corepack prepare pnpm@latest --activate
+# Install
+npm install
 
-# Install packages
-pnpm install
+# Build
+npm run build:packages
+
+# Run accessibility audit
+npm run at-agent -- audit https://example.com
+
+# Run AI-guided flow test
+npm run at-agent -- flow https://example.com --goal "complete checkout"
 ```
 
-## Build
+## CLI Commands
+
+### Audit
+
+Run an accessibility audit on any URL:
 
 ```bash
-# Build everything with Bazel
-bazel build //...
+npm run at-agent -- audit <url> [options]
 
-# Or use pnpm for TypeScript
-pnpm build
+Options:
+  --json              Output results as JSON
+  --tags <tags...>    WCAG tags to check (e.g., wcag2a wcag2aa)
 ```
 
-## Run
+Example:
+```bash
+npm run at-agent -- audit https://example.com
+npm run at-agent -- audit https://example.com --json
+npm run at-agent -- audit https://example.com --tags wcag2a wcag2aa
+```
 
-### Agent
+### Flow
+
+Run an AI-guided accessibility flow test:
 
 ```bash
-pnpm start:agent
-pnpm start:agent-cli
-pnpm start:agent-parallel
-pnpm start:agent-openrouter
+npm run at-agent -- flow <url> [options]
+
+Options:
+  --goal <goal>       Goal for the agent to achieve (required)
+  --json              Output results as JSON
+  --max-steps <n>     Maximum steps (default: 20)
+  --api-key <key>     OpenAI API key (or set OPENAI_API_KEY env var)
 ```
 
-### Audits
+Example:
+```bash
+export OPENAI_API_KEY=sk-...
+npm run at-agent -- flow https://shop.example.com --goal "add item to cart"
+```
+
+## GitHub Actions
+
+Use at-agent in your CI/CD pipeline:
+
+```yaml
+# Accessibility audit
+- uses: your-org/at-agent/integrations/github-actions/audit@main
+  with:
+    url: https://example.com
+    fail-on: serious
+
+# AI-guided flow test
+- uses: your-org/at-agent/integrations/github-actions/flow@main
+  with:
+    url: https://example.com
+    goal: "complete user registration"
+    api-key: ${{ secrets.OPENAI_API_KEY }}
+```
+
+See [integrations/github-actions/README.md](integrations/github-actions/README.md) for full documentation.
+
+## Development
+
+### Setup
 
 ```bash
-pnpm audit-dom
-pnpm audit-visual
-pnpm audit-media
-pnpm audit
+# Install dependencies
+npm install
+
+# Build all packages
+npm run build:packages
+
+# Run tests
+npm run test:packages
 ```
 
-### UI
-
-```bash
-pnpm start:ui
-pnpm start:debug-ui
-```
-
-### Dashboard
-
-```bash
-cd apps/dashboard
-pnpm dev
-pnpm build
-pnpm start
-```
-
-### Discovery Agent (Python)
-
-```bash
-cd python/discovery-agent
-pip install -r requirements.txt
-python discover.py
-```
-
-### Screen Reader
-
-```bash
-pnpm dev:sr
-```
-
-## Test
-
-```bash
-pnpm test
-pnpm test:visual-regression
-pnpm benchmark:aria-at
-```
-
-## Scripts
-
-```bash
-pnpm visualize-report
-pnpm generate-graph
-pnpm generate-sitemap
-```
-
-## Docker
-
-```bash
-cd infra/docker
-docker-compose up
-```
-
-## Integrations
-
-### Jenkins Plugin
-
-```bash
-cd integrations/jenkins
-./mvnw package
-```
-
-### Azure DevOps Extension
-
-```bash
-cd integrations/azure-devops
-pnpm install
-npx tfx extension create
-```
-
-### GitHub Action
-
-See `integrations/github-actions/`
-
-### GitLab CI
-
-See `integrations/gitlab-ci/.gitlab-ci-template.yml`
-
-## Structure
+### Package Structure
 
 ```
-at-agent/
-├── packages/                 # Shared libraries
-│   ├── browser/              # Browser automation client
-│   ├── shared/               # Common types
-│   ├── drivers/              # Accessibility drivers
-│   └── evaluation/           # Test evaluation
-├── apps/                     # Applications
-│   ├── agent/                # Core AI agent
-│   ├── dashboard/            # Next.js dashboard
-│   ├── ui/                   # Express server
-│   └── virtual-screen-reader/
-├── services/                 # Backend workers
-│   └── rerun-worker/
-├── scripts/                  # CLI tools
-├── integrations/             # CI/CD plugins
-│   ├── jenkins/
-│   ├── azure-devops/
-│   ├── github-actions/
-│   └── gitlab-ci/
-├── python/                   # Python code
-│   └── discovery-agent/
-├── infra/                    # Deployment
-│   └── docker/
-├── tools/                    # Bazel macros
-└── third_party/              # External deps
+packages/
+├── browser/        # Playwright wrapper for a11y-focused automation
+├── accessibility/  # Auditor, axe-core integration, screen reader sim
+├── agent/          # AI orchestration with OpenAI
+└── cli/            # Command-line interface
 ```
 
-## Environment
+### Environment
 
 Create `.env`:
 
 ```
 OPENAI_API_KEY=sk-...
-GOOGLE_API_KEY=...
-GROQ_API_KEY=...
+```
+
+## Architecture
+
+```
+┌─────────────────────────────────────────────────┐
+│              Integrations Layer                 │
+│         (GitHub Actions, CI/CD)                 │
+└─────────────────────────────────────────────────┘
+                        │
+┌─────────────────────────────────────────────────┐
+│              Application Layer                  │
+│                   (CLI)                         │
+└─────────────────────────────────────────────────┘
+                        │
+┌─────────────────────────────────────────────────┐
+│                Agent Layer                      │
+│      (AI orchestration, tools, OpenAI)          │
+└─────────────────────────────────────────────────┘
+                        │
+┌─────────────────────────────────────────────────┐
+│              Accessibility Layer                │
+│    (Auditor, screen reader sim, WCAG rules)     │
+└─────────────────────────────────────────────────┘
+                        │
+┌─────────────────────────────────────────────────┐
+│               Browser Layer                     │
+│        (Playwright wrapper, interactions)       │
+└─────────────────────────────────────────────────┘
+```
+
+## Legacy Commands
+
+The following commands are from the previous architecture and may be deprecated:
+
+```bash
+# Old agent commands
+npm run start:agent
+npm run start:agent-cli
+
+# Old audit commands
+npm run audit-dom
+npm run audit-visual
+npm run audit
+
+# UI
+npm run start:ui
+npm run start:debug-ui
 ```
