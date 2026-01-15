@@ -112,6 +112,27 @@ describe('BrowserPage', () => {
     })
   })
 
+  describe('interactions', () => {
+    it('clicks element by role', async () => {
+      page = await client.newPage()
+      await page.goto('https://example.com')
+      // Click the "Learn more" link
+      await page.clickByRole('link', { name: 'Learn more' })
+      // Should navigate to IANA
+      expect(await page.url()).toContain('iana.org')
+      await page.close()
+    })
+
+    it('throws when element not found', async () => {
+      page = await client.newPage()
+      await page.goto('https://example.com')
+      await expect(
+        page.clickByRole('button', { name: 'nonexistent', timeout: 1000 })
+      ).rejects.toThrow()
+      await page.close()
+    })
+  })
+
   describe('screenshot', () => {
     it('captures screenshot as buffer', async () => {
       page = await client.newPage()

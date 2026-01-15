@@ -138,6 +138,33 @@ export class BrowserPage {
     }
   }
 
+  async clickByRole(
+    role: string,
+    options?: { name?: string | RegExp; timeout?: number }
+  ): Promise<void> {
+    const { timeout, ...locatorOptions } = options ?? {}
+    const locator = this.page.getByRole(role as Parameters<Page['getByRole']>[0], locatorOptions)
+    await locator.click({ timeout })
+  }
+
+  async clickByText(text: string | RegExp): Promise<void> {
+    const locator = this.page.getByText(text)
+    await locator.click()
+  }
+
+  async fill(selector: string, value: string): Promise<void> {
+    await this.page.fill(selector, value)
+  }
+
+  async fillByRole(
+    role: string,
+    value: string,
+    options?: { name?: string | RegExp }
+  ): Promise<void> {
+    const locator = this.page.getByRole(role as Parameters<Page['getByRole']>[0], options)
+    await locator.fill(value)
+  }
+
   async close(): Promise<void> {
     await this.page.close()
   }
