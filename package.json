@@ -11,7 +11,7 @@
     ]
   },
   "workspaces": [
-
+    "packages/accessibility",
     "packages/browser",
     "packages/shared",
     "packages/drivers",
