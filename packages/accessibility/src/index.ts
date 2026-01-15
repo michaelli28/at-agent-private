@@ -13,3 +13,5 @@ export {
   AuditOptionsSchema,
   type AuditOptions,
 } from './types.js'
+
+export { runAxe, type AxeResult } from './axe.js'
