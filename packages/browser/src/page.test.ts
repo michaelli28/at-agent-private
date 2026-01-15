@@ -81,6 +81,37 @@ describe('BrowserPage', () => {
     })
   })
 
+  describe('accessibility', () => {
+    it('returns accessibility tree', async () => {
+      page = await client.newPage()
+      await page.goto('https://example.com')
+      const tree = await page.accessibilityTree()
+      expect(tree.role).toBe('WebArea')
+      expect(tree.children.length).toBeGreaterThan(0)
+      await page.close()
+    })
+
+    it('tree contains heading', async () => {
+      page = await client.newPage()
+      await page.goto('https://example.com')
+      const tree = await page.accessibilityTree()
+
+      const findHeading = (node: any): any => {
+        if (node.role === 'heading') return node
+        for (const child of node.children || []) {
+          const found = findHeading(child)
+          if (found) return found
+        }
+        return null
+      }
+
+      const heading = findHeading(tree)
+      expect(heading).not.toBeNull()
+      expect(heading.name).toContain('Example')
+      await page.close()
+    })
+  })
+
   describe('screenshot', () => {
     it('captures screenshot as buffer', async () => {
       page = await client.newPage()
