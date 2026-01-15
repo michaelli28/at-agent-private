@@ -15,8 +15,8 @@ export type ActionType = z.infer<typeof ActionTypeSchema>
 // An action the agent wants to perform
 export const ActionSchema = z.object({
   type: ActionTypeSchema,
-  target: z.string().optional(),
-  value: z.string().optional(),
+  target: z.string().nullish(), // nullish allows null, undefined, or string
+  value: z.string().nullish(),
   reason: z.string(),
 })
 export type Action = z.infer<typeof ActionSchema>
