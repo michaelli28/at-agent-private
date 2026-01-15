@@ -11,3 +11,6 @@ export {
   ScreenshotOptionsSchema,
   type ScreenshotOptions,
 } from './types.js'
+
+export { BrowserClient } from './client.js'
+export { BrowserPage } from './page.js'
