@@ -1,5 +1,5 @@
 import type { Page, Locator } from 'playwright'
-import type { ElementData } from './types.js'
+import { ScreenshotOptionsSchema, type ElementData, type ScreenshotOptions } from './types.js'
 
 export class BrowserPage {
   constructor(private readonly page: Page) {}
@@ -57,6 +57,14 @@ export class BrowserPage {
     }
 
     return elements
+  }
+
+  async screenshot(options: Partial<ScreenshotOptions> = {}): Promise<Buffer> {
+    const opts = ScreenshotOptionsSchema.parse(options)
+    return this.page.screenshot({
+      fullPage: opts.fullPage,
+      type: opts.type,
+    })
   }
 
   async close(): Promise<void> {

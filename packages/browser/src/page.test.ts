@@ -80,4 +80,29 @@ describe('BrowserPage', () => {
       await page.close()
     })
   })
+
+  describe('screenshot', () => {
+    it('captures screenshot as buffer', async () => {
+      page = await client.newPage()
+      await page.goto('https://example.com')
+      const buffer = await page.screenshot()
+      expect(buffer).toBeInstanceOf(Buffer)
+      expect(buffer.length).toBeGreaterThan(0)
+      // PNG magic bytes
+      expect(buffer[0]).toBe(0x89)
+      expect(buffer[1]).toBe(0x50) // P
+      expect(buffer[2]).toBe(0x4e) // N
+      expect(buffer[3]).toBe(0x47) // G
+      await page.close()
+    })
+
+    it('captures full page screenshot', async () => {
+      page = await client.newPage()
+      await page.goto('https://example.com')
+      const partial = await page.screenshot()
+      const full = await page.screenshot({ fullPage: true })
+      expect(full.length).toBeGreaterThanOrEqual(partial.length)
+      await page.close()
+    })
+  })
 })
