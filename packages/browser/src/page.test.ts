@@ -63,5 +63,21 @@ describe('BrowserPage', () => {
       expect(buttons).toEqual([])
       await page.close()
     })
+
+    it('finds elements by text', async () => {
+      page = await client.newPage()
+      await page.goto('https://example.com')
+      const elements = await page.getByText('Example Domain')
+      expect(elements.length).toBeGreaterThan(0)
+      await page.close()
+    })
+
+    it('finds elements by partial text', async () => {
+      page = await client.newPage()
+      await page.goto('https://example.com')
+      const elements = await page.getByText('Example', { exact: false })
+      expect(elements.length).toBeGreaterThan(0)
+      await page.close()
+    })
   })
 })

@@ -24,6 +24,14 @@ export class BrowserPage {
     return this.locatorToElementData(locator, role)
   }
 
+  async getByText(
+    text: string | RegExp,
+    options?: { exact?: boolean }
+  ): Promise<ElementData[]> {
+    const locator = this.page.getByText(text, options)
+    return this.locatorToElementData(locator)
+  }
+
   private async locatorToElementData(locator: Locator, role?: string): Promise<ElementData[]> {
     const count = await locator.count()
     const elements: ElementData[] = []
