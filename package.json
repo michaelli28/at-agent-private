@@ -14,6 +14,7 @@
     "packages/accessibility",
     "packages/browser",
     "packages/agent",
+    "packages/cli",
     "packages/shared",
     "packages/drivers",
     "packages/evaluation",
