@@ -13,3 +13,5 @@ export {
   AgentResultSchema,
   type AgentResult,
 } from './types.js'
+
+export { createOpenAIClient, generateAction } from './openai.js'
