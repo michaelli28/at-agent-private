@@ -56,3 +56,9 @@ export const AgentResultSchema = z.object({
   summary: z.string(),
 })
 export type AgentResult = z.infer<typeof AgentResultSchema>
+
+// Options for executeAction
+export const ExecuteActionOptionsSchema = z.object({
+  headed: z.boolean().default(false),
+})
+export type ExecuteActionOptions = z.infer<typeof ExecuteActionOptionsSchema>

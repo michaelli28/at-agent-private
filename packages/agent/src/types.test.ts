@@ -6,6 +6,7 @@ import {
   AgentOptionsSchema,
   StepSchema,
   AgentResultSchema,
+  ExecuteActionOptionsSchema,
 } from './types.js'
 
 describe('ActionTypeSchema', () => {
@@ -274,5 +275,17 @@ describe('AgentResultSchema', () => {
     expect(result.success).toBe(false)
     expect(result.violations).toHaveLength(1)
     expect(result.violations[0].impact).toBe('critical')
+  })
+})
+
+describe('ExecuteActionOptionsSchema', () => {
+  it('defaults headed to false', () => {
+    const result = ExecuteActionOptionsSchema.parse({})
+    expect(result.headed).toBe(false)
+  })
+
+  it('allows setting headed to true', () => {
+    const result = ExecuteActionOptionsSchema.parse({ headed: true })
+    expect(result.headed).toBe(true)
   })
 })

@@ -12,6 +12,8 @@ export {
   type AgentOptions,
   AgentResultSchema,
   type AgentResult,
+  ExecuteActionOptionsSchema,
+  type ExecuteActionOptions,
 } from './types.js'
 
 export { createOpenAIClient, generateAction } from './openai.js'
