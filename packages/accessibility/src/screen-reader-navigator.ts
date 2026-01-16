@@ -6,7 +6,7 @@ const INTERESTING_ROLES = new Set([
   'combobox', 'listbox', 'option', 'switch', 'slider', 'spinbutton',
   'tab', 'tablist', 'menu', 'menuitem', 'table', 'row', 'cell',
   'banner', 'main', 'navigation', 'complementary', 'contentinfo',
-  'form', 'region', 'alert', 'dialog', 'img', 'list', 'listitem',
+  'search', 'form', 'region', 'alert', 'dialog', 'img', 'list', 'listitem',
 ])
 
 const LANDMARK_ROLES = new Set([

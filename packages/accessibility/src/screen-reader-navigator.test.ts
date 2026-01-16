@@ -218,4 +218,58 @@ describe('ScreenReaderNavigator - Role Navigation', () => {
     expect(result.success).toBe(false)
     expect(result.message).toBe('No next heading')
   })
+
+  it('should move to previous landmark', () => {
+    const navigator = new ScreenReaderNavigator()
+    navigator.loadTree(mockTree)
+
+    navigator.moveToNextLandmark() // banner
+    navigator.moveToNextLandmark() // main
+
+    const result = navigator.moveToPrevLandmark()
+    expect(result.success).toBe(true)
+    expect(result.node?.role).toBe('banner')
+  })
+
+  it('should return failure when no next landmark exists', () => {
+    const navigator = new ScreenReaderNavigator()
+    navigator.loadTree(mockTree)
+
+    navigator.moveToNextLandmark() // banner
+    navigator.moveToNextLandmark() // main
+
+    const result = navigator.moveToNextLandmark()
+    expect(result.success).toBe(false)
+    expect(result.message).toBe('No next landmark')
+  })
+
+  it('should return failure when no previous landmark exists', () => {
+    const navigator = new ScreenReaderNavigator()
+    navigator.loadTree(mockTree)
+
+    navigator.moveToNextLandmark() // banner (first landmark)
+
+    const result = navigator.moveToPrevLandmark()
+    expect(result.success).toBe(false)
+    expect(result.message).toBe('No previous landmark')
+  })
+
+  it('should return failure when no main landmark exists', () => {
+    const treeWithoutMain: AccessibilityNode = {
+      role: 'WebArea',
+      name: 'Test Page',
+      value: null,
+      description: null,
+      children: [
+        { role: 'banner', name: 'Header', value: null, description: null, children: [] },
+        { role: 'heading', name: 'Title', value: null, description: null, children: [] },
+      ],
+    }
+    const navigator = new ScreenReaderNavigator()
+    navigator.loadTree(treeWithoutMain)
+
+    const result = navigator.moveToMain()
+    expect(result.success).toBe(false)
+    expect(result.message).toBe('No main content')
+  })
 })
