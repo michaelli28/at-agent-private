@@ -4,6 +4,10 @@ import { ScreenshotOptionsSchema, type ElementData, type ScreenshotOptions, type
 export class BrowserPage {
   constructor(private readonly page: Page) {}
 
+  get playwrightPage(): Page {
+    return this.page
+  }
+
   async goto(url: string): Promise<void> {
     await this.page.goto(url, { waitUntil: 'domcontentloaded' })
   }

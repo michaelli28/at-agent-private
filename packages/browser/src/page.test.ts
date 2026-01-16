@@ -138,10 +138,17 @@ describe('BrowserPage', () => {
       page = await client.newPage()
       await page.goto('https://example.com')
 
-      await page.highlight('heading', { name: 'Example Domain' }, 'CLICK', 100)
+      const highlightPromise = page.highlight('heading', { name: 'Example Domain' }, 'CLICK', 500)
 
-      // Overlay should be removed after duration, but we can check it was injected
-      // by verifying no errors were thrown
+      await page.playwrightPage.waitForSelector('#__agent_highlight__')
+
+      const overlay = await page.playwrightPage.$('#__agent_highlight__')
+      expect(overlay).not.toBeNull()
+
+      const labelText = await page.playwrightPage.$eval('#__agent_highlight__ > div', el => el.textContent)
+      expect(labelText).toBe('CLICK')
+
+      await highlightPromise
       await page.close()
     })
   })
