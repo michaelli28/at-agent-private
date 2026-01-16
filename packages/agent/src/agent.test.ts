@@ -215,5 +215,22 @@ describe('Agent', () => {
 
       expect(BrowserClient).toHaveBeenCalledWith({ headless: true })
     })
+
+    it('passes headed option to executeAction', async () => {
+      const mockGenerateAction = vi.mocked(openai.generateAction)
+      mockGenerateAction.mockResolvedValue({
+        type: 'done',
+        reason: 'Goal achieved',
+      })
+
+      const agent = new Agent('test-api-key')
+      await agent.run('test goal', { startUrl: 'https://example.com', headed: true })
+
+      expect(tools.executeAction).toHaveBeenCalledWith(
+        expect.any(Object),
+        expect.any(Object),
+        expect.objectContaining({ headed: true })
+      )
+    })
   })
 })

@@ -60,7 +60,7 @@ export class Agent {
           await page.goto(opts.startUrl)
         }
 
-        const result = await executeAction(action, page)
+        const result = await executeAction(action, page, { headed: opts.headed })
 
         const step: Step = {
           stepNumber,
