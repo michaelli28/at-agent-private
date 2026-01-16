@@ -58,6 +58,8 @@ export const AgentResultSchema = z.object({
   steps: z.array(StepSchema),
   violations: z.array(ViolationSchema),
   summary: z.string(),
+  focusHistory: FocusHistorySchema.optional(),
+  trapDetected: z.boolean().optional(),
 })
 export type AgentResult = z.infer<typeof AgentResultSchema>
 

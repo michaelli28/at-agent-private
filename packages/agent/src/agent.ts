@@ -1,5 +1,5 @@
 import { BrowserClient, BrowserPage } from '@at-agent/browser'
-import type { Violation } from '@at-agent/accessibility'
+import type { Violation, FocusHistory } from '@at-agent/accessibility'
 import { createOpenAIClient, generateAction } from './openai.js'
 import { executeAction } from './tools.js'
 import {
@@ -30,6 +30,8 @@ export class Agent {
 
     const steps: Step[] = []
     const violations: Violation[] = []
+    const focusHistory: FocusHistory = []
+    let trapDetected = false
     let page: BrowserPage | null = null
 
     try {
@@ -43,7 +45,9 @@ export class Agent {
             steps,
             violations,
             false,
-            'Agent stopped by user'
+            'Agent stopped by user',
+            focusHistory,
+            trapDetected
           )
         }
 
@@ -60,7 +64,25 @@ export class Agent {
           await page.goto(opts.startUrl)
         }
 
-        const result = await executeAction(action, page, { headed: opts.headed })
+        // Build execute options, including trapContext for checkTrap action
+        const executeOptions = action.type === 'checkTrap'
+          ? { headed: opts.headed, trapContext: { focusHistory } }
+          : { headed: opts.headed }
+
+        const result = await executeAction(action, page, executeOptions)
+
+        // Record focus events after tab actions
+        if (action.type === 'tab' && result.focusedElement) {
+          focusHistory.push({
+            element: result.focusedElement,
+            timestamp: Date.now(),
+          })
+        }
+
+        // Track trap detection result
+        if (action.type === 'checkTrap' && result.trapDetected) {
+          trapDetected = true
+        }
 
         const step: Step = {
           stepNumber,
@@ -79,7 +101,7 @@ export class Agent {
 
         // Check if done
         if (action.type === 'done') {
-          return this.createResult(goal, steps, violations, true, action.reason)
+          return this.createResult(goal, steps, violations, true, action.reason, focusHistory, trapDetected)
         }
       }
 
@@ -89,7 +111,9 @@ export class Agent {
         steps,
         violations,
         false,
-        `Reached max steps (${opts.maxSteps}) without completing goal`
+        `Reached max steps (${opts.maxSteps}) without completing goal`,
+        focusHistory,
+        trapDetected
       )
     } finally {
       if (page) {
@@ -108,7 +132,9 @@ export class Agent {
     steps: Step[],
     violations: Violation[],
     success: boolean,
-    summary: string
+    summary: string,
+    focusHistory: FocusHistory,
+    trapDetected: boolean
   ): AgentResult {
     return {
       success,
@@ -116,6 +142,8 @@ export class Agent {
       steps,
       violations,
       summary,
+      focusHistory,
+      trapDetected,
     }
   }
 }
