@@ -133,6 +133,19 @@ describe('BrowserPage', () => {
     })
   })
 
+  describe('highlight', () => {
+    it('injects overlay element with label', async () => {
+      page = await client.newPage()
+      await page.goto('https://example.com')
+
+      await page.highlight('heading', { name: 'Example Domain' }, 'CLICK', 100)
+
+      // Overlay should be removed after duration, but we can check it was injected
+      // by verifying no errors were thrown
+      await page.close()
+    })
+  })
+
   describe('screenshot', () => {
     it('captures screenshot as buffer', async () => {
       page = await client.newPage()

@@ -168,4 +168,49 @@ export class BrowserPage {
   async close(): Promise<void> {
     await this.page.close()
   }
+
+  async highlight(
+    role: string,
+    options: { name?: string | RegExp },
+    label: string,
+    duration: number = 500
+  ): Promise<void> {
+    const locator = this.page.getByRole(role as Parameters<Page['getByRole']>[0], options)
+    const box = await locator.boundingBox()
+    if (!box) return
+
+    await this.page.evaluate(({ box, label, duration }) => {
+      const overlay = document.createElement('div')
+      overlay.id = '__agent_highlight__'
+      overlay.style.cssText = `
+        position: fixed;
+        left: ${box.x}px;
+        top: ${box.y}px;
+        width: ${box.width}px;
+        height: ${box.height}px;
+        border: 3px solid cyan;
+        background: rgba(0, 255, 255, 0.1);
+        pointer-events: none;
+        z-index: 999999;
+        box-sizing: border-box;
+      `
+      const labelEl = document.createElement('div')
+      labelEl.textContent = label
+      labelEl.style.cssText = `
+        position: absolute;
+        top: -24px;
+        left: -3px;
+        background: cyan;
+        color: black;
+        font: bold 12px system-ui;
+        padding: 2px 6px;
+      `
+      overlay.appendChild(labelEl)
+      document.body.appendChild(overlay)
+
+      setTimeout(() => overlay.remove(), duration)
+    }, { box, label, duration })
+
+    await this.page.waitForTimeout(duration)
+  }
 }
