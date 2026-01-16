@@ -110,7 +110,7 @@ describe('AgentOptionsSchema', () => {
     const options = { startUrl: 'https://example.com' }
     const result = AgentOptionsSchema.parse(options)
     expect(result.maxSteps).toBe(20)
-    expect(result.model).toBe('gpt-4o')
+    expect(result.model).toBe('gpt-5')
   })
 
   it('allows overriding defaults', () => {
@@ -135,6 +135,18 @@ describe('AgentOptionsSchema', () => {
     expect(() =>
       AgentOptionsSchema.parse({ startUrl: 'https://example.com', maxSteps: -1 })
     ).toThrow()
+  })
+
+  it('defaults headed to false', () => {
+    const options = { startUrl: 'https://example.com' }
+    const result = AgentOptionsSchema.parse(options)
+    expect(result.headed).toBe(false)
+  })
+
+  it('allows setting headed to true', () => {
+    const options = { startUrl: 'https://example.com', headed: true }
+    const result = AgentOptionsSchema.parse(options)
+    expect(result.headed).toBe(true)
   })
 })
 

@@ -42,7 +42,8 @@ export type Step = z.infer<typeof StepSchema>
 export const AgentOptionsSchema = z.object({
   startUrl: z.string().url(),
   maxSteps: z.number().positive().default(20),
-  model: z.string().default('gpt-4o'),
+  model: z.string().default('gpt-5'),
+  headed: z.boolean().default(false),
 })
 export type AgentOptions = z.infer<typeof AgentOptionsSchema>
 
