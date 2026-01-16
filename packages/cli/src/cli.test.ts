@@ -28,4 +28,13 @@ describe('CLI', () => {
     expect(flowCmd?.options.some((o: Option) => o.long === '--json')).toBe(true)
     expect(flowCmd?.options.some((o: Option) => o.long === '--max-steps')).toBe(true)
   })
+
+  it('flow command accepts --headed flag', () => {
+    const program = createProgram()
+    const flowCommand = program.commands.find((cmd: Command) => cmd.name() === 'flow')
+
+    expect(flowCommand).toBeDefined()
+    const headedOption = flowCommand?.options.find((opt: Option) => opt.long === '--headed')
+    expect(headedOption).toBeDefined()
+  })
 })

@@ -40,13 +40,15 @@ export function createProgram(): Command {
     .option('--json', 'Output results as JSON')
     .option('--max-steps <number>', 'Maximum steps (default: 20)', parseInt)
     .option('--api-key <key>', 'OpenAI API key (or set OPENAI_API_KEY env var)')
-    .action(async (url: string, options: { goal: string; json?: boolean; maxSteps?: number; apiKey?: string }) => {
+    .option('--headed', 'Show browser window')
+    .action(async (url: string, options: { goal: string; json?: boolean; maxSteps?: number; apiKey?: string; headed?: boolean }) => {
       const result = await runFlow({
         url,
         goal: options.goal,
         json: options.json,
         maxSteps: options.maxSteps,
         apiKey: options.apiKey,
+        headed: options.headed,
       })
 
       if (result.output) {
