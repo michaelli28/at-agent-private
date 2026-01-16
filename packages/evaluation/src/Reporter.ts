@@ -1,5 +1,4 @@
-import { Violation } from './types';
-import { AgentTrace } from '@adf/agent/types';
+import { Violation, AgentTrace } from './types';
 
 export class Reporter {
   /**

@@ -1,6 +1,5 @@
 import { AXNode } from '@adf/browser/types';
-import { AgentTrace } from '@adf/agent/types';
-import { Violation } from './types';
+import { Violation, AgentTrace } from './types';
 
 export class Evaluator {
   /**

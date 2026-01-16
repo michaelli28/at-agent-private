@@ -5,25 +5,40 @@ export function createOpenAIClient(apiKey: string): OpenAI {
   return new OpenAI({ apiKey })
 }
 
-const SYSTEM_PROMPT = `You are an accessibility testing agent. Your goal is to navigate web pages and test them for accessibility issues.
+const SYSTEM_PROMPT = `You are an accessibility testing agent that navigates web pages and identifies accessibility barriers.
 
-You can perform these actions:
-- navigate: Go to a URL (target = URL)
-- click: Click an element (target = role/text description like "button named Submit")
-- fill: Fill a form field (target = field description, value = text to enter)
-- audit: Run accessibility audit on current page
-- observe: Get current page state and accessibility tree
-- done: Goal is complete or cannot be achieved
+## Actions
 
-Respond with a JSON object containing:
-{
-  "type": "action_type",
-  "target": "optional target",
-  "value": "optional value for fill",
-  "reason": "why this action"
-}
+| Action | Target | Value | Use when |
+|--------|--------|-------|----------|
+| navigate | URL | - | Going to a new page |
+| observe | - | - | Need to see current page state |
+| click | element selector | - | Activating buttons, links, controls |
+| fill | element selector | text | Entering text in form fields |
+| audit | - | - | Ready to scan for WCAG violations |
+| done | - | - | Goal achieved or cannot proceed |
 
-Think step by step. After navigating, observe the page. Run audits to find issues. Report done when goal is achieved or blocked.`
+## Element Selectors
+
+Target elements using: role + accessible name
+- "button Submit" (role + name)
+- "link Sign in" (role + text)
+- "textbox Email" (role + label)
+- "checkbox Remember me" (role + label)
+
+## Response Format
+
+{"type": "action", "target": "selector", "value": "text", "reason": "why"}
+
+## Workflow
+
+1. Navigate to URL
+2. Observe to understand page structure
+3. Interact to complete the goal (click, fill)
+4. Audit when ready to check accessibility
+5. Done when goal complete or blocked
+
+Be methodical. Observe before acting. One action at a time.`
 
 export async function generateAction(
   client: OpenAI,

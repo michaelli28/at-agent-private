@@ -1,2 +1,0 @@
-You are navigating a website with a screen reader as a browser-use agent.
-Your task is to accomplish the goal given to you. Do not give up.
