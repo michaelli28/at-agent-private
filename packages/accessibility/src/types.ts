@@ -76,3 +76,28 @@ export type NavigationResult = {
   node: NavigableNode | null
   message: string
 }
+
+// Keyboard Trap Detection Types (WCAG 2.1.2)
+
+export const FocusEventSchema = z.object({
+  element: z.string(),
+  timestamp: z.number(),
+})
+export type FocusEvent = z.infer<typeof FocusEventSchema>
+
+export const FocusHistorySchema = z.array(FocusEventSchema)
+export type FocusHistory = z.infer<typeof FocusHistorySchema>
+
+export const TrapDetectionResultSchema = z.object({
+  trapped: z.boolean(),
+  element: z.string().nullable(),
+  cycleLength: z.number(),
+  wcagCriterion: z.literal('2.1.2'),
+})
+export type TrapDetectionResult = z.infer<typeof TrapDetectionResultSchema>
+
+export const TrapDetectionConfigSchema = z.object({
+  minCycleCount: z.number().default(5),
+  maxHistorySize: z.number(),
+})
+export type TrapDetectionConfig = z.infer<typeof TrapDetectionConfigSchema>
