@@ -25,7 +25,7 @@ export class Agent {
     const opts = AgentOptionsSchema.parse(options)
     this.stopped = false
 
-    const browser = new BrowserClient()
+    const browser = new BrowserClient({ headless: !opts.headed })
     await browser.launch()
 
     const steps: Step[] = []

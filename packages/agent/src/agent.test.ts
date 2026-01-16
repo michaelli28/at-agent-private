@@ -22,6 +22,8 @@ vi.mock('@at-agent/browser', () => ({
   BrowserPage: vi.fn(),
 }))
 
+import { BrowserClient } from '@at-agent/browser'
+
 // Mock tools module
 vi.mock('./tools.js', () => ({
   executeAction: vi.fn(),
@@ -185,5 +187,33 @@ describe('Agent', () => {
       expect(result.success).toBe(false)
       expect(result.summary).toContain('stopped')
     }, 60000)
+  })
+
+  describe('headed option', () => {
+    it('passes headed option to BrowserClient', async () => {
+      const mockGenerateAction = vi.mocked(openai.generateAction)
+      mockGenerateAction.mockResolvedValue({
+        type: 'done',
+        reason: 'Goal achieved',
+      })
+
+      const agent = new Agent('test-api-key')
+      await agent.run('test goal', { startUrl: 'https://example.com', headed: true })
+
+      expect(BrowserClient).toHaveBeenCalledWith({ headless: false })
+    })
+
+    it('defaults to headless mode', async () => {
+      const mockGenerateAction = vi.mocked(openai.generateAction)
+      mockGenerateAction.mockResolvedValue({
+        type: 'done',
+        reason: 'Goal achieved',
+      })
+
+      const agent = new Agent('test-api-key')
+      await agent.run('test goal', { startUrl: 'https://example.com' })
+
+      expect(BrowserClient).toHaveBeenCalledWith({ headless: true })
+    })
   })
 })
