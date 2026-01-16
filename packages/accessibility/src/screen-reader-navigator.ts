@@ -9,6 +9,11 @@ const INTERESTING_ROLES = new Set([
   'form', 'region', 'alert', 'dialog', 'img', 'list', 'listitem',
 ])
 
+const LANDMARK_ROLES = new Set([
+  'banner', 'main', 'navigation', 'complementary', 'contentinfo',
+  'search', 'form', 'region',
+])
+
 export class ScreenReaderNavigator {
   private state: NavigatorState = {
     currentIndex: -1,
@@ -115,5 +120,63 @@ export class ScreenReaderNavigator {
 
   reset(): void {
     this.state.currentIndex = -1
+  }
+
+  moveToNextHeading(): NavigationResult {
+    return this.moveToNextByRole('heading')
+  }
+
+  moveToPrevHeading(): NavigationResult {
+    return this.moveToPrevByRole('heading')
+  }
+
+  moveToNextLandmark(): NavigationResult {
+    for (let i = this.state.currentIndex + 1; i < this.state.nodes.length; i++) {
+      if (LANDMARK_ROLES.has(this.state.nodes[i].role)) {
+        this.state.currentIndex = i
+        return { success: true, node: this.state.nodes[i], message: '' }
+      }
+    }
+    return { success: false, node: this.getCurrentNode(), message: 'No next landmark' }
+  }
+
+  moveToPrevLandmark(): NavigationResult {
+    for (let i = this.state.currentIndex - 1; i >= 0; i--) {
+      if (LANDMARK_ROLES.has(this.state.nodes[i].role)) {
+        this.state.currentIndex = i
+        return { success: true, node: this.state.nodes[i], message: '' }
+      }
+    }
+    return { success: false, node: this.getCurrentNode(), message: 'No previous landmark' }
+  }
+
+  moveToMain(): NavigationResult {
+    for (let i = 0; i < this.state.nodes.length; i++) {
+      if (this.state.nodes[i].role === 'main') {
+        this.state.currentIndex = i
+        return { success: true, node: this.state.nodes[i], message: '' }
+      }
+    }
+    return { success: false, node: this.getCurrentNode(), message: 'No main content' }
+  }
+
+  moveToNextByRole(role: string): NavigationResult {
+    for (let i = this.state.currentIndex + 1; i < this.state.nodes.length; i++) {
+      if (this.state.nodes[i].role === role) {
+        this.state.currentIndex = i
+        return { success: true, node: this.state.nodes[i], message: '' }
+      }
+    }
+    return { success: false, node: this.getCurrentNode(), message: `No next ${role}` }
+  }
+
+  moveToPrevByRole(role: string): NavigationResult {
+    for (let i = this.state.currentIndex - 1; i >= 0; i--) {
+      if (this.state.nodes[i].role === role) {
+        this.state.currentIndex = i
+        return { success: true, node: this.state.nodes[i], message: '' }
+      }
+    }
+    return { success: false, node: this.getCurrentNode(), message: `No previous ${role}` }
   }
 }

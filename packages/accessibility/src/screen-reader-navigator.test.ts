@@ -151,3 +151,71 @@ describe('ScreenReaderNavigator', () => {
     expect(navigator.getMode()).toBe('browse')
   })
 })
+
+describe('ScreenReaderNavigator - Role Navigation', () => {
+  const mockTree: AccessibilityNode = {
+    role: 'WebArea',
+    name: 'Test Page',
+    value: null,
+    description: null,
+    children: [
+      { role: 'banner', name: 'Header', value: null, description: null, children: [] },
+      { role: 'heading', name: 'Title', value: null, description: null, children: [] },
+      { role: 'button', name: 'Action', value: null, description: null, children: [] },
+      { role: 'heading', name: 'Section', value: null, description: null, children: [] },
+      { role: 'main', name: 'Content', value: null, description: null, children: [] },
+      { role: 'link', name: 'More', value: null, description: null, children: [] },
+    ],
+  }
+
+  it('should move to next heading', () => {
+    const navigator = new ScreenReaderNavigator()
+    navigator.loadTree(mockTree)
+
+    const result = navigator.moveToNextHeading()
+    expect(result.success).toBe(true)
+    expect(result.node?.name).toBe('Title')
+  })
+
+  it('should move to previous heading', () => {
+    const navigator = new ScreenReaderNavigator()
+    navigator.loadTree(mockTree)
+
+    navigator.moveToNextHeading() // Title
+    navigator.moveToNextHeading() // Section
+
+    const result = navigator.moveToPrevHeading()
+    expect(result.success).toBe(true)
+    expect(result.node?.name).toBe('Title')
+  })
+
+  it('should move to next landmark', () => {
+    const navigator = new ScreenReaderNavigator()
+    navigator.loadTree(mockTree)
+
+    const result = navigator.moveToNextLandmark()
+    expect(result.success).toBe(true)
+    expect(result.node?.role).toBe('banner')
+  })
+
+  it('should move to main content', () => {
+    const navigator = new ScreenReaderNavigator()
+    navigator.loadTree(mockTree)
+
+    const result = navigator.moveToMain()
+    expect(result.success).toBe(true)
+    expect(result.node?.role).toBe('main')
+  })
+
+  it('should return failure when no more headings', () => {
+    const navigator = new ScreenReaderNavigator()
+    navigator.loadTree(mockTree)
+
+    navigator.moveToNextHeading() // Title
+    navigator.moveToNextHeading() // Section
+
+    const result = navigator.moveToNextHeading()
+    expect(result.success).toBe(false)
+    expect(result.message).toBe('No next heading')
+  })
+})
