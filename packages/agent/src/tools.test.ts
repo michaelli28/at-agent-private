@@ -1,4 +1,4 @@
-import { describe, it, expect, beforeAll, afterAll } from 'vitest'
+import { describe, it, expect, beforeAll, afterAll, vi } from 'vitest'
 import { BrowserClient, BrowserPage } from '@at-agent/browser'
 import { executeAction } from './tools.js'
 import type { Action } from './types.js'
@@ -181,6 +181,48 @@ describe('executeAction', () => {
       const result = await executeAction(action, page, { headed: true })
       expect(result.success).toBe(true)
       await page.close()
+    })
+  })
+})
+
+describe('executeAction with mocked page', () => {
+  function createMockPage() {
+    return {
+      highlight: vi.fn(),
+      clickByRole: vi.fn(),
+      clickByText: vi.fn(),
+      fillByRole: vi.fn(),
+      goto: vi.fn(),
+      title: vi.fn().mockResolvedValue('Test Page'),
+      url: vi.fn().mockResolvedValue('https://example.com'),
+      accessibilityTree: vi.fn().mockResolvedValue({ role: 'document', name: 'Test' }),
+    } as unknown as BrowserPage
+  }
+
+  describe('click highlighting', () => {
+    it('calls highlight before click when headed is true', async () => {
+      const mockPage = createMockPage()
+      const highlightSpy = vi.fn()
+      mockPage.highlight = highlightSpy
+      mockPage.clickByRole = vi.fn()
+
+      const action: Action = { type: 'click', target: 'button named "Submit"', reason: 'Click submit' }
+      await executeAction(action, mockPage, { headed: true })
+
+      expect(highlightSpy).toHaveBeenCalledWith('button', { name: 'Submit' }, 'CLICK', 500)
+      expect(mockPage.clickByRole).toHaveBeenCalled()
+    })
+
+    it('does not highlight when headed is false', async () => {
+      const mockPage = createMockPage()
+      const highlightSpy = vi.fn()
+      mockPage.highlight = highlightSpy
+      mockPage.clickByRole = vi.fn()
+
+      const action: Action = { type: 'click', target: 'button named "Submit"', reason: 'Click submit' }
+      await executeAction(action, mockPage, { headed: false })
+
+      expect(highlightSpy).not.toHaveBeenCalled()
     })
   })
 })

@@ -61,7 +61,7 @@ const DEFAULT_CLICK_TIMEOUT = 5000
 async function executeClick(
   action: Action,
   page: BrowserPage,
-  _opts: ExecuteActionOptions
+  opts: ExecuteActionOptions
 ): Promise<ActionResult> {
   try {
     if (!action.target) {
@@ -72,6 +72,9 @@ async function executeClick(
     const match = action.target.match(/(\w+)\s+named\s+"([^"]+)"/i)
     if (match) {
       const [, role, name] = match
+      if (opts.headed) {
+        await page.highlight(role, { name }, 'CLICK', 500)
+      }
       await page.clickByRole(role, { name, timeout: DEFAULT_CLICK_TIMEOUT })
       return {
         success: true,
