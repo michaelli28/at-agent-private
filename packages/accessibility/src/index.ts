@@ -12,6 +12,10 @@ export {
   type AuditResult,
   AuditOptionsSchema,
   type AuditOptions,
+  type NavigationMode,
+  type NavigableNode,
+  type NavigatorState,
+  type NavigationResult,
 } from './types.js'
 
 export { runAxe, type AxeResult } from './axe.js'
