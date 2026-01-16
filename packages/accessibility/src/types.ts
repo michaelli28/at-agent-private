@@ -101,3 +101,38 @@ export const TrapDetectionConfigSchema = z.object({
   maxHistorySize: z.number(),
 })
 export type TrapDetectionConfig = z.infer<typeof TrapDetectionConfigSchema>
+
+// Dynamic WCAG Evaluation Types (behavioral accessibility issues)
+
+export const InteractionEventSchema = z.object({
+  type: z.enum(['focus', 'click', 'input', 'navigate']),
+  element: z.string().nullable(),
+  timestamp: z.number(),
+  metadata: z.record(z.unknown()).optional(),
+})
+export type InteractionEvent = z.infer<typeof InteractionEventSchema>
+
+export const InteractionTraceSchema = z.array(InteractionEventSchema)
+export type InteractionTrace = z.infer<typeof InteractionTraceSchema>
+
+export const DynamicViolationSchema = z.object({
+  criterion: z.string(),
+  description: z.string(),
+  severity: z.enum(['critical', 'serious', 'moderate', 'minor']),
+  evidence: z.array(InteractionEventSchema),
+})
+export type DynamicViolation = z.infer<typeof DynamicViolationSchema>
+
+export const DynamicEvaluationResultSchema = z.object({
+  violations: z.array(DynamicViolationSchema),
+  trace: InteractionTraceSchema,
+  evaluatedAt: z.number(),
+})
+export type DynamicEvaluationResult = z.infer<typeof DynamicEvaluationResultSchema>
+
+export const DynamicEvaluatorConfigSchema = z.object({
+  checkFocusOrder: z.boolean(),
+  checkFocusIndicator: z.boolean(),
+  checkContextChanges: z.boolean(),
+})
+export type DynamicEvaluatorConfig = z.infer<typeof DynamicEvaluatorConfigSchema>
