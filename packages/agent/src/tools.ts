@@ -1,18 +1,25 @@
 import type { BrowserPage } from '@at-agent/browser'
 import { Auditor, ScreenReaderSimulator } from '@at-agent/accessibility'
-import type { Action, ActionResult } from './types.js'
+import {
+  type Action,
+  type ActionResult,
+  ExecuteActionOptionsSchema,
+  type ExecuteActionOptions,
+} from './types.js'
 
 export async function executeAction(
   action: Action,
-  page: BrowserPage
+  page: BrowserPage,
+  options: Partial<ExecuteActionOptions> = {}
 ): Promise<ActionResult> {
+  const opts = ExecuteActionOptionsSchema.parse(options)
   switch (action.type) {
     case 'navigate':
       return executeNavigate(action, page)
     case 'click':
-      return executeClick(action, page)
+      return executeClick(action, page, opts)
     case 'fill':
-      return executeFill(action, page)
+      return executeFill(action, page, opts)
     case 'audit':
       return executeAudit(page)
     case 'observe':
@@ -53,7 +60,8 @@ const DEFAULT_CLICK_TIMEOUT = 5000
 
 async function executeClick(
   action: Action,
-  page: BrowserPage
+  page: BrowserPage,
+  _opts: ExecuteActionOptions
 ): Promise<ActionResult> {
   try {
     if (!action.target) {
@@ -87,7 +95,8 @@ async function executeClick(
 
 async function executeFill(
   action: Action,
-  page: BrowserPage
+  page: BrowserPage,
+  _opts: ExecuteActionOptions
 ): Promise<ActionResult> {
   try {
     if (!action.target || !action.value) {

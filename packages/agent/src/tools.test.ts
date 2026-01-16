@@ -173,4 +173,14 @@ describe('executeAction', () => {
       await page.close()
     })
   })
+
+  describe('options parameter', () => {
+    it('accepts options parameter', async () => {
+      page = await client.newPage()
+      const action: Action = { type: 'done', reason: 'test' }
+      const result = await executeAction(action, page, { headed: true })
+      expect(result.success).toBe(true)
+      await page.close()
+    })
+  })
 })
