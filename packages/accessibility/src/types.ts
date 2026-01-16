@@ -51,3 +51,28 @@ export const AuditOptionsSchema = z.object({
   tags: z.array(z.string()).optional(),
 })
 export type AuditOptions = z.infer<typeof AuditOptionsSchema>
+
+// Screen Reader Navigation Types
+
+export type NavigationMode = 'browse' | 'focus'
+
+export type NavigableNode = {
+  role: string
+  name: string | null
+  value: string | null
+  level?: number
+  children: NavigableNode[]
+  isInteresting: boolean
+}
+
+export type NavigatorState = {
+  currentIndex: number
+  nodes: NavigableNode[]
+  mode: NavigationMode
+}
+
+export type NavigationResult = {
+  success: boolean
+  node: NavigableNode | null
+  message: string
+}
