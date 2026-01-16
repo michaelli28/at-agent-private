@@ -113,4 +113,41 @@ describe('ScreenReaderNavigator', () => {
     expect(result.success).toBe(false)
     expect(result.message).toBe('End of page')
   })
+
+  it('should return failure at top of page', () => {
+    const navigator = new ScreenReaderNavigator()
+    navigator.loadTree(mockTree)
+    navigator.moveNext() // Move to first node
+    const result = navigator.movePrev() // Try to go back before first
+    expect(result.success).toBe(false)
+    expect(result.message).toBe('Top of page')
+  })
+
+  it('should reset navigation position', () => {
+    const navigator = new ScreenReaderNavigator()
+    navigator.loadTree(mockTree)
+
+    navigator.moveNext() // heading
+    navigator.moveNext() // button
+    expect(navigator.getCurrentNode()?.role).toBe('button')
+
+    navigator.reset()
+    expect(navigator.getCurrentNode()).toBeNull()
+
+    const result = navigator.moveNext()
+    expect(result.success).toBe(true)
+    expect(result.node?.role).toBe('heading')
+  })
+
+  it('should get and set navigation mode', () => {
+    const navigator = new ScreenReaderNavigator()
+
+    expect(navigator.getMode()).toBe('browse')
+
+    navigator.setMode('focus')
+    expect(navigator.getMode()).toBe('focus')
+
+    navigator.setMode('browse')
+    expect(navigator.getMode()).toBe('browse')
+  })
 })

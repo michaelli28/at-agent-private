@@ -21,3 +21,4 @@ export {
 export { runAxe, type AxeResult } from './axe.js'
 export { Auditor, type AuditSummary } from './auditor.js'
 export { ScreenReaderSimulator, type ReadableItem, type Heading, type Landmark } from './screen-reader.js'
+export { ScreenReaderNavigator } from './screen-reader-navigator.js'
