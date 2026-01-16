@@ -22,3 +22,16 @@ export { runAxe, type AxeResult } from './axe.js'
 export { Auditor, type AuditSummary } from './auditor.js'
 export { ScreenReaderSimulator, type ReadableItem, type Heading, type Landmark } from './screen-reader.js'
 export { ScreenReaderNavigator } from './screen-reader-navigator.js'
+export { KeyboardTrapDetector } from './keyboard-trap-detector.js'
+
+// Keyboard trap detection types
+export {
+  FocusEventSchema,
+  type FocusEvent,
+  FocusHistorySchema,
+  type FocusHistory,
+  TrapDetectionResultSchema,
+  type TrapDetectionResult,
+  TrapDetectionConfigSchema,
+  type TrapDetectionConfig,
+} from './types.js'
