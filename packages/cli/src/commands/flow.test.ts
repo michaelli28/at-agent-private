@@ -70,4 +70,23 @@ describe('runFlow', () => {
     expect(result.success).toBe(false)
     expect(result.error).toContain('OPENAI_API_KEY')
   })
+
+  it('passes headed option to agent', async () => {
+    const { Agent } = await import('@at-agent/agent')
+    const mockAgent = vi.mocked(Agent)
+
+    const options: FlowCommandOptions = {
+      url: 'https://example.com',
+      goal: 'Test the page',
+      headed: true,
+    }
+
+    await runFlow(options)
+
+    const runCall = mockAgent.mock.results[0].value.run
+    expect(runCall).toHaveBeenCalledWith('Test the page', expect.objectContaining({
+      startUrl: 'https://example.com',
+      headed: true,
+    }))
+  })
 })

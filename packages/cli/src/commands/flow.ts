@@ -7,6 +7,7 @@ export interface FlowCommandOptions {
   json?: boolean
   maxSteps?: number
   apiKey?: string
+  headed?: boolean
 }
 
 export interface FlowCommandResult {
@@ -31,6 +32,7 @@ export async function runFlow(options: FlowCommandOptions): Promise<FlowCommandR
     const agentResult = await agent.run(options.goal, {
       startUrl: options.url,
       maxSteps: options.maxSteps ?? 20,
+      headed: options.headed,
     })
 
     if (options.json) {
