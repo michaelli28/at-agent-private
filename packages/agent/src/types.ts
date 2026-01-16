@@ -1,5 +1,5 @@
 import { z } from 'zod'
-import { ViolationSchema } from '@at-agent/accessibility'
+import { ViolationSchema, FocusHistorySchema } from '@at-agent/accessibility'
 
 // Action types the agent can perform
 export const ActionTypeSchema = z.enum([
@@ -8,6 +8,8 @@ export const ActionTypeSchema = z.enum([
   'fill',
   'audit',
   'observe',
+  'tab',
+  'checkTrap',
   'done',
 ])
 export type ActionType = z.infer<typeof ActionTypeSchema>
@@ -26,6 +28,8 @@ export const ActionResultSchema = z.object({
   success: z.boolean(),
   observation: z.string(),
   violations: z.array(ViolationSchema).optional(),
+  focusedElement: z.string().optional(),
+  trapDetected: z.boolean().optional(),
 })
 export type ActionResult = z.infer<typeof ActionResultSchema>
 
@@ -57,8 +61,15 @@ export const AgentResultSchema = z.object({
 })
 export type AgentResult = z.infer<typeof AgentResultSchema>
 
+// Trap context for keyboard trap detection
+export const TrapContextSchema = z.object({
+  focusHistory: FocusHistorySchema,
+})
+export type TrapContext = z.infer<typeof TrapContextSchema>
+
 // Options for executeAction
 export const ExecuteActionOptionsSchema = z.object({
   headed: z.boolean().default(false),
+  trapContext: TrapContextSchema.optional(),
 })
 export type ExecuteActionOptions = z.infer<typeof ExecuteActionOptionsSchema>

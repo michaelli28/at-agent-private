@@ -7,6 +7,7 @@ import {
   StepSchema,
   AgentResultSchema,
   ExecuteActionOptionsSchema,
+  TrapContextSchema,
 } from './types.js'
 
 describe('ActionTypeSchema', () => {
@@ -16,6 +17,8 @@ describe('ActionTypeSchema', () => {
     expect(ActionTypeSchema.parse('fill')).toBe('fill')
     expect(ActionTypeSchema.parse('audit')).toBe('audit')
     expect(ActionTypeSchema.parse('observe')).toBe('observe')
+    expect(ActionTypeSchema.parse('tab')).toBe('tab')
+    expect(ActionTypeSchema.parse('checkTrap')).toBe('checkTrap')
     expect(ActionTypeSchema.parse('done')).toBe('done')
   })
 
@@ -103,6 +106,26 @@ describe('ActionResultSchema', () => {
     const parsed = ActionResultSchema.parse(result)
     expect(parsed.violations).toHaveLength(1)
     expect(parsed.violations?.[0].id).toBe('color-contrast')
+  })
+
+  it('validates result with focusedElement', () => {
+    const result = {
+      success: true,
+      observation: 'Focused on submit button',
+      focusedElement: 'button#submit',
+    }
+    const parsed = ActionResultSchema.parse(result)
+    expect(parsed.focusedElement).toBe('button#submit')
+  })
+
+  it('validates result with trapDetected', () => {
+    const result = {
+      success: true,
+      observation: 'Keyboard trap detected',
+      trapDetected: true,
+    }
+    const parsed = ActionResultSchema.parse(result)
+    expect(parsed.trapDetected).toBe(true)
   })
 })
 
@@ -287,5 +310,42 @@ describe('ExecuteActionOptionsSchema', () => {
   it('allows setting headed to true', () => {
     const result = ExecuteActionOptionsSchema.parse({ headed: true })
     expect(result.headed).toBe(true)
+  })
+
+  it('accepts trapContext', () => {
+    const result = ExecuteActionOptionsSchema.parse({
+      trapContext: {
+        focusHistory: [
+          { element: 'button#a', timestamp: 1 },
+          { element: 'button#b', timestamp: 2 },
+        ],
+      },
+    })
+    expect(result.trapContext?.focusHistory).toHaveLength(2)
+  })
+})
+
+describe('TrapContextSchema', () => {
+  it('validates trap context with focus history', () => {
+    const context = {
+      focusHistory: [
+        { element: 'input#name', timestamp: 1705312800000 },
+        { element: 'input#email', timestamp: 1705312801000 },
+        { element: 'button#submit', timestamp: 1705312802000 },
+      ],
+    }
+    const parsed = TrapContextSchema.parse(context)
+    expect(parsed.focusHistory).toHaveLength(3)
+    expect(parsed.focusHistory[0].element).toBe('input#name')
+  })
+
+  it('validates empty focus history', () => {
+    const context = { focusHistory: [] }
+    const parsed = TrapContextSchema.parse(context)
+    expect(parsed.focusHistory).toHaveLength(0)
+  })
+
+  it('rejects context without focus history', () => {
+    expect(() => TrapContextSchema.parse({})).toThrow()
   })
 })

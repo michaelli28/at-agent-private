@@ -1,5 +1,5 @@
 import type { BrowserPage } from '@at-agent/browser'
-import { Auditor, ScreenReaderSimulator } from '@at-agent/accessibility'
+import { Auditor, ScreenReaderSimulator, KeyboardTrapDetector } from '@at-agent/accessibility'
 import {
   type Action,
   type ActionResult,
@@ -24,6 +24,10 @@ export async function executeAction(
       return executeAudit(page)
     case 'observe':
       return executeObserve(page)
+    case 'tab':
+      return executeTab(action, page)
+    case 'checkTrap':
+      return executeCheckTrap(opts)
     case 'done':
       return executeDone(action)
     default:
@@ -196,5 +200,88 @@ function executeDone(action: Action): ActionResult {
   return {
     success: true,
     observation: `Agent finished: ${action.reason}`,
+  }
+}
+
+async function executeTab(
+  action: Action,
+  page: BrowserPage
+): Promise<ActionResult> {
+  try {
+    const isReverse = action.target === 'previous'
+    const count = action.value ? parseInt(action.value, 10) : 1
+    const key = isReverse ? 'Shift+Tab' : 'Tab'
+
+    for (let i = 0; i < count; i++) {
+      await page.playwrightPage.keyboard.press(key)
+    }
+
+    // Get the currently focused element's description
+    // Note: This callback runs in browser context via Playwright
+    const focusedElement = await page.playwrightPage.evaluate<string>(`
+      (() => {
+        const el = document.activeElement;
+        if (!el || el === document.body) {
+          return 'body';
+        }
+
+        const tag = el.tagName.toLowerCase();
+        const id = el.id ? '#' + el.id : '';
+        const className = el.className && typeof el.className === 'string'
+          ? '.' + el.className.split(' ').filter(Boolean).join('.')
+          : '';
+        const name = el.getAttribute('aria-label')
+          || el.name
+          || (el.textContent || '').slice(0, 30).trim()
+          || '';
+
+        return tag + id + className + (name ? ' "' + name + '"' : '');
+      })()
+    `)
+
+    return {
+      success: true,
+      observation: `Focused on: ${focusedElement}`,
+      focusedElement,
+    }
+  } catch (error) {
+    return {
+      success: false,
+      observation: `Tab failed: ${error instanceof Error ? error.message : 'Unknown error'}`,
+    }
+  }
+}
+
+function executeCheckTrap(opts: ExecuteActionOptions): ActionResult {
+  const trapContext = opts.trapContext
+  if (!trapContext || !trapContext.focusHistory) {
+    return {
+      success: true,
+      observation: 'No focus history available for trap detection',
+      trapDetected: false,
+    }
+  }
+
+  // Create a detector and replay the focus history
+  const detector = new KeyboardTrapDetector({ minCycleCount: 5, maxHistorySize: 50 })
+
+  for (const event of trapContext.focusHistory) {
+    detector.recordFocus(event.element)
+  }
+
+  const result = detector.detectTrap()
+
+  if (result.trapped) {
+    return {
+      success: true,
+      observation: `Keyboard trap detected (WCAG 2.1.2 violation): Focus is cycling through ${result.cycleLength} element(s) starting at "${result.element}"`,
+      trapDetected: true,
+    }
+  }
+
+  return {
+    success: true,
+    observation: 'No keyboard trap detected',
+    trapDetected: false,
   }
 }
