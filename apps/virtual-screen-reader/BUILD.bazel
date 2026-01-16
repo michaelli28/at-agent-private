@@ -1,6 +1,0 @@
-package(default_visibility = ["//visibility:public"])
-
-filegroup(
-    name = "virtual-screen-reader",
-    srcs = glob(["**/*.ts", "**/*.md"]),
-)

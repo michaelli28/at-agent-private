@@ -1,2 +1,0 @@
-# Python packages
-package(default_visibility = ["//visibility:public"])

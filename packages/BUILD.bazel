@@ -1,2 +1,0 @@
-# Shared library packages
-package(default_visibility = ["//visibility:public"])

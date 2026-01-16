@@ -1,9 +1,0 @@
-package(default_visibility = ["//visibility:public"])
-
-# Scripts - run with tsx directly
-# Run: pnpm start:agent
-
-filegroup(
-    name = "scripts",
-    srcs = glob(["*.ts"]),
-)

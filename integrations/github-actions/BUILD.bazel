@@ -1,9 +1,0 @@
-package(default_visibility = ["//visibility:public"])
-
-filegroup(
-    name = "action",
-    srcs = glob(
-        ["**/*"],
-        allow_empty = True,
-    ),
-)

@@ -1,6 +1,0 @@
-package(default_visibility = ["//visibility:public"])
-
-filegroup(
-    name = "rerun-worker",
-    srcs = glob(["**/*.ts"]),
-)

@@ -1,2 +1,0 @@
-# Build tools and macros
-package(default_visibility = ["//visibility:public"])
