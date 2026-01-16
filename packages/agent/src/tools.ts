@@ -99,7 +99,7 @@ async function executeClick(
 async function executeFill(
   action: Action,
   page: BrowserPage,
-  _opts: ExecuteActionOptions
+  opts: ExecuteActionOptions
 ): Promise<ActionResult> {
   try {
     if (!action.target || !action.value) {
@@ -110,6 +110,9 @@ async function executeFill(
     const match = action.target.match(/(\w+)\s+named\s+"([^"]+)"/i)
     if (match) {
       const [, role, name] = match
+      if (opts.headed) {
+        await page.highlight(role, { name }, 'FILL', 500)
+      }
       await page.fillByRole(role, action.value, { name })
       return {
         success: true,
