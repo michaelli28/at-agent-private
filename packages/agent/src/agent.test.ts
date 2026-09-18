@@ -498,4 +498,264 @@ describe('Agent', () => {
       expect(result2.focusHistory![0].element).toBe('button#second-run')
     }, 60000)
   })
+
+  describe('dynamic WCAG evaluation integration', () => {
+    it('records interaction events during actions and includes them in result', async () => {
+      const mockGenerateAction = vi.mocked(openai.generateAction)
+      mockGenerateAction
+        .mockResolvedValueOnce({
+          type: 'navigate',
+          target: 'https://example.com',
+          reason: 'Navigate to page',
+        })
+        .mockResolvedValueOnce({
+          type: 'click',
+          target: 'button#submit',
+          reason: 'Click submit button',
+        })
+        .mockResolvedValueOnce({
+          type: 'fill',
+          target: 'input#email',
+          value: 'test@example.com',
+          reason: 'Fill email field',
+        })
+        .mockResolvedValueOnce({
+          type: 'tab',
+          reason: 'Tab to next element',
+        })
+        .mockResolvedValueOnce({
+          type: 'done',
+          reason: 'Complete',
+        })
+
+      const mockExecuteAction = vi.mocked(tools.executeAction)
+      mockExecuteAction
+        .mockResolvedValueOnce({
+          success: true,
+          observation: 'Navigated to page',
+        })
+        .mockResolvedValueOnce({
+          success: true,
+          observation: 'Clicked button',
+        })
+        .mockResolvedValueOnce({
+          success: true,
+          observation: 'Filled email',
+        })
+        .mockResolvedValueOnce({
+          success: true,
+          observation: 'Focused on: input#password',
+          focusedElement: 'input#password',
+        })
+        .mockResolvedValueOnce({
+          success: true,
+          observation: 'Done',
+        })
+
+      const agent = new Agent('test-api-key')
+      const result = await agent.run('Test dynamic evaluation', {
+        startUrl: 'https://example.com',
+      })
+
+      expect(result.success).toBe(true)
+      // Should have dynamicViolations field (empty array if no violations detected)
+      expect(result.dynamicViolations).toBeDefined()
+      expect(Array.isArray(result.dynamicViolations)).toBe(true)
+    }, 60000)
+
+    it('detects dynamic WCAG violations during navigation', async () => {
+      const mockGenerateAction = vi.mocked(openai.generateAction)
+      // Simulate a pattern that triggers context change on focus (3.2.1 violation)
+      // This happens when a navigate event immediately follows a focus event
+      mockGenerateAction
+        .mockResolvedValueOnce({
+          type: 'tab',
+          reason: 'Tab to link',
+        })
+        .mockResolvedValueOnce({
+          type: 'navigate',
+          target: 'https://example.com/other',
+          reason: 'Navigate away',
+        })
+        .mockResolvedValueOnce({
+          type: 'done',
+          reason: 'Complete',
+        })
+
+      const mockExecuteAction = vi.mocked(tools.executeAction)
+      mockExecuteAction
+        .mockResolvedValueOnce({
+          success: true,
+          observation: 'Focused on: a#auto-nav "Auto-navigate link"',
+          focusedElement: 'a#auto-nav "Auto-navigate link"',
+        })
+        .mockResolvedValueOnce({
+          success: true,
+          observation: 'Navigated to other page',
+        })
+        .mockResolvedValueOnce({
+          success: true,
+          observation: 'Done',
+        })
+
+      const agent = new Agent('test-api-key')
+      const result = await agent.run('Test context change detection', {
+        startUrl: 'https://example.com',
+      })
+
+      expect(result.success).toBe(true)
+      expect(result.dynamicViolations).toBeDefined()
+      // Should detect 3.2.1 violation (context change on focus)
+      expect(result.dynamicViolations!.length).toBeGreaterThanOrEqual(1)
+      const contextChangeViolation = result.dynamicViolations!.find(
+        (v) => v.criterion === '3.2.1'
+      )
+      expect(contextChangeViolation).toBeDefined()
+      expect(contextChangeViolation!.description).toContain('Context change')
+    }, 60000)
+
+    it('detects focus cycling violations (2.4.3)', async () => {
+      const mockGenerateAction = vi.mocked(openai.generateAction)
+      // Simulate focus cycling - focus returns to same element within short sequence
+      mockGenerateAction
+        .mockResolvedValueOnce({
+          type: 'tab',
+          reason: 'Tab 1',
+        })
+        .mockResolvedValueOnce({
+          type: 'tab',
+          reason: 'Tab 2',
+        })
+        .mockResolvedValueOnce({
+          type: 'tab',
+          reason: 'Tab 3',
+        })
+        .mockResolvedValueOnce({
+          type: 'tab',
+          reason: 'Tab 4 - back to first',
+        })
+        .mockResolvedValueOnce({
+          type: 'done',
+          reason: 'Complete',
+        })
+
+      const mockExecuteAction = vi.mocked(tools.executeAction)
+      // Cycle through elements: A -> B -> C -> A (cycling)
+      mockExecuteAction
+        .mockResolvedValueOnce({
+          success: true,
+          observation: 'Focused on: button#A',
+          focusedElement: 'button#A',
+        })
+        .mockResolvedValueOnce({
+          success: true,
+          observation: 'Focused on: button#B',
+          focusedElement: 'button#B',
+        })
+        .mockResolvedValueOnce({
+          success: true,
+          observation: 'Focused on: button#C',
+          focusedElement: 'button#C',
+        })
+        .mockResolvedValueOnce({
+          success: true,
+          observation: 'Focused on: button#A',
+          focusedElement: 'button#A',
+        })
+        .mockResolvedValueOnce({
+          success: true,
+          observation: 'Done',
+        })
+
+      const agent = new Agent('test-api-key')
+      const result = await agent.run('Test focus cycling detection', {
+        startUrl: 'https://example.com',
+      })
+
+      expect(result.success).toBe(true)
+      expect(result.dynamicViolations).toBeDefined()
+      // Should detect 2.4.3 violation (focus cycling)
+      const focusCyclingViolation = result.dynamicViolations!.find(
+        (v) => v.criterion === '2.4.3'
+      )
+      expect(focusCyclingViolation).toBeDefined()
+      expect(focusCyclingViolation!.description).toContain('Focus cycling')
+    }, 60000)
+
+    it('resets dynamic evaluator between runs', async () => {
+      const mockGenerateAction = vi.mocked(openai.generateAction)
+      const mockExecuteAction = vi.mocked(tools.executeAction)
+
+      // First run - trigger a violation
+      mockGenerateAction
+        .mockResolvedValueOnce({
+          type: 'tab',
+          reason: 'Tab',
+        })
+        .mockResolvedValueOnce({
+          type: 'navigate',
+          target: 'https://example.com/other',
+          reason: 'Navigate',
+        })
+        .mockResolvedValueOnce({
+          type: 'done',
+          reason: 'Done',
+        })
+
+      mockExecuteAction
+        .mockResolvedValueOnce({
+          success: true,
+          observation: 'Focused on: link#nav',
+          focusedElement: 'link#nav',
+        })
+        .mockResolvedValueOnce({
+          success: true,
+          observation: 'Navigated',
+        })
+        .mockResolvedValueOnce({
+          success: true,
+          observation: 'Done',
+        })
+
+      const agent = new Agent('test-api-key')
+      const result1 = await agent.run('First run with violation', {
+        startUrl: 'https://example.com',
+      })
+
+      expect(result1.dynamicViolations!.length).toBeGreaterThan(0)
+
+      // Reset mocks for second run
+      vi.clearAllMocks()
+
+      // Second run - no violations
+      mockGenerateAction
+        .mockResolvedValueOnce({
+          type: 'click',
+          target: 'button#ok',
+          reason: 'Click',
+        })
+        .mockResolvedValueOnce({
+          type: 'done',
+          reason: 'Done',
+        })
+
+      mockExecuteAction
+        .mockResolvedValueOnce({
+          success: true,
+          observation: 'Clicked',
+        })
+        .mockResolvedValueOnce({
+          success: true,
+          observation: 'Done',
+        })
+
+      const result2 = await agent.run('Second run without violation', {
+        startUrl: 'https://example.com',
+      })
+
+      // Second run should NOT have violations from the first run
+      expect(result2.dynamicViolations).toBeDefined()
+      expect(result2.dynamicViolations!.length).toBe(0)
+    }, 60000)
+  })
 })

@@ -23,6 +23,7 @@ export { Auditor, type AuditSummary } from './auditor.js'
 export { ScreenReaderSimulator, type ReadableItem, type Heading, type Landmark } from './screen-reader.js'
 export { ScreenReaderNavigator } from './screen-reader-navigator.js'
 export { KeyboardTrapDetector } from './keyboard-trap-detector.js'
+export { DynamicEvaluator } from './dynamic-evaluator.js'
 
 // Keyboard trap detection types
 export {
@@ -34,4 +35,18 @@ export {
   type TrapDetectionResult,
   TrapDetectionConfigSchema,
   type TrapDetectionConfig,
+} from './types.js'
+
+// Dynamic WCAG evaluation types
+export {
+  InteractionEventSchema,
+  type InteractionEvent,
+  InteractionTraceSchema,
+  type InteractionTrace,
+  DynamicViolationSchema,
+  type DynamicViolation,
+  DynamicEvaluationResultSchema,
+  type DynamicEvaluationResult,
+  DynamicEvaluatorConfigSchema,
+  type DynamicEvaluatorConfig,
 } from './types.js'

@@ -1,5 +1,5 @@
 import { z } from 'zod'
-import { ViolationSchema, FocusHistorySchema } from '@at-agent/accessibility'
+import { ViolationSchema, FocusHistorySchema, DynamicViolationSchema } from '@at-agent/accessibility'
 
 // Action types the agent can perform
 export const ActionTypeSchema = z.enum([
@@ -60,6 +60,7 @@ export const AgentResultSchema = z.object({
   summary: z.string(),
   focusHistory: FocusHistorySchema.optional(),
   trapDetected: z.boolean().optional(),
+  dynamicViolations: z.array(DynamicViolationSchema).optional(),
 })
 export type AgentResult = z.infer<typeof AgentResultSchema>
 

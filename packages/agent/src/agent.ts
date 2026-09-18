@@ -1,5 +1,6 @@
 import { BrowserClient, BrowserPage } from '@at-agent/browser'
-import type { Violation, FocusHistory } from '@at-agent/accessibility'
+import type { Violation, FocusHistory, DynamicViolation } from '@at-agent/accessibility'
+import { DynamicEvaluator } from '@at-agent/accessibility'
 import { createOpenAIClient, generateAction } from './openai.js'
 import { executeAction } from './tools.js'
 import {
@@ -7,6 +8,7 @@ import {
   type AgentOptions,
   type AgentResult,
   type Step,
+  type Action,
 } from './types.js'
 import type OpenAI from 'openai'
 
@@ -31,6 +33,7 @@ export class Agent {
     const steps: Step[] = []
     const violations: Violation[] = []
     const focusHistory: FocusHistory = []
+    const dynamicEvaluator = new DynamicEvaluator()
     let trapDetected = false
     let page: BrowserPage | null = null
 
@@ -40,6 +43,7 @@ export class Agent {
 
       for (let stepNumber = 1; stepNumber <= opts.maxSteps; stepNumber++) {
         if (this.stopped) {
+          const dynamicResult = dynamicEvaluator.evaluate()
           return this.createResult(
             goal,
             steps,
@@ -47,7 +51,8 @@ export class Agent {
             false,
             'Agent stopped by user',
             focusHistory,
-            trapDetected
+            trapDetected,
+            dynamicResult.violations
           )
         }
 
@@ -70,6 +75,9 @@ export class Agent {
           : { headed: opts.headed }
 
         const result = await executeAction(action, page, executeOptions)
+
+        // Record interaction events for dynamic WCAG evaluation
+        this.recordInteractionEvent(dynamicEvaluator, action, result.focusedElement)
 
         // Record focus events after tab actions
         if (action.type === 'tab' && result.focusedElement) {
@@ -101,11 +109,13 @@ export class Agent {
 
         // Check if done
         if (action.type === 'done') {
-          return this.createResult(goal, steps, violations, true, action.reason, focusHistory, trapDetected)
+          const dynamicResult = dynamicEvaluator.evaluate()
+          return this.createResult(goal, steps, violations, true, action.reason, focusHistory, trapDetected, dynamicResult.violations)
         }
       }
 
       // Reached max steps
+      const dynamicResult = dynamicEvaluator.evaluate()
       return this.createResult(
         goal,
         steps,
@@ -113,13 +123,49 @@ export class Agent {
         false,
         `Reached max steps (${opts.maxSteps}) without completing goal`,
         focusHistory,
-        trapDetected
+        trapDetected,
+        dynamicResult.violations
       )
     } finally {
       if (page) {
         await page.close()
       }
       await browser.close()
+    }
+  }
+
+  private recordInteractionEvent(
+    evaluator: DynamicEvaluator,
+    action: Action,
+    focusedElement?: string
+  ): void {
+    // Map agent actions to InteractionEvent types
+    switch (action.type) {
+      case 'click':
+        evaluator.recordEvent({
+          type: 'click',
+          element: action.target ?? null,
+        })
+        break
+      case 'fill':
+        evaluator.recordEvent({
+          type: 'input',
+          element: action.target ?? null,
+          metadata: action.value ? { value: action.value } : undefined,
+        })
+        break
+      case 'navigate':
+        evaluator.recordEvent({
+          type: 'navigate',
+          element: action.target ?? null,
+        })
+        break
+      case 'tab':
+        evaluator.recordEvent({
+          type: 'focus',
+          element: focusedElement ?? null,
+        })
+        break
     }
   }
 
@@ -134,7 +180,8 @@ export class Agent {
     success: boolean,
     summary: string,
     focusHistory: FocusHistory,
-    trapDetected: boolean
+    trapDetected: boolean,
+    dynamicViolations: DynamicViolation[] = []
   ): AgentResult {
     return {
       success,
@@ -144,6 +191,7 @@ export class Agent {
       summary,
       focusHistory,
       trapDetected,
+      dynamicViolations,
     }
   }
 }

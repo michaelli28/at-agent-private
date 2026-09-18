@@ -284,3 +284,195 @@ describe('Dynamic WCAG Evaluation Types', () => {
     })
   })
 })
+
+// Tests for DynamicEvaluator class
+import { DynamicEvaluator } from './dynamic-evaluator.js'
+
+// Factory for creating test events
+const createFocusEvent = (
+  element: string,
+  overrides?: Partial<Omit<InteractionEvent, 'type' | 'timestamp'>>
+): Omit<InteractionEvent, 'timestamp'> => ({
+  type: 'focus',
+  element,
+  ...overrides,
+})
+
+const createNavigateEvent = (
+  element: string | null = null
+): Omit<InteractionEvent, 'timestamp'> => ({
+  type: 'navigate',
+  element,
+})
+
+const createClickEvent = (
+  element: string
+): Omit<InteractionEvent, 'timestamp'> => ({
+  type: 'click',
+  element,
+})
+
+describe('DynamicEvaluator', () => {
+  describe('constructor', () => {
+    it('uses default config with all checks enabled', () => {
+      const evaluator = new DynamicEvaluator()
+
+      // Verify default config by checking that all checks run
+      // Record events that would trigger violations if checks are enabled
+      evaluator.recordEvent(createFocusEvent('button-1'))
+      evaluator.recordEvent(createNavigateEvent())
+
+      const result = evaluator.evaluate()
+
+      // Context change check is enabled by default, so should detect violation
+      expect(result.violations.length).toBeGreaterThan(0)
+      expect(result.violations.some(v => v.criterion === '3.2.1')).toBe(true)
+    })
+  })
+
+  describe('recordEvent', () => {
+    it('adds event to trace with timestamp', () => {
+      const evaluator = new DynamicEvaluator()
+      const beforeRecord = Date.now()
+
+      evaluator.recordEvent(createFocusEvent('button-1'))
+
+      const trace = evaluator.getTrace()
+      expect(trace).toHaveLength(1)
+      expect(trace[0].type).toBe('focus')
+      expect(trace[0].element).toBe('button-1')
+      expect(trace[0].timestamp).toBeGreaterThanOrEqual(beforeRecord)
+      expect(trace[0].timestamp).toBeLessThanOrEqual(Date.now())
+    })
+
+    it('preserves metadata when provided', () => {
+      const evaluator = new DynamicEvaluator()
+
+      evaluator.recordEvent({
+        type: 'click',
+        element: 'submit-btn',
+        metadata: { screenX: 100, screenY: 200 },
+      })
+
+      const trace = evaluator.getTrace()
+      expect(trace[0].metadata).toEqual({ screenX: 100, screenY: 200 })
+    })
+  })
+
+  describe('evaluate', () => {
+    it('returns no violations for clean trace', () => {
+      const evaluator = new DynamicEvaluator()
+
+      // Record normal interaction flow: focus different elements, then navigate on click
+      evaluator.recordEvent(createFocusEvent('input-1'))
+      evaluator.recordEvent(createFocusEvent('input-2'))
+      evaluator.recordEvent(createFocusEvent('submit-btn'))
+      evaluator.recordEvent(createClickEvent('submit-btn'))
+      evaluator.recordEvent(createNavigateEvent())
+
+      const result = evaluator.evaluate()
+
+      expect(result.violations).toHaveLength(0)
+      expect(result.trace).toHaveLength(5)
+      expect(typeof result.evaluatedAt).toBe('number')
+    })
+
+    it('detects focus cycling violation (WCAG 2.4.3)', () => {
+      const evaluator = new DynamicEvaluator()
+
+      // Focus same element multiple times within 5 focus events
+      evaluator.recordEvent(createFocusEvent('button-1'))
+      evaluator.recordEvent(createFocusEvent('button-2'))
+      evaluator.recordEvent(createFocusEvent('button-1')) // Repeat within window
+
+      const result = evaluator.evaluate()
+
+      expect(result.violations.some(v => v.criterion === '2.4.3')).toBe(true)
+      const focusViolation = result.violations.find(v => v.criterion === '2.4.3')
+      expect(focusViolation?.description).toContain('focus')
+      expect(focusViolation?.evidence.length).toBeGreaterThan(0)
+    })
+
+    it('detects context change on focus violation (WCAG 3.2.1)', () => {
+      const evaluator = new DynamicEvaluator()
+
+      // Focus causes navigation (on-focus context change)
+      evaluator.recordEvent(createFocusEvent('auto-nav-link'))
+      evaluator.recordEvent(createNavigateEvent())
+
+      const result = evaluator.evaluate()
+
+      expect(result.violations.some(v => v.criterion === '3.2.1')).toBe(true)
+      const contextViolation = result.violations.find(v => v.criterion === '3.2.1')
+      expect(contextViolation?.description.toLowerCase()).toContain('context')
+      expect(contextViolation?.severity).toBe('serious')
+    })
+
+    it('respects config - disabled checks do not fire', () => {
+      const config: DynamicEvaluatorConfig = {
+        checkFocusOrder: false,
+        checkFocusIndicator: false,
+        checkContextChanges: false,
+      }
+      const evaluator = new DynamicEvaluator(config)
+
+      // Record events that would trigger violations if checks were enabled
+      evaluator.recordEvent(createFocusEvent('button-1'))
+      evaluator.recordEvent(createFocusEvent('button-2'))
+      evaluator.recordEvent(createFocusEvent('button-1')) // Would be focus cycling
+      evaluator.recordEvent(createNavigateEvent()) // Would be context change if focus came before
+
+      const result = evaluator.evaluate()
+
+      expect(result.violations).toHaveLength(0)
+    })
+
+    it('includes trace and evaluatedAt in result', () => {
+      const evaluator = new DynamicEvaluator()
+      const beforeEvaluate = Date.now()
+
+      evaluator.recordEvent(createFocusEvent('element-1'))
+
+      const result = evaluator.evaluate()
+
+      expect(result.trace).toHaveLength(1)
+      expect(result.evaluatedAt).toBeGreaterThanOrEqual(beforeEvaluate)
+    })
+  })
+
+  describe('getTrace', () => {
+    it('returns copy of trace (not reference)', () => {
+      const evaluator = new DynamicEvaluator()
+      evaluator.recordEvent(createFocusEvent('button-1'))
+
+      const trace1 = evaluator.getTrace()
+      const trace2 = evaluator.getTrace()
+
+      expect(trace1).toEqual(trace2)
+      expect(trace1).not.toBe(trace2) // Different references
+
+      // Modifying returned trace should not affect internal state
+      trace1.push({
+        type: 'click',
+        element: 'fake',
+        timestamp: 0,
+      })
+
+      expect(evaluator.getTrace()).toHaveLength(1)
+    })
+  })
+
+  describe('reset', () => {
+    it('clears trace', () => {
+      const evaluator = new DynamicEvaluator()
+      evaluator.recordEvent(createFocusEvent('button-1'))
+      evaluator.recordEvent(createFocusEvent('button-2'))
+
+      expect(evaluator.getTrace()).toHaveLength(2)
+
+      evaluator.reset()
+
+      expect(evaluator.getTrace()).toHaveLength(0)
+    })
+  })
+})
