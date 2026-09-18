@@ -30,3 +30,18 @@ Committed before any site is drawn or opened. The draw script must implement exa
 
 - The accepted list and the full candidate log are committed before the first checker run on any test site.
 - Every accepted site is used; none is dropped after results are seen. If a site dies later, it's reported as lost, not replaced.
+
+## Amendment 1 (2026-09-18, after the draw stopped at i=10)
+
+**Why:** the draw stopped at i=10 (noticiasdealava.eus, `ERR_CERT_DATE_INVALID`) because the rule did not say whether a TLS error counts as "fails to connect". Its verifier found more gaps that hadn't come up yet. This amendment was written before any candidate at i ≥ 10 was judged, and no accepted site's content has been viewed.
+
+**What stays fixed:** the records for i=0..9 from commit 7440778 are kept exactly as they are. Their verdicts come out the same under every reading below (the draw computed both readings wherever the rule was ambiguous, and its verifier confirmed this). The draw resumes at i=10. Its primary load is attempted again, because the first attempt produced no response and was never judged.
+
+1. **"Fails to connect"** means the main document gets no HTTP response. This covers DNS, TCP, TLS/certificate, connection reset or closed, an empty response, HTTP/2 protocol errors, a 60 s load timeout, and a redirect whose target does any of these. In that case, try `https://www.<domain>/` once (not when the domain already starts with `www.`). If the fallback also gets no response, reject on rule 1.
+2. **Rule 2:** HTML means a media type of `text/html` or `application/xhtml+xml`, case-insensitive. A missing content-type, or a download, is a rule-2 reject.
+3. **Rule 3:** the body text is `document.body.innerText` (visible text) and the title is `document.title`. The regex is case-insensitive. `cf-mitigated` counts if it appears on any main-frame response during the load.
+4. **Rule 4:** count focusable elements in the main document's light DOM only.
+5. **Rule 5:** the keyword check is case-insensitive and applies to the candidate domain before any load, and to the final URL's host after the load. A domain that fails before the load is never loaded, so adult-keyword sites are never opened; its finalUrl and status are recorded as null. The RTA meta check is case-insensitive after trimming.
+6. **Rule 6:** exclude exactly these registrable domains and their subdomains: amazon.com, mealkeyway.com, fake-university.com, cmu.edu, troy.k12.mi.us, troyroyalpalace.com, w3.org. The check runs on the candidate domain before the load (not loaded, recorded as null) and on the final URL's host after it. Other domains that merely share a name (amazon.eu, cmu.ac.th) are not excluded.
+7. **Reject label:** a reject is labelled with the lowest-numbered failing rule among the checks actually run.
+8. **Extra fields:** each record also gets `fallbackUsed` (boolean) and `netError` (the Chromium error code, or null).
