@@ -5,3 +5,6 @@ probes/**/out/
 probes/**/.deps/
 vendor/
 probes/reach/*.txt
+corpus/dev/variants/
+corpus/dev/.deps/
+corpus/dev/base/react-div-button/app.js
