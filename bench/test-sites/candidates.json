@@ -1,0 +1,139 @@
+{
+  "rule": "bench/test-sites/SAMPLING-RULE.md @ 68ffa0a",
+  "seed": "at-agent-bench-2026-09-18",
+  "list": {
+    "id": "V3YPN",
+    "url": "https://tranco-list.eu/download/V3YPN/1000000",
+    "file": "bench/vendor/tranco/tranco_V3YPN-1000000.csv",
+    "sha256": "eb755facd7174045ae81c41d0f8496d9b9ae667b6a7047c861cbe56c02a21445",
+    "rows": 1000000
+  },
+  "browser": {
+    "launch": "playwright chromium.launch() default (headless shell)",
+    "version": "143.0.7499.4",
+    "userAgent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) HeadlessChrome/143.0.7499.4 Safari/537.36"
+  },
+  "timing": {
+    "waitUntil": "load",
+    "settleMs": 3000,
+    "loadTimeoutMs": 60000
+  },
+  "startedAt": "2026-09-18T23:06:58.249Z",
+  "updatedAt": "2026-09-18T23:07:45.085Z",
+  "complete": false,
+  "acceptedCount": 5,
+  "stop": {
+    "i": 10,
+    "rank": 61381,
+    "domain": "noticiasdealava.eus",
+    "reasons": [
+      "rule 1: first load failed with ERR_CERT_DATE_INVALID; the rule doesn't say whether that counts as \"fails to connect\" (www retry or not)",
+      "rule 2: first load failed with ERR_CERT_DATE_INVALID; the rule doesn't say whether that counts as \"fails to connect\" (www retry or not)",
+      "rule 3: first load failed with ERR_CERT_DATE_INVALID; the rule doesn't say whether that counts as \"fails to connect\" (www retry or not)",
+      "rule 4: first load failed with ERR_CERT_DATE_INVALID; the rule doesn't say whether that counts as \"fails to connect\" (www retry or not)",
+      "rule 5: first load failed with ERR_CERT_DATE_INVALID; the rule doesn't say whether that counts as \"fails to connect\" (www retry or not)",
+      "rule 6: first load failed with ERR_CERT_DATE_INVALID; the rule doesn't say whether that counts as \"fails to connect\" (www retry or not)"
+    ]
+  },
+  "candidates": [
+    {
+      "i": 0,
+      "rank": 80782,
+      "domain": "pricecheck.co.za",
+      "finalUrl": "https://pricecheck.co.za/",
+      "status": 403,
+      "contentType": "text/html; charset=UTF-8",
+      "result": 1
+    },
+    {
+      "i": 1,
+      "rank": 22399,
+      "domain": "topjobs.lk",
+      "finalUrl": "https://topjobs.lk/",
+      "status": 200,
+      "contentType": "text/html;charset=utf-8",
+      "result": "accept"
+    },
+    {
+      "i": 2,
+      "rank": 90298,
+      "domain": "huntingbc.ca",
+      "finalUrl": "https://huntingbc.ca/",
+      "status": 403,
+      "contentType": "text/html; charset=UTF-8",
+      "result": 1
+    },
+    {
+      "i": 3,
+      "rank": 22996,
+      "domain": "recaptcha.cloud",
+      "finalUrl": "https://malware.expert/recaptcha/",
+      "status": 200,
+      "contentType": "text/html; charset=UTF-8",
+      "result": 3
+    },
+    {
+      "i": 4,
+      "rank": 69549,
+      "domain": "bestcam.tv",
+      "finalUrl": "https://bestcam.tv/",
+      "status": 403,
+      "contentType": "text/html; charset=UTF-8",
+      "result": 1
+    },
+    {
+      "i": 5,
+      "rank": 65564,
+      "domain": "r-gol.com",
+      "finalUrl": "https://r-gol.com/",
+      "status": 403,
+      "contentType": "text/html; charset=UTF-8",
+      "result": 1
+    },
+    {
+      "i": 6,
+      "rank": 78760,
+      "domain": "apina.biz",
+      "finalUrl": "https://apina.biz/",
+      "status": 200,
+      "contentType": "text/html; charset=UTF-8",
+      "result": "accept"
+    },
+    {
+      "i": 7,
+      "rank": 81702,
+      "domain": "pasarjaya.co.id",
+      "finalUrl": "https://pasarjaya.co.id/",
+      "status": 200,
+      "contentType": "text/html",
+      "result": "accept"
+    },
+    {
+      "i": 8,
+      "rank": 50741,
+      "domain": "anime.nexus",
+      "finalUrl": "https://anime.nexus/",
+      "status": 200,
+      "contentType": "text/html; charset=utf-8",
+      "result": "accept"
+    },
+    {
+      "i": 9,
+      "rank": 63899,
+      "domain": "fashionbeans.com",
+      "finalUrl": "https://www.fashionbeans.com/",
+      "status": 200,
+      "contentType": "text/html; charset=UTF-8",
+      "result": "accept"
+    },
+    {
+      "i": 10,
+      "rank": 61381,
+      "domain": "noticiasdealava.eus",
+      "finalUrl": null,
+      "status": null,
+      "contentType": null,
+      "result": "stop"
+    }
+  ]
+}

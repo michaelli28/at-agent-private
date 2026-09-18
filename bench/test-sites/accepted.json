@@ -1,0 +1,40 @@
+{
+  "seed": "at-agent-bench-2026-09-18",
+  "list": {
+    "id": "V3YPN",
+    "sha256": "eb755facd7174045ae81c41d0f8496d9b9ae667b6a7047c861cbe56c02a21445"
+  },
+  "complete": false,
+  "accepted": [
+    {
+      "i": 1,
+      "rank": 22399,
+      "domain": "topjobs.lk",
+      "finalUrl": "https://topjobs.lk/"
+    },
+    {
+      "i": 6,
+      "rank": 78760,
+      "domain": "apina.biz",
+      "finalUrl": "https://apina.biz/"
+    },
+    {
+      "i": 7,
+      "rank": 81702,
+      "domain": "pasarjaya.co.id",
+      "finalUrl": "https://pasarjaya.co.id/"
+    },
+    {
+      "i": 8,
+      "rank": 50741,
+      "domain": "anime.nexus",
+      "finalUrl": "https://anime.nexus/"
+    },
+    {
+      "i": 9,
+      "rank": 63899,
+      "domain": "fashionbeans.com",
+      "finalUrl": "https://www.fashionbeans.com/"
+    }
+  ]
+}
