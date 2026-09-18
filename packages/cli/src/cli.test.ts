@@ -37,4 +37,13 @@ describe('CLI', () => {
     const headedOption = flowCommand?.options.find((opt: Option) => opt.long === '--headed')
     expect(headedOption).toBeDefined()
   })
+
+  it('gaps command takes a url and --json', () => {
+    const program = createProgram()
+    const gapsCmd = program.commands.find((c: Command) => c.name() === 'gaps')
+
+    expect(gapsCmd).toBeDefined()
+    expect(gapsCmd?.registeredArguments.map((a) => a.name())).toEqual(['url'])
+    expect(gapsCmd?.options.some((o: Option) => o.long === '--json')).toBe(true)
+  })
 })

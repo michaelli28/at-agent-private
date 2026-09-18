@@ -50,3 +50,33 @@ export {
   DynamicEvaluatorConfigSchema,
   type DynamicEvaluatorConfig,
 } from './types.js'
+
+// Dual-crawl gap detection: baseline port of taskgen's DOM-vs-accessibility-tree detector
+export { crawlPageWithGapDetection } from './gaps/detect.js'
+export { crawlDOM, getInteractivitySignals, isElementVisible } from './gaps/dom-crawler.js'
+export { getAccessibilityTree, convertToElementGraph, type AXNode } from './gaps/ax-tree.js'
+export { buildBridgeMap, detectGaps, isLikelyInteractive, getElementDescription } from './gaps/gap-detector.js'
+export { summarizeGaps, type GapSummary } from './gaps/summary.js'
+export {
+  ACCESSIBILITY_GAP_TYPES,
+  AccessibilityGapTypeSchema,
+  type AccessibilityGapType,
+  BoundingBoxSchema,
+  type BoundingBox,
+  DOMElementSchema,
+  type DOMElement,
+  InteractivitySignalsSchema,
+  type InteractivitySignals,
+  AccessibilityGapSchema,
+  type AccessibilityGap,
+  ElementTypeFlagsSchema,
+  type ElementTypeFlags,
+  ElementNodeSchema,
+  type ElementNode,
+  OutboundLinkSchema,
+  type OutboundLink,
+  PageElementGraphSchema,
+  type PageElementGraph,
+  DualCrawlResultSchema,
+  type DualCrawlResult,
+} from './gaps/types.js'

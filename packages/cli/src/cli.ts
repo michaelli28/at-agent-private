@@ -1,6 +1,7 @@
 import { Command } from 'commander'
 import { runAudit } from './commands/audit.js'
 import { runFlow } from './commands/flow.js'
+import { runGaps } from './commands/gaps.js'
 
 export function createProgram(): Command {
   const program = new Command()
@@ -57,6 +58,28 @@ export function createProgram(): Command {
 
       if (!result.success) {
         console.error(`Error: ${result.error}`)
+        process.exit(1)
+      }
+    })
+
+  program
+    .command('gaps <url>')
+    .description('Detect interactive elements missing from the accessibility tree')
+    .option('--json', 'Output results as JSON')
+    .action(async (url: string, options: { json?: boolean }) => {
+      const result = await runGaps({ url, json: options.json })
+
+      if (result.output) {
+        console.log(result.output)
+      }
+
+      if (!result.success) {
+        console.error(`Error: ${result.error}`)
+        process.exit(1)
+      }
+
+      // Exit with non-zero if critical/serious gaps found
+      if (result.summary && (result.summary.bySeverity.critical > 0 || result.summary.bySeverity.serious > 0)) {
         process.exit(1)
       }
     })
