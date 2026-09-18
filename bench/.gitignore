@@ -1,0 +1,7 @@
+# Regenerable probe/bench output: bundles, screenshots, raw logs, pinned installs, vendored W3C pages
+probes/**/dist/
+probes/**/shots/
+probes/**/out/
+probes/**/.deps/
+vendor/
+probes/reach/*.txt
