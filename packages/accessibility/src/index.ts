@@ -51,6 +51,29 @@ export {
   type DynamicEvaluatorConfig,
 } from './types.js'
 
+// Scripted Tab walk (no LLM): per-press focus record for trap, focus-order and focus-indicator checks
+export {
+  runTabWalk,
+  TabKeySchema,
+  type TabKey,
+  TabWalkOptionsSchema,
+  type TabWalkOptions,
+  FocusReadSchema,
+  type FocusRead,
+  FocusStyleSchema,
+  type FocusStyle,
+  TabWalkStepSchema,
+  type TabWalkStep,
+  EscapeProbeStepSchema,
+  type EscapeProbeStep,
+  EscapeProbeSchema,
+  type EscapeProbe,
+  TabWalkErrorSchema,
+  type TabWalkError,
+  TabWalkResultSchema,
+  type TabWalkResult,
+} from './tab-walk.js'
+
 // Dual-crawl gap detection: baseline port of taskgen's DOM-vs-accessibility-tree detector
 export { crawlPageWithGapDetection } from './gaps/detect.js'
 export { crawlDOM, getInteractivitySignals, isElementVisible } from './gaps/dom-crawler.js'
