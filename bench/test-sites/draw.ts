@@ -1,4 +1,4 @@
-// Draws the test-set live sites per SAMPLING-RULE.md @ 0467eb6, including Amendment 1.
+// Draws the test-set live sites per SAMPLING-RULE.md @ 10f9c86, including Amendments 1 and 2.
 // Anything the amended rule does not settle STOPS the draw at that candidate instead of picking a reading.
 // The draw started in 7440778 (i=0..9 frozen), so the only mode is resume. Run outside the sandbox (launches Chromium):
 //   node --import tsx bench/test-sites/draw.ts --resume [--max-candidates N]
@@ -7,14 +7,21 @@ import { createHash } from "node:crypto";
 import { readFile, writeFile } from "node:fs/promises";
 import { dirname, join, resolve } from "node:path";
 import { fileURLToPath, pathToFileURL } from "node:url";
-import { chromium, errors, type Browser, type Response } from "playwright";
+import {
+  chromium,
+  errors,
+  type Browser,
+  type Page,
+  type Request,
+  type Response,
+} from "playwright";
 import { z } from "zod";
 
 export const SEED = "at-agent-bench-2026-09-18";
 const RANK_LO = 10_001;
 const RANK_SPAN = 90_000;
 const TARGET_ACCEPTED = 20;
-export const RULE = "bench/test-sites/SAMPLING-RULE.md @ 0467eb6 (Amendment 1)";
+export const RULE = "bench/test-sites/SAMPLING-RULE.md @ 10f9c86 (Amendment 2)";
 
 export function rankForIndex(seed: string, i: number): number {
   const u = createHash("sha256")
@@ -80,45 +87,20 @@ const EXCLUDED_DOMAINS = [
   "w3.org",
 ];
 
-// Amendment 1 §1 families: DNS, TCP, TLS/certificate, reset or closed, empty response, HTTP/2.
-const NO_RESPONSE_CODES = new Set([
-  "ERR_NAME_NOT_RESOLVED",
-  "ERR_NAME_RESOLUTION_FAILED",
-  "ERR_CONNECTION_REFUSED",
-  "ERR_CONNECTION_TIMED_OUT",
-  "ERR_CONNECTION_FAILED",
-  "ERR_ADDRESS_UNREACHABLE",
-  "ERR_ADDRESS_INVALID",
-  "ERR_TIMED_OUT",
-  "ERR_CONNECTION_RESET",
-  "ERR_CONNECTION_CLOSED",
-  "ERR_CONNECTION_ABORTED",
-  "ERR_EMPTY_RESPONSE",
-  "ERR_BAD_SSL_CLIENT_AUTH_CERT",
-]);
-const NO_RESPONSE_PREFIXES = [
-  "ERR_DNS_",
-  "ERR_CERT",
-  "ERR_SSL_",
-  "ERR_TLS",
-  "ERR_ECH_",
-  "ERR_HTTP2_",
-];
-// Our own network, not the site: abort the run rather than record a verdict.
+// Our own machine or network, not the site: abort the run rather than record a verdict.
+// Since Amendment 2 §5 any other code with no document response is a rule-1 path, so local failures must be listed here.
 const ENVIRONMENT_FAILURES = new Set([
   "ERR_INTERNET_DISCONNECTED",
   "ERR_NETWORK_CHANGED",
   "ERR_PROXY_CONNECTION_FAILED",
+  "ERR_TUNNEL_CONNECTION_FAILED",
   "ERR_NETWORK_ACCESS_DENIED",
+  "ERR_NETWORK_IO_SUSPENDED",
+  "ERR_INSUFFICIENT_RESOURCES",
+  "ERR_OUT_OF_MEMORY",
+  "ERR_BLOCKED_BY_CLIENT",
+  "ERR_BLOCKED_BY_ADMINISTRATOR",
 ]);
-
-/** Whether a Chromium net error is one Amendment 1 §1 lists as "no HTTP response". */
-export function failsToConnect(code: string): boolean {
-  return (
-    NO_RESPONSE_CODES.has(code) ||
-    NO_RESPONSE_PREFIXES.some((p) => code.startsWith(p))
-  );
-}
 
 export function urlsFor(domain: string): {
   primary: string;
@@ -150,16 +132,23 @@ export type PageFacts = { botWall: boolean; focusable: number; rta: boolean };
 export type Observation = {
   finalUrl: string | null;
   status: number | null;
+  // Content-Type header(s) of the final main-document response, joined with ", " (recorded, not judged).
   contentType: string | null;
-  // Lower-cased media type of each Content-Type header on the final response.
-  mediaTypes: string[];
+  // document.contentType: the media type Rule 2 judges (Amendment 2 §4); null when no document was read.
+  documentContentType: string | null;
   download: boolean;
-  // cf-mitigated on any main-frame response during the judged load.
+  // cf-mitigated on any main-frame navigation response of the judged load (Amendment 2 §3).
   cfMitigated: boolean;
   fallbackUsed: boolean;
-  // Last Chromium net error seen in the screen (primary or fallback), else null.
+  // Last Chromium net error seen in the screen (Amendment 1 §8), and each load's own (Amendment 2 §6).
   netError: string | null;
-  // Set when Amendment 1 doesn't settle what this load means: the draw stops.
+  primaryNetError: string | null;
+  fallbackNetError: string | null;
+  // `load` never fired, so the document was judged as it stood at the timeout + settle (Amendment 2 §1). Log only.
+  loadTimedOut: boolean;
+  // The in-page read did not finish in time: a rule-1 reject (Amendment 2 §2).
+  readTimedOut: boolean;
+  // Set when the amended rule doesn't settle what this load means: the draw stops.
   loadIssue: string | null;
   page: PageFacts | null;
 };
@@ -171,9 +160,13 @@ export type Timing = {
   evalTimeoutMs: number;
 };
 
-type InPage = PageFacts & { navName: string | null; navStatus: number | null };
+type InPage = PageFacts & {
+  contentType: string;
+  navName: string | null;
+  navStatus: number | null;
+};
 
-// A string, not a function, so no transpiler helper can leak into the page. Returns booleans and counts only.
+// A string, not a function, so no transpiler helper can leak into the page. Returns booleans, counts and the media type only.
 const IN_PAGE_SCRIPT = `(() => {
   const re = new RegExp(${JSON.stringify(BOT_WALL_SOURCE)}, 'i');
   const norm = (s) => (s || '').trim().toLowerCase();
@@ -183,6 +176,7 @@ const IN_PAGE_SCRIPT = `(() => {
     botWall: re.test(document.title || '') || re.test(document.body ? document.body.innerText || '' : ''),
     focusable: document.querySelectorAll(${JSON.stringify(FOCUSABLE_SELECTOR)}).length,
     rta: Array.from(document.querySelectorAll('meta[name]')).some((m) => norm(m.getAttribute('name')) === 'rating' && rta.includes(norm(m.getAttribute('content')))),
+    contentType: document.contentType,
     navName: nav ? nav.name : null,
     navStatus: nav && typeof nav.responseStatus === 'number' ? nav.responseStatus : null,
   };
@@ -192,29 +186,56 @@ const REDIRECT_STATUSES = new Set([301, 302, 303, 307, 308]);
 const stripHash = (u: string): string => u.split("#")[0];
 const firstLine = (e: unknown): string =>
   String(e instanceof Error ? e.message : e).split("\n")[0];
+const netCode = (message: string): string | null =>
+  /net::(ERR_[A-Z0-9_]+)/.exec(message)?.[1] ?? null;
 const is2xx = (s: number): boolean => s >= 200 && s <= 299;
 
+/** Whether a Chromium net error is our own machine or network failing, which aborts the run instead of judging the site. */
+export function isEnvironmentFailure(code: string): boolean {
+  return ENVIRONMENT_FAILURES.has(code);
+}
+
+function assertNotEnvironment(code: string | null, url: string): void {
+  if (code !== null && isEnvironmentFailure(code))
+    throw new Error(
+      `environment network failure ${code} at ${url}; aborting the draw`,
+    );
+}
+
+// What one load attempt learned; kept for the record even when the load can't be judged.
 type LoadFacts = Pick<
   Observation,
   | "finalUrl"
   | "status"
   | "contentType"
-  | "mediaTypes"
+  | "documentContentType"
   | "download"
   | "cfMitigated"
-  | "netError"
+  | "loadTimedOut"
+  | "readTimedOut"
   | "page"
 >;
 type Attempt =
   | { kind: "no-response"; netError: string | null; cfMitigated: boolean }
-  | { kind: "response"; facts: LoadFacts }
+  | { kind: "response"; netError: string | null; facts: LoadFacts }
   | {
       kind: "unsettled";
-      reason: string;
-      finalUrl: string | null;
-      status: number | null;
       netError: string | null;
+      reason: string;
+      facts: LoadFacts;
     };
+
+const NO_FACTS: LoadFacts = {
+  finalUrl: null,
+  status: null,
+  contentType: null,
+  documentContentType: null,
+  download: false,
+  cfMitigated: false,
+  loadTimedOut: false,
+  readTimedOut: false,
+  page: null,
+};
 
 async function anyCfMitigated(responses: Response[]): Promise<boolean> {
   for (const r of responses)
@@ -222,25 +243,86 @@ async function anyCfMitigated(responses: Response[]): Promise<boolean> {
   return false;
 }
 
-async function contentTypeOf(
-  r: Response,
-): Promise<Pick<Observation, "contentType" | "mediaTypes">> {
+async function contentTypeHeader(r: Response): Promise<string | null> {
   const values = (await r.headersArray())
     .filter((h) => h.name.toLowerCase() === "content-type")
     .map((h) => h.value);
-  return {
-    contentType: values.length === 0 ? null : values.join(", "),
-    mediaTypes: [
-      ...new Set(values.map((v) => v.split(";")[0].trim().toLowerCase())),
-    ],
-  };
+  return values.length === 0 ? null : values.join(", ");
 }
 
-async function isRedirect(r: Response): Promise<boolean> {
-  return (
-    REDIRECT_STATUSES.has(r.status()) &&
-    (await r.allHeaders()).location !== undefined
-  );
+/** Main-frame navigation responses that are documents, not redirect hops. */
+async function documentResponses(responses: Response[]): Promise<Response[]> {
+  const docs: Response[] = [];
+  for (const r of responses)
+    if (
+      !(
+        REDIRECT_STATUSES.has(r.status()) &&
+        (await r.allHeaders()).location !== undefined
+      )
+    )
+      docs.push(r);
+  return docs;
+}
+
+type Seen = {
+  navResponses: Response[];
+  // Net error codes of failed main-frame navigation requests, including ones the page started after goto.
+  navFailures: string[];
+  downloaded: () => boolean;
+};
+
+function watch(page: Page): Seen {
+  const seen = { navResponses: [] as Response[], navFailures: [] as string[] };
+  let downloaded = false;
+  const mainNav = (req: Request): boolean =>
+    req.isNavigationRequest() && req.frame() === page.mainFrame();
+  page.on("response", (r) => {
+    if (mainNav(r.request())) seen.navResponses.push(r);
+  });
+  page.on("requestfailed", (req) => {
+    const code = netCode(req.failure()?.errorText ?? "");
+    if (mainNav(req) && code !== null) seen.navFailures.push(code);
+  });
+  page.on("download", () => {
+    downloaded = true;
+  });
+  return { ...seen, downloaded: () => downloaded };
+}
+
+/** The in-page read, bounded: "timeout" when the page's main thread doesn't answer in time. */
+async function readPage(
+  page: Page,
+  timeoutMs: number,
+): Promise<InPage | "timeout" | Error> {
+  let timer: NodeJS.Timeout | undefined;
+  try {
+    return await Promise.race([
+      page.evaluate(IN_PAGE_SCRIPT) as Promise<InPage>,
+      new Promise<"timeout">((resolve) => {
+        timer = setTimeout(() => resolve("timeout"), timeoutMs);
+      }),
+    ]);
+  } catch (err) {
+    return err instanceof Error ? err : new Error(String(err));
+  } finally {
+    clearTimeout(timer);
+  }
+}
+
+/** The main-frame response that produced the document standing now. */
+function standingResponse(
+  docs: Response[],
+  read: InPage,
+): Response | undefined {
+  const { navName, navStatus } = read;
+  if (navName === null) return undefined;
+  return docs
+    .filter(
+      (r) =>
+        stripHash(r.url()) === stripHash(navName) &&
+        (navStatus === null || navStatus === 0 || r.status() === navStatus),
+    )
+    .at(-1);
 }
 
 async function attempt(
@@ -251,183 +333,193 @@ async function attempt(
   const context = await browser.newContext();
   try {
     const page = await context.newPage();
-    const navResponses: Response[] = [];
-    let downloaded = false;
-    page.on("response", (r) => {
-      const req = r.request();
-      if (req.isNavigationRequest() && req.frame() === page.mainFrame())
-        navResponses.push(r);
-    });
-    page.on("download", () => {
-      downloaded = true;
-    });
-
+    const seen = watch(page);
+    let gotoError: unknown = null;
     try {
       await page.goto(url, {
         waitUntil: "load",
         timeout: timing.loadTimeoutMs,
       });
     } catch (err) {
-      const code = /net::(ERR_[A-Z0-9_]+)/.exec(firstLine(err))?.[1] ?? null;
-      if (code !== null && ENVIRONMENT_FAILURES.has(code))
-        throw new Error(
-          `environment network failure ${code} at ${url}; aborting the draw`,
-        );
-      const last = navResponses.at(-1);
-      const doc =
-        last === undefined || (await isRedirect(last)) ? undefined : last;
-      // Only redirects (or nothing) came back, so the final hop got no response (§1: "a redirect whose target does any of these").
-      let noResponse = true;
-      for (const r of navResponses)
-        if (!(await isRedirect(r))) noResponse = false;
-      const cfMitigated = await anyCfMitigated(navResponses);
-      const timedOut = err instanceof errors.TimeoutError;
-      const unsettled = (reason: string): Attempt => ({
-        kind: "unsettled",
-        reason: `${reason}; Amendment 1 does not settle this`,
-        finalUrl: doc?.url() ?? null,
-        status: doc?.status() ?? null,
-        netError: code,
-      });
-      const answered = doc
-        ? `after an HTTP ${doc.status()} response`
-        : noResponse
-          ? "with no HTTP response"
-          : "after an earlier main-frame document answered";
-
-      if (noResponse && (timedOut || (code !== null && failsToConnect(code))))
-        return { kind: "no-response", netError: code, cfMitigated };
-      if (timedOut)
-        return unsettled(
-          `load did not fire within ${timing.loadTimeoutMs} ms ${answered} (§1 lists "a 60 s load timeout" but defines "fails to connect" as no HTTP response)`,
-        );
-      // goto can reject before the download event is dispatched, so its message counts too.
-      const download =
-        downloaded || /Download is starting/.test(firstLine(err));
-      // A download is a rule-2 reject (§2); a non-2xx document fails rule 1 whatever error followed it.
-      if (doc !== undefined && (download || !is2xx(doc.status())))
-        return {
-          kind: "response",
-          facts: {
-            finalUrl: doc.url(),
-            status: doc.status(),
-            ...(await contentTypeOf(doc)),
-            download,
-            cfMitigated,
-            netError: code,
-            page: null,
-          },
-        };
-      return unsettled(
-        `${download ? "download started" : `navigation failed with ${code ?? firstLine(err)}`} ${answered}`,
-      );
+      gotoError = err;
     }
-
-    await page.waitForTimeout(timing.settleMs);
-
-    let inPage: InPage;
-    let timer: NodeJS.Timeout | undefined;
-    try {
-      inPage = (await Promise.race([
-        page.evaluate(IN_PAGE_SCRIPT),
-        new Promise<never>((_, reject) => {
-          timer = setTimeout(
-            () =>
-              reject(
-                new Error(`did not return within ${timing.evalTimeoutMs} ms`),
-              ),
-            timing.evalTimeoutMs,
-          );
-        }),
-      ])) as InPage;
-    } catch (err) {
-      return {
-        kind: "unsettled",
-        reason: `page evaluation at load + ${timing.settleMs} ms failed (${firstLine(err)})`,
-        finalUrl: page.url(),
-        status: navResponses.at(-1)?.status() ?? null,
-        netError: null,
-      };
-    } finally {
-      clearTimeout(timer);
-    }
-
-    // The final main document is the one present now; match it to the main-frame response that produced it.
-    const navName = inPage.navName;
-    const final =
-      navName === null
-        ? undefined
-        : navResponses
-            .filter(
-              (r) =>
-                !REDIRECT_STATUSES.has(r.status()) &&
-                stripHash(r.url()) === stripHash(navName) &&
-                (inPage.navStatus === null ||
-                  inPage.navStatus === 0 ||
-                  r.status() === inPage.navStatus),
-            )
-            .at(-1);
-    if (!final) {
-      return {
-        kind: "unsettled",
-        reason: `current document (${navName ?? "no navigation entry"}) matches no main-frame response`,
-        finalUrl: page.url(),
-        status: null,
-        netError: null,
-      };
-    }
-
-    const { botWall, focusable, rta } = inPage;
-    return {
-      kind: "response",
-      facts: {
-        finalUrl: page.url(),
-        status: final.status(),
-        ...(await contentTypeOf(final)),
-        download: false,
-        cfMitigated: await anyCfMitigated(navResponses),
-        netError: null,
-        page: { botWall, focusable, rta },
-      },
-    };
+    return await classify(page, url, seen, gotoError, timing);
   } finally {
     await context.close();
   }
 }
 
-const EMPTY: Omit<Observation, "fallbackUsed" | "netError" | "loadIssue"> = {
-  finalUrl: null,
-  status: null,
-  contentType: null,
-  mediaTypes: [],
-  download: false,
-  cfMitigated: false,
-  page: null,
-};
+// The load's main-frame responses so far; taken again after the settle, since the page may navigate during it.
+type Snapshot = { docs: Response[]; cfMitigated: boolean };
 
-function fromAttempt(
-  a: Exclude<Attempt, { kind: "no-response" }>,
-  fallbackUsed: boolean,
-  earlierNetError: string | null,
-): Observation {
-  if (a.kind === "response")
-    return {
-      ...a.facts,
-      fallbackUsed,
-      netError: a.facts.netError ?? earlierNetError,
-      loadIssue: null,
-    };
+async function snapshot(seen: Seen): Promise<Snapshot> {
   return {
-    ...EMPTY,
-    finalUrl: a.finalUrl,
-    status: a.status,
-    fallbackUsed,
-    netError: a.netError ?? earlierNetError,
-    loadIssue: a.reason,
+    docs: await documentResponses(seen.navResponses),
+    cfMitigated: await anyCfMitigated(seen.navResponses),
   };
 }
 
-/** One load of primaryUrl; one fallback load only when it gets no HTTP response (Amendment 1 §1). */
+async function classify(
+  page: Page,
+  url: string,
+  seen: Seen,
+  gotoError: unknown,
+  timing: Timing,
+): Promise<Attempt> {
+  const message = gotoError === null ? null : firstLine(gotoError);
+  const timedOut = gotoError instanceof errors.TimeoutError;
+  const gotoCode = message === null ? null : netCode(message);
+  assertNotEnvironment(gotoCode, url);
+  const facts = async (
+    snap: Snapshot,
+    over: Partial<LoadFacts>,
+  ): Promise<LoadFacts> => {
+    const lastDoc = snap.docs.at(-1);
+    return {
+      ...NO_FACTS,
+      finalUrl: lastDoc?.url() ?? null,
+      status: lastDoc?.status() ?? null,
+      contentType: lastDoc ? await contentTypeHeader(lastDoc) : null,
+      cfMitigated: snap.cfMitigated,
+      loadTimedOut: timedOut,
+      ...over,
+    };
+  };
+  const unsettled = async (
+    snap: Snapshot,
+    reason: string,
+    over: Partial<LoadFacts> = {},
+  ): Promise<Attempt> => ({
+    kind: "unsettled",
+    netError: gotoCode,
+    reason: `${reason}; Amendments 1 and 2 do not settle this`,
+    facts: await facts(snap, over),
+  });
+
+  const atLoad = await snapshot(seen);
+  const lastDoc = atLoad.docs.at(-1);
+  // The navigation itself became a download (goto can reject before the event is dispatched): rule 2 (Amendment 1 §2).
+  if (
+    message !== null &&
+    !timedOut &&
+    (seen.downloaded() || /Download is starting/.test(message))
+  )
+    return lastDoc === undefined
+      ? unsettled(atLoad, "a download started with no document response")
+      : {
+          kind: "response",
+          netError: gotoCode,
+          facts: await facts(atLoad, { download: true }),
+        };
+  // Only redirects or nothing answered: no HTTP response. A timeout counts only here (Amendment 2 §1), and so does
+  // any error code outside Amendment 1 §1's list (Amendment 2 §5).
+  if (lastDoc === undefined)
+    return timedOut || gotoCode !== null
+      ? {
+          kind: "no-response",
+          netError: gotoCode,
+          cfMitigated: atLoad.cfMitigated,
+        }
+      : unsettled(
+          atLoad,
+          `no document response (${message ?? "goto resolved"})`,
+        );
+  if (message !== null && !timedOut && gotoCode === null)
+    return unsettled(
+      atLoad,
+      `navigation failed (${message}) after an HTTP ${lastDoc.status()} response`,
+    );
+
+  // A document answered: judge what stands at load + settle, or at the load timeout + settle (Amendment 2 §1).
+  await page.waitForTimeout(timing.settleMs);
+  const current = page.url();
+  if (current === "about:blank" || current.startsWith("chrome-error://")) {
+    const settled = await snapshot(seen);
+    // A navigation error that leaves no final document counts as no HTTP response (Amendment 2 §5).
+    const code = gotoCode ?? seen.navFailures.at(-1) ?? null;
+    assertNotEnvironment(code, url);
+    return !timedOut && code !== null
+      ? {
+          kind: "no-response",
+          netError: code,
+          cfMitigated: settled.cfMitigated,
+        }
+      : unsettled(
+          settled,
+          `no document stands at ${current} ${timedOut ? "after the load timeout, though a document answered" : "and no navigation error was seen"}`,
+          { finalUrl: current },
+        );
+  }
+  const read = await readPage(page, timing.evalTimeoutMs);
+  const settled = await snapshot(seen);
+  // A frozen page can't be Tab-walked: rule 1 (Amendment 2 §2).
+  if (read === "timeout")
+    return {
+      kind: "response",
+      netError: gotoCode,
+      facts: await facts(settled, { finalUrl: page.url(), readTimedOut: true }),
+    };
+  if (read instanceof Error)
+    return unsettled(settled, `the in-page read failed (${firstLine(read)})`, {
+      finalUrl: page.url(),
+    });
+  const final = standingResponse(settled.docs, read);
+  if (final === undefined)
+    return unsettled(
+      settled,
+      `current document (${read.navName ?? "no navigation entry"}) matches no main-frame response`,
+      { finalUrl: page.url(), documentContentType: read.contentType },
+    );
+  const { botWall, focusable, rta } = read;
+  const judged: LoadFacts = {
+    ...NO_FACTS,
+    finalUrl: page.url(),
+    status: final.status(),
+    contentType: await contentTypeHeader(final),
+    documentContentType: read.contentType,
+    cfMitigated: settled.cfMitigated,
+    loadTimedOut: timedOut,
+    page: { botWall, focusable, rta },
+  };
+  // A non-2xx document fails rule 1 whatever error came with it; a 2xx one standing beside an error is not settled.
+  if (message !== null && !timedOut && is2xx(final.status()))
+    return {
+      kind: "unsettled",
+      netError: gotoCode,
+      reason: `navigation failed with ${gotoCode} while an HTTP ${final.status()} document stands; Amendments 1 and 2 do not settle this`,
+      facts: judged,
+    };
+  return { kind: "response", netError: gotoCode, facts: judged };
+}
+
+type NetErrors = Pick<
+  Observation,
+  "fallbackUsed" | "primaryNetError" | "fallbackNetError"
+>;
+
+function toObservation(
+  facts: LoadFacts,
+  errs: NetErrors,
+  loadIssue: string | null,
+): Observation {
+  return {
+    ...facts,
+    ...errs,
+    // "The last error seen" (Amendment 1 §8).
+    netError: errs.fallbackUsed
+      ? (errs.fallbackNetError ?? errs.primaryNetError)
+      : errs.primaryNetError,
+    loadIssue,
+  };
+}
+
+const fromAttempt = (
+  a: Exclude<Attempt, { kind: "no-response" }>,
+  errs: NetErrors,
+): Observation =>
+  toObservation(a.facts, errs, a.kind === "unsettled" ? a.reason : null);
+
+/** One load of primaryUrl; one fallback load only when it gets no HTTP response (Amendment 1 §1, Amendment 2 §1, §5). */
 export async function observe(
   browser: Browser,
   primaryUrl: string,
@@ -435,31 +527,27 @@ export async function observe(
   timing: Timing,
 ): Promise<Observation> {
   const first = await attempt(browser, primaryUrl, timing);
-  if (first.kind !== "no-response") return fromAttempt(first, false, null);
-  if (fallbackUrl === null)
-    return {
-      ...EMPTY,
-      fallbackUsed: false,
-      netError: first.netError,
-      loadIssue: null,
-    };
-  if (first.cfMitigated)
-    return {
-      ...EMPTY,
-      fallbackUsed: false,
-      netError: first.netError,
-      loadIssue:
-        "cf-mitigated on a redirect of a load that then failed to connect: Amendment 1 doesn't say whether it counts toward the www fallback's rule 3",
-    };
-  const second = await attempt(browser, fallbackUrl, timing);
-  if (second.kind !== "no-response")
-    return fromAttempt(second, true, first.netError);
-  return {
-    ...EMPTY,
-    fallbackUsed: true,
-    netError: second.netError ?? first.netError,
-    loadIssue: null,
+  const primaryOnly: NetErrors = {
+    fallbackUsed: false,
+    primaryNetError: first.netError,
+    fallbackNetError: null,
   };
+  if (first.kind !== "no-response") return fromAttempt(first, primaryOnly);
+  if (fallbackUrl === null) return toObservation(NO_FACTS, primaryOnly, null);
+  if (first.cfMitigated)
+    return toObservation(
+      NO_FACTS,
+      primaryOnly,
+      "cf-mitigated on a main-frame response of a load that then got no HTTP response: the amendments don't say whether it counts toward the www fallback's rule 3",
+    );
+  const second = await attempt(browser, fallbackUrl, timing);
+  const both: NetErrors = {
+    fallbackUsed: true,
+    primaryNetError: first.netError,
+    fallbackNetError: second.netError,
+  };
+  if (second.kind !== "no-response") return fromAttempt(second, both);
+  return toObservation(NO_FACTS, both, null);
 }
 
 // ---- judgement ----
@@ -486,16 +574,12 @@ export function judge(domain: string, obs: Observation): Judgement {
     return { result: "stop", reasons: [obs.loadIssue] };
   const reject = (rule: RuleNumber): Judgement => ({ result: "reject", rule });
 
-  if (obs.status === null || !is2xx(obs.status)) return reject(1);
-  const html = obs.mediaTypes.map((m) => HTML_MEDIA_TYPES.has(m));
-  if (obs.download || !html.some(Boolean)) return reject(2);
-  if (!html.every(Boolean))
-    return {
-      result: "stop",
-      reasons: [
-        `Content-Type headers disagree on HTML (${obs.contentType}): Amendment 1 §2 doesn't say which one decides`,
-      ],
-    };
+  if (obs.readTimedOut || obs.status === null || !is2xx(obs.status))
+    return reject(1);
+  // Amendment 2 §4: the type Chromium used for the document, whatever the headers said.
+  const media = obs.documentContentType?.toLowerCase() ?? null;
+  if (obs.download || media === null || !HTML_MEDIA_TYPES.has(media))
+    return reject(2);
   if (obs.cfMitigated) return reject(3);
   if (obs.page === null)
     return { result: "stop", reasons: ["2xx HTML page was not evaluated"] };
@@ -538,13 +622,24 @@ const LegacyRecordSchema = z
     ]),
   })
   .strict();
+// Amendment 1 §8 records (i=10..21).
 const CandidateRecordSchema = LegacyRecordSchema.extend({
   fallbackUsed: z.boolean(),
   netError: z.string().nullable(),
 }).strict();
+// Amendment 2 §6 records: each load's own error, and the document.contentType Rule 2 judged.
+const A2RecordSchema = CandidateRecordSchema.extend({
+  primaryNetError: z.string().nullable(),
+  fallbackNetError: z.string().nullable(),
+  documentContentType: z.string().nullable(),
+}).strict();
 type LegacyRecord = z.infer<typeof LegacyRecordSchema>;
 type CandidateRecord = z.infer<typeof CandidateRecordSchema>;
-type StoredRecord = LegacyRecord | CandidateRecord;
+type A2Record = z.infer<typeof A2RecordSchema>;
+type StoredRecord = LegacyRecord | CandidateRecord | A2Record;
+// Amendment 2 re-attempts the stop at i=22, so every record it writes from there on has its fields.
+// (The stop record at i=22 that the Amendment 1 file still holds is dropped on resume.)
+const A2_FROM = 22;
 
 const LEGACY_COMMIT = "7440778";
 const LEGACY_COUNT = 10;
@@ -628,12 +723,27 @@ export const CandidatesFileSchema = z
     notes: NotesSchema,
     legacyRecords: LegacyRecordsSchema,
     inFlight: InFlightSchema,
-    candidates: z.array(z.union([CandidateRecordSchema, LegacyRecordSchema])),
+    candidates: z.array(
+      z.union([A2RecordSchema, CandidateRecordSchema, LegacyRecordSchema]),
+    ),
   })
   .refine(
     (f) =>
       f.candidates.every((r) => "fallbackUsed" in r === r.i >= LEGACY_COUNT),
     { message: `only i < ${LEGACY_COUNT} may lack fallbackUsed/netError` },
+  )
+  .refine(
+    (f) => {
+      const first = f.candidates.findIndex((r) => "primaryNetError" in r);
+      return f.candidates.every(
+        (r, k) =>
+          "primaryNetError" in r === (first !== -1 && k >= first) &&
+          (f.rule !== RULE || r.i < A2_FROM || "primaryNetError" in r),
+      );
+    },
+    {
+      message: `under ${RULE}, records from i=${A2_FROM}, and every record after the first that has them, carry Amendment 2's fields`,
+    },
   );
 export type CandidatesFile = z.infer<typeof CandidatesFileSchema>;
 const AcceptedFileSchema = z.object({
@@ -841,7 +951,7 @@ function screenRecord(
   domain: string,
   obs: Observation | null,
   result: CandidateRecord["result"],
-): CandidateRecord {
+): A2Record {
   return {
     i: c.i,
     rank: c.rank,
@@ -852,8 +962,15 @@ function screenRecord(
     result,
     fallbackUsed: obs?.fallbackUsed ?? false,
     netError: obs?.netError ?? null,
+    primaryNetError: obs?.primaryNetError ?? null,
+    fallbackNetError: obs?.fallbackNetError ?? null,
+    documentContentType: obs?.documentContentType ?? null,
   };
 }
+
+// Load and read timeouts aren't record fields, so the log carries them.
+const timeoutNote = (obs: Observation | null): string =>
+  `${obs?.loadTimedOut ? " (load timed out; judged as it stood, Amendment 2 §1)" : ""}${obs?.readTimedOut ? " (in-page read timed out, Amendment 2 §2)" : ""}`;
 
 const resultOf = (v: Judgement): CandidateRecord["result"] =>
   v.result === "reject" ? v.rule : v.result;
@@ -889,8 +1006,9 @@ export async function screenFrom(
       throw new Error(`rank ${c.rank} missing from the list`);
 
     const pre = c.duplicate ? null : domainPrecheck(domain);
-    let record: CandidateRecord;
+    let record: A2Record;
     let verdict: Judgement | null = null;
+    let obs: Observation | null = null;
     if (c.duplicate) record = screenRecord(c, domain, null, "duplicate");
     else if (pre !== null) record = screenRecord(c, domain, null, pre);
     else {
@@ -900,7 +1018,7 @@ export async function screenFrom(
       };
       await deps.save(file);
       const { primary, fallback } = urlsFor(domain);
-      const obs = await deps.observe(primary, fallback);
+      obs = await deps.observe(primary, fallback);
       verdict = judge(domain, obs);
       record = screenRecord(c, domain, obs, resultOf(verdict));
     }
@@ -918,7 +1036,7 @@ export async function screenFrom(
       candidates: [...file.candidates, record],
     };
     deps.log(
-      `i=${record.i} rank=${record.rank} ${record.domain} -> ${record.result} status=${record.status ?? "-"} final=${record.finalUrl ?? "-"} ctype=${record.contentType ?? "-"} fallback=${record.fallbackUsed} netError=${record.netError ?? "-"}${pre !== null ? " (domain precheck, not loaded)" : ""}`,
+      `i=${record.i} rank=${record.rank} ${record.domain} -> ${record.result} status=${record.status ?? "-"} final=${record.finalUrl ?? "-"} ctype=${record.contentType ?? "-"} doctype=${record.documentContentType ?? "-"} fallback=${record.fallbackUsed} netError=${record.netError ?? "-"} primaryNetError=${record.primaryNetError ?? "-"} fallbackNetError=${record.fallbackNetError ?? "-"}${pre !== null ? " (domain precheck, not loaded)" : ""}${timeoutNote(obs)}`,
     );
     await deps.save(file);
     if (stop !== null) {

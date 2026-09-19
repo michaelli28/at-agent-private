@@ -15,7 +15,7 @@ import {
   SEED,
   candidates,
   domainPrecheck,
-  failsToConnect,
+  isEnvironmentFailure,
   judge,
   legacyRecordsSha256,
   markDuplicates,
@@ -153,36 +153,28 @@ describe("urls and domain prechecks (Amendment 1 §1, §5, §6)", () => {
   });
 });
 
-describe("failsToConnect (Amendment 1 §1)", () => {
-  it("covers DNS, TCP, TLS/certificate, reset/closed, empty response and HTTP/2 errors", () => {
+describe("environment failures (abort the run instead of judging the site)", () => {
+  it("covers our own machine or network failing", () => {
     for (const code of [
-      "ERR_NAME_NOT_RESOLVED",
-      "ERR_DNS_TIMED_OUT",
-      "ERR_CONNECTION_REFUSED",
-      "ERR_CONNECTION_TIMED_OUT",
-      "ERR_ADDRESS_UNREACHABLE",
-      "ERR_CERT_DATE_INVALID",
-      "ERR_CERT_AUTHORITY_INVALID",
-      "ERR_CERT_COMMON_NAME_INVALID",
-      "ERR_SSL_PROTOCOL_ERROR",
-      "ERR_SSL_VERSION_OR_CIPHER_MISMATCH",
-      "ERR_CONNECTION_RESET",
-      "ERR_CONNECTION_CLOSED",
-      "ERR_EMPTY_RESPONSE",
-      "ERR_HTTP2_PROTOCOL_ERROR",
+      "ERR_INTERNET_DISCONNECTED",
+      "ERR_NETWORK_CHANGED",
+      "ERR_PROXY_CONNECTION_FAILED",
+      "ERR_BLOCKED_BY_CLIENT",
     ])
-      expect(failsToConnect(code), code).toBe(true);
+      expect(isEnvironmentFailure(code), code).toBe(true);
   });
 
-  it("does not cover errors Amendment 1 doesn't list", () => {
+  it("leaves site errors, listed or not, to the rule-1 path (Amendment 1 §1, Amendment 2 §5)", () => {
     for (const code of [
+      "ERR_NAME_NOT_RESOLVED",
+      "ERR_CERT_DATE_INVALID",
+      "ERR_CONNECTION_REFUSED",
       "ERR_TOO_MANY_REDIRECTS",
       "ERR_ABORTED",
-      "ERR_BLOCKED_BY_CLIENT",
-      "ERR_INVALID_HTTP_RESPONSE",
       "ERR_QUIC_PROTOCOL_ERROR",
+      "ERR_INVALID_HTTP_RESPONSE",
     ])
-      expect(failsToConnect(code), code).toBe(false);
+      expect(isEnvironmentFailure(code), code).toBe(false);
   });
 });
 
@@ -191,11 +183,15 @@ const okObs: Observation = {
   finalUrl: "https://example.org/",
   status: 200,
   contentType: "text/html; charset=utf-8",
-  mediaTypes: ["text/html"],
+  documentContentType: "text/html",
   download: false,
   cfMitigated: false,
   fallbackUsed: false,
   netError: null,
+  primaryNetError: null,
+  fallbackNetError: null,
+  loadTimedOut: false,
+  readTimedOut: false,
   loadIssue: null,
   page: cleanPage,
 };
@@ -204,7 +200,7 @@ const noResponse: Observation = {
   finalUrl: null,
   status: null,
   contentType: null,
-  mediaTypes: [],
+  documentContentType: null,
   page: null,
 };
 
@@ -217,7 +213,7 @@ describe("judge", () => {
     const bad: Observation = {
       ...okObs,
       status: 403,
-      mediaTypes: [],
+      documentContentType: "text/plain",
       cfMitigated: true,
       page: { botWall: true, focusable: 0, rta: true },
       finalUrl: "https://www.amazon.com/",
@@ -227,7 +223,7 @@ describe("judge", () => {
       result: "reject",
       rule: 2,
     });
-    const html = { ...bad, status: 200, mediaTypes: ["text/html"] };
+    const html = { ...bad, status: 200, documentContentType: "text/html" };
     expect(judge("example.org", html)).toEqual({ result: "reject", rule: 3 });
     const noWall = {
       ...html,
@@ -252,31 +248,68 @@ describe("judge", () => {
   });
 
   it("treats text/html and application/xhtml+xml as HTML, case-insensitively (§2)", () => {
-    for (const mediaTypes of [["text/html"], ["application/xhtml+xml"]])
-      expect(judge("example.org", { ...okObs, mediaTypes })).toEqual({
+    for (const documentContentType of [
+      "text/html",
+      "application/xhtml+xml",
+      "Application/XHTML+XML",
+    ])
+      expect(judge("example.org", { ...okObs, documentContentType })).toEqual({
         result: "accept",
       });
   });
 
-  it("rejects a missing content-type, a non-HTML type and a download on rule 2 (§2)", () => {
-    expect(judge("example.org", { ...okObs, mediaTypes: [] })).toEqual({
-      result: "reject",
-      rule: 2,
-    });
+  it("rejects a non-HTML document type, no document and a download on rule 2 (§2)", () => {
     expect(
-      judge("example.org", { ...okObs, mediaTypes: ["application/json"] }),
+      judge("example.org", { ...okObs, documentContentType: null }),
     ).toEqual({ result: "reject", rule: 2 });
     expect(
-      judge("example.org", { ...okObs, download: true, page: null }),
+      judge("example.org", {
+        ...okObs,
+        documentContentType: "application/json",
+      }),
+    ).toEqual({ result: "reject", rule: 2 });
+    expect(
+      judge("example.org", {
+        ...okObs,
+        download: true,
+        documentContentType: null,
+        page: null,
+      }),
     ).toEqual({ result: "reject", rule: 2 });
   });
 
-  it("stops when Content-Type headers disagree (not settled by Amendment 1)", () => {
-    const v = judge("example.org", {
-      ...okObs,
-      mediaTypes: ["text/html", "text/plain"],
+  it("judges document.contentType, not the headers, when they disagree or are missing (Amendment 2 §4)", () => {
+    const conflict = { ...okObs, contentType: "text/html, text/plain" };
+    expect(
+      judge("example.org", { ...conflict, documentContentType: "text/plain" }),
+    ).toEqual({ result: "reject", rule: 2 });
+    expect(
+      judge("example.org", { ...conflict, documentContentType: "text/html" }),
+    ).toEqual({ result: "accept" });
+    expect(
+      judge("example.org", {
+        ...okObs,
+        contentType: null,
+        documentContentType: "text/html",
+      }),
+    ).toEqual({ result: "accept" });
+  });
+
+  it("rejects on rule 1 when the in-page read timed out (Amendment 2 §2)", () => {
+    expect(
+      judge("example.org", {
+        ...okObs,
+        readTimedOut: true,
+        documentContentType: null,
+        page: null,
+      }),
+    ).toEqual({ result: "reject", rule: 1 });
+  });
+
+  it("judges a document whose load timed out like any other (Amendment 2 §1)", () => {
+    expect(judge("example.org", { ...okObs, loadTimedOut: true })).toEqual({
+      result: "accept",
     });
-    expect(v.result).toBe("stop");
   });
 
   it("rejects cf-mitigated or bot-wall text on rule 3 (§3)", () => {
@@ -337,7 +370,7 @@ describe("judge", () => {
 // ---- resume ----
 const COMMITTED = JSON.parse(
   readFileSync(new URL("./candidates.json", import.meta.url), "utf8"),
-) as { candidates: Record<string, unknown>[] };
+) as { rule: string; candidates: Record<string, unknown>[] };
 const FROZEN = COMMITTED.candidates.slice(0, 10);
 const STOP_AT_10 = {
   i: 10,
@@ -576,6 +609,152 @@ describe("resume (Amendment 1: keep i=0..9, resume at i=10)", () => {
   });
 });
 
+// candidates.json as b089260 left it (stopped at i=22 under Amendment 1): the current file's i=0..21, which must still
+// be b089260's, plus the stop record and metadata pinned from b089260.
+const A1_RULE = "bench/test-sites/SAMPLING-RULE.md @ 0467eb6 (Amendment 1)";
+// sha256 of JSON.stringify(candidates.slice(0, 22)) of candidates.json @ b089260.
+const B089260_RECORDS_SHA256 =
+  "ae154894835e5e0d50ace367a1cbd89c1002a0a678578b187e1ea05ecb4e814f";
+const I22_REASON =
+  'load did not fire within 60000 ms after an HTTP 200 response (§1 lists "a 60 s load timeout" but defines "fails to connect" as no HTTP response); Amendment 1 does not settle this';
+function fileAtB089260() {
+  const cur = structuredClone(COMMITTED) as typeof COMMITTED & {
+    notes: string[];
+  };
+  // Spreading keeps the file's key order, so the rebuilt file serialises like the committed one.
+  return {
+    ...cur,
+    rule: A1_RULE,
+    notes: cur.notes.slice(0, 1),
+    updatedAt: "2026-09-19T02:20:23.687Z",
+    complete: false,
+    acceptedCount: 14,
+    stop: { i: 22, rank: 77440, domain: "dfbocai.net", reasons: [I22_REASON] },
+    inFlight: null,
+    candidates: [
+      ...cur.candidates.slice(0, 22),
+      {
+        i: 22,
+        rank: 77440,
+        domain: "dfbocai.net",
+        finalUrl: "https://www.dfbocai.net/en",
+        status: 200,
+        contentType: null,
+        result: "stop",
+        fallbackUsed: false,
+        netError: null,
+      },
+    ],
+  };
+}
+
+describe("resume under Amendment 2 (the b089260 file stopped at i=22)", () => {
+  const committedRaw = fileAtB089260;
+
+  it("names the Amendment 2 commit", () => {
+    expect(RULE).toBe(
+      "bench/test-sites/SAMPLING-RULE.md @ 10f9c86 (Amendment 2)",
+    );
+  });
+
+  it("candidates.json still holds b089260's i=0..21 unchanged and validates", () => {
+    expect(legacyRecordsSha256(COMMITTED.candidates.slice(0, 22))).toBe(
+      B089260_RECORDS_SHA256,
+    );
+    expect(() => CandidatesFileSchema.parse(COMMITTED)).not.toThrow();
+    expect(() => CandidatesFileSchema.parse(fileAtB089260())).not.toThrow();
+  });
+
+  it("keeps i=0..21 byte-identical, re-attempts i=22 and discloses the second load", () => {
+    const plan = planResume(
+      committedRaw(),
+      planOpts(committedRaw().candidates),
+    );
+    expect(plan.nextI).toBe(22);
+    expect(plan.acceptedCount).toBe(14);
+    expect(JSON.stringify(plan.kept, null, 2)).toBe(
+      JSON.stringify(committedRaw().candidates.slice(0, 22), null, 2),
+    );
+    expect(plan.notes).toHaveLength(2);
+    expect(plan.notes[1]).toBe(
+      `i=22 (dfbocai.net) stopped under ${A1_RULE} (load did not fire within 60000 ms after an HTTP 200 response (§1 lists "a 60 s load timeout" but defines "fails to connect" as no HTTP response); Amendment 1 does not settle this); that stop record is dropped and i=22 re-attempted under ${RULE} by the resume started ${NOW}.`,
+    );
+  });
+
+  it("would refuse the re-attempt under the Amendment 1 rule", () => {
+    expect(() =>
+      planResume(committedRaw(), {
+        ...planOpts(committedRaw().candidates),
+        rule: A1_RULE,
+      }),
+    ).toThrow(/stopped at i=22.*amend/);
+  });
+
+  it("writes Amendment 2 records from i=22 after the Amendment 1 ones, and the file validates", async () => {
+    const plan = planResume(
+      committedRaw(),
+      planOpts(committedRaw().candidates),
+    );
+    const start = resumeFile(plan, { list: LIST, browser: BROWSER, now: NOW });
+    const { file } = await screenFrom(start, {
+      domains: planOpts(committedRaw().candidates).domains,
+      nextI: plan.nextI,
+      maxCandidates: 1,
+      observe: async () => ({ ...okObs, loadTimedOut: true }),
+      save: async (f) => void CandidatesFileSchema.parse(f),
+      now: () => NOW,
+      log: () => {},
+    });
+    expect(file.notes).toEqual(plan.notes);
+    expect(file.candidates.at(-1)).toEqual({
+      i: 22,
+      rank: 77440,
+      domain: "dfbocai.net",
+      finalUrl: "https://example.org/",
+      status: 200,
+      contentType: "text/html; charset=utf-8",
+      result: "accept",
+      fallbackUsed: false,
+      netError: null,
+      primaryNetError: null,
+      fallbackNetError: null,
+      documentContentType: "text/html",
+    });
+    expect(() => CandidatesFileSchema.parse(file)).not.toThrow();
+  });
+
+  it("refuses an Amendment 1-shaped record at i >= 22, or a later record without Amendment 2's fields", () => {
+    const plan = planResume(
+      committedRaw(),
+      planOpts(committedRaw().candidates),
+    );
+    const start = resumeFile(plan, { list: LIST, browser: BROWSER, now: NOW });
+    const a1At22 = { ...amendedRecord(22, 1), domain: "dfbocai.net" };
+    expect(() =>
+      CandidatesFileSchema.parse({
+        ...start,
+        candidates: [...start.candidates, a1At22],
+      }),
+    ).toThrow(/Amendment 2/);
+    const a2At10 = {
+      ...amendedRecord(10, 1),
+      primaryNetError: null,
+      fallbackNetError: null,
+      documentContentType: null,
+    };
+    expect(() =>
+      CandidatesFileSchema.parse({
+        ...start,
+        candidates: [
+          ...start.candidates.slice(0, 10),
+          a2At10,
+          amendedRecord(11, 1),
+        ],
+      }),
+    ).toThrow(/Amendment 2/);
+  });
+});
+
 describe("parseArgs", () => {
   it("requires --resume, since i=0..9 are frozen", () => {
     expect(() => parseArgs([])).toThrow(/--resume/);
@@ -662,13 +841,15 @@ describe("screenFrom (the resume loop, with a stub load)", () => {
     );
   });
 
-  it("records fallbackUsed and netError on every new record", async () => {
+  it("records fallbackUsed, netError and each load's own error on every new record", async () => {
     const { run } = setup({
       maxCandidates: 1,
       observe: async () => ({
         ...noResponse,
         fallbackUsed: true,
-        netError: "ERR_CERT_DATE_INVALID",
+        netError: "ERR_TOO_MANY_REDIRECTS",
+        primaryNetError: "ERR_CERT_DATE_INVALID",
+        fallbackNetError: "ERR_TOO_MANY_REDIRECTS",
       }),
     });
     const { file } = await run();
@@ -681,7 +862,10 @@ describe("screenFrom (the resume loop, with a stub load)", () => {
       contentType: null,
       result: 1,
       fallbackUsed: true,
-      netError: "ERR_CERT_DATE_INVALID",
+      netError: "ERR_TOO_MANY_REDIRECTS",
+      primaryNetError: "ERR_CERT_DATE_INVALID",
+      fallbackNetError: "ERR_TOO_MANY_REDIRECTS",
+      documentContentType: null,
     });
   });
 
@@ -740,7 +924,7 @@ const NAV_TO_OK =
 const XHTML = `<?xml version="1.0" encoding="UTF-8"?><html xmlns="http://www.w3.org/1999/xhtml"><head><title>x</title></head><body>${LINK}</body></html>`;
 
 type Route =
-  | { status: number; headers: Record<string, string>; body: string }
+  | { status: number; headers: Record<string, string | string[]>; body: string }
   | "hang"
   | "destroy"
   | "reset"
@@ -760,6 +944,19 @@ const ROUTES: Record<string, Route> = {
     body: '{"a":1}',
   },
   "/no-ctype": { status: 200, headers: {}, body: LINK },
+  "/no-ctype-text": { status: 200, headers: {}, body: "just words, no markup" },
+  // Two Content-Type headers: Chromium uses the last one (Amendment 2 §4 judges what Chromium used).
+  "/ct-conflict-plain-last": {
+    status: 200,
+    headers: { "content-type": ["text/html", "text/plain"] },
+    body: `<!doctype html><title>t</title>${LINK}`,
+  },
+  "/ct-conflict-html-last": {
+    status: 200,
+    headers: { "content-type": ["text/plain", "text/html"] },
+    body: `<!doctype html><title>t</title>${LINK}`,
+  },
+  "/204": { status: 204, headers: {}, body: "" },
   "/xhtml": {
     status: 200,
     headers: { "content-type": "Application/XHTML+XML; charset=utf-8" },
@@ -776,6 +973,13 @@ const ROUTES: Record<string, Route> = {
     status: 200,
     headers: { ...HTML, "cf-mitigated": "challenge" },
     body: LINK,
+  },
+  // cf-mitigated only on a subresource, not on a navigation response (Amendment 2 §3).
+  "/cf-sub": { status: 200, headers: HTML, body: `${LINK}<img src="/cf-img">` },
+  "/cf-img": {
+    status: 403,
+    headers: { "content-type": "text/plain", "cf-mitigated": "challenge" },
+    body: "",
   },
   "/cf-then-nav": {
     status: 403,
@@ -971,15 +1175,46 @@ describe(
 
     it("accepts application/xhtml+xml as HTML", async () => {
       const { obs, verdict } = await screenPath("/xhtml");
-      expect(obs.mediaTypes).toEqual(["application/xhtml+xml"]);
+      expect(obs.documentContentType).toBe("application/xhtml+xml");
       expect(verdict).toEqual({ result: "accept" });
     });
 
-    it("rejects non-HTML and a missing content-type on rule 2", async () => {
-      expect(rejectRule((await screenPath("/json")).verdict)).toBe(2);
-      const noCtype = await screenPath("/no-ctype");
-      expect(noCtype.obs).toMatchObject({ status: 200, contentType: null });
-      expect(noCtype.verdict).toEqual({ result: "reject", rule: 2 });
+    it("rejects a non-HTML document on rule 2", async () => {
+      const json = await screenPath("/json");
+      expect(json.obs.documentContentType).toBe("application/json");
+      expect(json.verdict).toEqual({ result: "reject", rule: 2 });
+    });
+
+    it("judges a missing Content-Type by the type Chromium sniffed (Amendment 2 §4)", async () => {
+      const html = await screenPath("/no-ctype");
+      expect(html.obs).toMatchObject({
+        status: 200,
+        contentType: null,
+        documentContentType: "text/html",
+      });
+      expect(html.verdict).toEqual({ result: "accept" });
+      const text = await screenPath("/no-ctype-text");
+      expect(text.obs).toMatchObject({
+        contentType: null,
+        documentContentType: "text/plain",
+      });
+      expect(text.verdict).toEqual({ result: "reject", rule: 2 });
+    });
+
+    it("judges conflicting Content-Type headers by document.contentType and records the headers (Amendment 2 §4)", async () => {
+      const plain = await screenPath("/ct-conflict-plain-last");
+      expect(plain.obs).toMatchObject({
+        contentType: "text/html, text/plain",
+        documentContentType: "text/plain",
+        loadIssue: null,
+      });
+      expect(plain.verdict).toEqual({ result: "reject", rule: 2 });
+      const html = await screenPath("/ct-conflict-html-last");
+      expect(html.obs).toMatchObject({
+        contentType: "text/plain, text/html",
+        documentContentType: "text/html",
+      });
+      expect(html.verdict).toEqual({ result: "accept" });
     });
 
     it("rejects a download on rule 2 and records its response", async () => {
@@ -996,6 +1231,12 @@ describe(
       const { obs, verdict } = await screenPath("/cf");
       expect(obs.cfMitigated).toBe(true);
       expect(verdict).toEqual({ result: "reject", rule: 3 });
+    });
+
+    it("ignores cf-mitigated on a subresource (Amendment 2 §3)", async () => {
+      const { obs, verdict } = await screenPath("/cf-sub");
+      expect(obs.cfMitigated).toBe(false);
+      expect(verdict).toEqual({ result: "accept" });
     });
 
     it("rejects cf-mitigated on an earlier main-frame response of the load on rule 3", async () => {
@@ -1131,6 +1372,8 @@ describe(
         status: 200,
         fallbackUsed: true,
         netError: null,
+        primaryNetError: null,
+        fallbackNetError: null,
       });
     });
 
@@ -1141,6 +1384,8 @@ describe(
         status: null,
         fallbackUsed: true,
         netError: "ERR_CONNECTION_REFUSED",
+        primaryNetError: "ERR_SSL_PROTOCOL_ERROR",
+        fallbackNetError: "ERR_CONNECTION_REFUSED",
         loadIssue: null,
       });
       expect(judge("fixture.test", obs)).toEqual({ result: "reject", rule: 1 });
@@ -1162,45 +1407,96 @@ describe(
       });
     });
 
-    it("stops when load never fires after the document responded", async () => {
-      const { obs, verdict } = await screenPath("/hang", {
+    it("judges a document whose load never fires as it stands at the timeout + settle, without a fallback (Amendment 2 §1)", async () => {
+      const t0 = Date.now();
+      const obs = await observe(browser, `${base}/hang`, `${base}/ok`, {
         settleMs: 300,
         loadTimeoutMs: 1_500,
         evalTimeoutMs: 5_000,
       });
-      expect(obs.loadIssue).toMatch(/load did not fire.*HTTP 200/);
-      expect(verdict.result).toBe("stop");
+      expect(Date.now() - t0).toBeGreaterThanOrEqual(1_800);
+      expect(obs).toMatchObject({
+        finalUrl: `${base}/hang`,
+        status: 200,
+        contentType: "text/html; charset=utf-8",
+        documentContentType: "text/html",
+        fallbackUsed: false,
+        primaryNetError: null,
+        loadTimedOut: true,
+        loadIssue: null,
+        page: { botWall: false, focusable: 1, rta: false },
+      });
+      expect(judge("fixture.test", obs)).toEqual({ result: "accept" });
     });
 
-    it("stops when the page's main thread never frees up for the evaluation", async () => {
-      const { obs, verdict } = await screenPath("/spin", {
+    it("rejects on rule 1 when the in-page read doesn't finish in time, and records the response (Amendment 2 §2)", async () => {
+      const obs = await observe(browser, `${base}/spin`, `${base}/ok`, {
         ...fast,
         evalTimeoutMs: 1_000,
       });
-      expect(obs.loadIssue).toMatch(/did not return within 1000 ms/);
-      expect(verdict.result).toBe("stop");
-    });
-
-    it("stops on a navigation error Amendment 1 does not list (redirect loop)", async () => {
-      const obs = await observe(browser, `${base}/loop`, `${base}/ok`, fast);
       expect(obs).toMatchObject({
+        finalUrl: `${base}/spin`,
+        status: 200,
+        contentType: "text/html; charset=utf-8",
         fallbackUsed: false,
-        netError: "ERR_TOO_MANY_REDIRECTS",
+        readTimedOut: true,
+        loadIssue: null,
+        page: null,
       });
-      expect(obs.loadIssue).toMatch(/ERR_TOO_MANY_REDIRECTS/);
-      expect(judge("fixture.test", obs).result).toBe("stop");
+      expect(judge("fixture.test", obs)).toEqual({ result: "reject", rule: 1 });
     });
 
-    it("stops, without a fallback, when a document answered and a later navigation got no response", async () => {
+    it("treats a redirect loop as no HTTP response: one www fallback, then rule 1 (Amendment 2 §5)", async () => {
+      const fell = await observe(browser, `${base}/loop`, `${base}/ok`, fast);
+      expect(fell).toMatchObject({
+        finalUrl: `${base}/ok`,
+        status: 200,
+        fallbackUsed: true,
+        netError: "ERR_TOO_MANY_REDIRECTS",
+        primaryNetError: "ERR_TOO_MANY_REDIRECTS",
+        fallbackNetError: null,
+      });
+      expect(judge("fixture.test", fell)).toEqual({ result: "accept" });
+      const both = await observe(browser, `${base}/loop`, `${base}/loop`, fast);
+      expect(both).toMatchObject({
+        finalUrl: null,
+        status: null,
+        fallbackUsed: true,
+        primaryNetError: "ERR_TOO_MANY_REDIRECTS",
+        fallbackNetError: "ERR_TOO_MANY_REDIRECTS",
+        loadIssue: null,
+      });
+      expect(judge("fixture.test", both)).toEqual({
+        result: "reject",
+        rule: 1,
+      });
+    });
+
+    it("treats an aborted navigation (a 204) as no HTTP response and falls back (Amendment 2 §5)", async () => {
+      const obs = await observe(browser, `${base}/204`, `${base}/ok`, fast);
+      expect(obs).toMatchObject({
+        finalUrl: `${base}/ok`,
+        status: 200,
+        fallbackUsed: true,
+        primaryNetError: "ERR_ABORTED",
+      });
+    });
+
+    it("falls back when a document answered but a later navigation left no final document (Amendment 2 §5)", async () => {
       const obs = await observe(
         browser,
         `${base}/js-to-dead`,
         `${base}/ok`,
         fast,
       );
-      expect(obs.fallbackUsed).toBe(false);
-      expect(obs.loadIssue).not.toBeNull();
-      expect(judge("fixture.test", obs).result).toBe("stop");
+      expect(obs).toMatchObject({
+        finalUrl: `${base}/ok`,
+        status: 200,
+        fallbackUsed: true,
+        primaryNetError: "ERR_CONNECTION_REFUSED",
+        loadIssue: null,
+      });
+      expect(judge("fixture.test", obs)).toEqual({ result: "accept" });
     });
   },
 );
