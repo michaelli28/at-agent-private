@@ -54,6 +54,15 @@ export {
 // Scripted Tab walk (no LLM): per-press focus record for trap, focus-order and focus-indicator checks
 export {
   runTabWalk,
+  focusIdentity,
+  FocusContainerSchema,
+  type FocusContainer,
+  DeepFocusSchema,
+  type DeepFocus,
+  DeepUnavailableSchema,
+  type DeepUnavailable,
+  LaunchFactsSchema,
+  type LaunchFacts,
   TabKeySchema,
   type TabKey,
   TabWalkOptionsSchema,
