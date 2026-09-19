@@ -84,10 +84,27 @@ export {
 } from './tab-walk.js'
 
 // Dual-crawl gap detection: baseline port of taskgen's DOM-vs-accessibility-tree detector
-export { crawlPageWithGapDetection } from './gaps/detect.js'
-export { crawlDOM, getInteractivitySignals, isElementVisible } from './gaps/dom-crawler.js'
+export { crawlPageWithGapDetection, GapDetectionOptionsSchema, type GapDetectionOptions } from './gaps/detect.js'
+export {
+  crawlDOM,
+  getInteractivitySignals,
+  isElementVisible,
+  findHiddenCandidates,
+  collectInteractivitySignals,
+  type DOMCrawl,
+  type SignalsRead,
+  type SignalsCollection,
+  type HiddenCandidates,
+} from './gaps/dom-crawler.js'
 export { getAccessibilityTree, convertToElementGraph, type AXNode } from './gaps/ax-tree.js'
-export { buildBridgeMap, detectGaps, isLikelyInteractive, getElementDescription } from './gaps/gap-detector.js'
+export {
+  buildBridgeMap,
+  detectGaps,
+  isLikelyInteractive,
+  getElementDescription,
+  type DetectGapsOptions,
+} from './gaps/gap-detector.js'
+export { NO_WALK, walkFailed, keyboardEvidence } from './gaps/keyboard.js'
 export { summarizeGaps, type GapSummary } from './gaps/summary.js'
 export {
   ACCESSIBILITY_GAP_TYPES,
@@ -111,4 +128,19 @@ export {
   type PageElementGraph,
   DualCrawlResultSchema,
   type DualCrawlResult,
+  HIDDEN_REASONS,
+  HiddenReasonSchema,
+  type HiddenReason,
+  HiddenCandidateSchema,
+  type HiddenCandidate,
+  CRAWL_STAGES,
+  CrawlStageSchema,
+  type CrawlStage,
+  CrawlErrorSchema,
+  type CrawlError,
+  KEYBOARD_UNASSESSED_REASONS,
+  KeyboardUnassessedReasonSchema,
+  type KeyboardUnassessedReason,
+  KeyboardEvidenceSchema,
+  type KeyboardEvidence,
 } from './gaps/types.js'

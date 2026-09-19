@@ -16,6 +16,7 @@ interface AXProperty {
 export interface AXNode {
   nodeId: string
   ignored: boolean
+  ignoredReasons?: AXProperty[]
   role?: AXValue
   name?: AXValue
   description?: AXValue
@@ -77,15 +78,11 @@ export function convertToElementGraph(
   const nodeIdToElement = new Map<string, ElementNode>()
   const childToParent = new Map<string, string>()
 
+  // Ignored and unnamed generic nodes are kept (taskgen dropped both) so the gap detector can bridge an
+  // aria-hidden control or an unnamed clickable div to its AX node (F2).
   for (const axNode of axNodes) {
-    // BASELINE-BUG(F2): ignored nodes are skipped, so aria-hidden/hidden clickables can never be bridged.
-    if (axNode.ignored) continue
-
     const role = axText(axNode.role?.value) || 'generic'
     const name = axText(axNode.name?.value) || ''
-
-    // BASELINE-BUG(F2): unnamed generic nodes are dropped, so an unnamed clickable div falls to missing_from_a11y_tree, never wrong_role.
-    if (role === 'generic' && !name) continue
 
     const xpath = generateXPathFromNodeId(axNode.nodeId)
     const elementId = `${pageUrl}#${xpath}`
@@ -100,6 +97,8 @@ export function convertToElementGraph(
       description: axText(axNode.description?.value),
       value: axText(axNode.value?.value),
       backendDOMNodeId: axNode.backendDOMNodeId,
+      ignored: axNode.ignored,
+      ignoredReasons: (axNode.ignoredReasons ?? []).map((r) => r.name),
       typeFlags,
       children: [],
       parent: null,
@@ -114,6 +113,8 @@ export function convertToElementGraph(
       }
     }
 
+    // An ignored node is not exposed to assistive technology, so it indexes nothing.
+    if (axNode.ignored) continue
     if (typeFlags.headingLevel) headings.push(elementId)
     if (typeFlags.isLandmark) landmarks.push(elementId)
     if (typeFlags.isButton) buttons.push(elementId)
@@ -152,7 +153,7 @@ export function convertToElementGraph(
 
   let interactiveCount = 0
   for (const element of elements.values()) {
-    if (element.typeFlags.isInteractive) interactiveCount++
+    if (element.typeFlags.isInteractive && !element.ignored) interactiveCount++
   }
 
   return {

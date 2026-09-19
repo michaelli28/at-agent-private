@@ -1,9 +1,11 @@
 import type { Impact } from '../types.js'
+import { NO_WALK } from './keyboard.js'
 import type {
   AccessibilityGap,
   AccessibilityGapType,
   DOMElement,
   InteractivitySignals,
+  KeyboardEvidence,
   PageElementGraph,
 } from './types.js'
 
@@ -34,6 +36,11 @@ const GAP_FIX_SUGGESTIONS: Record<AccessibilityGapType, string> = {
     'Add tabindex="0" to make the element keyboard focusable, and ensure it can be activated with Enter/Space.',
   hidden_but_interactive: 'Remove aria-hidden="true" or ensure the element is not interactive if it should be hidden.',
 }
+
+// Chromium ignores these nodes because the element is not rendered or not visible (F1).
+const HIDDEN_AX_REASONS = ['notRendered', 'notVisible']
+// Roles that carry no semantics; ARIA prohibits naming a generic, so a missing name is not its defect (F2).
+const NO_ROLE_ROLES = ['generic', 'group', 'none']
 
 const INTERACTIVE_ROLES = [
   'button',
@@ -67,27 +74,46 @@ export function buildBridgeMap(accessibilityTree: PageElementGraph): Map<number,
   return bridgeMap
 }
 
+export type DetectGapsOptions = {
+  // From a Tab walk of the same load; without it not_focusable is never emitted (F3).
+  keyboard?: KeyboardEvidence
+}
+
+type ClassifyContext = {
+  accessibilityTree: PageElementGraph
+  bridgeMap: Map<number, string>
+  keyboard: KeyboardEvidence
+  reached: ReadonlySet<number>
+}
+
 export function detectGaps(
   domElements: readonly DOMElement[],
   accessibilityTree: PageElementGraph,
   signals: ReadonlyMap<number, InteractivitySignals>,
+  options: DetectGapsOptions = {},
 ): AccessibilityGap[] {
+  const keyboard = options.keyboard ?? NO_WALK
+  const ctx: ClassifyContext = {
+    accessibilityTree,
+    bridgeMap: buildBridgeMap(accessibilityTree),
+    keyboard,
+    reached: new Set(keyboard.reachedBackendNodeIds),
+  }
   const gaps: AccessibilityGap[] = []
-  const bridgeMap = buildBridgeMap(accessibilityTree)
 
   for (const domElement of domElements) {
     const elementSignals = signals.get(domElement.backendNodeId)
     if (!elementSignals) continue
     if (!isLikelyInteractive(elementSignals)) continue
 
-    const gap = classifyGap(domElement, elementSignals, accessibilityTree, bridgeMap)
+    const gap = classifyGap(domElement, elementSignals, ctx)
     if (gap) gaps.push(gap)
   }
 
   return gaps
 }
 
-// BASELINE-BUG(F9): hand-set weights and threshold 2, never calibrated; cursor:pointer (1 point) is never observed.
+// Hand-set weights and threshold 2 from taskgen, never calibrated (F9 left them unchanged).
 export function isLikelyInteractive(signals: InteractivitySignals): boolean {
   let score = 0
 
@@ -109,12 +135,18 @@ function isInteractiveRole(role: string | null): boolean {
   return INTERACTIVE_ROLES.includes(role.toLowerCase())
 }
 
+// Once a walk ran, an aria-hidden control counts only if Tab focused it: one the walk never reached is hidden from
+// keyboard and assistive technology alike (e.g. page content behind a modal). Without a walk, the signals decide.
+function hiddenFromKeyboardToo(domElement: DOMElement, ctx: ClassifyContext): boolean {
+  return ctx.keyboard.walkRan && !ctx.reached.has(domElement.backendNodeId)
+}
+
 function classifyGap(
   domElement: DOMElement,
   signals: InteractivitySignals,
-  accessibilityTree: PageElementGraph,
-  bridgeMap: Map<number, string>,
+  ctx: ClassifyContext,
 ): AccessibilityGap | null {
+  const { accessibilityTree, bridgeMap } = ctx
   const axElementId = bridgeMap.get(domElement.backendNodeId)
 
   if (!axElementId) {
@@ -128,6 +160,45 @@ function classifyGap(
 
   const axElement = accessibilityTree.elements.get(axElementId)
   if (!axElement) return null
+  if (axElement.ignoredReasons.some((r) => HIDDEN_AX_REASONS.includes(r))) return null
+
+  if (axElement.ignored) {
+    const ariaHidden = axElement.ignoredReasons.some((r) => r === 'ariaHiddenElement' || r === 'ariaHiddenSubtree')
+    if (ariaHidden && hiddenFromKeyboardToo(domElement, ctx)) return null
+    if (axElement.ignoredReasons.includes('ariaHiddenElement')) {
+      return createGap(
+        domElement,
+        signals,
+        'hidden_but_interactive',
+        `${domElement.nodeName} element has aria-hidden="true" but is interactive`,
+      )
+    }
+    if (axElement.ignoredReasons.includes('ariaHiddenSubtree')) {
+      return createGap(
+        domElement,
+        signals,
+        'hidden_but_interactive',
+        `${domElement.nodeName} element is inside an aria-hidden="true" subtree but is interactive`,
+      )
+    }
+    return createGap(
+      domElement,
+      signals,
+      'missing_from_a11y_tree',
+      `${domElement.nodeName} element with interactivity signals is not exposed in the accessibility tree`,
+    )
+  }
+
+  if (NO_ROLE_ROLES.includes(axElement.role)) {
+    if (signals.hasClickHandler || isInteractiveRole(signals.roleValue)) {
+      return createGap(
+        domElement,
+        signals,
+        'wrong_role',
+        `${domElement.nodeName} element has click handlers but generic role "${axElement.role}"`,
+      )
+    }
+  }
 
   if (!axElement.name || axElement.name.trim() === '') {
     if (signals.hasClickHandler || signals.isSemanticInteractive) {
@@ -140,38 +211,26 @@ function classifyGap(
     }
   }
 
-  // BASELINE-BUG(F2): only named generic/group nodes survive the AX conversion, so unnamed clickable divs never reach this branch.
-  if (axElement.role === 'generic' || axElement.role === 'group') {
-    if (signals.hasClickHandler || isInteractiveRole(signals.roleValue)) {
-      return createGap(
-        domElement,
-        signals,
-        'wrong_role',
-        `${domElement.nodeName} element has click handlers but generic role "${axElement.role}"`,
-      )
-    }
-  }
-
-  // BASELINE-BUG(F3): keyboard access is inferred from tag name and tabindex attribute, never from a real Tab walk.
-  const isKeyboardAccessible =
-    signals.isSemanticInteractive ||
-    (signals.hasTabindex && signals.tabindexValue !== null && signals.tabindexValue >= 0)
-
-  if (!isKeyboardAccessible && (signals.hasClickHandler || signals.hasCursorPointer)) {
-    const reason =
-      signals.tabindexValue === -1
-        ? 'tabindex="-1" makes it unfocusable'
-        : 'has no tabindex and is not a native interactive element'
+  // F3: keyboard access comes from where Tab really went, never from the tag or the tabindex attribute.
+  if (
+    ctx.keyboard.notFocusableAssessed &&
+    !ctx.reached.has(domElement.backendNodeId) &&
+    (signals.hasClickHandler || signals.hasCursorPointer)
+  ) {
     return createGap(
       domElement,
       signals,
       'not_focusable',
-      `${domElement.nodeName} element has ${signals.hasClickHandler ? 'click handlers' : 'cursor:pointer'} but ${reason}`,
+      `${domElement.nodeName} element has ${signals.hasClickHandler ? 'click handlers' : 'cursor:pointer'} but a complete Tab walk never focused it`,
     )
   }
 
-  // BASELINE-BUG(F2): aria-hidden nodes are normally ignored and never bridged, so this fires only when Chromium still exposes one (e.g. focused).
-  if (domElement.attributes['aria-hidden'] === 'true' && signals.hasClickHandler) {
+  // Chromium still exposes an aria-hidden element that has focus; the ignored case is handled above.
+  if (
+    domElement.attributes['aria-hidden'] === 'true' &&
+    signals.hasClickHandler &&
+    !hiddenFromKeyboardToo(domElement, ctx)
+  ) {
     return createGap(
       domElement,
       signals,

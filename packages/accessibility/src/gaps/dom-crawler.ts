@@ -1,12 +1,20 @@
 import type { CDPSession, Page } from 'playwright'
-import type { DOMElement, InteractivitySignals } from './types.js'
+import { z } from 'zod'
+import type {
+  CrawlError,
+  CrawlStage,
+  DOMElement,
+  HiddenCandidate,
+  HiddenReason,
+  InteractivitySignals,
+} from './types.js'
 
-// Port of taskgen/src/dom-crawler.ts (DOMCrawler) as functions; CDP call order is unchanged.
+// Port of taskgen/src/dom-crawler.ts (DOMCrawler) as functions, plus listener and React discovery (F9).
 
 const SEMANTIC_INTERACTIVE_SELECTORS = [
   'button',
   'a[href]',
-  // BASELINE-BUG(F1): 'input' also matches type=hidden and unrendered inputs, which are then flagged.
+  // Also matches type=hidden and unrendered inputs; findHiddenCandidates drops those before classification.
   'input',
   'select',
   'textarea',
@@ -66,9 +74,70 @@ const INTERACTIVE_CLASS_PATTERNS = [
 ]
 
 const SEMANTIC_TAGS = ['button', 'a', 'input', 'select', 'textarea', 'details', 'summary']
-const LISTENER_TYPES = ['click', 'mousedown', 'mouseup', 'keydown', 'keyup', 'touchstart', 'touchend']
+// Pointer events added (F9): Radix/shadcn-style components activate on pointerdown.
+const LISTENER_TYPES = [
+  'click',
+  'mousedown',
+  'mouseup',
+  'pointerdown',
+  'pointerup',
+  'keydown',
+  'keyup',
+  'touchstart',
+  'touchend',
+]
 
-export async function crawlDOM(page: Page, pageUrl: string): Promise<DOMElement[]> {
+const OBJECT_GROUP = 'at-agent-gaps'
+
+// Every element in the document and its open shadow roots whose React props hold any on[A-Z]* function, and every
+// React root container (it carries React's delegated listeners for the whole app).
+const REACT_SCAN_FN = `function () {
+  var handlers = []
+  var containers = []
+  var visit = function (root) {
+    root.querySelectorAll('*').forEach(function (el) {
+      Object.keys(el).forEach(function (key) {
+        if (key.indexOf('__reactContainer$') === 0) containers.push(el)
+        if (key.indexOf('__reactProps$') !== 0) return
+        var props = el[key]
+        var handler = props && Object.keys(props).some(function (p) {
+          return /^on[A-Z]/.test(p) && typeof props[p] === 'function'
+        })
+        if (handler) handlers.push(el)
+      })
+      if (el.shadowRoot) visit(el.shadowRoot)
+    })
+  }
+  visit(document)
+  return { handlers: handlers, containers: containers }
+}`
+
+// Listener discovery pierces frames; the AX tree covers the top document only, and html/body hold delegated listeners.
+const DISCOVERABLE_FN = `function () {
+  return window === window.top && this.localName !== 'html' && this.localName !== 'body'
+}`
+
+// For a React element its props are the source of truth: React leaves the no-op el.onclick it planted after onClick
+// is removed. Only activation handlers count, as with the listener types (onMouseEnter or onLoad is not a click).
+const REACT_FACTS_FN = `function () {
+  var key = Object.keys(this).filter(function (k) { return k.indexOf('__reactProps$') === 0 })[0]
+  var props = key === undefined ? null : this[key]
+  var activation = /^on(Click|MouseDown|MouseUp|PointerDown|PointerUp|KeyDown|KeyUp|TouchStart|TouchEnd)(Capture)?$/
+  return {
+    hasProps: props !== null && typeof props === 'object',
+    activation: !!props && Object.keys(props).some(function (p) {
+      return activation.test(p) && typeof props[p] === 'function'
+    }),
+    onclickProperty: typeof this.onclick === 'function',
+  }
+}`
+
+// visibility:hidden/collapse (own or inherited), content-visibility:hidden and display:none all fail this.
+const CHECK_VISIBILITY_FN = 'function () { return this.checkVisibility({ checkVisibilityCSS: true }) }'
+
+export type DOMCrawl = { elements: DOMElement[]; errors: CrawlError[] }
+
+export async function crawlDOM(page: Page, pageUrl: string): Promise<DOMCrawl> {
   const cdp = await page.context().newCDPSession(page)
 
   try {
@@ -77,7 +146,6 @@ export async function crawlDOM(page: Page, pageUrl: string): Promise<DOMElement[
 
     const domElements: DOMElement[] = []
 
-    // BASELINE-BUG(F9): discovery is selector/class-substring only; a plain div with an addEventListener or React handler is never visited.
     for (const selector of [...SEMANTIC_INTERACTIVE_SELECTORS, ...PSEUDO_INTERACTIVE_SELECTORS]) {
       try {
         const { nodeIds } = await cdp.send('DOM.querySelectorAll', {
@@ -102,8 +170,29 @@ export async function crawlDOM(page: Page, pageUrl: string): Promise<DOMElement[
       }
     }
 
-    return domElements
+    // F9: a plain div with an addEventListener or React handler matches no selector; find it by its handlers.
+    const errors: CrawlError[] = []
+    const react = await attempt('discover-react', errors, () => scanReact(cdp))
+    const listened = await attempt('discover-listeners', errors, () =>
+      findListenerElements(cdp, root.nodeId, new Set(react?.containers ?? [])),
+    )
+    const known = new Set(domElements.map((e) => e.backendNodeId))
+    const found = [...new Set([...(listened ?? []), ...(react?.handlers ?? [])])].filter((id) => !known.has(id))
+    const pushed =
+      found.length === 0
+        ? []
+        : await attempt('discover', errors, async () => {
+            const { nodeIds } = await cdp.send('DOM.pushNodesByBackendIdsToFrontend', { backendNodeIds: found })
+            return nodeIds
+          })
+    for (const nodeId of pushed ?? []) {
+      const element = nodeId ? await getElementDetails(cdp, nodeId, pageUrl) : null
+      if (element) domElements.push(element)
+    }
+
+    return { elements: domElements, errors }
   } finally {
+    await cdp.send('Runtime.releaseObjectGroup', { objectGroup: OBJECT_GROUP }).catch(() => undefined)
     await cdp.detach()
   }
 }
@@ -128,7 +217,7 @@ async function getElementDetails(cdp: CDPSession, nodeId: number, pageUrl: strin
         boundingBox = { x: x1, y: y1, width: x2 - x1, height: y3 - y1 }
       }
     } catch {
-      // BASELINE-BUG(F1): unrendered nodes throw here and keep a null box, so isElementVisible's size check is skipped.
+      // An unrendered node has no box model; findHiddenCandidates drops it as no-box.
     }
 
     return {
@@ -170,60 +259,182 @@ async function findElementsWithInteractiveClasses(
   return elements
 }
 
-export async function getInteractivitySignals(page: Page, element: DOMElement): Promise<InteractivitySignals> {
-  const cdp = await page.context().newCDPSession(page)
+// One pierced listing of every listener under the document; each carries its node's backendNodeId.
+async function findListenerElements(
+  cdp: CDPSession,
+  rootNodeId: number,
+  reactContainers: ReadonlySet<number>,
+): Promise<number[]> {
+  const { object } = await cdp.send('DOM.resolveNode', {
+    nodeId: rootNodeId,
+    objectGroup: OBJECT_GROUP,
+  })
+  if (!object.objectId) throw new Error('document resolved to no object')
+  const { listeners } = await cdp.send('DOMDebugger.getEventListeners', {
+    objectId: object.objectId,
+    depth: -1,
+    pierce: true,
+  })
+  const ids = new Set<number>()
+  for (const listener of listeners) {
+    if (listener.backendNodeId !== undefined && LISTENER_TYPES.includes(listener.type)) ids.add(listener.backendNodeId)
+  }
 
+  const found: number[] = []
+  for (const backendNodeId of ids) {
+    if (reactContainers.has(backendNodeId)) continue
+    const { node } = await cdp.send('DOM.describeNode', { backendNodeId })
+    if (node.nodeType !== 1) continue
+    if ((await callOnNode(cdp, backendNodeId, DISCOVERABLE_FN)) === true) found.push(backendNodeId)
+  }
+  return found
+}
+
+async function scanReact(cdp: CDPSession): Promise<{ handlers: number[]; containers: number[] }> {
+  const { result, exceptionDetails } = await cdp.send('Runtime.evaluate', {
+    expression: `(${REACT_SCAN_FN})()`,
+    objectGroup: OBJECT_GROUP,
+  })
+  if (exceptionDetails) throw new Error(exceptionDetails.text)
+  if (!result.objectId) throw new Error('React scan returned no object')
+  return {
+    handlers: await elementIds(cdp, await property(cdp, result.objectId, 'handlers')),
+    containers: await elementIds(cdp, await property(cdp, result.objectId, 'containers')),
+  }
+}
+
+async function property(cdp: CDPSession, objectId: string, name: string): Promise<string> {
+  const { result } = await cdp.send('Runtime.getProperties', {
+    objectId,
+    ownProperties: true,
+  })
+  const value = result.find((p) => p.name === name)?.value?.objectId
+  if (!value) throw new Error(`React scan result has no ${name}`)
+  return value
+}
+
+// backendNodeIds of the elements held by an in-page array.
+async function elementIds(cdp: CDPSession, arrayObjectId: string): Promise<number[]> {
+  const { result } = await cdp.send('Runtime.getProperties', {
+    objectId: arrayObjectId,
+    ownProperties: true,
+  })
+  const ids: number[] = []
+  for (const entry of result) {
+    const objectId = entry.value?.objectId
+    if (!/^\d+$/.test(entry.name) || !objectId) continue
+    ids.push((await cdp.send('DOM.describeNode', { objectId })).node.backendNodeId)
+  }
+  return ids
+}
+
+async function callOnNode(cdp: CDPSession, backendNodeId: number, functionDeclaration: string): Promise<unknown> {
+  const { object } = await cdp.send('DOM.resolveNode', {
+    backendNodeId,
+    objectGroup: OBJECT_GROUP,
+  })
+  if (!object.objectId) throw new Error('node resolved to no object')
+  const { result, exceptionDetails } = await cdp.send('Runtime.callFunctionOn', {
+    objectId: object.objectId,
+    functionDeclaration,
+    returnByValue: true,
+  })
+  if (exceptionDetails) throw new Error(exceptionDetails.text)
+  return result.value
+}
+
+// Runs one read; a failure is recorded under its stage and yields null instead of aborting the crawl.
+async function attempt<T>(
+  stage: CrawlStage,
+  errors: CrawlError[],
+  read: () => Promise<T>,
+  backendNodeId: number | null = null,
+): Promise<T | null> {
   try {
-    await cdp.send('DOM.enable')
-    await cdp.send('CSS.enable')
+    return await read()
+  } catch (err) {
+    errors.push({ stage, backendNodeId, message: errorMessage(err) })
+    return null
+  }
+}
 
-    const attrs = element.attributes
-    const hasClickAttribute = !!(
-      attrs['onclick'] ||
-      attrs['onkeydown'] ||
-      attrs['onmousedown'] ||
-      attrs['ng-click'] ||
-      attrs['v-on:click']
-    )
+const ReactFactsSchema = z.object({
+  hasProps: z.boolean(),
+  activation: z.boolean(),
+  onclickProperty: z.boolean(),
+})
 
-    const hasTabindex = attrs['tabindex'] !== undefined
-    // BASELINE-BUG(F3): focusability is read from the attribute ('abc' parses to 0), never from the browser.
-    const tabindexValue = hasTabindex ? parseInt(attrs['tabindex'], 10) || 0 : null
+export type SignalsRead = {
+  signals: InteractivitySignals
+  errors: CrawlError[]
+}
 
-    const className = attrs['class'] || ''
-    const classNameHints = INTERACTIVE_CLASS_PATTERNS.filter((pattern) => className.toLowerCase().includes(pattern))
+async function readSignals(cdp: CDPSession, element: DOMElement): Promise<SignalsRead> {
+  const id = element.backendNodeId
+  const errors: CrawlError[] = []
+  const attrs = element.attributes
+  const hasClickAttribute = !!(
+    attrs['onclick'] ||
+    attrs['onkeydown'] ||
+    attrs['onmousedown'] ||
+    attrs['ng-click'] ||
+    attrs['v-on:click']
+  )
 
-    let hasCursorPointer = false
-    try {
-      const { nodeIds } = await cdp.send('DOM.pushNodesByBackendIdsToFrontend', {
-        backendNodeIds: [element.backendNodeId],
-      })
-      if (nodeIds && nodeIds[0]) {
+  const hasTabindex = attrs['tabindex'] !== undefined
+  // Kept as a scoring signal only; keyboard reachability comes from the Tab walk (F3).
+  const tabindexValue = hasTabindex ? parseInt(attrs['tabindex'], 10) || 0 : null
+
+  const className = attrs['class'] || ''
+  const classNameHints = INTERACTIVE_CLASS_PATTERNS.filter((pattern) => className.toLowerCase().includes(pattern))
+
+  const hasCursorPointer =
+    (await attempt(
+      'cursor',
+      errors,
+      async () => {
+        const { nodeIds } = await cdp.send('DOM.pushNodesByBackendIdsToFrontend', { backendNodeIds: [id] })
+        if (!nodeIds[0]) throw new Error('node could not be pushed to the frontend')
         const { computedStyle } = await cdp.send('CSS.getComputedStyleForNode', { nodeId: nodeIds[0] })
-        const cursorProp = computedStyle.find((p) => p.name === 'cursor')
-        if (cursorProp && cursorProp.value === 'pointer') hasCursorPointer = true
-      }
-    } catch {
-      // BASELINE-BUG(F9): this fresh session never called DOM.getDocument, so the push throws and cursor:pointer is always false.
-    }
+        return computedStyle.some((p) => p.name === 'cursor' && p.value === 'pointer')
+      },
+      id,
+    )) ?? false
 
-    let hasListener = false
-    try {
+  const listenerTypes = await attempt(
+    'listeners',
+    errors,
+    async () => {
       const { object } = await cdp.send('DOM.resolveNode', {
-        backendNodeId: element.backendNodeId,
+        backendNodeId: id,
+        objectGroup: OBJECT_GROUP,
       })
-      if (object?.objectId) {
-        const { listeners } = await cdp.send('DOMDebugger.getEventListeners', {
-          objectId: object.objectId,
-        })
-        hasListener = listeners.some((l) => LISTENER_TYPES.includes(l.type))
-      }
-    } catch {
-      // Event listener API may not be available.
-    }
+      if (!object.objectId) throw new Error('node resolved to no object')
+      const { listeners } = await cdp.send('DOMDebugger.getEventListeners', {
+        objectId: object.objectId,
+      })
+      return listeners.map((l) => l.type).filter((t) => LISTENER_TYPES.includes(t))
+    },
+    id,
+  )
+  // A node that could not be resolved for its listeners cannot be read for props either.
+  const react =
+    listenerTypes === null
+      ? null
+      : await attempt(
+          'react-props',
+          errors,
+          async () => ReactFactsSchema.parse(await callOnNode(cdp, id, REACT_FACTS_FN)),
+          id,
+        )
 
-    return {
-      hasClickHandler: hasClickAttribute || hasListener,
+  // The one click listener that is React's no-op el.onclick does not count once props exist (F9).
+  const ownListeners =
+    react?.hasProps && react.onclickProperty ? withoutOne(listenerTypes ?? [], 'click') : (listenerTypes ?? [])
+
+  return {
+    signals: {
+      hasClickHandler: hasClickAttribute || ownListeners.length > 0 || (react?.activation ?? false),
       hasCursorPointer,
       isSemanticInteractive: SEMANTIC_TAGS.includes(element.localName.toLowerCase()),
       hasTabindex,
@@ -232,44 +443,112 @@ export async function getInteractivitySignals(page: Page, element: DOMElement): 
       roleValue: attrs['role'] ? attrs['role'] : null,
       hasAriaExpanded: attrs['aria-expanded'] !== undefined,
       classNameHints,
-    }
-  } finally {
-    await cdp.detach()
+    },
+    errors,
   }
 }
 
-// BASELINE-BUG(F1): never called on the gap path, and its fresh session also throws on the push, so it answers true for every element.
-export async function isElementVisible(page: Page, element: DOMElement): Promise<boolean> {
+function withoutOne(types: readonly string[], type: string): string[] {
+  const index = types.indexOf(type)
+  return index === -1 ? [...types] : [...types.slice(0, index), ...types.slice(index + 1)]
+}
+
+async function openDomSession(page: Page): Promise<CDPSession> {
   const cdp = await page.context().newCDPSession(page)
+  await cdp.send('DOM.enable')
+  await cdp.send('CSS.enable')
+  // Node pushes and backendNodeId lookups fail until the document has been requested in this session (F9).
+  await cdp.send('DOM.getDocument', { depth: 0 })
+  return cdp
+}
 
+async function closeDomSession(cdp: CDPSession): Promise<void> {
+  await cdp.send('Runtime.releaseObjectGroup', { objectGroup: OBJECT_GROUP })
+  await cdp.detach()
+}
+
+export async function getInteractivitySignals(page: Page, element: DOMElement): Promise<SignalsRead> {
+  const cdp = await openDomSession(page)
   try {
-    await cdp.send('DOM.enable')
-    await cdp.send('CSS.enable')
-
-    const { nodeIds } = await cdp.send('DOM.pushNodesByBackendIdsToFrontend', {
-      backendNodeIds: [element.backendNodeId],
-    })
-    if (!nodeIds || !nodeIds[0]) return false
-
-    const { computedStyle } = await cdp.send('CSS.getComputedStyleForNode', {
-      nodeId: nodeIds[0],
-    })
-    const display = computedStyle.find((p) => p.name === 'display')
-    const visibility = computedStyle.find((p) => p.name === 'visibility')
-    const opacity = computedStyle.find((p) => p.name === 'opacity')
-
-    if (display?.value === 'none') return false
-    if (visibility?.value === 'hidden') return false
-    if (opacity?.value === '0') return false
-
-    if (element.boundingBox) {
-      if (element.boundingBox.width === 0 || element.boundingBox.height === 0) return false
-    }
-
-    return true
-  } catch {
-    return true
+    return await readSignals(cdp, element)
   } finally {
-    await cdp.detach()
+    await closeDomSession(cdp)
   }
+}
+
+export type SignalsCollection = {
+  signals: Map<number, InteractivitySignals>
+  errors: CrawlError[]
+}
+
+// One session for every candidate; each failed read is recorded with its stage.
+export async function collectInteractivitySignals(
+  page: Page,
+  elements: readonly DOMElement[],
+): Promise<SignalsCollection> {
+  const cdp = await openDomSession(page)
+  try {
+    const signals = new Map<number, InteractivitySignals>()
+    const errors: CrawlError[] = []
+    for (const element of elements) {
+      const read = await readSignals(cdp, element)
+      signals.set(element.backendNodeId, read.signals)
+      errors.push(...read.errors)
+    }
+    return { signals, errors }
+  } finally {
+    await closeDomSession(cdp)
+  }
+}
+
+// F1: why a candidate is not rendered or not visible, or null when it is. Throws when the node cannot be read.
+async function hiddenReason(cdp: CDPSession, element: DOMElement): Promise<HiddenReason | null> {
+  if (element.localName === 'input' && element.attributes['type']?.toLowerCase() === 'hidden') return 'hidden-input'
+  let area: number
+  try {
+    const { model } = await cdp.send('DOM.getBoxModel', {
+      backendNodeId: element.backendNodeId,
+    })
+    area = model.width * model.height
+  } catch {
+    // Chromium computes no box model for an element that is not rendered.
+    return 'no-box'
+  }
+  if (area === 0) return 'zero-area'
+  return (await callOnNode(cdp, element.backendNodeId, CHECK_VISIBILITY_FN)) === true ? null : 'css-hidden'
+}
+
+export async function isElementVisible(page: Page, element: DOMElement): Promise<boolean> {
+  const cdp = await openDomSession(page)
+  try {
+    return (await hiddenReason(cdp, element)) === null
+  } finally {
+    await closeDomSession(cdp)
+  }
+}
+
+export type HiddenCandidates = {
+  hidden: HiddenCandidate[]
+  errors: CrawlError[]
+}
+
+// One session for the whole candidate list. A candidate whose visibility cannot be read is kept and recorded.
+export async function findHiddenCandidates(page: Page, elements: readonly DOMElement[]): Promise<HiddenCandidates> {
+  const cdp = await openDomSession(page)
+  try {
+    const hidden: HiddenCandidate[] = []
+    const errors: CrawlError[] = []
+    for (const element of elements) {
+      const reason = await attempt('visibility', errors, () => hiddenReason(cdp, element), element.backendNodeId)
+      if (reason) hidden.push({ backendNodeId: element.backendNodeId, reason })
+    }
+    return { hidden, errors }
+  } finally {
+    await closeDomSession(cdp)
+  }
+}
+
+function errorMessage(err: unknown): string {
+  // Playwright appends a multi-line call log; the first line carries the cause.
+  return (err instanceof Error ? err.message : String(err)).split('\n')[0]
 }

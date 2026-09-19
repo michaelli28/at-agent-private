@@ -37,6 +37,7 @@ const nodes: AXNode[] = [
   {
     nodeId: '5',
     ignored: true,
+    ignoredReasons: [{ name: 'ariaHiddenElement', value: { value: true } }],
     role: { value: 'button' },
     name: { value: 'Hidden' },
     backendDOMNodeId: 104,
@@ -67,18 +68,30 @@ describe('convertToElementGraph', () => {
     expect([...graph.elements.keys()]).toEqual([
       `${URL_}#node-1`,
       `${URL_}#node-2`,
+      `${URL_}#node-3`,
       `${URL_}#node-4`,
+      `${URL_}#node-5`,
       `${URL_}#node-6`,
+      `${URL_}#node-7`,
       `${URL_}#node-8`,
     ])
     expect(graph.elements.get(`${URL_}#node-2`)?.xpath).toBe('node-2')
   })
 
-  it('drops ignored nodes and unnamed generic nodes but keeps named generics', () => {
+  it('keeps unnamed generics and ignored nodes with their ignoredReasons, so both can be bridged (F2)', () => {
     const roles = [...graph.elements.values()].map((e) => `${e.role}:${e.name}`)
-    expect(roles).not.toContain('button:Hidden')
+    expect(roles.filter((r) => r === 'generic:')).toHaveLength(2)
     expect(roles).toContain('generic:Close banner')
-    expect(roles.filter((r) => r === 'generic:')).toHaveLength(0)
+    expect(graph.elements.get(`${URL_}#node-5`)).toMatchObject({
+      ignored: true,
+      ignoredReasons: ['ariaHiddenElement'],
+      backendDOMNodeId: 104,
+    })
+    expect(graph.elements.get(`${URL_}#node-3`)).toMatchObject({ ignored: false, ignoredReasons: [] })
+  })
+
+  it('leaves ignored nodes out of the role indices and the interactive count', () => {
+    expect(graph.buttons).toEqual([])
   })
 
   it('carries backendDOMNodeId across as the DOM bridge', () => {
@@ -98,7 +111,7 @@ describe('convertToElementGraph', () => {
       },
     ])
     expect(graph.interactiveCount).toBe(1)
-    expect(graph.elementCount).toBe(5)
+    expect(graph.elementCount).toBe(8)
   })
 
   it('links children to parents; a child claimed twice keeps the last parent', () => {

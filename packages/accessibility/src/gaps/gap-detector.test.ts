@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest'
 import { buildBridgeMap, detectGaps, getElementDescription, isLikelyInteractive } from './gap-detector.js'
-import type { DOMElement, ElementNode, InteractivitySignals, PageElementGraph } from './types.js'
+import type { DOMElement, ElementNode, InteractivitySignals, KeyboardEvidence, PageElementGraph } from './types.js'
 
 const PAGE = 'http://fixture.test/'
 
@@ -41,7 +41,14 @@ function el(backendNodeId: number, nodeName: string, attributes: Record<string, 
   }
 }
 
-function tree(axNodes: Array<{ backend: number; role: string; name: string }>): PageElementGraph {
+type AxFixture = {
+  backend: number
+  role: string
+  name: string
+  ignoredReasons?: string[]
+}
+
+function tree(axNodes: AxFixture[]): PageElementGraph {
   const elements = new Map<string, ElementNode>()
   axNodes.forEach((n, i) => {
     const id = `${PAGE}#node-${i}`
@@ -52,6 +59,8 @@ function tree(axNodes: Array<{ backend: number; role: string; name: string }>): 
       role: n.role,
       name: n.name,
       backendDOMNodeId: n.backend,
+      ignored: n.ignoredReasons !== undefined,
+      ignoredReasons: n.ignoredReasons ?? [],
       typeFlags: flags,
       children: [],
       parent: null,
@@ -76,11 +85,7 @@ function tree(axNodes: Array<{ backend: number; role: string; name: string }>): 
   }
 }
 
-function classifyOne(
-  element: DOMElement,
-  signals: InteractivitySignals,
-  axNodes: Array<{ backend: number; role: string; name: string }>,
-) {
+function classifyOne(element: DOMElement, signals: InteractivitySignals, axNodes: AxFixture[]) {
   return detectGaps([element], tree(axNodes), new Map([[element.backendNodeId, signals]]))
 }
 
@@ -183,39 +188,6 @@ describe('detectGaps classification', () => {
     expect(group.gapType).toBe('wrong_role')
   })
 
-  it('flags not_focusable with the no-tabindex reason', () => {
-    const [gap] = classifyOne(
-      el(5, 'DIV', { role: 'button' }),
-      {
-        ...noSignals,
-        hasClickHandler: true,
-        hasRoleAttribute: true,
-        roleValue: 'button',
-      },
-      [{ backend: 5, role: 'button', name: 'Buy' }],
-    )
-    expect(gap.gapType).toBe('not_focusable')
-    expect(gap.severity).toBe('critical')
-    expect(gap.wcagViolations).toEqual(['2.1.1', '2.4.7'])
-    expect(gap.evidence).toBe(
-      'DIV element has click handlers but has no tabindex and is not a native interactive element',
-    )
-  })
-
-  it('flags not_focusable with the tabindex=-1 reason', () => {
-    const [gap] = classifyOne(
-      el(6, 'DIV'),
-      {
-        ...noSignals,
-        hasClickHandler: true,
-        hasTabindex: true,
-        tabindexValue: -1,
-      },
-      [{ backend: 6, role: 'button', name: 'Compare' }],
-    )
-    expect(gap.evidence).toBe('DIV element has click handlers but tabindex="-1" makes it unfocusable')
-  })
-
   it('does not flag not_focusable from a role alone (no handler, cursor never set)', () => {
     const gaps = classifyOne(el(7, 'DIV'), { ...noSignals, hasRoleAttribute: true, roleValue: 'button' }, [
       { backend: 7, role: 'button', name: 'Wishlist' },
@@ -239,6 +211,134 @@ describe('detectGaps classification', () => {
       { backend: 9, role: 'button', name: 'Checkout' },
     ])
     expect(gaps).toEqual([])
+  })
+})
+
+const walked = (reached: number[]): KeyboardEvidence => ({
+  walkRan: true,
+  notFocusableAssessed: true,
+  unassessedReasons: [],
+  walkError: null,
+  reachedBackendNodeIds: reached,
+})
+const trapped = (reached: number[]): KeyboardEvidence => ({
+  ...walked(reached),
+  notFocusableAssessed: false,
+  unassessedReasons: ['no-wrap'],
+})
+
+function classifyWith(
+  element: DOMElement,
+  signals: InteractivitySignals,
+  axNodes: AxFixture[],
+  keyboard: KeyboardEvidence,
+) {
+  return detectGaps([element], tree(axNodes), new Map([[element.backendNodeId, signals]]), { keyboard })
+}
+
+describe('F3: not_focusable comes only from a complete Tab walk', () => {
+  const roleButton = { ...noSignals, hasClickHandler: true, hasRoleAttribute: true, roleValue: 'button' }
+  const buy = [{ backend: 5, role: 'button', name: 'Buy' }]
+
+  it('never emits not_focusable without a walk', () => {
+    expect(classifyOne(el(5, 'DIV', { role: 'button' }), roleButton, buy)).toEqual([])
+  })
+
+  it('emits not_focusable when a complete walk never focused the element', () => {
+    const [gap] = classifyWith(el(5, 'DIV', { role: 'button' }), roleButton, buy, walked([1, 2]))
+    expect(gap).toMatchObject({
+      gapType: 'not_focusable',
+      severity: 'critical',
+      wcagViolations: ['2.1.1', '2.4.7'],
+      evidence: 'DIV element has click handlers but a complete Tab walk never focused it',
+    })
+    const [pointer] = classifyWith(
+      el(5, 'DIV', { role: 'button' }),
+      { ...noSignals, hasCursorPointer: true, hasRoleAttribute: true, roleValue: 'button' },
+      buy,
+      walked([]),
+    )
+    expect(pointer?.evidence).toBe('DIV element has cursor:pointer but a complete Tab walk never focused it')
+  })
+
+  it('trusts the walk over the tabindex attribute', () => {
+    const neg = { ...roleButton, hasTabindex: true, tabindexValue: -1 }
+    expect(classifyWith(el(5, 'DIV', { role: 'button', tabindex: '-1' }), neg, buy, walked([5]))).toEqual([])
+    const junk = { ...roleButton, hasTabindex: true, tabindexValue: 0 }
+    const [gap] = classifyWith(el(5, 'DIV', { role: 'button', tabindex: 'abc' }), junk, buy, walked([]))
+    expect(gap?.gapType).toBe('not_focusable')
+  })
+
+  it('does not emit not_focusable from an incomplete walk', () => {
+    expect(classifyWith(el(5, 'DIV', { role: 'button' }), roleButton, buy, trapped([]))).toEqual([])
+  })
+})
+
+describe('F3: once a walk ran, hidden_but_interactive needs the walk to have focused the element', () => {
+  const link = { ...noSignals, isSemanticInteractive: true }
+  const hidden = [{ backend: 40, role: 'none', name: '', ignoredReasons: ['ariaHiddenSubtree'] }]
+  const a = el(40, 'A', { href: '#a' })
+
+  it('flags an aria-hidden control the walk focused, even when the walk was incomplete', () => {
+    expect(classifyWith(a, link, hidden, walked([40]))[0]?.gapType).toBe('hidden_but_interactive')
+    expect(classifyWith(a, link, hidden, trapped([40]))[0]?.gapType).toBe('hidden_but_interactive')
+  })
+
+  it('does not flag an aria-hidden control the walk never focused (hidden from both, e.g. behind a modal)', () => {
+    expect(classifyWith(a, link, hidden, walked([]))).toEqual([])
+    expect(classifyWith(a, link, hidden, trapped([]))).toEqual([])
+  })
+})
+
+describe('F2: generic roles and aria-hidden', () => {
+  const clickable = { ...noSignals, hasClickHandler: true }
+
+  it('flags an unnamed clickable generic, group or none as wrong_role, before the empty-name check', () => {
+    for (const role of ['generic', 'group', 'none']) {
+      const [gap] = classifyOne(el(30, 'DIV'), clickable, [{ backend: 30, role, name: '' }])
+      expect(gap?.gapType, role).toBe('wrong_role')
+      expect(gap?.evidence).toBe(`DIV element has click handlers but generic role "${role}"`)
+    }
+  })
+
+  it('flags an interactive element hidden by its own aria-hidden or an aria-hidden ancestor', () => {
+    const link = { ...noSignals, isSemanticInteractive: true }
+    const [own] = classifyOne(el(31, 'A', { href: '#a', 'aria-hidden': 'true' }), link, [
+      { backend: 31, role: 'none', name: '', ignoredReasons: ['ariaHiddenElement'] },
+    ])
+    expect(own).toMatchObject({
+      gapType: 'hidden_but_interactive',
+      severity: 'moderate',
+      evidence: 'A element has aria-hidden="true" but is interactive',
+    })
+    const [inside] = classifyOne(el(32, 'BUTTON'), clickable, [
+      { backend: 32, role: 'none', name: '', ignoredReasons: ['ariaHiddenSubtree'] },
+    ])
+    expect(inside).toMatchObject({
+      gapType: 'hidden_but_interactive',
+      evidence: 'BUTTON element is inside an aria-hidden="true" subtree but is interactive',
+    })
+  })
+
+  it('flags a node ignored for any other reason as missing from the tree', () => {
+    const [gap] = classifyOne(el(33, 'DIV'), clickable, [
+      { backend: 33, role: 'none', name: '', ignoredReasons: ['inertElement'] },
+    ])
+    expect(gap?.gapType).toBe('missing_from_a11y_tree')
+    expect(gap?.evidence).toBe('DIV element with interactivity signals is not exposed in the accessibility tree')
+  })
+})
+
+describe('F1: candidates the AX tree marks as not rendered or not visible', () => {
+  it('drops them instead of classifying them', () => {
+    for (const reason of ['notRendered', 'notVisible']) {
+      const gaps = classifyOne(
+        el(20, 'A', { href: '#x' }),
+        { ...noSignals, isSemanticInteractive: true, hasClickHandler: true },
+        [{ backend: 20, role: 'none', name: '', ignoredReasons: [reason] }],
+      )
+      expect(gaps, reason).toEqual([])
+    }
   })
 })
 

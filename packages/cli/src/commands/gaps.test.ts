@@ -19,7 +19,16 @@ vi.mock('@at-agent/accessibility', () => ({
     pageUrl: 'https://example.com',
     accessibilityTree: { elements: new Map() },
     domElements: [],
+    hidden: [],
     bridgeMap: new Map(),
+    errors: [],
+    keyboard: {
+      walkRan: true,
+      notFocusableAssessed: true,
+      unassessedReasons: [],
+      walkError: null,
+      reachedBackendNodeIds: [7],
+    },
     gaps: [
       {
         domElement: {
@@ -78,7 +87,9 @@ describe('runGaps', () => {
     const result = await runGaps(options)
 
     expect(result.success).toBe(true)
-    expect(crawlPageWithGapDetection).toHaveBeenCalledWith({ marker: 'playwright-page' }, 'https://example.com')
+    expect(crawlPageWithGapDetection).toHaveBeenCalledWith({ marker: 'playwright-page' }, 'https://example.com', {
+      tabWalk: true,
+    })
     expect(result.gaps).toHaveLength(1)
     expect(result.summary?.bySeverity.critical).toBe(1)
   })
@@ -105,6 +116,42 @@ describe('runGaps', () => {
     expect(result.output).toContain('[CRITICAL] missing_from_a11y_tree')
     expect(result.output).toContain('<div> class="btn"')
     expect(result.output).toContain('DIV element with interactivity signals is not exposed in the accessibility tree')
+  })
+
+  it('skips the Tab walk only when asked (F3)', async () => {
+    await runGaps({ url: 'https://example.com', tabWalk: false })
+
+    expect(crawlPageWithGapDetection).toHaveBeenCalledWith({ marker: 'playwright-page' }, 'https://example.com', {
+      tabWalk: false,
+    })
+  })
+
+  it('says in text and JSON output when not_focusable was not assessed, and why (F3)', async () => {
+    const detected = await crawlPageWithGapDetection(
+      {} as Parameters<typeof crawlPageWithGapDetection>[0],
+      'https://example.com',
+    )
+    const unassessed = {
+      ...detected,
+      keyboard: {
+        walkRan: true,
+        notFocusableAssessed: false,
+        unassessedReasons: ['no-wrap' as const],
+        walkError: null,
+        reachedBackendNodeIds: [],
+      },
+    }
+    vi.mocked(crawlPageWithGapDetection).mockResolvedValueOnce(unassessed).mockResolvedValueOnce(unassessed)
+
+    const text = await runGaps({ url: 'https://example.com' })
+    expect(text.output).toContain('not_focusable not assessed: no-wrap')
+
+    const json = await runGaps({ url: 'https://example.com', json: true })
+    expect(JSON.parse(json.output!).keyboard).toEqual({
+      notFocusableAssessed: false,
+      unassessedReasons: ['no-wrap'],
+      walkError: null,
+    })
   })
 
   it('returns the error when detection fails', async () => {

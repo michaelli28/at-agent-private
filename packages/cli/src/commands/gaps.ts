@@ -4,6 +4,7 @@ import {
   getElementDescription,
   summarizeGaps,
   type AccessibilityGap,
+  type DualCrawlResult,
   type GapSummary,
 } from '@at-agent/accessibility'
 import { formatJSON } from '../output.js'
@@ -11,6 +12,8 @@ import { formatJSON } from '../output.js'
 export interface GapsCommandOptions {
   url: string
   json?: boolean
+  // Tab walk on the same load, the only source of not_focusable; on unless false.
+  tabWalk?: boolean
 }
 
 export interface GapsCommandResult {
@@ -30,8 +33,11 @@ export async function runGaps(options: GapsCommandOptions): Promise<GapsCommandR
 
     try {
       // The detector navigates itself (domcontentloaded + fixed settle), so no page.goto here.
-      const result = await crawlPageWithGapDetection(page.playwrightPage, options.url)
+      const result = await crawlPageWithGapDetection(page.playwrightPage, options.url, {
+        tabWalk: options.tabWalk ?? true,
+      })
       const summary = summarizeGaps(result.gaps)
+      const { notFocusableAssessed, unassessedReasons, walkError } = result.keyboard
 
       if (options.json) {
         return {
@@ -41,6 +47,7 @@ export async function runGaps(options: GapsCommandOptions): Promise<GapsCommandR
           output: formatJSON({
             url: result.pageUrl,
             summary,
+            keyboard: { notFocusableAssessed, unassessedReasons, walkError },
             gaps: result.gaps,
           }),
         }
@@ -50,7 +57,7 @@ export async function runGaps(options: GapsCommandOptions): Promise<GapsCommandR
         success: true,
         gaps: result.gaps,
         summary,
-        output: formatGapReport(summary, result.gaps),
+        output: formatGapReport(summary, result.gaps, result.keyboard),
       }
     } finally {
       await page.close()
@@ -65,7 +72,11 @@ export async function runGaps(options: GapsCommandOptions): Promise<GapsCommandR
   }
 }
 
-function formatGapReport(summary: GapSummary, gaps: readonly AccessibilityGap[]): string {
+function formatGapReport(
+  summary: GapSummary,
+  gaps: readonly AccessibilityGap[],
+  keyboard: DualCrawlResult['keyboard'],
+): string {
   const lines = [
     `Accessibility Gap Detection Results`,
     `-----------------------------------`,
@@ -75,6 +86,12 @@ function formatGapReport(summary: GapSummary, gaps: readonly AccessibilityGap[])
     `  Moderate: ${summary.bySeverity.moderate}`,
     `  Minor: ${summary.bySeverity.minor}`,
   ]
+
+  // A zero not_focusable count means nothing unless the Tab walk could assess it.
+  if (!keyboard.notFocusableAssessed) {
+    const why = keyboard.unassessedReasons.join(', ')
+    lines.push(`not_focusable not assessed: ${why}${keyboard.walkError ? ` (${keyboard.walkError})` : ''}`)
+  }
 
   if (gaps.length > 0) {
     lines.push('', 'Gaps:', '')

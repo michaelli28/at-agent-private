@@ -82,6 +82,9 @@ export const ElementNodeSchema = z.object({
   description: z.string().optional(),
   value: z.string().optional(),
   backendDOMNodeId: z.number().optional(),
+  // Chromium's AX ignored flag and ignoredReasons names (e.g. notRendered, ariaHiddenElement).
+  ignored: z.boolean(),
+  ignoredReasons: z.array(z.string()),
   typeFlags: ElementTypeFlagsSchema,
   children: z.array(z.string()),
   parent: z.string().nullable(),
@@ -114,11 +117,76 @@ export const PageElementGraphSchema = z.object({
 })
 export type PageElementGraph = z.infer<typeof PageElementGraphSchema>
 
+// Why a candidate was dropped before classification: it is not rendered or not visible (F1).
+export const HIDDEN_REASONS = ['hidden-input', 'no-box', 'zero-area', 'css-hidden'] as const
+export const HiddenReasonSchema = z.enum(HIDDEN_REASONS)
+export type HiddenReason = z.infer<typeof HiddenReasonSchema>
+
+export const HiddenCandidateSchema = z.object({
+  backendNodeId: z.number(),
+  reason: HiddenReasonSchema,
+})
+export type HiddenCandidate = z.infer<typeof HiddenCandidateSchema>
+
+export const CRAWL_STAGES = [
+  'discover-react',
+  'discover-listeners',
+  'discover',
+  'visibility',
+  'cursor',
+  'listeners',
+  'react-props',
+  'tab-walk',
+] as const
+export const CrawlStageSchema = z.enum(CRAWL_STAGES)
+export type CrawlStage = z.infer<typeof CrawlStageSchema>
+
+// A CDP read that failed during the crawl; recorded instead of swallowed.
+export const CrawlErrorSchema = z.object({
+  stage: CrawlStageSchema,
+  backendNodeId: z.number().nullable(),
+  message: z.string(),
+})
+export type CrawlError = z.infer<typeof CrawlErrorSchema>
+
+// Why not_focusable was not assessed on this load (F3).
+export const KEYBOARD_UNASSESSED_REASONS = [
+  'walk-not-run',
+  // runTabWalk threw before walking (e.g. invalid options).
+  'walk-failed',
+  // The walk stopped on an error part-way.
+  'walk-error',
+  // A cross-origin frame or closed shadow root may hide Tab stops.
+  'focusables-incomplete',
+  // Focus never wrapped past the end of the page (a trap), so some stops may never have been tried.
+  'no-wrap',
+  // A keypress replaced the document, so later reads are not of the crawled DOM.
+  'document-replaced',
+] as const
+export const KeyboardUnassessedReasonSchema = z.enum(KEYBOARD_UNASSESSED_REASONS)
+export type KeyboardUnassessedReason = z.infer<typeof KeyboardUnassessedReasonSchema>
+
+export const KeyboardEvidenceSchema = z.object({
+  // A Tab walk ran on the same load after the crawl (it may still have stopped on an error).
+  walkRan: z.boolean(),
+  // not_focusable is emitted only when true; unassessedReasons says why not otherwise.
+  notFocusableAssessed: z.boolean(),
+  unassessedReasons: z.array(KeyboardUnassessedReasonSchema),
+  walkError: z.string().nullable(),
+  // focusIdentity of every read the walk took after a Tab press (immediate and settled).
+  reachedBackendNodeIds: z.array(z.number()),
+})
+export type KeyboardEvidence = z.infer<typeof KeyboardEvidenceSchema>
+
 export const DualCrawlResultSchema = z.object({
   pageUrl: z.string(),
   accessibilityTree: PageElementGraphSchema,
+  // Every enumerated candidate, hidden ones included; only the visible ones are classified.
   domElements: z.array(DOMElementSchema),
+  hidden: z.array(HiddenCandidateSchema),
   gaps: z.array(AccessibilityGapSchema),
   bridgeMap: z.map(z.number(), z.string()),
+  keyboard: KeyboardEvidenceSchema,
+  errors: z.array(CrawlErrorSchema),
 })
 export type DualCrawlResult = z.infer<typeof DualCrawlResultSchema>
