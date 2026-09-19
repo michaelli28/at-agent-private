@@ -8,3 +8,5 @@ probes/reach/*.txt
 corpus/dev/variants/
 corpus/dev/.deps/
 corpus/dev/base/react-div-button/app.js
+# Full per-page harness records (bench/run.ts); summary.json and reports stay committable
+results/**/raw/
