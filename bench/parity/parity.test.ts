@@ -9,10 +9,15 @@ import { extname, join, resolve, sep } from 'node:path'
 import { fileURLToPath } from 'node:url'
 import { chromium, type Browser } from 'playwright'
 import { ElementCrawler } from '../../taskgen/src/element-crawler'
-import { crawlPageWithGapDetection } from '../../packages/accessibility/src/gaps/detect.js'
 
 const HERE = fileURLToPath(new URL('.', import.meta.url))
 const BENCH = resolve(HERE, '..')
+
+// PARITY_GAPS_SRC swaps the port side for a copy of packages/accessibility/src/gaps (mutation testing only).
+const GAPS_SRC = process.env.PARITY_GAPS_SRC ?? resolve(BENCH, '..', 'packages', 'accessibility', 'src', 'gaps')
+const { crawlPageWithGapDetection } = (await import(
+  join(GAPS_SRC, 'detect.ts')
+)) as typeof import('../../packages/accessibility/src/gaps/detect.js')
 const REACT_DIR = join(BENCH, 'probes', 'react')
 const REACT_BUILDS = ['react18-prod', 'react18-dev', 'react19-prod', 'react19-dev', 'control']
 
@@ -54,6 +59,22 @@ const FIXTURES: Array<{ name: string; path: string; expected: GapTypeCounts }> =
       hidden_but_interactive: 1,
     },
   },
+  // T1 verifier's stress page; the fixture comments mark the elements that kill port mutations the older fixtures missed.
+  {
+    name: 'stress',
+    path: '/parity/stress.html',
+    expected: {
+      no_accessible_name: 9,
+      missing_from_a11y_tree: 17,
+      not_focusable: 7,
+      wrong_role: 1,
+    },
+  },
+  {
+    name: 'focused-hidden-named',
+    path: '/parity/focused-hidden-named.html',
+    expected: { not_focusable: 1 },
+  },
   ...['a', 'b', 'c', 'd', 'e'].map((f) => ({
     name: `wrap-${f}`,
     path: `/wrap/${f}.html`,
@@ -84,7 +105,7 @@ interface AxLike {
   role: string
   name: string
   description?: string
-  value?: string
+  value?: unknown
   typeFlags: object
 }
 interface ResultLike {
@@ -114,9 +135,17 @@ const gapSignals = (r: ResultLike): string[] => r.gaps.map((g) => JSON.stringify
 const enumeration = (r: ResultLike): string[] =>
   r.domElements.map((e) => JSON.stringify([e.nodeName, e.localName, e.attributes, e.boundingBox ?? null]))
 
+// taskgen keeps numeric AX values (slider 30) while the port's axText stringifies them ("30"); the classifier
+// never reads value, so both sides compare as strings.
 const axProjection = (r: ResultLike): string[] =>
   [...r.accessibilityTree.elements.values()].map((n) =>
-    JSON.stringify([n.role, n.name, n.description ?? null, n.value ?? null, n.typeFlags]),
+    JSON.stringify([
+      n.role,
+      n.name,
+      n.description ?? null,
+      n.value === undefined || n.value === null ? null : String(n.value),
+      n.typeFlags,
+    ]),
   )
 
 function countByType(r: ResultLike): GapTypeCounts {
@@ -183,7 +212,7 @@ describe('gap detector parity: taskgen original vs accessibility port', () => {
 
   afterAll(async () => {
     console.log(
-      ['Gap types per fixture (identical in both implementations):']
+      [`Port source: ${GAPS_SRC}`, 'Gap types per fixture (identical in both implementations):']
         .concat(recorded.map((r) => `  ${r.fixture}: ${r.total} ${JSON.stringify(r.gapTypes)}`))
         .join('\n'),
     )
