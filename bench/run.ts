@@ -86,7 +86,7 @@ const EXECUTABLE_PATH_NOTE =
 const NOTES = [
   LEGACY_3_2_1_NOTE,
   "Per page the tools run in the order gaps, axe, walk (the legacy replay reuses that walk), each in its own fresh context and load: goto domcontentloaded + 3000 ms settle, the gap detector's own load.",
-  "Legacy trap = detectTrap() after the last walk press (an executeCheckTrap after the whole walk); firstTrappedPress is the first press where it already said trapped.",
+  "Legacy trap: detectTrap() is replayed after every walk press; trapped is its verdict after the last press, and firstTrappedPress is the first press where it said trapped (report.ts scores a page flagged if it ever did, as the agent latches trapDetected).",
   LEGACY_TRAP_NOTE,
   "The legacy identity is rebuilt from each press's immediate read (the walk's step.immediate: top-level document.activeElement as soon as keyboard.press resolves, with no settle), which is when executeTab reads it; focus a page script moves later is not seen, and focus inside frames or shadow roots shows as the container.",
   "Walk trap (the new walk's facts, not the old checker): no = focus wrapped past the end of the page; suspected = no wrap in 5(F+1)+5 presses with F complete; undetermined = the walk stopped on an error, or F is a lower bound (fIncomplete: a cross-origin frame or closed shadow root may hide stops), where a missing wrap or a null escape reachedAt is not evidence of a trap. The legacy detector's verdicts are reported as-is.",
