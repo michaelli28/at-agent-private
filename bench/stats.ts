@@ -23,9 +23,12 @@ function requireRange(ok: boolean, message: string): void {
   if (!ok) throw new RangeError(message);
 }
 
+// The double nearest Φ⁻¹(0.975) = 1.95996398454005423552…; 1.959963984540054 is one ulp below it.
+export const Z_975 = 1.9599639845400543;
+
 // Wilson 1927: inverts the score test, solving |p̂-p| = z·sqrt(p(1-p)/n) for p.
 // Counts may be non-integer so design-effect-deflated x/deff, n/deff can be passed.
-export function wilson(x: number, n: number, z = 1.959964): Interval {
+export function wilson(x: number, n: number, z = Z_975): Interval {
   requireRange(
     n > 0 && x >= 0 && x <= n && z > 0,
     `wilson: need n > 0, 0 <= x <= n, z > 0 (x=${x}, n=${n}, z=${z})`,
@@ -57,8 +60,14 @@ export function exactZeroUpper(n: number, alpha = 0.05): number {
   return 1 - Math.pow(alpha, 1 / n);
 }
 
-// Kish 1965: variance inflation for clusters of m items with intraclass correlation rho.
+// Kish 1965: variance inflation for clusters of m items (mean size, may be non-integer) with intraclass correlation rho.
+// Negative rho is rejected: it gives deff < 1, so effectiveN > n (claims clustering ADDS information), and deff <= 0
+// once rho <= -1/(m-1). A negative ICC estimate is sampling noise here; floor it at 0 before calling.
 export function designEffect(m: number, rho: number): number {
+  requireRange(
+    Number.isFinite(m) && m >= 1 && rho >= 0 && rho <= 1,
+    `designEffect: need finite m >= 1 and rho in [0, 1] (m=${m}, rho=${rho})`,
+  );
   return 1 + (m - 1) * rho;
 }
 
@@ -96,15 +105,23 @@ function quantile(sorted: Float64Array, q: number): number {
   return sorted[lo] + (h - lo) * (sorted[hi] - sorted[lo]);
 }
 
+// Seeded uniform [0, 1) stream for reproducible draws (clusterBootstrap, bench/spotcheck.ts).
+export function seededRandom(seed: string | number): () => number {
+  return mulberry32(hashSeed(seed));
+}
+
 // Efron percentile interval, resampling whole clusters with replacement so within-cluster correlation is kept.
 // All-zero outcomes collapse to [0, 0]; report wilson/exactZeroUpper there instead.
+// Under-covers with few clusters: print k beside every interval. Figures from ONE simulation setup, not a general law
+// (p_j ~ U(0.4, 1), m = 10 items per cluster, nominal 95%): ~85% at k=5, ~91% k=10, ~93% k=20, ~94-95% k=40.
+// k=2 is especially unstable: the interval is [min, max] of the two cluster means, and reruns gave 36-65%.
 export function clusterBootstrap<T>(
   options: ClusterBootstrapOptions<T>,
 ): BootstrapInterval {
   const { clusters, statistic, B = 10000, seed, alpha = 0.05 } = options;
   requireRange(
-    clusters.length > 0,
-    "clusterBootstrap: need at least one cluster",
+    clusters.length >= 2,
+    `clusterBootstrap: need at least 2 clusters (got ${clusters.length}); one cluster resamples to itself, a zero-width interval that looks like certainty`,
   );
   requireRange(
     Number.isInteger(B) && B > 0,
@@ -116,7 +133,7 @@ export function clusterBootstrap<T>(
   );
 
   const k = clusters.length;
-  const rng = mulberry32(hashSeed(seed));
+  const rng = seededRandom(seed);
   const replicates = new Float64Array(B);
   for (let b = 0; b < B; b++) {
     const items: T[] = [];

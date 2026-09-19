@@ -54,14 +54,20 @@ const LABELS_FILE = "labels.json";
 
 export type StaticServer = { origin: string; close: () => Promise<void> };
 
+// css and images: bench/serve.ts also serves the vendored W3C BAD pages.
 const CONTENT_TYPES: Record<string, string> = {
   ".html": "text/html; charset=utf-8",
   ".js": "text/javascript; charset=utf-8",
+  ".css": "text/css; charset=utf-8",
+  ".gif": "image/gif",
+  ".png": "image/png",
+  ".jpg": "image/jpeg",
 };
 
-// Serves each mount (URL prefix -> directory) from 127.0.0.1 on an ephemeral port.
+// Serves each mount (URL prefix -> directory) from 127.0.0.1; port 0 (the default) picks an ephemeral port.
 export function startStaticServer(
   mounts: Record<string, string>,
+  port = 0,
 ): Promise<StaticServer> {
   const server = createServer((req, res) => {
     const pathname = decodeURIComponent(
@@ -96,7 +102,7 @@ export function startStaticServer(
   });
   return new Promise((resolveServer, reject) => {
     server.once("error", reject);
-    server.listen(0, "127.0.0.1", () => {
+    server.listen(port, "127.0.0.1", () => {
       const address = server.address();
       if (address === null || typeof address === "string") {
         reject(new Error("server has no TCP address"));

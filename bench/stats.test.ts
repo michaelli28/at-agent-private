@@ -6,6 +6,7 @@ import {
   designEffect,
   effectiveN,
   clusterBootstrap,
+  Z_975,
   type Cluster,
 } from "./stats.js";
 
@@ -78,6 +79,48 @@ describe("design effect", () => {
     expect(designEffect(30, 0)).toBe(1);
     expect(effectiveN(120, 30, 0)).toBe(120);
   });
+
+  it("accepts a non-integer mean cluster size m >= 1", () => {
+    expect(designEffect(1, 0.7)).toBe(1);
+    expect(designEffect(2.5, 0.2)).toBeCloseTo(1.3, 12);
+  });
+
+  it("rejects rho outside [0, 1], including negative and NaN rho", () => {
+    for (const rho of [-0.01, -1, 1.01, Number.NaN]) {
+      expect(() => designEffect(10, rho)).toThrow(RangeError);
+      expect(() => effectiveN(100, 10, rho)).toThrow(RangeError);
+    }
+    expect(() => designEffect(10, -0.2)).toThrow(/rho in \[0, 1\]/);
+  });
+
+  it("rejects m < 1", () => {
+    for (const m of [0, 0.5, -3, Number.NaN]) {
+      expect(() => designEffect(m, 0.1)).toThrow(RangeError);
+      expect(() => effectiveN(100, m, 0.1)).toThrow(RangeError);
+    }
+    expect(() => designEffect(0, 0.1)).toThrow(/m >= 1/);
+  });
+
+  it("rejects non-finite m (Infinity with rho 0 would give NaN)", () => {
+    for (const rho of [0, 0.1]) {
+      expect(() => designEffect(Number.POSITIVE_INFINITY, rho)).toThrow(
+        /finite m/,
+      );
+      expect(() => effectiveN(100, Number.POSITIVE_INFINITY, rho)).toThrow(
+        RangeError,
+      );
+    }
+  });
+});
+
+describe("default z", () => {
+  it("is the double nearest the 0.975 normal quantile", () => {
+    // ECMAScript rounds a decimal of at most 20 significant digits correctly.
+    expect(Z_975).toBe(Number("1.9599639845400542355"));
+    expect(Z_975).not.toBe(1.959963984540054);
+    expect(wilson(110, 120)).toEqual(wilson(110, 120, Z_975));
+    expect(wilson(3, 17)).toEqual(wilson(3, 17, 1.9599639845400543));
+  });
 });
 
 describe("clusterBootstrap", () => {
@@ -130,6 +173,19 @@ describe("clusterBootstrap", () => {
     ];
     const r = clusterBootstrap({ clusters: split, statistic: mean, seed: 11 });
     expect(r).toEqual({ estimate: 0.5, lower: 0, upper: 1, B: 10000 });
+  });
+
+  it("rejects fewer than 2 clusters with a message naming the cluster count", () => {
+    expect(() =>
+      clusterBootstrap({
+        clusters: [cluster("only", [1, 0, 1])],
+        statistic: mean,
+        seed: 1,
+      }),
+    ).toThrow(/at least 2 clusters \(got 1\)/);
+    expect(() =>
+      clusterBootstrap({ clusters: [], statistic: mean, seed: 1 }),
+    ).toThrow(/at least 2 clusters \(got 0\)/);
   });
 
   it("rejects empty input, bad B or alpha, and a non-finite replicate", () => {
