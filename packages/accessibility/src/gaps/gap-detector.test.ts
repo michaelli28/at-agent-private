@@ -1,6 +1,13 @@
 import { describe, it, expect } from 'vitest'
 import { buildBridgeMap, detectGaps, getElementDescription, isLikelyInteractive } from './gap-detector.js'
-import type { DOMElement, ElementNode, InteractivitySignals, KeyboardEvidence, PageElementGraph } from './types.js'
+import type {
+  DOMElement,
+  ElementNode,
+  FocusFacts,
+  InteractivitySignals,
+  KeyboardEvidence,
+  PageElementGraph,
+} from './types.js'
 
 const PAGE = 'http://fixture.test/'
 
@@ -287,6 +294,173 @@ describe('F3: once a walk ran, hidden_but_interactive needs the walk to have foc
   it('does not flag an aria-hidden control the walk never focused (hidden from both, e.g. behind a modal)', () => {
     expect(classifyWith(a, link, hidden, walked([]))).toEqual([])
     expect(classifyWith(a, link, hidden, trapped([]))).toEqual([])
+  })
+})
+
+const fact = (f: Partial<FocusFacts> = {}): FocusFacts => ({
+  disabled: false,
+  focusable: false,
+  radioGroup: null,
+  compositeWidget: null,
+  keydownHandler: false,
+  activeDescendantHost: null,
+  ...f,
+})
+const incomplete = (reasons: KeyboardEvidence['unassessedReasons'], reached: number[]): KeyboardEvidence => ({
+  ...walked(reached),
+  notFocusableAssessed: false,
+  unassessedReasons: reasons,
+})
+
+// Several candidates on one page, each with its own signals and focus facts; returns gap type by backendNodeId.
+function detectPage(
+  items: Array<{ element: DOMElement; signals: InteractivitySignals; facts?: FocusFacts }>,
+  axNodes: AxFixture[],
+  keyboard: KeyboardEvidence,
+): Record<number, string> {
+  const focus = new Map<number, FocusFacts>()
+  for (const i of items) if (i.facts) focus.set(i.element.backendNodeId, i.facts)
+  const gaps = detectGaps(
+    items.map((i) => i.element),
+    tree(axNodes),
+    new Map(items.map((i) => [i.element.backendNodeId, i.signals])),
+    { keyboard, focus },
+  )
+  return Object.fromEntries(gaps.map((g) => [g.domElement.backendNodeId, g.gapType]))
+}
+
+describe('G1b: not_focusable skips controls meant to be unfocusable and arrow-key group members', () => {
+  const clickable = { ...noSignals, hasClickHandler: true, isSemanticInteractive: true }
+  const pointer = { ...noSignals, hasCursorPointer: true, isSemanticInteractive: true }
+
+  it('never flags a natively disabled control or one inside an inert subtree, but still flags an enabled one', () => {
+    const submit = el(50, 'BUTTON', { type: 'submit', disabled: '' })
+    const ax = [{ backend: 50, role: 'button', name: 'Submit' }]
+    const disabled = [{ element: submit, signals: clickable, facts: fact({ disabled: true }) }]
+    expect(detectPage(disabled, ax, walked([]))).toEqual({})
+    const enabled = [{ element: submit, signals: clickable, facts: fact() }]
+    expect(detectPage(enabled, ax, walked([]))).toEqual({ 50: 'not_focusable' })
+  })
+
+  it('counts a radio as reached when Tab focused another radio of its group (same form owner and name)', () => {
+    const radio = (id: number, group: string) => ({
+      element: el(id, 'INPUT', { type: 'radio' }),
+      signals: pointer,
+      facts: fact({ radioGroup: group }),
+    })
+    const ax = [60, 61, 62, 63].map((backend) => ({ backend, role: 'radio', name: `r${backend}` }))
+    const radios = [radio(60, 'f:size'), radio(61, 'f:size'), radio(62, 'f:size'), radio(63, 'f:color')]
+    expect(detectPage(radios, ax, walked([60]))).toEqual({ 63: 'not_focusable' })
+  })
+
+  it('counts a composite widget member as reached when Tab focused another member of the same widget', () => {
+    const tab = (id: number, widget: number) => ({
+      element: el(id, 'DIV', { role: 'tab' }),
+      signals: { ...noSignals, hasClickHandler: true, hasRoleAttribute: true, roleValue: 'tab' },
+      facts: fact({ compositeWidget: widget, keydownHandler: true }),
+    })
+    const ax = [70, 71, 72].map((backend) => ({ backend, role: 'tab', name: `t${backend}` }))
+    expect(detectPage([tab(70, 900), tab(71, 900), tab(72, 901)], ax, walked([70]))).toEqual({ 72: 'not_focusable' })
+  })
+
+  it('does not count the widget container itself as a reached member', () => {
+    const option = {
+      element: el(80, 'DIV', { role: 'option' }),
+      signals: { ...noSignals, hasClickHandler: true, hasRoleAttribute: true, roleValue: 'option' },
+      facts: fact({ compositeWidget: 910 }),
+    }
+    const ax = [{ backend: 80, role: 'option', name: 'M' }]
+    expect(detectPage([option], ax, walked([910]))).toEqual({ 80: 'not_focusable' })
+  })
+})
+
+describe('G1c: composite widgets under a complete walk', () => {
+  const handled = { ...noSignals, hasClickHandler: true, hasRoleAttribute: true }
+  const item = (id: number, role: string, facts: Partial<FocusFacts>) => ({
+    element: el(id, 'DIV', { role }),
+    signals: { ...handled, roleValue: role },
+    facts: fact(facts),
+  })
+
+  it('N2: flags the tabindex=-1 member of a toolbar with no arrow-key handling, not one with it', () => {
+    const ax = [
+      { backend: 101, role: 'button', name: 'Bold' },
+      { backend: 102, role: 'button', name: 'Italic' },
+    ]
+    const toolbar = (keys: boolean) => [
+      item(101, 'button', { compositeWidget: 1000, focusable: true }),
+      item(102, 'button', { compositeWidget: 1000, keydownHandler: keys }),
+    ]
+    expect(detectPage(toolbar(false), ax, walked([101]))).toEqual({ 102: 'not_focusable' })
+    expect(detectPage(toolbar(true), ax, walked([101]))).toEqual({})
+  })
+
+  it('N1: does not flag the container whose keydown listener drives the roving tabindex once a member was reached', () => {
+    const ax = [
+      { backend: 1100, role: 'tablist', name: 'Details' },
+      { backend: 111, role: 'tab', name: 'One' },
+      { backend: 112, role: 'tab', name: 'Two' },
+    ]
+    const tabs = [
+      item(1100, 'tablist', { keydownHandler: true }),
+      item(111, 'tab', { compositeWidget: 1100, focusable: true }),
+      item(112, 'tab', { compositeWidget: 1100 }),
+    ]
+    expect(detectPage(tabs, ax, walked([111]))).toEqual({})
+    // Tab never entered it: container and members are all unreachable.
+    expect(detectPage(tabs, ax, walked([]))).toEqual({
+      1100: 'not_focusable',
+      111: 'not_focusable',
+      112: 'not_focusable',
+    })
+  })
+
+  it('N3: does not flag the options of a listbox managed by aria-activedescendant once its manager was reached', () => {
+    const ax = [
+      { backend: 121, role: 'option', name: 'Apple' },
+      { backend: 122, role: 'option', name: 'Pear' },
+    ]
+    const options = [
+      item(121, 'option', { compositeWidget: 1200, activeDescendantHost: 1200 }),
+      item(122, 'option', { compositeWidget: 1200, activeDescendantHost: 1200 }),
+    ]
+    expect(detectPage(options, ax, walked([1200]))).toEqual({})
+    expect(detectPage(options, ax, walked([]))).toEqual({ 121: 'not_focusable', 122: 'not_focusable' })
+  })
+})
+
+describe('G1b: hidden_but_interactive after an incomplete walk', () => {
+  const link = { ...noSignals, isSemanticInteractive: true }
+  const hidden = [{ backend: 40, role: 'none', name: '', ignoredReasons: ['ariaHiddenElement'] }]
+  const a = el(40, 'A', { href: '#b', 'aria-hidden': 'true' })
+
+  it('falls back to the static rule unless the walk was complete or stopped only for a trap', () => {
+    const cases: Array<KeyboardEvidence['unassessedReasons']> = [
+      ['document-replaced'],
+      ['walk-error'],
+      ['focusables-incomplete'],
+      ['no-wrap', 'document-replaced'],
+    ]
+    for (const reasons of cases) {
+      const [gap] = classifyWith(a, link, hidden, incomplete(reasons, []))
+      expect(gap?.gapType, reasons.join(',')).toBe('hidden_but_interactive')
+    }
+    expect(classifyWith(a, link, hidden, incomplete(['no-wrap'], []))).toEqual([])
+    expect(classifyWith(a, link, hidden, walked([]))).toEqual([])
+  })
+
+  it('flags an aria-hidden radio that arrow keys reach from a radio Tab focused', () => {
+    const radio = (id: number, extra: Record<string, string> = {}) => ({
+      element: el(id, 'INPUT', { type: 'radio', ...extra }),
+      signals: link,
+      facts: fact({ radioGroup: 'doc:size' }),
+    })
+    const ax = [
+      { backend: 41, role: 'radio', name: 'S' },
+      { backend: 42, role: 'none', name: '', ignoredReasons: ['ariaHiddenElement'] },
+    ]
+    const radios = [radio(41), radio(42, { 'aria-hidden': 'true' })]
+    expect(detectPage(radios, ax, walked([41]))).toEqual({ 42: 'hidden_but_interactive' })
   })
 })
 

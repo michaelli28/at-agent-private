@@ -1,9 +1,10 @@
 import type { Impact } from '../types.js'
-import { NO_WALK } from './keyboard.js'
+import { groupReach, NO_WALK } from './keyboard.js'
 import type {
   AccessibilityGap,
   AccessibilityGapType,
   DOMElement,
+  FocusFacts,
   InteractivitySignals,
   KeyboardEvidence,
   PageElementGraph,
@@ -77,12 +78,16 @@ export function buildBridgeMap(accessibilityTree: PageElementGraph): Map<number,
 export type DetectGapsOptions = {
   // From a Tab walk of the same load; without it not_focusable is never emitted (F3).
   keyboard?: KeyboardEvidence
+  // Per candidate, read before the walk: disabled controls and arrow-key group members are not not_focusable (G1b).
+  focus?: ReadonlyMap<number, FocusFacts>
 }
 
 type ClassifyContext = {
   accessibilityTree: PageElementGraph
   bridgeMap: Map<number, string>
   keyboard: KeyboardEvidence
+  focus: ReadonlyMap<number, FocusFacts>
+  // Focused by Tab, or reached through a group, widget or aria-activedescendant Tab entered (G1b, G1c).
   reached: ReadonlySet<number>
 }
 
@@ -93,11 +98,14 @@ export function detectGaps(
   options: DetectGapsOptions = {},
 ): AccessibilityGap[] {
   const keyboard = options.keyboard ?? NO_WALK
+  const focus = options.focus ?? new Map<number, FocusFacts>()
+  const byGroup = groupReach(keyboard.reachedBackendNodeIds, focus).map((r) => r.backendNodeId)
   const ctx: ClassifyContext = {
     accessibilityTree,
     bridgeMap: buildBridgeMap(accessibilityTree),
     keyboard,
-    reached: new Set(keyboard.reachedBackendNodeIds),
+    focus,
+    reached: new Set([...keyboard.reachedBackendNodeIds, ...byGroup]),
   }
   const gaps: AccessibilityGap[] = []
 
@@ -135,10 +143,13 @@ function isInteractiveRole(role: string | null): boolean {
   return INTERACTIVE_ROLES.includes(role.toLowerCase())
 }
 
-// Once a walk ran, an aria-hidden control counts only if Tab focused it: one the walk never reached is hidden from
-// keyboard and assistive technology alike (e.g. page content behind a modal). Without a walk, the signals decide.
+// After a walk, an aria-hidden control counts only if the keyboard reached it: one never reached is hidden from keyboard
+// and assistive technology alike (e.g. page content behind a modal). Only a complete walk, or one stopped by a trap
+// (the modal case), can show that; after any other incomplete walk, or none, the static rule decides (G1b).
 function hiddenFromKeyboardToo(domElement: DOMElement, ctx: ClassifyContext): boolean {
-  return ctx.keyboard.walkRan && !ctx.reached.has(domElement.backendNodeId)
+  const { walkRan, unassessedReasons } = ctx.keyboard
+  const walkCovers = walkRan && unassessedReasons.every((r) => r === 'no-wrap')
+  return walkCovers && !ctx.reached.has(domElement.backendNodeId)
 }
 
 function classifyGap(
@@ -211,10 +222,12 @@ function classifyGap(
     }
   }
 
-  // F3: keyboard access comes from where Tab really went, never from the tag or the tabindex attribute.
+  // F3: keyboard access comes from where Tab really went, never from the tag or the tabindex attribute. A disabled
+  // control is meant to be unfocusable (G1b).
   if (
     ctx.keyboard.notFocusableAssessed &&
     !ctx.reached.has(domElement.backendNodeId) &&
+    !ctx.focus.get(domElement.backendNodeId)?.disabled &&
     (signals.hasClickHandler || signals.hasCursorPointer)
   ) {
     return createGap(

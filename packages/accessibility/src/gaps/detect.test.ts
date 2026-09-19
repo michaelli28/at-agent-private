@@ -138,11 +138,11 @@ describe('crawlPageWithGapDetection drops hidden candidates (F1)', () => {
   it('records why each hidden candidate was dropped', () => {
     const idOf = new Map(result.domElements.map((e) => [e.backendNodeId, e.attributes['data-bench-id'] ?? e.localName]))
     const dropped = Object.fromEntries(result.hidden.map((h) => [idOf.get(h.backendNodeId), h.reason]))
+    // zero-size is a zero-area button that still takes focus, so it stays a candidate (G1b).
     expect(dropped).toEqual({
       ul: 'no-box',
       'dd-item': 'no-box',
       csrf: 'hidden-input',
-      'zero-size': 'zero-area',
       'hidden-attr': 'no-box',
       offcanvas: 'css-hidden',
       'offcanvas-close': 'css-hidden',
@@ -288,5 +288,275 @@ describe('crawlPageWithGapDetection with a Tab walk on the same load (F3)', () =
   it('runs the walk with defaults when tabWalk is true', async () => {
     const result = await detectWith(TRAP_HTML, true)
     expect(result.keyboard.walkRan).toBe(true)
+  })
+})
+
+// The Stage-A reviewer's edge probes (scratchpad verify-p2a/G1/edge-probes.mts), each with the verdict a careful tester
+// would give, plus the neighbouring cases each fix must not break.
+const probePage = (body: string): string =>
+  `<!doctype html><html lang="en"><head><meta charset="utf-8"><title>Probe</title></head><body><main>${body}</main></body></html>`
+
+const DISABLED_HTML = probePage(`<a href="#top" data-bench-id="first">Top</a>
+<label>Email <input data-bench-id="email"></label>
+<button type="submit" data-bench-id="disabled-submit" disabled onclick="void 0">Submit</button>
+<fieldset disabled><legend>Card</legend><button type="button" data-bench-id="fs-button" onclick="void 0">Apply</button>
+<input data-bench-id="fs-input" aria-label="Code" style="cursor:pointer"></fieldset>
+<div role="button" data-bench-id="enabled-no-tabindex" onclick="void 0">Buy now</div>
+<a href="#end" data-bench-id="last">End</a>`)
+
+const GROUPS_HTML = probePage(`<fieldset><legend>Size</legend>
+<label><input type="radio" name="size" value="s" data-bench-id="radio-s" checked style="cursor:pointer"> Small</label>
+<label><input type="radio" name="size" value="m" data-bench-id="radio-m" style="cursor:pointer"> Medium</label>
+<label><input type="radio" name="size" value="l" data-bench-id="radio-l" style="cursor:pointer"> Large</label>
+</fieldset>
+<div role="tablist" aria-label="Details" data-bench-id="tablist" onkeydown="void 0"><div role="tab" tabindex="0" data-bench-id="tab-1" onclick="void 0">Description</div>
+<div role="tab" tabindex="-1" data-bench-id="tab-2" onclick="void 0">Reviews</div></div>
+<ul role="menu" aria-label="Actions"><li role="menuitem" data-bench-id="menu-cut" onclick="void 0">Cut</li></ul>
+<a href="#end" data-bench-id="last">End</a>`)
+
+const NAVIGATES_HTML = probePage(`<a href="#a" data-bench-id="first">First</a>
+<a href="/next.html" data-bench-id="nav-on-focus" onfocus="location.href='/next.html'">Go</a>
+<a href="#b" data-bench-id="hidden-link" aria-hidden="true">Hidden but focusable</a>`)
+
+const ZERO_AREA_HTML = probePage(`<a href="#a" data-bench-id="first">First</a>
+<a href="/product" data-bench-id="img-link"><img src="data:," alt=""></a>
+<div data-bench-id="zero-div" style="width:0;height:0;overflow:hidden" onclick="void 0">Z</div>
+<button data-bench-id="zero-disabled" disabled style="width:0;height:0;padding:0;border:0;overflow:hidden" onclick="void 0">Z</button>
+<a href="#r" data-bench-id="redirect" onfocus="document.querySelector('[data-bench-id=zero-focused]').focus()">Skip</a>
+<div data-bench-id="zero-focused" tabindex="-1" style="width:0;height:0;overflow:hidden" onclick="void 0">Z</div>
+<a href="#end" data-bench-id="last">End</a>`)
+
+const NEXT_HTML = probePage('<p>Next page</p>')
+
+describe('crawlPageWithGapDetection on the reviewer edge probes, with a Tab walk (G1b)', () => {
+  let client: BrowserClient
+  let page: BrowserPage
+
+  beforeAll(async () => {
+    client = new BrowserClient()
+    await client.launch()
+    page = await client.newPage()
+  })
+
+  afterAll(async () => {
+    await page.close()
+    await client.close()
+  })
+
+  async function detectProbe(html: string): Promise<DualCrawlResult> {
+    await page.playwrightPage.unrouteAll()
+    await page.playwrightPage.route('http://fixture.test/**', (route) =>
+      route.fulfill({
+        contentType: 'text/html',
+        body: route.request().url().endsWith('/next.html') ? NEXT_HTML : html,
+      }),
+    )
+    return crawlPageWithGapDetection(page.playwrightPage, URL_, { tabWalk: { settleMs: 50 } })
+  }
+
+  const byId = (r: DualCrawlResult): Record<string, string> =>
+    Object.fromEntries(r.gaps.map((g) => [benchId(g), g.gapType]))
+  const idsOf = (r: DualCrawlResult): Map<number, string> =>
+    new Map(r.domElements.map((e) => [e.backendNodeId, e.attributes['data-bench-id'] ?? e.localName]))
+
+  it('does not flag natively disabled controls, in a disabled fieldset or not, as not_focusable', async () => {
+    const result = await detectProbe(DISABLED_HTML)
+    expect(result.keyboard.notFocusableAssessed).toBe(true)
+    expect(byId(result)).toEqual({ 'enabled-no-tabindex': 'not_focusable' })
+  })
+
+  it('counts radios and roving tabs reached by arrows from the member Tab focused, and records the rule', async () => {
+    const result = await detectProbe(GROUPS_HTML)
+    expect(result.keyboard.notFocusableAssessed).toBe(true)
+    expect(byId(result)).toEqual({ 'menu-cut': 'not_focusable' })
+    const ids = idsOf(result)
+    expect(result.reachedByGroup.map((r) => [ids.get(r.backendNodeId), r.rule])).toEqual([
+      ['radio-m', 'radio-group'],
+      ['radio-l', 'radio-group'],
+      ['tab-2', 'composite-widget'],
+      ['tablist', 'widget-container'],
+    ])
+  })
+
+  it('flags an aria-hidden focusable link after a walk that a focus-triggered navigation cut short', async () => {
+    const result = await detectProbe(NAVIGATES_HTML)
+    expect(result.keyboard.unassessedReasons).toContain('document-replaced')
+    expect(byId(result)).toEqual({ 'hidden-link': 'hidden_but_interactive' })
+  })
+
+  it('keeps zero-area elements that take focus or that Tab reached; still drops those that cannot', async () => {
+    const result = await detectProbe(ZERO_AREA_HTML)
+    expect(result.keyboard.notFocusableAssessed).toBe(true)
+    const gaps = byId(result)
+    expect(gaps['img-link']).toBe('no_accessible_name')
+    expect(gaps['zero-focused']).toBe('wrong_role')
+    const ids = idsOf(result)
+    expect(Object.fromEntries(result.hidden.map((h) => [ids.get(h.backendNodeId), h.reason]))).toEqual({
+      'zero-div': 'zero-area',
+      'zero-disabled': 'zero-area',
+    })
+  })
+})
+
+// The G1b reviewer's probes (scratchpad verify-p2a2/G1b/own-probes.mts), several widgets per page: roving widgets
+// whose container carries the arrow-key listener, one without key handling, aria-activedescendant widgets and tabs
+// slotted into a shadow tablist.
+const ARROWS = `<script>
+document.querySelectorAll('[data-roving]').forEach(function (w) {
+  w.addEventListener('keydown', function (e) {
+    var items = [].slice.call(w.querySelectorAll('[data-item]'))
+    var i = items.indexOf(document.activeElement)
+    var d = e.key === 'ArrowRight' || e.key === 'ArrowDown' ? 1 : e.key === 'ArrowLeft' || e.key === 'ArrowUp' ? -1 : 0
+    if (i < 0 || !d) return
+    e.preventDefault()
+    var next = items[(i + d + items.length) % items.length]
+    items[i].tabIndex = -1
+    next.tabIndex = 0
+    next.focus()
+  })
+})
+</script>`
+
+const WIDGETS_HTML = probePage(`<a href="#a" data-bench-id="first">First</a>
+<div role="tablist" aria-label="Details" data-roving data-bench-id="tablist">
+<div role="tab" data-item tabindex="0" aria-selected="true" data-bench-id="tab-1" onclick="void 0">Description</div>
+<div role="tab" data-item tabindex="-1" aria-selected="false" data-bench-id="tab-2" onclick="void 0">Reviews</div>
+</div><div role="tabpanel"><a href="#more" data-bench-id="panel-link">More</a></div>
+<ul role="menu" aria-label="Actions" data-roving data-bench-id="menu">
+<li role="menuitem" data-item tabindex="0" data-bench-id="mi-cut" onclick="void 0">Cut</li>
+<li role="menuitem" data-item tabindex="-1" data-bench-id="mi-copy" onclick="void 0">Copy</li>
+</ul>
+<div role="toolbar" aria-label="Format" data-roving data-bench-id="toolbar">
+<button data-item tabindex="0" data-bench-id="tb-bold" onclick="void 0">Bold</button>
+<button data-item tabindex="-1" data-bench-id="tb-italic" onclick="void 0">Italic</button>
+</div>
+<button tabindex="-1" data-bench-id="outside-neg" onclick="void 0">Outside</button>
+<div role="grid" aria-label="Orders" data-roving data-bench-id="grid">
+<div role="row"><div role="gridcell" data-item tabindex="0" data-bench-id="gc-1" onclick="void 0">A1</div>
+<div role="gridcell" data-item tabindex="-1" data-bench-id="gc-2" onclick="void 0">A2</div></div>
+</div>
+<div role="toolbar" aria-label="No arrows">
+<button tabindex="0" data-bench-id="na-bold" onclick="void 0">Bold</button>
+<button tabindex="-1" data-bench-id="na-italic" onclick="void 0">Italic</button>
+</div>
+<div role="tablist" aria-label="Broken">
+<div role="tab" tabindex="-1" data-bench-id="bt-1" onclick="void 0">One</div>
+<div role="tab" tabindex="-1" data-bench-id="bt-2" onclick="void 0">Two</div>
+</div>
+<div role="listbox" tabindex="0" aria-label="Fruit" aria-activedescendant="lb-o1" data-bench-id="listbox">
+<div role="option" id="lb-o1" aria-selected="true" data-bench-id="lb-opt-1" onclick="void 0">Apple</div>
+<div role="option" id="lb-o2" data-bench-id="lb-opt-2" onclick="void 0">Pear</div>
+</div>
+<input role="combobox" aria-label="City" aria-controls="cities" aria-expanded="true" aria-activedescendant="" data-bench-id="combo">
+<ul role="listbox" id="cities" aria-label="Cities" data-bench-id="cities">
+<li role="option" id="city-o1" data-bench-id="city-1" onclick="void 0">Oslo</li>
+<li role="option" id="city-o2" data-bench-id="city-2" onclick="void 0">Rome</li>
+</ul>
+<x-tabs><div role="tab" tabindex="0" data-bench-id="st-1" onclick="void 0">One</div><div role="tab" tabindex="-1" data-bench-id="st-2" onclick="void 0">Two</div></x-tabs>
+<a href="#end" data-bench-id="last">End</a>
+<script>
+customElements.define('x-tabs', class extends HTMLElement {
+  constructor() { super(); this.attachShadow({ mode: 'open' }).innerHTML = '<div role="tablist" aria-label="T"><slot></slot></div>' }
+})
+document.querySelectorAll('x-tabs [role=tab]').forEach(function (t) { t.addEventListener('keydown', function () {}) })
+</script>${ARROWS}`)
+
+// Zero-area candidates: decorative ones Tab never reaches, one inside an inert region, a link around a broken image
+// (a real Tab stop), and a link Tab passes straight through (its focus handler moves focus on).
+const ZERO_HTML = probePage(`<a href="#a" data-bench-id="first">First</a>
+<span data-bench-id="deco-span" onclick="void 0" style="display:inline-block;width:0;height:0;overflow:hidden">x</span>
+<i data-bench-id="deco-icon" class="icon" onclick="void 0"></i>
+<div data-bench-id="deco-tabneg" tabindex="-1" onclick="void 0" style="width:0;height:0;overflow:hidden">x</div>
+<a data-bench-id="deco-a-nohref" onclick="void 0"></a>
+<button data-bench-id="deco-btn-disabled" disabled onclick="void 0" style="width:0;height:0;padding:0;border:0;overflow:hidden">x</button>
+<div inert><a href="#y" data-bench-id="inert-zero-link" onclick="void 0" style="display:inline-block;width:0;height:0;overflow:hidden">x</a></div>
+<a href="/p" data-bench-id="img-link"><img src="data:," alt=""></a>
+<a href="#s" data-bench-id="zero-skip" style="display:inline-block;width:0;height:0;overflow:hidden" onfocus="document.querySelector('[data-bench-id=last]').focus()"></a>
+<a href="#end" data-bench-id="last">End</a>`)
+
+describe('crawlPageWithGapDetection on the G1b reviewer probes (G1c)', () => {
+  let client: BrowserClient
+  let page: BrowserPage
+
+  beforeAll(async () => {
+    client = new BrowserClient()
+    await client.launch()
+    page = await client.newPage()
+  })
+
+  afterAll(async () => {
+    await page.close()
+    await client.close()
+  })
+
+  async function detectProbe(html: string, tabWalk: GapDetectionOptions['tabWalk']): Promise<DualCrawlResult> {
+    await page.playwrightPage.unrouteAll()
+    await page.playwrightPage.route(URL_, (route) => route.fulfill({ contentType: 'text/html', body: html }))
+    return crawlPageWithGapDetection(page.playwrightPage, URL_, { tabWalk })
+  }
+
+  const byId = (r: DualCrawlResult): Record<string, string> =>
+    Object.fromEntries(r.gaps.map((g) => [benchId(g), g.gapType]))
+  const idsOf = (r: DualCrawlResult): Map<number, string> =>
+    new Map(r.domElements.map((e) => [e.backendNodeId, e.attributes['data-bench-id'] ?? e.localName]))
+  const hiddenOf = (r: DualCrawlResult): Record<string, string> => {
+    const ids = idsOf(r)
+    return Object.fromEntries(r.hidden.map((h) => [ids.get(h.backendNodeId), h.reason]))
+  }
+
+  it('flags only the truly unreachable members: containers (N1), key handling (N2), activedescendant (N3), slots (N4)', async () => {
+    const result = await detectProbe(WIDGETS_HTML, { settleMs: 50 })
+    expect(result.keyboard.notFocusableAssessed).toBe(true)
+    expect(byId(result)).toEqual({
+      'outside-neg': 'not_focusable',
+      'na-italic': 'not_focusable',
+      'bt-1': 'not_focusable',
+      'bt-2': 'not_focusable',
+    })
+    const ids = idsOf(result)
+    expect(Object.fromEntries(result.reachedByGroup.map((r) => [ids.get(r.backendNodeId), r.rule]))).toEqual({
+      'tab-2': 'composite-widget',
+      'mi-copy': 'composite-widget',
+      'tb-italic': 'composite-widget',
+      'gc-2': 'composite-widget',
+      'st-2': 'composite-widget',
+      'lb-opt-1': 'active-descendant',
+      'lb-opt-2': 'active-descendant',
+      'city-1': 'active-descendant',
+      'city-2': 'active-descendant',
+      tablist: 'widget-container',
+      menu: 'widget-container',
+      toolbar: 'widget-container',
+      grid: 'widget-container',
+      cities: 'widget-container',
+    })
+  })
+
+  it('B1: after a complete walk, keeps a zero-area element only if Tab reached it', async () => {
+    const result = await detectProbe(ZERO_HTML, { settleMs: 50 })
+    expect(result.keyboard.notFocusableAssessed).toBe(true)
+    expect(byId(result)).toEqual({ 'img-link': 'no_accessible_name' })
+    expect(hiddenOf(result)).toEqual({
+      'deco-span': 'zero-area',
+      'deco-icon': 'zero-area',
+      'deco-tabneg': 'zero-area',
+      'deco-a-nohref': 'zero-area',
+      'deco-btn-disabled': 'zero-area',
+      'inert-zero-link': 'zero-area',
+      'zero-skip': 'zero-area',
+    })
+  })
+
+  it('B1: without a walk, keeps a zero-area element only if it is really a Tab stop', async () => {
+    const result = await detectProbe(ZERO_HTML, false)
+    expect(byId(result)).toEqual({ 'img-link': 'no_accessible_name', 'zero-skip': 'no_accessible_name' })
+    expect(hiddenOf(result)).toEqual({
+      'deco-span': 'zero-area',
+      'deco-icon': 'zero-area',
+      'deco-tabneg': 'zero-area',
+      'deco-a-nohref': 'zero-area',
+      'deco-btn-disabled': 'zero-area',
+      'inert-zero-link': 'zero-area',
+    })
   })
 })

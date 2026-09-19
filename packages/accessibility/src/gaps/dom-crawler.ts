@@ -4,6 +4,7 @@ import type {
   CrawlError,
   CrawlStage,
   DOMElement,
+  FocusFacts,
   HiddenCandidate,
   HiddenReason,
   InteractivitySignals,
@@ -134,6 +135,75 @@ const REACT_FACTS_FN = `function () {
 
 // visibility:hidden/collapse (own or inherited), content-visibility:hidden and display:none all fail this.
 const CHECK_VISIBILITY_FN = 'function () { return this.checkVisibility({ checkVisibilityCSS: true }) }'
+
+// Roles whose members arrow keys move between, so one Tab stop serves the whole widget (G1b).
+const COMPOSITE_ROLES = ['radiogroup', 'tablist', 'menu', 'menubar', 'listbox', 'grid', 'treegrid', 'tree', 'toolbar']
+
+// Ancestors are walked along the flat tree: a slotted element's slot first, then across open shadow roots (G1c). The
+// role attribute's first token is taken as the role.
+const WIDGET_OF_JS = `
+  var up = function (el) { return el.assignedSlot || el.parentElement || (el.parentNode && el.parentNode.host) || null }
+  var isWidget = function (el) {
+    var role = (el.getAttribute('role') || '').trim().split(/\\s+/)[0].toLowerCase()
+    return ${JSON.stringify(COMPOSITE_ROLES)}.indexOf(role) !== -1
+  }
+  var widgetOf = function (el) {
+    for (var a = up(el); a; a = up(a)) if (isWidget(a)) return a
+    return null
+  }`
+
+// By value; the group anchors are then read as nodes only for the few candidates that have one. Chromium reports
+// tabIndex 0 for an a without href and inside inert, neither of which takes focus (G1c).
+const FOCUS_FLAGS_FN = `function () {${WIDGET_OF_JS}
+  var inert = false
+  for (var a = this; a; a = up(a)) if (a.hasAttribute('inert')) { inert = true; break }
+  var disabled = this.matches(':disabled') || inert
+  var hrefless = (this.localName === 'a' || this.localName === 'area') &&
+    !this.hasAttribute('href') && !this.hasAttribute('tabindex')
+  var radio = this.localName === 'input' && this.type === 'radio' && this.name !== ''
+  var key = Object.keys(this).filter(function (k) { return k.indexOf('__reactProps$') === 0 })[0]
+  var props = key === undefined ? null : this[key]
+  return {
+    disabled: disabled,
+    focusable: this.tabIndex >= 0 && !disabled && !hrefless && this.checkVisibility({ checkVisibilityCSS: true }),
+    radioName: radio ? this.name : null,
+    inWidget: widgetOf(this) !== null,
+    isWidget: isWidget(this),
+    reactKeydown: !!props && (typeof props.onKeyDown === 'function' || typeof props.onKeyDownCapture === 'function'),
+  }
+}`
+
+// The element whose aria-activedescendant manages the nearest widget: the widget itself, or one naming it by id in
+// aria-controls or aria-owns (a combobox), in the same tree (G1c).
+const ACTIVE_DESCENDANT_HOST_FN = `function () {${WIDGET_OF_JS}
+  var w = widgetOf(this)
+  if (!w) return null
+  if (w.hasAttribute('aria-activedescendant')) return w
+  if (!w.id) return null
+  var hosts = w.getRootNode().querySelectorAll('[aria-activedescendant]')
+  for (var i = 0; i < hosts.length; i++) {
+    var refs = ((hosts[i].getAttribute('aria-controls') || '') + ' ' + (hosts[i].getAttribute('aria-owns') || ''))
+      .split(/\\s+/)
+    if (refs.indexOf(w.id) !== -1) return hosts[i]
+  }
+  return null
+}`
+
+// A radio group is the radios sharing a name and a form owner, or a tree root when they have no form (HTML spec).
+const RADIO_OWNER_FN = 'function () { return this.form || this.getRootNode() }'
+
+const WIDGET_FN = `function () {${WIDGET_OF_JS}
+  return widgetOf(this)
+}`
+
+const FocusFlagsSchema = z.object({
+  disabled: z.boolean(),
+  focusable: z.boolean(),
+  radioName: z.string().nullable(),
+  inWidget: z.boolean(),
+  isWidget: z.boolean(),
+  reactKeydown: z.boolean(),
+})
 
 export type DOMCrawl = { elements: DOMElement[]; errors: CrawlError[] }
 
@@ -328,6 +398,22 @@ async function elementIds(cdp: CDPSession, arrayObjectId: string): Promise<numbe
   return ids
 }
 
+// backendNodeId of the node a function returns when called on an element, or null when it returns none.
+async function nodeFrom(cdp: CDPSession, backendNodeId: number, functionDeclaration: string): Promise<number | null> {
+  const { object } = await cdp.send('DOM.resolveNode', {
+    backendNodeId,
+    objectGroup: OBJECT_GROUP,
+  })
+  if (!object.objectId) throw new Error('node resolved to no object')
+  const { result, exceptionDetails } = await cdp.send('Runtime.callFunctionOn', {
+    objectId: object.objectId,
+    functionDeclaration,
+  })
+  if (exceptionDetails) throw new Error(exceptionDetails.text)
+  if (!result.objectId) return null
+  return (await cdp.send('DOM.describeNode', { objectId: result.objectId })).node.backendNodeId
+}
+
 async function callOnNode(cdp: CDPSession, backendNodeId: number, functionDeclaration: string): Promise<unknown> {
   const { object } = await cdp.send('DOM.resolveNode', {
     backendNodeId,
@@ -496,6 +582,53 @@ export async function collectInteractivitySignals(
       errors.push(...read.errors)
     }
     return { signals, errors }
+  } finally {
+    await closeDomSession(cdp)
+  }
+}
+
+async function hasKeydownListener(cdp: CDPSession, backendNodeId: number): Promise<boolean> {
+  const { object } = await cdp.send('DOM.resolveNode', {
+    backendNodeId,
+    objectGroup: OBJECT_GROUP,
+  })
+  if (!object.objectId) throw new Error('node resolved to no object')
+  const { listeners } = await cdp.send('DOMDebugger.getEventListeners', { objectId: object.objectId })
+  return listeners.some((l) => l.type === 'keydown')
+}
+
+async function readFocusFacts(cdp: CDPSession, backendNodeId: number): Promise<FocusFacts> {
+  const flags = FocusFlagsSchema.parse(await callOnNode(cdp, backendNodeId, FOCUS_FLAGS_FN))
+  const owner = flags.radioName === null ? null : await nodeFrom(cdp, backendNodeId, RADIO_OWNER_FN)
+  // A listener read per element, so only where arrow-key evidence can matter.
+  const grouped = flags.inWidget || flags.isWidget
+  return {
+    disabled: flags.disabled,
+    focusable: flags.focusable,
+    radioGroup: owner === null ? null : `${owner}:${flags.radioName}`,
+    compositeWidget: flags.inWidget ? await nodeFrom(cdp, backendNodeId, WIDGET_FN) : null,
+    keydownHandler: grouped && (flags.reactKeydown || (await hasKeydownListener(cdp, backendNodeId))),
+    activeDescendantHost: flags.inWidget ? await nodeFrom(cdp, backendNodeId, ACTIVE_DESCENDANT_HOST_FN) : null,
+  }
+}
+
+export type FocusFactsCollection = {
+  facts: Map<number, FocusFacts>
+  errors: CrawlError[]
+}
+
+// G1b: one session for every candidate; a candidate whose facts cannot be read gets none and the failure is recorded.
+export async function collectFocusFacts(page: Page, elements: readonly DOMElement[]): Promise<FocusFactsCollection> {
+  const cdp = await openDomSession(page)
+  try {
+    const facts = new Map<number, FocusFacts>()
+    const errors: CrawlError[] = []
+    for (const element of elements) {
+      const id = element.backendNodeId
+      const read = await attempt('focus-facts', errors, () => readFocusFacts(cdp, id), id)
+      if (read) facts.set(id, read)
+    }
+    return { facts, errors }
   } finally {
     await closeDomSession(cdp)
   }

@@ -1,7 +1,10 @@
 // Every expected difference between the UNMODIFIED taskgen dual crawl and the fixed packages/accessibility port, per
 // parity fixture, tagged with the fix that explains it (F1 hidden candidates, F2 generic roles and aria-hidden, F3 Tab
-// walk, F9 discovery and cursor). parity.test.ts fails on any difference missing here and on any entry here that no
-// longer occurs. Token formats are documented at diffTokens in parity.test.ts; count repeats an identical token.
+// walk, F9 discovery and cursor). The G1b/G1c follow-ups (a zero-area element kept only as a Tab stop; disabled
+// controls, members of widgets that handle arrow keys or aria-activedescendant, and widget containers holding focus not
+// not_focusable) refine F1 and F3 and carry those ids. parity.test.ts fails on any difference missing here and on any
+// entry here that no longer occurs. Token formats are documented at diffTokens in parity.test.ts; count repeats an
+// identical token.
 import { z } from "zod";
 
 export const FIX_IDS = ["F1", "F2", "F3", "F9"] as const;
@@ -92,7 +95,7 @@ export const DIVERGENCE_LEDGER: Record<string, LedgerEntry[]> =
         diff: "gap- SPAN[span-tabindex-neg] missing_from_a11y_tree/critical: SPAN element with interactivity signals is not exposed in the accessibility tree",
       },
     ],
-    // The hidden dropdown's links and the zero-area icon button are dropped (F1); generic listener divs get wrong_role (F2); the plain listener div is discovered (F9); not_focusable from the walk (F3).
+    // The hidden dropdown's links are dropped (F1); the zero-area icon button takes focus, so it is kept and flagged as taskgen does (F1, G1b). Generic listener divs get wrong_role (F2); the plain listener div is discovered (F9); not_focusable from the walk (F3), tab-2 included: its tablist handles no arrow keys (F3, G1c).
     "branches-scripted": [
       { fix: "F2", diff: 'ax+ generic ""', count: 4 },
       { fix: "F2", diff: 'ax+ none "" ignored:uninteresting', count: 2 },
@@ -138,10 +141,6 @@ export const DIVERGENCE_LEDGER: Record<string, LedgerEntry[]> =
         diff: 'gap- DIV[tab-2] not_focusable/critical: DIV element has click handlers but tabindex="-1" makes it unfocusable',
       },
       {
-        fix: "F1",
-        diff: "gap- I[icon-toggle-listener] no_accessible_name/serious: Interactive I element has no accessible name",
-      },
-      {
         fix: "F3",
         diff: "gap- SPAN[checkbox-keydown] not_focusable/critical: SPAN element has click handlers but has no tabindex and is not a native interactive element",
       },
@@ -150,7 +149,7 @@ export const DIVERGENCE_LEDGER: Record<string, LedgerEntry[]> =
         diff: "gap- SPAN[role-button-listener] not_focusable/critical: SPAN element has click handlers but has no tabindex and is not a native interactive element",
       },
     ],
-    // Unnamed generics get wrong_role instead of missing_from_a11y_tree, the unnamed group and the focused aria-hidden group get wrong_role before the name check (F2); visibility:hidden and zero-area candidates dropped (F1); shadow-root elements discovered (F9); cursor:pointer now read (F9); not_focusable from the walk (F3).
+    // Unnamed generics get wrong_role instead of missing_from_a11y_tree, the unnamed group and the focused aria-hidden group get wrong_role before the name check (F2); visibility:hidden candidates dropped (F1), while the zero-area img-link takes focus and is kept (F1, G1b); shadow-root elements discovered (F9); cursor:pointer now read, img-link's included (F9); not_focusable from the walk (F3), gc-onclick included: its grid handles no arrow keys (F3, G1c).
     stress: [
       { fix: "F2", diff: 'ax+ generic ""', count: 24 },
       { fix: "F2", diff: 'ax+ none "" ignored:presentationalRole', count: 6 },
@@ -255,10 +254,6 @@ export const DIVERGENCE_LEDGER: Record<string, LedgerEntry[]> =
       },
       {
         fix: "F1",
-        diff: "gap- A[img-link] no_accessible_name/serious: Interactive A element has no accessible name",
-      },
-      {
-        fix: "F1",
         diff: "gap- BUTTON[visibility-hidden] missing_from_a11y_tree/critical: BUTTON element with interactivity signals is not exposed in the accessibility tree",
       },
       {
@@ -352,6 +347,10 @@ export const DIVERGENCE_LEDGER: Record<string, LedgerEntry[]> =
       {
         fix: "F2",
         diff: "gap- SPAN[span-onmouseup] missing_from_a11y_tree/critical: SPAN element with interactivity signals is not exposed in the accessibility tree",
+      },
+      {
+        fix: "F9",
+        diff: "signals~ A[img-link] hasCursorPointer: false -> true",
       },
       {
         fix: "F9",

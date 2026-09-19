@@ -136,6 +136,7 @@ export const CRAWL_STAGES = [
   'cursor',
   'listeners',
   'react-props',
+  'focus-facts',
   'tab-walk',
 ] as const
 export const CrawlStageSchema = z.enum(CRAWL_STAGES)
@@ -178,6 +179,39 @@ export const KeyboardEvidenceSchema = z.object({
 })
 export type KeyboardEvidence = z.infer<typeof KeyboardEvidenceSchema>
 
+// Read with the crawl, before the walk (G1b): whether a candidate is meant to be unfocusable, and the arrow-key group
+// it belongs to. WCAG 2.1.1 lets one Tab stop serve a radio group or a composite widget; arrows reach the rest.
+export const FocusFactsSchema = z.object({
+  // Natively disabled (:disabled, so also inside a disabled fieldset) or inside an inert subtree.
+  disabled: z.boolean(),
+  // A Tab stop by the DOM's own rules: tabIndex >= 0, enabled, not inert, visible, and not an a/area without href
+  // or tabindex. Decides zero-area candidates when no complete walk does (G1c).
+  focusable: z.boolean(),
+  // A named radio's group: its form owner (or tree root, when formless) and its name.
+  radioGroup: z.string().nullable(),
+  // backendNodeId of the nearest flat-tree ancestor whose role is a composite widget role (tablist, menu, grid...).
+  compositeWidget: z.number().nullable(),
+  // Own keydown listener or React onKeyDown prop: the widget's arrow-key evidence. Read only for composite widgets
+  // and their members, false for the rest (G1c).
+  keydownHandler: z.boolean(),
+  // backendNodeId of the element carrying aria-activedescendant for the nearest composite widget: the widget itself,
+  // or an element whose aria-controls or aria-owns names it (a combobox) (G1c).
+  activeDescendantHost: z.number().nullable(),
+})
+export type FocusFacts = z.infer<typeof FocusFactsSchema>
+
+export const GROUP_REACH_RULES = ['radio-group', 'composite-widget', 'active-descendant', 'widget-container'] as const
+export const GroupReachRuleSchema = z.enum(GROUP_REACH_RULES)
+export type GroupReachRule = z.infer<typeof GroupReachRuleSchema>
+
+// A candidate Tab never focused that the keyboard still reaches: by arrow keys from a group member Tab focused, as
+// the aria-activedescendant of an element Tab focused, or as a widget container focus was inside.
+export const GroupReachSchema = z.object({
+  backendNodeId: z.number(),
+  rule: GroupReachRuleSchema,
+})
+export type GroupReach = z.infer<typeof GroupReachSchema>
+
 export const DualCrawlResultSchema = z.object({
   pageUrl: z.string(),
   accessibilityTree: PageElementGraphSchema,
@@ -187,6 +221,8 @@ export const DualCrawlResultSchema = z.object({
   gaps: z.array(AccessibilityGapSchema),
   bridgeMap: z.map(z.number(), z.string()),
   keyboard: KeyboardEvidenceSchema,
+  // Counted as keyboard-reachable for not_focusable and hidden_but_interactive, with the rule that made them so.
+  reachedByGroup: z.array(GroupReachSchema),
   errors: z.array(CrawlErrorSchema),
 })
 export type DualCrawlResult = z.infer<typeof DualCrawlResultSchema>

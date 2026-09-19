@@ -2,9 +2,9 @@ import type { Page } from 'playwright'
 import { z } from 'zod'
 import { runTabWalk, TabWalkOptionsSchema } from '../tab-walk.js'
 import { convertToElementGraph, getAccessibilityTree } from './ax-tree.js'
-import { collectInteractivitySignals, crawlDOM, findHiddenCandidates } from './dom-crawler.js'
+import { collectFocusFacts, collectInteractivitySignals, crawlDOM, findHiddenCandidates } from './dom-crawler.js'
 import { buildBridgeMap, detectGaps } from './gap-detector.js'
-import { keyboardEvidence, NO_WALK, walkFailed } from './keyboard.js'
+import { groupReach, keyboardEvidence, NO_WALK, walkFailed } from './keyboard.js'
 import type { CrawlError, DualCrawlResult, KeyboardEvidence } from './types.js'
 
 const NAVIGATION_TIMEOUT_MS = 60000
@@ -35,25 +35,38 @@ export async function crawlPageWithGapDetection(
   const crawl = await crawlDOM(page, url)
   const domElements = crawl.elements
   const visibility = await findHiddenCandidates(page, domElements)
-  const hiddenIds = new Set(visibility.hidden.map((h) => h.backendNodeId))
-  const candidates = domElements.filter((e) => !hiddenIds.has(e.backendNodeId))
-  const { signals, errors: signalErrors } = await collectInteractivitySignals(page, candidates)
+  // A zero-area element may still be a Tab stop (G1b), so it is read like the rest until the walk has run.
+  const unrendered = new Set(visibility.hidden.filter((h) => h.reason !== 'zero-area').map((h) => h.backendNodeId))
+  const crawled = domElements.filter((e) => !unrendered.has(e.backendNodeId))
+  const { signals, errors: signalErrors } = await collectInteractivitySignals(page, crawled)
+  const { facts: crawledFocus, errors: focusErrors } = await collectFocusFacts(page, crawled)
 
   // After the crawl: the walk moves focus and may open or navigate, which must not change what was crawled.
   const walked = await walkKeyboard(page, options.tabWalk)
 
+  // G1c: a zero-area element stays a candidate only as a Tab stop. A complete walk decides by where Tab went alone;
+  // after none, or an incomplete one, the DOM's focusability rules read before it count too.
+  const reached = new Set(walked.keyboard.reachedBackendNodeIds)
+  const walkDecides = walked.keyboard.notFocusableAssessed
+  const tabStop = (id: number): boolean => reached.has(id) || (!walkDecides && crawledFocus.get(id)?.focusable === true)
+  const hidden = visibility.hidden.filter((h) => !(h.reason === 'zero-area' && tabStop(h.backendNodeId)))
+  const hiddenIds = new Set(hidden.map((h) => h.backendNodeId))
+  const candidates = domElements.filter((e) => !hiddenIds.has(e.backendNodeId))
+  const focus = new Map([...crawledFocus].filter(([id]) => !hiddenIds.has(id)))
+
   const bridgeMap = buildBridgeMap(accessibilityTree)
-  const gaps = detectGaps(candidates, accessibilityTree, signals, { keyboard: walked.keyboard })
+  const gaps = detectGaps(candidates, accessibilityTree, signals, { keyboard: walked.keyboard, focus })
 
   return {
     pageUrl: url,
     accessibilityTree,
     domElements,
-    hidden: visibility.hidden,
+    hidden,
     gaps,
     bridgeMap,
     keyboard: walked.keyboard,
-    errors: [...crawl.errors, ...visibility.errors, ...signalErrors, ...walked.errors],
+    reachedByGroup: groupReach(walked.keyboard.reachedBackendNodeIds, focus),
+    errors: [...crawl.errors, ...visibility.errors, ...signalErrors, ...focusErrors, ...walked.errors],
   }
 }
 
