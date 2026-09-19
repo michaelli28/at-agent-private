@@ -48,37 +48,204 @@ const COUNT_FOCUSABLE_FN = `function (selector, frameTags) {
 
 // A per-walk token on window; if it is missing after a press, the document was replaced.
 const MARKER_KEY = '__atAgentTabWalk'
+// Top window's store of focused-state snapshots, one per visit, until its unfocused reads are done.
+const INDICATOR_STORE_KEY = '__atAgentTabWalkIndicator'
 const OBJECT_GROUP = 'at-agent-tab-walk'
 // A navigation can destroy the execution context mid-read; a retry lands in the new document.
 const READ_ATTEMPTS = 3
 const READ_RETRY_MS = 50
 
-// Runs in the page with `this` = document.activeElement (or no element). The raw fields
-// mirror packages/agent/src/tools.ts executeTab so the legacy identity string can be rebuilt.
-// container misses closed shadow hosts; the caller adds those from DOM.describeNode.
-const READ_FOCUS_FN = `function (markerKey, token, withStyle, frameTags) {
-  const el = this && this.nodeType === 1 ? this : null
-  const name = el ? el.name : undefined
-  const style = el && withStyle ? getComputedStyle(el) : null
+// Computed properties that draw nothing themselves (z-index only through overlap): never compared.
+const NON_VISUAL_PROPERTIES = [
+  '^(?:(?:transition|animation|caret|interest-delay|scroll|overscroll|view-timeline|view-transition|anchor|position-try|contain|container)(?:-.*)?',
+  'cursor|will-change|pointer-events|touch-action|user-select|-webkit-user-drag|-webkit-user-modify',
+  '-webkit-tap-highlight-color|z-index|resize|app-region|interactivity|reading-flow|reading-order|speak',
+  'timeline-scope|position-anchor|interpolate-size|buffered-rendering|print-color-adjust|-webkit-locale)$',
+].join('|')
+
+const BORDER_SIDES = ['top', 'right', 'bottom', 'left', 'block-start', 'block-end', 'inline-start', 'inline-end']
+export type LineGroup = { style: string; width: string; color: string }
+// Outlines, border sides and column rules draw only when style, width and colour all allow it.
+export const LINE_GROUPS: readonly LineGroup[] = [
+  { style: 'outline-style', width: 'outline-width', color: 'outline-color' },
+  ...BORDER_SIDES.map((side) => ({
+    style: `border-${side}-style`,
+    width: `border-${side}-width`,
+    color: `border-${side}-color`,
+  })),
+  {
+    style: 'column-rule-style',
+    width: 'column-rule-width',
+    color: 'column-rule-color',
+  },
+]
+const lineProps = (group: LineGroup): string[] => [group.style, group.width, group.color]
+// What a box paints on its own: whether a radius change or a generated box can be seen at all.
+export const PAINT_PROPERTIES = [
+  'background-color',
+  'background-image',
+  'box-shadow',
+  ...LINE_GROUPS.slice(0, 5).flatMap(lineProps),
+]
+const TRANSFORM_PROPERTIES = ['transform', 'rotate', 'scale', 'translate']
+// Changed property (regex source) -> unchanged properties recorded with it, so the checker can tell
+// whether the change draws anything.
+const STYLE_CONTEXT: [string, string[]][] = [
+  ['^outline-', lineProps(LINE_GROUPS[0])],
+  ...LINE_GROUPS.slice(1, -1).map((group): [string, string[]] => [
+    `^${group.style.replace(/-style$/, '')}-(?:style|width|color)$`,
+    lineProps(group),
+  ]),
+  ['^column-rule-', lineProps(LINE_GROUPS[LINE_GROUPS.length - 1])],
+  ['-radius$|^corner-', PAINT_PROPERTIES],
+  ['^text-decoration|^text-underline-', ['text-decoration-line']],
+  ['^text-emphasis-', ['text-emphasis-style']],
+  ['^-webkit-text-stroke-color$', ['-webkit-text-stroke-width']],
+  ['^transform-origin$', TRANSFORM_PROPERTIES],
+  ['^perspective-origin$', ['perspective']],
+]
+
+// Runs in the top window. The focused snapshot of a visit stays in the page (element references and
+// every compared property of: the element, its ::before/::after, 3 ancestors, previous and next element
+// siblings); only the properties that differ between reads come back.
+const INDICATOR_API_FN = `function (cfg) {
+  let store = window[cfg.storeKey]
+  if (!store || store.token !== cfg.token) {
+    const deny = new RegExp(cfg.deny)
+    const names = Array.from(getComputedStyle(document.documentElement)).filter((n) => !n.startsWith('--') && !deny.test(n))
+    const index = new Map(names.map((n, i) => [n, i]))
+    const indices = (list) => list.map((n) => index.get(n)).filter((i) => i !== undefined)
+    store = {
+      token: cfg.token,
+      names,
+      rules: cfg.context.map(([source, extra]) => [new RegExp(source), indices(extra)]),
+      presence: indices([...cfg.paint, 'content']),
+      visits: new Map(),
+    }
+    Object.defineProperty(window, cfg.storeKey, { value: store, configurable: true, writable: true })
+  }
+  const names = store.names
+  const up = (n) => n.parentElement || n.getRootNode().host || null
+  const targetsOf = (el) => {
+    const list = [['element', el, null], ['before', el, '::before'], ['after', el, '::after']]
+    let a = up(el)
+    for (const name of ['parent', 'grandparent', 'great-grandparent']) {
+      if (!a) break
+      list.push([name, a, null])
+      a = up(a)
+    }
+    if (el.previousElementSibling) list.push(['previous-sibling', el.previousElementSibling, null])
+    if (el.nextElementSibling) list.push(['next-sibling', el.nextElementSibling, null])
+    return list
+  }
+  // A finished transition shows the style the element settles on, so a fade still running from the
+  // previous press is not read as a change; keyframe animations keep running and show up as drift.
+  const finish = (targets) => {
+    for (const [, t, pseudo] of targets) {
+      if (!t.isConnected) continue
+      for (const a of t.getAnimations(pseudo ? { subtree: true } : undefined)) {
+        const effect = a.effect
+        if (a.transitionProperty === undefined || !effect || effect.target !== t) continue
+        if ((effect.pseudoElement || null) !== pseudo) continue
+        // finish() throws only for a zero playback rate; that transition is left to run.
+        try { a.finish() } catch {}
+      }
+    }
+  }
+  const read = (targets) => targets.map(([, t, pseudo]) => {
+    const view = t.isConnected ? t.ownerDocument.defaultView : null
+    if (!view) return null
+    const style = view.getComputedStyle(t, pseudo)
+    if (pseudo && (style.content === 'none' || style.content === 'normal' || style.display === 'none')) return null
+    return names.map((n) => style.getPropertyValue(n))
+  })
+  // An ancestor or sibling holding focus shows that focus, not the element's.
+  const busy = (targets) => new Set(targets.flatMap(([, t], i) => (i >= 3 && t.isConnected && t.matches(':focus-within') ? [i] : [])))
+  const pick = (values, keep) => Object.fromEntries([...keep].map((k) => [names[k], values[k]]))
+  const changes = (targets, a, b, skip) => {
+    const out = []
+    targets.forEach(([name, , pseudo], i) => {
+      const [fa, fb] = [a[i], b[i]]
+      if (skip.has(i) || (fa === null && fb === null)) return
+      if (fa === null || fb === null) {
+        // A generated box in one state only; a context element gone in one state has nothing to compare.
+        if (pseudo) out.push({ target: name, focused: fa && pick(fa, store.presence), unfocused: fb && pick(fb, store.presence) })
+        return
+      }
+      const keep = new Set()
+      for (let k = 0; k < names.length; k++) {
+        if (fa[k] === fb[k]) continue
+        keep.add(k)
+        for (const [re, extra] of store.rules) if (re.test(names[k])) extra.forEach((x) => keep.add(x))
+      }
+      if (keep.size > 0) out.push({ target: name, focused: pick(fa, keep), unfocused: pick(fb, keep) })
+    })
+    return out
+  }
+  // wasBusy: left out of the unfocused read; nowBusy: holding focus now. A context element compared at the
+  // unfocused read but holding focus now cannot be re-read unfocused: 'target:*' marks it unverified.
+  const drift = (targets, a, b, wasBusy, nowBusy) => {
+    const keys = []
+    targets.forEach(([name, , pseudo], i) => {
+      const [fa, fb] = [a[i], b[i]]
+      if (wasBusy.has(i) || (fa === null && fb === null)) return
+      if (nowBusy.has(i)) {
+        keys.push(name + ':*')
+        return
+      }
+      if (fa === null || fb === null) {
+        if (pseudo) keys.push(name + ':content')
+        return
+      }
+      for (let k = 0; k < names.length; k++) if (fa[k] !== fb[k]) keys.push(name + ':' + names[k])
+    })
+    return keys
+  }
+  // First read after focus has left the element's subtree: changes; the read one press later: drift.
+  function processVisit(visit) {
+    const entry = store.visits.get(visit)
+    if (!entry) return { visit, kind: 'lost' }
+    const el = entry.targets[0][1]
+    const recheck = entry.unfocused !== null
+    if (!el.isConnected || !el.ownerDocument.defaultView) {
+      store.visits.delete(visit)
+      return recheck ? { visit, kind: 'drift', drift: null } : { visit, kind: 'removed' }
+    }
+    if (el.matches(':focus-within')) {
+      const refocused = el.matches(':focus')
+      if (recheck || refocused) store.visits.delete(visit)
+      if (recheck) return { visit, kind: 'drift', drift: null }
+      return { visit, kind: refocused ? 'still-focused' : 'focus-inside' }
+    }
+    finish(entry.targets)
+    const values = read(entry.targets)
+    const skip = busy(entry.targets)
+    if (!recheck) {
+      entry.unfocused = values
+      entry.skip = skip
+      return { visit, kind: 'captured', changes: changes(entry.targets, entry.focused, values, skip) }
+    }
+    store.visits.delete(visit)
+    return { visit, kind: 'drift', drift: drift(entry.targets, entry.unfocused, values, entry.skip, skip) }
+  }
   return {
-    tag: el ? el.tagName.toLowerCase() : null,
-    id: el && el.id ? el.id : null,
-    className: el && typeof el.className === 'string' ? el.className : null,
-    ariaLabel: el ? el.getAttribute('aria-label') : null,
-    nameAttr: el ? el.getAttribute('name') : null,
-    nameProp: name ? String(name) : null,
-    text: el ? (el.textContent || '').slice(0, 30) : null,
-    isBody: el !== null && el === document.body,
-    hasFocus: document.hasFocus(),
-    url: location.href,
-    container: !el ? null : el.shadowRoot ? 'shadow-host' : frameTags.includes(el.localName) ? el.localName : null,
-    markerPresent: window[markerKey] === token,
-    focusStyle: style ? {
-      outlineStyle: style.outlineStyle,
-      outlineWidth: style.outlineWidth,
-      outlineColor: style.outlineColor,
-      boxShadow: style.boxShadow,
-    } : null,
+    focused(el, visit) {
+      const targets = targetsOf(el)
+      finish(targets)
+      store.visits.set(visit, { targets, focused: read(targets), unfocused: null, skip: null })
+    },
+    // One visit's failure is reported for that visit only.
+    process(ids, drop) {
+      for (const id of drop) store.visits.delete(id)
+      return ids.map((visit) => {
+        try {
+          return processVisit(visit)
+        } catch (err) {
+          store.visits.delete(visit)
+          return { visit, kind: 'failed', error: String(err && err.message ? err.message : err) }
+        }
+      })
+    },
   }
 }`
 
@@ -97,10 +264,59 @@ const DEEP_FOCUS_FN = `function (frameTags) {
   }
 }`
 
+// Runs in the page with `this` = document.activeElement (or no element). The raw fields
+// mirror packages/agent/src/tools.ts executeTab so the legacy identity string can be rebuilt.
+// container misses closed shadow hosts; the caller adds those from DOM.describeNode.
+// indicator ({ ...config, visit } or null) snapshots the deep element's focused state for that visit.
+const READ_FOCUS_FN = `function (markerKey, token, withStyle, frameTags, indicator) {
+  const el = this && this.nodeType === 1 ? this : null
+  const name = el ? el.name : undefined
+  const style = el && withStyle ? getComputedStyle(el) : null
+  // Read before the snapshot, which finishes running transitions.
+  const focusStyle = style ? {
+    outlineStyle: style.outlineStyle,
+    outlineWidth: style.outlineWidth,
+    outlineColor: style.outlineColor,
+    boxShadow: style.boxShadow,
+  } : null
+  // [stored, error]: a failing style read must not fail the focus read.
+  const snapshot = () => {
+    if (!el || !indicator || el === document.body) return [false, null]
+    try {
+      const deep = (${DEEP_FOCUS_FN}).call(el, frameTags)
+      if (deep === deep.ownerDocument.body || (frameTags.includes(deep.localName) && !deep.contentDocument)) return [false, null]
+      ;(${INDICATOR_API_FN})(indicator).focused(deep, indicator.visit)
+      return [true, null]
+    } catch (err) {
+      return [false, String(err && err.message ? err.message : err)]
+    }
+  }
+  const [snapshotted, snapshotError] = snapshot()
+  return {
+    tag: el ? el.tagName.toLowerCase() : null,
+    id: el && el.id ? el.id : null,
+    className: el && typeof el.className === 'string' ? el.className : null,
+    classAttr: el ? el.getAttribute('class') : null,
+    ariaLabel: el ? el.getAttribute('aria-label') : null,
+    nameAttr: el ? el.getAttribute('name') : null,
+    nameProp: name ? String(name) : null,
+    text: el ? (el.textContent || '').slice(0, 30) : null,
+    isBody: el !== null && el === document.body,
+    hasFocus: document.hasFocus(),
+    url: location.href,
+    container: !el ? null : el.shadowRoot ? 'shadow-host' : frameTags.includes(el.localName) ? el.localName : null,
+    markerPresent: window[markerKey] === token,
+    focusStyle,
+    snapshotted,
+    snapshotError,
+  }
+}`
+
 const READ_DEEP_FN = `function (frameTags) {
   return {
     tag: this.tagName.toLowerCase(),
     id: this.id ? this.id : null,
+    classAttr: this.getAttribute('class'),
     isBody: this === this.ownerDocument.body,
     crossOrigin: frameTags.includes(this.localName) && !this.contentDocument && !!this.contentWindow,
   }
@@ -131,6 +347,8 @@ export const DeepFocusSchema = z.object({
   // Body of its own document. Inside a frame that is the frame's own Tab stop (nothing focusable
   // in it, or focus dropped inside it), so it is neither a wrap nor focusLost.
   isBody: z.boolean(),
+  // Raw class attribute (also set on SVG elements, unlike className); groups findings by component.
+  classAttr: z.string().nullable(),
 })
 export type DeepFocus = z.infer<typeof DeepFocusSchema>
 
@@ -170,6 +388,61 @@ export const FocusStyleSchema = z.object({
 })
 export type FocusStyle = z.infer<typeof FocusStyleSchema>
 
+// Where a style change was seen, relative to the focused element. Ancestors cross shadow roots to
+// the host but not frames.
+export const IndicatorTargetSchema = z.enum([
+  'element',
+  'before',
+  'after',
+  'parent',
+  'grandparent',
+  'great-grandparent',
+  'previous-sibling',
+  'next-sibling',
+])
+export type IndicatorTarget = z.infer<typeof IndicatorTargetSchema>
+
+export const StyleChangeSchema = z.object({
+  target: IndicatorTargetSchema,
+  // Computed values (kebab-case keys) of the properties that differ, plus the unchanged ones needed to
+  // tell whether they draw anything. Null: a ::before/::after with no box in that state.
+  focused: z.record(z.string()).nullable(),
+  unfocused: z.record(z.string()).nullable(),
+})
+export type StyleChange = z.infer<typeof StyleChangeSchema>
+
+export const UnfocusedStatusSchema = z.enum([
+  // Read at the first press after which neither the element nor anything inside it had focus.
+  'captured',
+  // Focus came back to the element, or stayed in it or its subtree until the walk ended.
+  'still-focused',
+  // Disconnected, or its frame gone, when read.
+  'removed',
+  // A press replaced the document, taking the element with it.
+  'document-replaced',
+  // The read failed; unfocusedError has the message.
+  'read-failed',
+  // No later press: the walk ended or stopped on an error.
+  'not-read',
+])
+export type UnfocusedStatus = z.infer<typeof UnfocusedStatusSchema>
+
+export const StepIndicatorSchema = z.object({
+  unfocusedStatus: UnfocusedStatusSchema,
+  // Press whose read decided unfocusedStatus; null while not-read.
+  unfocusedAt: z.number().int().positive().nullable(),
+  unfocusedError: z.string().nullable(),
+  // Style differences between the settled read and the unfocused read; empty unless captured.
+  // Non-visual properties are never compared, running CSS transitions are finished before each read,
+  // and an ancestor or sibling holding focus at the unfocused read is left out.
+  changes: z.array(StyleChangeSchema),
+  // target:property keys that differ between the unfocused read and a second one on the next press
+  // (focus still elsewhere): changes unrelated to focus. target:* when that ancestor or sibling holds
+  // focus at the second read, so its changes cannot be checked. Null when no second read was taken.
+  unfocusedDrift: z.array(z.string()).nullable(),
+})
+export type StepIndicator = z.infer<typeof StepIndicatorSchema>
+
 export const TabWalkStepSchema = z.object({
   index: z.number().int().positive(),
   key: TabKeySchema,
@@ -180,6 +453,9 @@ export const TabWalkStepSchema = z.object({
   documentReplaced: z.boolean(),
   wrapped: z.boolean(),
   focusLost: z.boolean(),
+  // Focus-indicator facts for the settled deep element; null when there is none to read (body,
+  // nothing focused, or focus behind a cross-origin frame or closed shadow root).
+  indicator: StepIndicatorSchema.nullable(),
 })
 export type TabWalkStep = z.infer<typeof TabWalkStepSchema>
 
@@ -256,8 +532,11 @@ const RawReadSchema = FocusReadSchema.omit({
   deep: true,
   deepUnavailable: true,
 }).extend({
+  classAttr: z.string().nullable(),
   markerPresent: z.boolean(),
   focusStyle: FocusStyleSchema.nullable(),
+  snapshotted: z.boolean(),
+  snapshotError: z.string().nullable(),
 })
 const DeepFieldsSchema = DeepFocusSchema.omit({ backendNodeId: true }).extend({
   crossOrigin: z.boolean(),
@@ -266,6 +545,28 @@ const InPageCountSchema = z.object({
   count: z.number().int().nonnegative(),
   crossOriginFrames: z.number().int().nonnegative(),
 })
+const visitField = { visit: z.number().int().positive() }
+const VisitOutcomeSchema = z.discriminatedUnion('kind', [
+  z.object({
+    ...visitField,
+    kind: z.literal('captured'),
+    changes: z.array(StyleChangeSchema),
+  }),
+  z.object({
+    ...visitField,
+    kind: z.literal('drift'),
+    drift: z.array(z.string()).nullable(),
+  }),
+  // The in-page read of this visit threw.
+  z.object({ ...visitField, kind: z.literal('failed'), error: z.string() }),
+  // Focus is still inside the element's subtree: the visit stays open.
+  z.object({ ...visitField, kind: z.literal('focus-inside') }),
+  z.object({
+    ...visitField,
+    kind: z.enum(['still-focused', 'removed', 'lost']),
+  }),
+])
+type VisitOutcome = z.infer<typeof VisitOutcomeSchema>
 
 type WalkContext = {
   page: Page
@@ -277,8 +578,22 @@ type RawRead = {
   read: FocusRead
   focusStyle: FocusStyle | null
   markerPresent: boolean
+  // The deep element's focused state was stored in the page for this read's visit.
+  snapshotted: boolean
+  // Why storing it threw; the focus read itself still succeeded.
+  snapshotError: string | null
 }
 type DeepPart = Pick<FocusRead, 'deep' | 'deepUnavailable'>
+type PressRead = {
+  immediate: FocusRead
+  settled: FocusRead
+  focusStyle: FocusStyle | null
+  documentReplaced: boolean
+  snapshotted: boolean
+  snapshotError: string | null
+}
+// A visit still waiting for its unfocused read, or for the drift read one press after it.
+type OpenVisit = { drift: boolean; checkedAt: number | null }
 type FocusableCount = z.infer<typeof InPageCountSchema> & {
   closedShadowRoots: number
 }
@@ -313,29 +628,11 @@ export async function runTabWalk(page: Page, options: TabWalkOptions = {}): Prom
       settleMs: opts.settleMs,
     }
     await injectMarker(ctx)
-    const initial = (await readFocus(ctx, false)).read
+    const initial = (await readFocus(ctx)).read
 
-    const steps: TabWalkStep[] = []
-    let error: TabWalkError | null = null
-    let index = 1
-    try {
-      for (; index <= presses; index++) {
-        const r = await pressAndRead(ctx, key)
-        const previous = steps.at(-1)?.settled
-        steps.push({
-          index,
-          key,
-          immediate: r.immediate,
-          settled: r.settled,
-          focusStyle: r.focusStyle,
-          documentReplaced: r.documentReplaced,
-          wrapped: isWrapped(r.settled),
-          focusLost: r.settled.isBody && r.settled.hasFocus && previous !== undefined && isRealElement(previous),
-        })
-      }
-    } catch (err) {
-      error = { phase: 'walk', index, message: errorMessage(err) }
-    }
+    const walked = await walkPresses(ctx, key, presses)
+    const steps = walked.steps
+    let error = walked.error
 
     const suspectedTrap = error ? null : !steps.some((s) => s.wrapped)
     let escapeProbe: EscapeProbe | null = null
@@ -374,6 +671,174 @@ export function focusIdentity(read: FocusRead): number | null {
   return read.deep?.backendNodeId ?? read.backendNodeId
 }
 
+// Each press stores the settled element's focused style in the page as a visit; later presses read
+// every open visit until focus has left the element's subtree (the unfocused read), then once more.
+async function walkPresses(
+  ctx: WalkContext,
+  key: TabKey,
+  presses: number,
+): Promise<{ steps: TabWalkStep[]; error: TabWalkError | null }> {
+  const steps: TabWalkStep[] = []
+  const open = new Map<number, OpenVisit>()
+  let error: TabWalkError | null = null
+  let index = 1
+  try {
+    for (; index <= presses; index++) {
+      const r = await pressAndRead(ctx, key, index)
+      // A closed shadow host is stored in the page too, but its deep element is unknown: dropped.
+      const tried = r.snapshotted || r.snapshotError !== null
+      const readable = tried && r.settled.deep !== null && !r.settled.deep.isBody
+      const drop = r.snapshotted && !readable ? [index] : []
+      if (open.size > 0 || drop.length > 0) {
+        const outcomes = await processVisits(ctx, [...open.keys()], drop)
+        applyOutcomes(steps, open, outcomes, {
+          at: index,
+          documentReplaced: r.documentReplaced,
+        })
+      }
+      const previous = steps.at(-1)?.settled
+      steps.push({
+        index,
+        key,
+        immediate: r.immediate,
+        settled: r.settled,
+        focusStyle: r.focusStyle,
+        documentReplaced: r.documentReplaced,
+        wrapped: isWrapped(r.settled),
+        focusLost: r.settled.isBody && r.settled.hasFocus && previous !== undefined && isRealElement(previous),
+        indicator: !readable
+          ? null
+          : r.snapshotError === null
+            ? notRead()
+            : {
+                ...notRead(),
+                unfocusedStatus: 'read-failed',
+                unfocusedAt: index,
+                unfocusedError: `focused read failed: ${r.snapshotError}`,
+              },
+      })
+      if (readable && r.snapshotted) open.set(index, { drift: false, checkedAt: null })
+    }
+  } catch (err) {
+    error = { phase: 'walk', index, message: errorMessage(err) }
+  }
+  // Focus never left these elements' subtrees after they were checked.
+  for (const [visit, o] of open) {
+    if (!o.drift && o.checkedAt !== null) {
+      updateIndicator(steps, visit, {
+        unfocusedStatus: 'still-focused',
+        unfocusedAt: o.checkedAt,
+      })
+    }
+  }
+  // Best effort: the store holds element references; a closed page has already dropped it.
+  await ctx.session
+    .send('Runtime.evaluate', {
+      expression: `delete window[${JSON.stringify(INDICATOR_STORE_KEY)}]`,
+    })
+    .catch(() => undefined)
+  return { steps, error }
+}
+
+function notRead(): StepIndicator {
+  return {
+    unfocusedStatus: 'not-read',
+    unfocusedAt: null,
+    unfocusedError: null,
+    changes: [],
+    unfocusedDrift: null,
+  }
+}
+
+async function processVisits(ctx: WalkContext, ids: number[], drop: number[]): Promise<VisitOutcome[]> {
+  const expression = `(${INDICATOR_API_FN})(${JSON.stringify(indicatorConfig(ctx))}).process(${JSON.stringify(ids)}, ${JSON.stringify(drop)})`
+  try {
+    return await withRetry(async () =>
+      z.array(VisitOutcomeSchema).parse(
+        unwrap(
+          await ctx.session.send('Runtime.evaluate', {
+            expression,
+            returnByValue: true,
+          }),
+        ),
+      ),
+    )
+  } catch (err) {
+    return ids.map((visit) => ({
+      visit,
+      kind: 'failed' as const,
+      error: errorMessage(err),
+    }))
+  }
+}
+
+function applyOutcomes(
+  steps: TabWalkStep[],
+  open: Map<number, OpenVisit>,
+  outcomes: VisitOutcome[],
+  press: { at: number; documentReplaced: boolean },
+): void {
+  const at = press.at
+  for (const outcome of outcomes) {
+    const { visit } = outcome
+    const drift = open.get(visit)?.drift ?? false
+    if (outcome.kind === 'focus-inside') {
+      open.set(visit, { drift, checkedAt: at })
+      continue
+    }
+    if (outcome.kind === 'captured') {
+      open.set(visit, { drift: true, checkedAt: at })
+      updateIndicator(steps, visit, {
+        unfocusedStatus: 'captured',
+        unfocusedAt: at,
+        changes: outcome.changes,
+      })
+      continue
+    }
+    open.delete(visit)
+    if (outcome.kind === 'drift') {
+      updateIndicator(steps, visit, { unfocusedDrift: outcome.drift })
+    } else if (!drift) {
+      // A drift read that could not be taken just leaves unfocusedDrift null.
+      updateIndicator(steps, visit, unfocusedEnd(outcome, press))
+    }
+  }
+}
+
+function unfocusedEnd(
+  outcome: Extract<VisitOutcome, { kind: 'still-focused' | 'removed' | 'lost' | 'failed' }>,
+  press: { at: number; documentReplaced: boolean },
+): Partial<StepIndicator> {
+  const at = press.at
+  if (outcome.kind === 'still-focused' || outcome.kind === 'removed') {
+    return { unfocusedStatus: outcome.kind, unfocusedAt: at }
+  }
+  // A replaced top document takes the store with it.
+  if (press.documentReplaced) return { unfocusedStatus: 'document-replaced', unfocusedAt: at }
+  return {
+    unfocusedStatus: 'read-failed',
+    unfocusedAt: at,
+    unfocusedError: outcome.kind === 'failed' ? outcome.error : 'focused snapshot missing from the page',
+  }
+}
+
+// Visits are press indices, and steps[i] is press i + 1.
+function updateIndicator(steps: TabWalkStep[], visit: number, patch: Partial<StepIndicator>): void {
+  const step = steps[visit - 1]
+  if (!step?.indicator) return
+  steps[visit - 1] = { ...step, indicator: { ...step.indicator, ...patch } }
+}
+
+function indicatorConfig(ctx: WalkContext) {
+  return {
+    storeKey: INDICATOR_STORE_KEY,
+    token: ctx.token,
+    deny: NON_VISUAL_PROPERTIES,
+    context: STYLE_CONTEXT,
+    paint: PAINT_PROPERTIES,
+  }
+}
+
 async function runEscapeProbe(
   ctx: WalkContext,
   walkKey: TabKey,
@@ -397,7 +862,7 @@ async function runEscapeProbe(
 
   let index = 0
   try {
-    const before = (await readFocus(ctx, false)).read
+    const before = (await readFocus(ctx)).read
     const esc = await pressAndRead(ctx, 'Escape')
     const escape = {
       after: esc.settled,
@@ -442,19 +907,12 @@ async function runEscapeProbe(
   }
 }
 
-async function pressAndRead(
-  ctx: WalkContext,
-  key: string,
-): Promise<{
-  immediate: FocusRead
-  settled: FocusRead
-  focusStyle: FocusStyle | null
-  documentReplaced: boolean
-}> {
+// visit: store the settled deep element's focused style under this press index.
+async function pressAndRead(ctx: WalkContext, key: string, visit?: number): Promise<PressRead> {
   await ctx.page.keyboard.press(key)
-  const immediate = await readFocus(ctx, false)
+  const immediate = await readFocus(ctx)
   await sleep(ctx.settleMs)
-  const settled = await readFocus(ctx, true)
+  const settled = await readFocus(ctx, { withStyle: true, visit })
   if (!settled.markerPresent) {
     await ctx.session.send('DOM.getDocument', { depth: 0 })
     await injectMarker(ctx)
@@ -464,13 +922,15 @@ async function pressAndRead(
     settled: settled.read,
     focusStyle: settled.focusStyle,
     documentReplaced: !immediate.markerPresent || !settled.markerPresent,
+    snapshotted: settled.snapshotted,
+    snapshotError: settled.snapshotError,
   }
 }
 
-async function readFocus(ctx: WalkContext, withStyle: boolean): Promise<RawRead> {
+async function withRetry<T>(fn: () => Promise<T>): Promise<T> {
   for (let attempt = 1; ; attempt++) {
     try {
-      return await readFocusOnce(ctx, withStyle)
+      return await fn()
     } catch (err) {
       if (attempt >= READ_ATTEMPTS) throw err
       await sleep(READ_RETRY_MS)
@@ -478,9 +938,14 @@ async function readFocus(ctx: WalkContext, withStyle: boolean): Promise<RawRead>
   }
 }
 
-async function readFocusOnce(ctx: WalkContext, withStyle: boolean): Promise<RawRead> {
+function readFocus(ctx: WalkContext, opts: { withStyle?: boolean; visit?: number } = {}): Promise<RawRead> {
+  return withRetry(() => readFocusOnce(ctx, opts.withStyle ?? false, opts.visit))
+}
+
+async function readFocusOnce(ctx: WalkContext, withStyle: boolean, visit: number | undefined): Promise<RawRead> {
   const { session } = ctx
-  const args = [MARKER_KEY, ctx.token, withStyle, FRAME_TAGS]
+  const indicator = visit === undefined ? null : { ...indicatorConfig(ctx), visit }
+  const args = [MARKER_KEY, ctx.token, withStyle, FRAME_TAGS, indicator]
   try {
     // Identity and fields come from the same element object, so a focus change between
     // CDP calls cannot pair one element's backendNodeId with another's fields.
@@ -525,18 +990,29 @@ async function readFocusOnce(ctx: WalkContext, withStyle: boolean): Promise<RawR
 }
 
 // Not a container: the top-level element is the deepest focused element.
-function topAsDeep(backendNodeId: number, top: Pick<FocusRead, 'tag' | 'id' | 'isBody'>): DeepPart {
-  const deep = top.tag === null ? null : { backendNodeId, tag: top.tag, id: top.id, isBody: top.isBody }
+function topAsDeep(
+  backendNodeId: number,
+  top: Pick<FocusRead, 'tag' | 'id' | 'isBody'> & { classAttr: string | null },
+): DeepPart {
+  const deep =
+    top.tag === null
+      ? null
+      : {
+          backendNodeId,
+          tag: top.tag,
+          id: top.id,
+          isBody: top.isBody,
+          classAttr: top.classAttr,
+        }
   return { deep, deepUnavailable: null }
 }
 
 // The deep element's fields and backendNodeId come from one handle, like the top-level read.
 async function readDeep(session: CDPSession, topObjectId: string): Promise<DeepPart> {
-  const frameTags = [{ value: FRAME_TAGS }]
   const handle = await session.send('Runtime.callFunctionOn', {
     objectId: topObjectId,
     functionDeclaration: DEEP_FOCUS_FN,
-    arguments: frameTags,
+    arguments: [{ value: FRAME_TAGS }],
     objectGroup: OBJECT_GROUP,
   })
   unwrap(handle)
@@ -547,7 +1023,7 @@ async function readDeep(session: CDPSession, topObjectId: string): Promise<DeepP
       await session.send('Runtime.callFunctionOn', {
         objectId,
         functionDeclaration: READ_DEEP_FN,
-        arguments: frameTags,
+        arguments: [{ value: FRAME_TAGS }],
         returnByValue: true,
       }),
     ),
@@ -561,17 +1037,20 @@ async function readDeep(session: CDPSession, topObjectId: string): Promise<DeepP
       tag: fields.tag,
       id: fields.id,
       isBody: fields.isBody,
+      classAttr: fields.classAttr,
     },
     deepUnavailable: null,
   }
 }
 
-function toRawRead(raw: z.infer<typeof RawReadSchema>, backendNodeId: number | null, deepPart: DeepPart): RawRead {
-  const { markerPresent, focusStyle, ...fields } = raw
+function toRawRead(raw: z.infer<typeof RawReadSchema>, backendNodeId: number | null, part: DeepPart): RawRead {
+  const { markerPresent, focusStyle, classAttr, snapshotted, snapshotError, ...fields } = raw
   return {
-    read: { backendNodeId, ...fields, ...deepPart },
+    read: { backendNodeId, ...fields, ...part },
     focusStyle,
     markerPresent,
+    snapshotted,
+    snapshotError,
   }
 }
 

@@ -83,6 +83,34 @@ export {
   type TabWalkResult,
 } from './tab-walk.js'
 
+// F7 focus-indicator check (WCAG 2.4.7) over a Tab walk: absent only with whole-viewport pixel confirmation
+export {
+  FocusIndicatorOptionsSchema,
+  type FocusIndicatorOptions,
+  IndicatorVerdictSchema,
+  type IndicatorVerdict,
+  IndicatorUndeterminedReasonSchema,
+  type IndicatorUndeterminedReason,
+  IndicatorEvidenceSchema,
+  type IndicatorEvidence,
+  IndicatorDifferenceSchema,
+  type IndicatorDifference,
+  ViewSchema,
+  type View,
+  ScreenshotEvidenceSchema,
+  type ScreenshotEvidence,
+  ElementIndicatorSchema,
+  type ElementIndicator,
+  IndicatorCountsSchema,
+  type IndicatorCounts,
+  IndicatorComponentSchema,
+  type IndicatorComponent,
+  FocusIndicatorResultSchema,
+  type FocusIndicatorResult,
+  checkFocusIndicator,
+  judgeFocusIndicator,
+} from './focus-indicator.js'
+
 // Dual-crawl gap detection: baseline port of taskgen's DOM-vs-accessibility-tree detector
 export { crawlPageWithGapDetection, GapDetectionOptionsSchema, type GapDetectionOptions } from './gaps/detect.js'
 export {
@@ -104,7 +132,7 @@ export {
   getElementDescription,
   type DetectGapsOptions,
 } from './gaps/gap-detector.js'
-export { NO_WALK, walkFailed, keyboardEvidence } from './gaps/keyboard.js'
+export { NO_WALK, walkFailed, keyboardEvidence, groupReach } from './gaps/keyboard.js'
 export { summarizeGaps, type GapSummary } from './gaps/summary.js'
 export {
   ACCESSIBILITY_GAP_TYPES,
@@ -143,4 +171,11 @@ export {
   type KeyboardUnassessedReason,
   KeyboardEvidenceSchema,
   type KeyboardEvidence,
+  FocusFactsSchema,
+  type FocusFacts,
+  GROUP_REACH_RULES,
+  GroupReachRuleSchema,
+  type GroupReachRule,
+  GroupReachSchema,
+  type GroupReach,
 } from './gaps/types.js'

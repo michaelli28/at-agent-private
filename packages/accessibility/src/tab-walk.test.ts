@@ -1,7 +1,7 @@
 import { describe, it, expect, beforeAll, afterAll, afterEach, vi, type MockInstance } from 'vitest'
 import type { CDPSession, Page } from 'playwright'
 import { BrowserClient, BrowserPage } from '@at-agent/browser'
-import { runTabWalk, TabWalkResultSchema, focusIdentity, type FocusRead } from './tab-walk.js'
+import { runTabWalk, TabWalkResultSchema, focusIdentity, type FocusRead, type StyleChange } from './tab-walk.js'
 
 // Fixtures A, D, E are copied from bench/probes/wrap/fixtures (shell-mode sequences in bench/probes/wrap/RESULT.md).
 const FIXTURE_A = `<!doctype html><html lang="en"><head><meta charset="utf-8"><title>Fixture A</title></head><body>
@@ -226,6 +226,104 @@ const LEGACY_CASES = doc(
 <div data-case="zero" tabindex="0">Zero name</div>
 <script>document.querySelector('[data-case=zero]').name = 0</script>`,
 )
+
+// Focus-indicator facts (WCAG 2.4.7 check, focus-indicator.ts).
+const INDICATOR_FIELDS = doc(
+  'Indicator fields',
+  `<style>
+#plain:focus { outline: none }
+.wrap:focus-within { background-color: rgb(255, 255, 0) }
+#pseudo::after { content: ''; display: inline-block; width: 4px; height: 4px }
+#pseudo:focus::after { border-bottom: 2px solid rgb(0, 0, 255) }
+#late:focus::before { content: '>' }
+</style>
+<p><a id="plain" href="#p">Plain</a></p>
+<div class="wrap"><input id="field" aria-label="Field"></div>
+<p><a id="pseudo" class="u  line" href="#u">Pseudo</a></p>
+<p><a id="late" href="#l">Late</a></p>`,
+)
+
+// Deep elements: a shadow root's top-level link (its parent is the host) and a same-origin frame's link.
+const INDICATOR_DEEP = doc(
+  'Indicator deep',
+  `<p><a id="light" href="#light">Light</a></p>
+<div id="host" style="background-color: rgb(9, 9, 9)"></div>
+<iframe id="frame" srcdoc="${srcdoc('<style>a:focus { outline: 5px dotted rgb(4, 5, 6) }</style><a id="f0" href="#f0">F0</a>')}"></iframe>
+<script>document.getElementById('host').attachShadow({ mode: 'open' }).innerHTML = '<style>a:focus { outline: 4px dashed rgb(1, 2, 3) }</style><a id="s0" href="#s0">S0</a>'</script>`,
+)
+
+const REMOVED_ON_BLUR = doc(
+  'Removed on blur',
+  `<p><a id="r0" href="#r0">R0</a></p>
+<p><a id="gone" href="#g" onfocus="this.addEventListener('blur', () => this.remove(), { once: true })">Gone</a></p>
+<p><a id="r2" href="#r2">R2</a></p>`,
+)
+
+// When focus moves on to the button, the link's next sibling holds focus in the link's unfocused read.
+const NEIGHBOURS = doc(
+  'Neighbours',
+  `<style>a.bare:focus { outline: none }</style>
+<p><a id="l1" class="bare" href="#one">One</a><button id="ok" type="button">OK</button></p>`,
+)
+
+// Reviewer X3/B2: the press after the region goes into the region's own child.
+const FOCUS_WITHIN_REGION = doc(
+  'Region',
+  `<style>.region:focus-within { outline: 3px solid rgb(0, 0, 255) }
+.region a:focus { outline: 2px solid rgb(255, 0, 0) }</style>
+<div id="reg" class="region" tabindex="0">Scroll region <a id="inner" href="#in">Inner link</a></div>
+<p><a id="out" href="#out">Outside</a></p>`,
+)
+
+// Reviewer X4/N2: a colour animation unrelated to focus.
+const ANIMATED = doc(
+  'Animated',
+  `<style>@keyframes pulse { 0% { color: rgb(0, 0, 0) } 100% { color: rgb(255, 0, 0) } }
+a { animation: pulse 0.2s infinite alternate linear } a:focus { outline: none }</style>
+<p><a id="an1" href="#1">One</a> <a id="an2" href="#2">Two</a></p>`,
+)
+
+// A 2 s ring transition: an unfinished read would catch it midway, on p and on q's previous sibling.
+const SLOW_RING = doc(
+  'Slow ring',
+  `<style>a.slow { transition: box-shadow 2s linear } a.slow:focus { outline: none; box-shadow: 0 0 0 3px rgb(0, 0, 255) }
+a.bare:focus { outline: none }</style>
+<p><a id="p" class="slow" href="#p">P</a> <a id="q" class="bare" href="#q">Q</a></p>`,
+)
+
+const OUTLINE_KEYS = ['outline-color', 'outline-offset', 'outline-style', 'outline-width']
+// Unchanged properties a change record may carry: what the checker needs to tell whether a change draws anything.
+const CONTEXT_KEYS = new Set([
+  'outline-style',
+  'outline-width',
+  'outline-color',
+  ...['top', 'right', 'bottom', 'left', 'block-start', 'block-end', 'inline-start', 'inline-end'].flatMap((side) =>
+    ['style', 'width', 'color'].map((part) => `border-${side}-${part}`),
+  ),
+  'column-rule-style',
+  'column-rule-width',
+  'column-rule-color',
+  'text-decoration-line',
+  'text-emphasis-style',
+  '-webkit-text-stroke-width',
+  'transform',
+  'rotate',
+  'scale',
+  'translate',
+  'perspective',
+  'background-color',
+  'background-image',
+  'box-shadow',
+  'content',
+])
+
+// Every recorded property either changed or is context for a change.
+function expectOnlyChangesAndContext(change: StyleChange): void {
+  const focused = change.focused ?? {}
+  const unfocused = change.unfocused ?? {}
+  const unchanged = Object.keys(focused).filter((k) => k in unfocused && focused[k] === unfocused[k])
+  expect(unchanged.filter((k) => !CONTEXT_KEYS.has(k))).toEqual([])
+}
 
 // Rebuilds TOOLS_TS_FOCUS_EXPR's string from a read's top-level fields (same rebuild as bench/legacy.ts).
 function legacyIdentity(read: FocusRead): string {
@@ -838,5 +936,348 @@ describe('runTabWalk', () => {
       browserVersion: null,
       executableBasename: null,
     })
+  })
+
+  it('indicator: records only the computed-style properties that change, with the values needed to judge them', async () => {
+    const page = await open(INDICATOR_FIELDS)
+    const result = await runTabWalk(page.playwrightPage, {
+      settleMs: FAST,
+      presses: 6,
+      allowFewerPresses: true,
+      escapeProbe: false,
+    })
+
+    expect(() => TabWalkResultSchema.parse(result)).not.toThrow()
+    const [plain, field, pseudo, late, wrap] = result.steps
+    expect([plain, field, pseudo, late].map((s) => deepLabel(s.settled))).toEqual(['plain', 'field', 'pseudo', 'late'])
+    expect(wrap.wrapped).toBe(true)
+    expect(wrap.indicator).toBeNull()
+    for (const s of [plain, field, pseudo, late]) s.indicator?.changes.forEach(expectOnlyChangesAndContext)
+
+    // The UA's a:focus-visible sets outline-offset; #plain:focus removes the outline, so only the offset changes.
+    expect(plain.indicator).toMatchObject({
+      unfocusedStatus: 'captured',
+      unfocusedAt: 2,
+      unfocusedError: null,
+      unfocusedDrift: [],
+    })
+    expect(plain.indicator?.changes.map((c) => c.target)).toEqual(['element'])
+    const [outline] = plain.indicator?.changes ?? []
+    expect(Object.keys(outline.focused ?? {}).sort()).toEqual(OUTLINE_KEYS)
+    expect(outline.focused).toMatchObject({
+      'outline-style': 'none',
+      'outline-offset': '1px',
+    })
+    expect(outline.unfocused).toMatchObject({
+      'outline-style': 'none',
+      'outline-offset': '0px',
+    })
+    expect(plain.settled.deep?.classAttr).toBeNull()
+
+    expect(field.indicator?.changes.find((c) => c.target === 'parent')).toEqual({
+      target: 'parent',
+      focused: { 'background-color': 'rgb(255, 255, 0)' },
+      unfocused: { 'background-color': 'rgba(0, 0, 0, 0)' },
+    })
+
+    expect(pseudo.settled.deep?.classAttr).toBe('u  line')
+    const after = pseudo.indicator?.changes.find((c) => c.target === 'after')
+    expect(after?.focused).toMatchObject({
+      'border-bottom-style': 'solid',
+      'border-bottom-width': '2px',
+      'border-bottom-color': 'rgb(0, 0, 255)',
+    })
+    expect(after?.unfocused).toMatchObject({
+      'border-bottom-style': 'none',
+      'border-bottom-width': '0px',
+    })
+    // Read on the wrap press: the last element before a wrap still gets an unfocused read.
+    expect(pseudo.indicator).toMatchObject({
+      unfocusedStatus: 'captured',
+      unfocusedAt: 4,
+    })
+
+    // A box that exists in one state only: the other state is null.
+    const before = late.indicator?.changes.find((c) => c.target === 'before')
+    expect(before?.focused?.content).toBe('">"')
+    expect(before?.unfocused).toBeNull()
+    expect(late.indicator).toMatchObject({
+      unfocusedStatus: 'captured',
+      unfocusedAt: 5,
+    })
+  })
+
+  it("indicator: the walk's last focused element has no unfocused read", async () => {
+    const page = await open(FIXTURE_A)
+    const result = await runTabWalk(page.playwrightPage, {
+      settleMs: FAST,
+      presses: 2,
+      allowFewerPresses: true,
+      escapeProbe: false,
+    })
+
+    expect(result.steps.map((s) => s.indicator?.unfocusedStatus)).toEqual(['captured', 'not-read'])
+    expect(result.steps[0].indicator?.unfocusedDrift).toBeNull()
+    expect(result.steps[1].indicator).toEqual({
+      unfocusedStatus: 'not-read',
+      unfocusedAt: null,
+      unfocusedError: null,
+      changes: [],
+      unfocusedDrift: null,
+    })
+  })
+
+  it('indicator: focus that never leaves an element is still-focused, never an unfocused read', async () => {
+    const page = await open(TAB_SWALLOW_TRAP)
+    const result = await runTabWalk(page.playwrightPage, { settleMs: FAST })
+
+    const statuses = result.steps.map((s) => s.indicator?.unfocusedStatus)
+    expect(statuses[0]).toBe('captured')
+    expect(statuses.slice(1, 24).every((s) => s === 'still-focused')).toBe(true)
+    expect(statuses[24]).toBe('not-read')
+    expect(result.steps[5].indicator).toMatchObject({
+      changes: [],
+      unfocusedAt: 7,
+    })
+  })
+
+  it('indicator: an element containing the focus is read once focus leaves its subtree (reviewer B2)', async () => {
+    const page = await open(FOCUS_WITHIN_REGION)
+    const result = await runTabWalk(page.playwrightPage, {
+      settleMs: FAST,
+      presses: 5,
+      allowFewerPresses: true,
+      escapeProbe: false,
+    })
+
+    const [reg, inner, out, wrap] = result.steps
+    expect([reg, inner, out].map((s) => deepLabel(s.settled))).toEqual(['reg', 'inner', 'out'])
+    expect(wrap.wrapped).toBe(true)
+    expect(reg.indicator).toMatchObject({
+      unfocusedStatus: 'captured',
+      unfocusedAt: 3,
+    })
+    expect(reg.indicator?.changes.find((c) => c.target === 'element')).toMatchObject({
+      focused: { 'outline-style': 'solid', 'outline-color': 'rgb(0, 0, 255)' },
+      unfocused: { 'outline-style': 'none' },
+    })
+    expect(inner.indicator).toMatchObject({
+      unfocusedStatus: 'captured',
+      unfocusedAt: 3,
+    })
+  })
+
+  it('indicator: an ancestor or sibling that holds focus in the unfocused read is not compared', async () => {
+    const page = await open(NEIGHBOURS)
+    const result = await runTabWalk(page.playwrightPage, {
+      settleMs: FAST,
+      presses: 4,
+      allowFewerPresses: true,
+      escapeProbe: false,
+    })
+
+    const [l1, ok] = result.steps
+    expect([l1, ok].map((s) => deepLabel(s.settled))).toEqual(['l1', 'ok'])
+    expect(l1.indicator?.unfocusedStatus).toBe('captured')
+    expect(l1.indicator?.changes.map((c) => c.target)).toEqual(['element'])
+    expect(ok.indicator?.changes.map((c) => c.target)).toEqual(['element'])
+  })
+
+  it('indicator: CSS transitions on the compared elements are finished before each read', async () => {
+    const page = await open(SLOW_RING)
+    const result = await runTabWalk(page.playwrightPage, {
+      settleMs: FAST,
+      presses: 4,
+      allowFewerPresses: true,
+      escapeProbe: false,
+    })
+
+    const [p, q] = result.steps
+    expect([p, q].map((s) => deepLabel(s.settled))).toEqual(['p', 'q'])
+    expect(p.indicator?.changes).toEqual([
+      {
+        target: 'element',
+        focused: expect.objectContaining({
+          'box-shadow': 'rgb(0, 0, 255) 0px 0px 0px 3px',
+        }),
+        unfocused: expect.objectContaining({ 'box-shadow': 'none' }),
+      },
+    ])
+    expect(q.indicator?.changes.map((c) => c.target)).toEqual(['element'])
+    expect(p.indicator?.unfocusedDrift).toEqual([])
+  })
+
+  it('indicator: unfocused drift lists what changes between two unfocused reads (reviewer N2)', async () => {
+    const animated = await open(ANIMATED)
+    const walk = await runTabWalk(animated.playwrightPage, { settleMs: FAST })
+
+    const drifts = walk.steps.flatMap((s) => (s.indicator?.unfocusedDrift ? [s.indicator.unfocusedDrift] : []))
+    expect(drifts.length).toBeGreaterThan(0)
+    expect(drifts.some((d) => d.includes('element:color'))).toBe(true)
+    // an1 is an2's animated previous sibling and holds focus at an2's drift read: it cannot be re-read unfocused.
+    const an2 = walk.steps.filter((s) => s.settled.deep?.id === 'an2' && s.indicator?.unfocusedDrift)
+    expect(an2.length).toBeGreaterThan(0)
+    expect(an2.every((s) => s.indicator?.unfocusedDrift?.includes('previous-sibling:*'))).toBe(true)
+
+    const still = await open(FIXTURE_A)
+    const plain = await runTabWalk(still.playwrightPage, { settleMs: FAST })
+    const plainDrifts = plain.steps.flatMap((s) => (s.indicator?.unfocusedDrift ? [s.indicator.unfocusedDrift] : []))
+    expect(plainDrifts.length).toBeGreaterThan(10)
+    // A static page has no property drift. The link read unfocused on the wrap press compares body and
+    // html, which hold focus again at its drift read: target:* only.
+    expect(plainDrifts.flat().filter((key) => !key.endsWith(':*'))).toEqual([])
+    const a3 = plain.steps.find((s) => s.settled.id === 'a3' && s.indicator?.unfocusedDrift)
+    expect(a3?.indicator?.unfocusedDrift).toEqual(['grandparent:*', 'great-grandparent:*'])
+  })
+
+  it('indicator: an element removed when focus leaves it is recorded as removed', async () => {
+    const page = await open(REMOVED_ON_BLUR)
+    const result = await runTabWalk(page.playwrightPage, { settleMs: FAST })
+
+    expect(result.suspectedTrap).toBe(false)
+    const gone = result.steps.filter((s) => s.settled.id === 'gone')
+    expect(gone).toHaveLength(1)
+    expect(gone[0].indicator).toMatchObject({
+      unfocusedStatus: 'removed',
+      changes: [],
+      unfocusedAt: gone[0].index + 1,
+    })
+    expect(result.steps[0].indicator?.unfocusedStatus).toBe('captured')
+  })
+
+  it('indicator: a document replaced after focus leaves the element is recorded as document-replaced', async () => {
+    const page = await client.newPage()
+    pages.push(page)
+    const pw = page.playwrightPage
+    const one = `<!doctype html><html><body><a id="go" href="#x" onblur="location.href='/two.html'">Go</a><a id="stay" href="#s">Stay</a></body></html>`
+    const two = `<!doctype html><html><body><a id="t1" href="#t">T1</a></body></html>`
+    await pw.route('http://tabwalk.test/**', (route) =>
+      route.fulfill({
+        contentType: 'text/html',
+        body: new URL(route.request().url()).pathname === '/two.html' ? two : one,
+      }),
+    )
+    await pw.goto('http://tabwalk.test/one.html', { waitUntil: 'load' })
+
+    const result = await runTabWalk(pw, {
+      settleMs: 300,
+      presses: 3,
+      allowFewerPresses: true,
+      escapeProbe: false,
+    })
+
+    expect(result.error).toBeNull()
+    expect(label(result.steps[0].settled)).toBe('go')
+    expect(result.steps[1].documentReplaced).toBe(true)
+    expect(result.steps[0].indicator).toMatchObject({
+      unfocusedStatus: 'document-replaced',
+      changes: [],
+      unfocusedAt: 2,
+    })
+  })
+
+  it('indicator: reads the deep element inside a shadow root and a frame; focusStyle stays the top-level element', async () => {
+    const page = await open(INDICATOR_DEEP)
+    const result = await runTabWalk(page.playwrightPage, {
+      settleMs: FAST,
+      presses: 4,
+      allowFewerPresses: true,
+      escapeProbe: false,
+    })
+
+    const [light, shadow, frame, wrap] = result.steps
+    expect([light, shadow, frame].map((s) => deepLabel(s.settled))).toEqual(['light', 's0', 'f0'])
+    expect(wrap.wrapped).toBe(true)
+
+    expect(shadow.settled.container).toBe('shadow-host')
+    expect(shadow.focusStyle?.outlineStyle).not.toBe('dashed')
+    expect(shadow.indicator?.unfocusedStatus).toBe('captured')
+    // The host is the shadow root's parent; its unchanged background is not recorded.
+    expect(shadow.indicator?.changes.map((c) => c.target)).toEqual(['element'])
+    expect(shadow.indicator?.changes[0]).toMatchObject({
+      focused: {
+        'outline-style': 'dashed',
+        'outline-width': '4px',
+        'outline-color': 'rgb(1, 2, 3)',
+      },
+      unfocused: { 'outline-style': 'none' },
+    })
+
+    expect(frame.settled.container).toBe('iframe')
+    expect(frame.indicator?.unfocusedStatus).toBe('captured')
+    expect(frame.indicator?.changes.find((c) => c.target === 'element')).toMatchObject({
+      focused: { 'outline-style': 'dotted', 'outline-width': '5px' },
+      unfocused: { 'outline-style': 'none' },
+    })
+  })
+
+  it('indicator: null when the focused element is behind a boundary page JS cannot cross', async () => {
+    const page = await serve(CROSS_ORIGIN_ROUTES, '/xo.html')
+    const result = await runTabWalk(page.playwrightPage, { settleMs: FAST })
+
+    const cycle = result.steps.slice(0, 5)
+    expect(cycle.map((s) => s.settled.deepUnavailable)).toEqual([null, 'cross-origin', 'cross-origin', null, null])
+    expect(cycle.map((s) => s.indicator === null)).toEqual([false, true, true, false, true])
+    expect(cycle[0].indicator?.unfocusedStatus).toBe('captured')
+  })
+
+  it('indicator: adds at most one in-page call per press', async () => {
+    const calls: number[] = []
+    for (const presses of [4, 12]) {
+      const page = await open(FIXTURE_A)
+      const pw = page.playwrightPage
+      const spies: { send?: MockInstance<CDPSession['send']> } = {}
+      interceptNextSession(pw, (session) => {
+        spies.send = vi.spyOn(session, 'send')
+      })
+      await runTabWalk(pw, {
+        settleMs: 0,
+        presses,
+        allowFewerPresses: true,
+        escapeProbe: false,
+      })
+      const inPage = (spies.send?.mock.calls ?? []).filter(
+        ([method]) => method === 'Runtime.evaluate' || method === 'Runtime.callFunctionOn',
+      )
+      calls.push(inPage.length)
+    }
+
+    // Without the indicator a press makes 4: an activeElement evaluate and a read call, immediate and settled.
+    expect((calls[1] - calls[0]) / 8).toBeLessThanOrEqual(5)
+  })
+
+  it('indicator: a failing style read never breaks the walk; the step records read-failed', async () => {
+    const page = await open(
+      doc(
+        'Hostile',
+        `<p><a id="h1" href="#1">One</a></p><p><a id="h2" href="#2">Two</a></p>
+<script>Element.prototype.getAnimations = () => { throw new Error('hostile page') }</script>`,
+      ),
+    )
+    const result = await runTabWalk(page.playwrightPage, { settleMs: FAST })
+
+    expect(result.error).toBeNull()
+    expect(result.suspectedTrap).toBe(false)
+    expect(result.steps.slice(0, 3).map((s) => deepLabel(s.settled))).toEqual(['h1', 'h2', 'body!'])
+    const reads = result.steps.filter((s) => s.indicator !== null)
+    expect(reads.length).toBeGreaterThan(0)
+    for (const s of reads) {
+      expect(s.indicator).toMatchObject({ unfocusedStatus: 'read-failed', changes: [], unfocusedAt: s.index })
+      expect(s.indicator?.unfocusedError).toMatch(/hostile page/)
+    }
+  })
+
+  it('indicator: leaves no element references in the page after the walk', async () => {
+    const page = await open(FIXTURE_A)
+    const pw = page.playwrightPage
+    await runTabWalk(pw, {
+      settleMs: FAST,
+      presses: 3,
+      allowFewerPresses: true,
+      escapeProbe: false,
+    })
+
+    const keys = await pw.evaluate(() => Object.getOwnPropertyNames(window).filter((k) => k.startsWith('__atAgent')))
+    expect(keys).toEqual(['__atAgentTabWalk'])
   })
 })
