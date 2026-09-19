@@ -1,5 +1,5 @@
 {
-  "rule": "bench/test-sites/SAMPLING-RULE.md @ 68ffa0a",
+  "rule": "bench/test-sites/SAMPLING-RULE.md @ 0467eb6 (Amendment 1)",
   "seed": "at-agent-bench-2026-09-18",
   "list": {
     "id": "V3YPN",
@@ -7,6 +7,35 @@
     "file": "bench/vendor/tranco/tranco_V3YPN-1000000.csv",
     "sha256": "eb755facd7174045ae81c41d0f8496d9b9ae667b6a7047c861cbe56c02a21445",
     "rows": 1000000
+  },
+  "notes": [
+    "i=10 (noticiasdealava.eus) was loaded once under Amendment 1 without a record. A draw.ts --resume run started 2026-09-18 20:08 EDT (2026-09-19T00:08Z) was killed while screening i=10, when the agent running it was cut off by an account usage limit. Its log's stack trace (page.waitForTimeout at draw.ts:320, inside the www-fallback attempt called at draw.ts:434, as the file stood then) shows the primary load of https://noticiasdealava.eus/ was classed as no HTTP response and the fallback https://www.noticiasdealava.eus/ reached load; the browser was closed during the 3 s settle, before the page was evaluated. Nothing was judged, recorded or viewed, and no candidate i>=11 was loaded. i=10 is re-attempted from its primary load under Amendment 1."
+  ],
+  "legacyRecords": {
+    "note": "i=0..9 are copied unchanged from commit 7440778: first loads under bench/test-sites/SAMPLING-RULE.md @ 68ffa0a, judged before Amendment 1. They have no fallbackUsed/netError fields because they predate them; nothing is back-filled. Amendment 1 keeps them as they are and resumes at i=10.",
+    "commit": "7440778",
+    "count": 10,
+    "rule": "bench/test-sites/SAMPLING-RULE.md @ 68ffa0a",
+    "browser": {
+      "launch": "playwright chromium.launch() default (headless shell)",
+      "version": "143.0.7499.4",
+      "userAgent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) HeadlessChrome/143.0.7499.4 Safari/537.36"
+    },
+    "startedAt": "2026-09-18T23:06:58.249Z",
+    "updatedAt": "2026-09-18T23:07:45.085Z",
+    "stop": {
+      "i": 10,
+      "rank": 61381,
+      "domain": "noticiasdealava.eus",
+      "reasons": [
+        "rule 1: first load failed with ERR_CERT_DATE_INVALID; the rule doesn't say whether that counts as \"fails to connect\" (www retry or not)",
+        "rule 2: first load failed with ERR_CERT_DATE_INVALID; the rule doesn't say whether that counts as \"fails to connect\" (www retry or not)",
+        "rule 3: first load failed with ERR_CERT_DATE_INVALID; the rule doesn't say whether that counts as \"fails to connect\" (www retry or not)",
+        "rule 4: first load failed with ERR_CERT_DATE_INVALID; the rule doesn't say whether that counts as \"fails to connect\" (www retry or not)",
+        "rule 5: first load failed with ERR_CERT_DATE_INVALID; the rule doesn't say whether that counts as \"fails to connect\" (www retry or not)",
+        "rule 6: first load failed with ERR_CERT_DATE_INVALID; the rule doesn't say whether that counts as \"fails to connect\" (www retry or not)"
+      ]
+    }
   },
   "browser": {
     "launch": "playwright chromium.launch() default (headless shell)",
@@ -16,25 +45,22 @@
   "timing": {
     "waitUntil": "load",
     "settleMs": 3000,
-    "loadTimeoutMs": 60000
+    "loadTimeoutMs": 60000,
+    "evalTimeoutMs": 10000
   },
-  "startedAt": "2026-09-18T23:06:58.249Z",
-  "updatedAt": "2026-09-18T23:07:45.085Z",
+  "startedAt": "2026-09-19T02:17:23.442Z",
+  "updatedAt": "2026-09-19T02:20:23.687Z",
   "complete": false,
-  "acceptedCount": 5,
+  "acceptedCount": 14,
   "stop": {
-    "i": 10,
-    "rank": 61381,
-    "domain": "noticiasdealava.eus",
+    "i": 22,
+    "rank": 77440,
+    "domain": "dfbocai.net",
     "reasons": [
-      "rule 1: first load failed with ERR_CERT_DATE_INVALID; the rule doesn't say whether that counts as \"fails to connect\" (www retry or not)",
-      "rule 2: first load failed with ERR_CERT_DATE_INVALID; the rule doesn't say whether that counts as \"fails to connect\" (www retry or not)",
-      "rule 3: first load failed with ERR_CERT_DATE_INVALID; the rule doesn't say whether that counts as \"fails to connect\" (www retry or not)",
-      "rule 4: first load failed with ERR_CERT_DATE_INVALID; the rule doesn't say whether that counts as \"fails to connect\" (www retry or not)",
-      "rule 5: first load failed with ERR_CERT_DATE_INVALID; the rule doesn't say whether that counts as \"fails to connect\" (www retry or not)",
-      "rule 6: first load failed with ERR_CERT_DATE_INVALID; the rule doesn't say whether that counts as \"fails to connect\" (www retry or not)"
+      "load did not fire within 60000 ms after an HTTP 200 response (§1 lists \"a 60 s load timeout\" but defines \"fails to connect\" as no HTTP response); Amendment 1 does not settle this"
     ]
   },
+  "inFlight": null,
   "candidates": [
     {
       "i": 0,
@@ -130,10 +156,144 @@
       "i": 10,
       "rank": 61381,
       "domain": "noticiasdealava.eus",
+      "finalUrl": "https://www.noticiasdealava.eus/",
+      "status": 200,
+      "contentType": "text/html; charset=UTF-8",
+      "result": "accept",
+      "fallbackUsed": true,
+      "netError": "ERR_CERT_DATE_INVALID"
+    },
+    {
+      "i": 11,
+      "rank": 65562,
+      "domain": "hostway.com",
+      "finalUrl": "https://hostway.com/",
+      "status": 200,
+      "contentType": "text/html; charset=UTF-8",
+      "result": "accept",
+      "fallbackUsed": false,
+      "netError": null
+    },
+    {
+      "i": 12,
+      "rank": 82213,
+      "domain": "zhanh.com",
       "finalUrl": null,
       "status": null,
       "contentType": null,
-      "result": "stop"
+      "result": 1,
+      "fallbackUsed": true,
+      "netError": "ERR_SSL_VERSION_OR_CIPHER_MISMATCH"
+    },
+    {
+      "i": 13,
+      "rank": 71430,
+      "domain": "naoconto.com",
+      "finalUrl": "https://www.naoconto.com/",
+      "status": 200,
+      "contentType": "text/html; charset=UTF-8",
+      "result": 5,
+      "fallbackUsed": false,
+      "netError": null
+    },
+    {
+      "i": 14,
+      "rank": 19447,
+      "domain": "xxxclub.to",
+      "finalUrl": null,
+      "status": null,
+      "contentType": null,
+      "result": 5,
+      "fallbackUsed": false,
+      "netError": null
+    },
+    {
+      "i": 15,
+      "rank": 81383,
+      "domain": "ekdromi.gr",
+      "finalUrl": "https://www.ekdromi.gr/",
+      "status": 200,
+      "contentType": "text/html; charset=utf-8",
+      "result": "accept",
+      "fallbackUsed": false,
+      "netError": null
+    },
+    {
+      "i": 16,
+      "rank": 42791,
+      "domain": "afad.gov.tr",
+      "finalUrl": "https://afad.gov.tr/",
+      "status": 200,
+      "contentType": "text/html; charset=utf-8",
+      "result": "accept",
+      "fallbackUsed": false,
+      "netError": null
+    },
+    {
+      "i": 17,
+      "rank": 18434,
+      "domain": "financesonline.com",
+      "finalUrl": "https://financesonline.com/",
+      "status": 200,
+      "contentType": "text/html; charset=UTF-8",
+      "result": "accept",
+      "fallbackUsed": false,
+      "netError": null
+    },
+    {
+      "i": 18,
+      "rank": 34400,
+      "domain": "ironplanet.com",
+      "finalUrl": "https://www.ironplanet.com/",
+      "status": 200,
+      "contentType": "text/html; charset=UTF-8",
+      "result": "accept",
+      "fallbackUsed": false,
+      "netError": null
+    },
+    {
+      "i": 19,
+      "rank": 11722,
+      "domain": "hyros.com",
+      "finalUrl": "https://hyros.com/",
+      "status": 200,
+      "contentType": "text/html",
+      "result": "accept",
+      "fallbackUsed": false,
+      "netError": null
+    },
+    {
+      "i": 20,
+      "rank": 83360,
+      "domain": "beardo.in",
+      "finalUrl": "https://beardo.in/",
+      "status": 200,
+      "contentType": "text/html; charset=utf-8",
+      "result": "accept",
+      "fallbackUsed": false,
+      "netError": null
+    },
+    {
+      "i": 21,
+      "rank": 59467,
+      "domain": "hoolai.com",
+      "finalUrl": "https://www.hoolai.com/",
+      "status": 200,
+      "contentType": "text/html",
+      "result": "accept",
+      "fallbackUsed": false,
+      "netError": null
+    },
+    {
+      "i": 22,
+      "rank": 77440,
+      "domain": "dfbocai.net",
+      "finalUrl": "https://www.dfbocai.net/en",
+      "status": 200,
+      "contentType": null,
+      "result": "stop",
+      "fallbackUsed": false,
+      "netError": null
     }
   ]
 }
