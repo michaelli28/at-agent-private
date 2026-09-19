@@ -45,3 +45,16 @@ Committed before any site is drawn or opened. The draw script must implement exa
 6. **Rule 6:** exclude exactly these registrable domains and their subdomains: amazon.com, mealkeyway.com, fake-university.com, cmu.edu, troy.k12.mi.us, troyroyalpalace.com, w3.org. The check runs on the candidate domain before the load (not loaded, recorded as null) and on the final URL's host after it. Other domains that merely share a name (amazon.eu, cmu.ac.th) are not excluded.
 7. **Reject label:** a reject is labelled with the lowest-numbered failing rule among the checks actually run.
 8. **Extra fields:** each record also gets `fallbackUsed` (boolean) and `netError` (the Chromium error code, or null).
+
+## Amendment 2 (2026-09-18, after the draw stopped at i=22)
+
+**Why:** the draw stopped at i=22 (dfbocai.net). The main document answered HTTP 200, but `load` never fired within 60 s. Amendment 1 §1 lists "a 60 s load timeout" inside a definition ("the main document gets no HTTP response") that this case contradicts. The draw's verifier also asked for readings that were already in use to be written down explicitly. This amendment was written before any candidate at i ≥ 22 was judged.
+
+**What stays fixed:** the records for i=0..21 from commit b089260 are kept as they are. None of them hit any clause below differently (none timed out after a response, and none had conflicting headers or an unlisted error). i=22 is attempted a second time, and that load is disclosed in the notes.
+
+1. **Response but no `load` within 60 s:** judge the document as it stands at 60 s + 3 s. There is no www fallback, because the host did answer. Amendment 1 §1's "60 s load timeout" now covers only loads that got no response at all.
+2. **In-page read timeout:** if the in-page read (title, text, focusable count, meta) does not finish within 10 s, reject on rule 1, because a frozen page can't be Tab-walked. This replaces the draw's earlier "stop" behaviour for that case.
+3. **Cloudflare header scope:** for Rule 3, `cf-mitigated` is checked on the main frame's navigation (document) responses only, not on its subresources. This is the reading used for every record so far.
+4. **Content type:** "the media type" for Rule 2 is `document.contentType`, the type Chromium actually used for the document. This settles missing or conflicting Content-Type headers.
+5. **Other errors:** any other navigation error that leaves no final document (for example `ERR_TOO_MANY_REDIRECTS`, `ERR_ABORTED`, `ERR_QUIC_*`) counts as "no HTTP response" under Amendment 1 §1. That means one www fallback, then a rule-1 reject.
+6. **Extra fields:** new records keep both errors (`primaryNetError`, `fallbackNetError`) and the content type even on timeouts. `netError` stays as it was defined (the last error seen).
