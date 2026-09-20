@@ -58,6 +58,8 @@ describe('formatAgentResult', () => {
       ],
       violations: [],
       summary: 'Goal achieved',
+      keyboard: null,
+      contextChange: null,
     }
 
     const output = formatAgentResult(result)
@@ -74,6 +76,8 @@ describe('formatAgentResult', () => {
       steps: [],
       violations: [],
       summary: 'Could not find login form',
+      keyboard: null,
+      contextChange: null,
     }
 
     const output = formatAgentResult(result)

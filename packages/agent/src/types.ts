@@ -1,5 +1,10 @@
 import { z } from 'zod'
-import { ViolationSchema, FocusHistorySchema, DynamicViolationSchema } from '@at-agent/accessibility'
+import {
+  ViolationSchema,
+  TabKeySchema,
+  KeyboardTrapResultSchema,
+  ContextChangeResultSchema,
+} from '@at-agent/accessibility'
 
 // Action types the agent can perform
 export const ActionTypeSchema = z.enum([
@@ -9,7 +14,7 @@ export const ActionTypeSchema = z.enum([
   'audit',
   'observe',
   'tab',
-  'checkTrap',
+  'checkKeyboard',
   'done',
 ])
 export type ActionType = z.infer<typeof ActionTypeSchema>
@@ -23,13 +28,25 @@ export const ActionSchema = z.object({
 })
 export type Action = z.infer<typeof ActionSchema>
 
+// One Tab press and the element it landed on, read immediately after that press. One record per
+// PRESS: a single read after N presses reports an N-press run as one element, which the retired
+// detector then read as a one-element cycle (bench/probes/wrap/RESULT.md:347).
+export const TabPressSchema = z.object({
+  index: z.number().int().positive(),
+  key: TabKeySchema,
+  element: z.string(),
+  timestamp: z.number(),
+})
+export type TabPress = z.infer<typeof TabPressSchema>
+
 // Result of executing an action
 export const ActionResultSchema = z.object({
   success: z.boolean(),
   observation: z.string(),
   violations: z.array(ViolationSchema).optional(),
-  focusedElement: z.string().optional(),
-  trapDetected: z.boolean().optional(),
+  presses: z.array(TabPressSchema).optional(),
+  keyboard: KeyboardTrapResultSchema.optional(),
+  contextChange: ContextChangeResultSchema.optional(),
 })
 export type ActionResult = z.infer<typeof ActionResultSchema>
 
@@ -58,21 +75,16 @@ export const AgentResultSchema = z.object({
   steps: z.array(StepSchema),
   violations: z.array(ViolationSchema),
   summary: z.string(),
-  focusHistory: FocusHistorySchema.optional(),
-  trapDetected: z.boolean().optional(),
-  dynamicViolations: z.array(DynamicViolationSchema).optional(),
+  tabPresses: z.array(TabPressSchema).optional(),
+  // Null when no checkKeyboard action ran. Last check wins; there is deliberately no latch, because
+  // latching a three-valued verdict would make one `undetermined` permanently non-pass.
+  keyboard: KeyboardTrapResultSchema.nullable(),
+  contextChange: ContextChangeResultSchema.nullable(),
 })
 export type AgentResult = z.infer<typeof AgentResultSchema>
-
-// Trap context for keyboard trap detection
-export const TrapContextSchema = z.object({
-  focusHistory: FocusHistorySchema,
-})
-export type TrapContext = z.infer<typeof TrapContextSchema>
 
 // Options for executeAction
 export const ExecuteActionOptionsSchema = z.object({
   headed: z.boolean().default(false),
-  trapContext: TrapContextSchema.optional(),
 })
 export type ExecuteActionOptions = z.infer<typeof ExecuteActionOptionsSchema>

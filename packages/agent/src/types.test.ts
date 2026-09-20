@@ -1,4 +1,5 @@
 import { describe, it, expect } from 'vitest'
+import * as agentTypes from './types.js'
 import {
   ActionTypeSchema,
   ActionSchema,
@@ -7,8 +8,50 @@ import {
   StepSchema,
   AgentResultSchema,
   ExecuteActionOptionsSchema,
-  TrapContextSchema,
 } from './types.js'
+
+// A KeyboardTrapResult the judge could really emit: the M5 Tab-swallow shape (one stop, no wrap,
+// neither Escape nor the opposite key released it).
+const TRAP_RESULT = {
+  wcagCriterion: '2.1.2',
+  verdict: 'fail',
+  reason: null,
+  keyboardTrap: true,
+  trapEscapable: false,
+  singleDirection: true,
+  directionsWalked: ['forward'],
+  launch: { browserVersion: null, executableBasename: 'chrome-headless-shell' },
+  directions: [
+    {
+      direction: 'forward',
+      verdict: 'fail',
+      reason: null,
+      confined: true,
+      endOfPage: null,
+      release: 'none',
+      region: [13],
+      focusableCount: 3,
+      stuckOn: {
+        backendNodeId: 13,
+        tag: 'a',
+        id: 'link-1',
+        isBody: false,
+        classAttr: null,
+      },
+      escapeUrlChanged: false,
+      documentReplacements: [],
+    },
+  ],
+}
+
+const CONTEXT_CHANGE_RESULT = {
+  wcagCriterion: '3.2.1',
+  verdict: 'pass',
+  reason: null,
+  fIncomplete: false,
+  findings: [],
+  unattributed: [],
+}
 
 describe('ActionTypeSchema', () => {
   it('accepts valid action types', () => {
@@ -18,7 +61,7 @@ describe('ActionTypeSchema', () => {
     expect(ActionTypeSchema.parse('audit')).toBe('audit')
     expect(ActionTypeSchema.parse('observe')).toBe('observe')
     expect(ActionTypeSchema.parse('tab')).toBe('tab')
-    expect(ActionTypeSchema.parse('checkTrap')).toBe('checkTrap')
+    expect(ActionTypeSchema.parse('checkKeyboard')).toBe('checkKeyboard')
     expect(ActionTypeSchema.parse('done')).toBe('done')
   })
 
@@ -108,24 +151,33 @@ describe('ActionResultSchema', () => {
     expect(parsed.violations?.[0].id).toBe('color-contrast')
   })
 
-  it('validates result with focusedElement', () => {
+  it('validates result with one record per Tab press', () => {
     const result = {
       success: true,
-      observation: 'Focused on submit button',
-      focusedElement: 'button#submit',
+      observation: 'Tab x2: a#one -> button#submit',
+      presses: [
+        { index: 1, key: 'Tab', element: 'a#one', timestamp: 1 },
+        { index: 2, key: 'Tab', element: 'button#submit', timestamp: 2 },
+      ],
     }
     const parsed = ActionResultSchema.parse(result)
-    expect(parsed.focusedElement).toBe('button#submit')
+    expect(parsed.presses).toHaveLength(2)
+    expect(parsed.presses?.[1].element).toBe('button#submit')
+    expect('focusedElement' in ActionResultSchema.shape).toBe(false)
   })
 
-  it('validates result with trapDetected', () => {
+  it('validates result with the two keyboard judgements', () => {
     const result = {
       success: true,
-      observation: 'Keyboard trap detected',
-      trapDetected: true,
+      observation: 'Keyboard check complete',
+      keyboard: TRAP_RESULT,
+      contextChange: CONTEXT_CHANGE_RESULT,
     }
     const parsed = ActionResultSchema.parse(result)
-    expect(parsed.trapDetected).toBe(true)
+    expect(parsed.keyboard?.verdict).toBe('fail')
+    expect(parsed.keyboard?.trapEscapable).toBe(false)
+    expect(parsed.contextChange?.verdict).toBe('pass')
+    expect('trapDetected' in ActionResultSchema.shape).toBe(false)
   })
 })
 
@@ -154,10 +206,16 @@ describe('AgentOptionsSchema', () => {
 
   it('rejects non-positive maxSteps', () => {
     expect(() =>
-      AgentOptionsSchema.parse({ startUrl: 'https://example.com', maxSteps: 0 })
+      AgentOptionsSchema.parse({
+        startUrl: 'https://example.com',
+        maxSteps: 0,
+      }),
     ).toThrow()
     expect(() =>
-      AgentOptionsSchema.parse({ startUrl: 'https://example.com', maxSteps: -1 })
+      AgentOptionsSchema.parse({
+        startUrl: 'https://example.com',
+        maxSteps: -1,
+      }),
     ).toThrow()
   })
 
@@ -263,6 +321,8 @@ describe('AgentResultSchema', () => {
       ],
       violations: [],
       summary: 'No accessibility violations found',
+      keyboard: null,
+      contextChange: null,
     }
     const result = AgentResultSchema.parse(agentResult)
     expect(result.success).toBe(true)
@@ -293,6 +353,8 @@ describe('AgentResultSchema', () => {
         },
       ],
       summary: 'Found 1 critical violation',
+      keyboard: null,
+      contextChange: null,
     }
     const result = AgentResultSchema.parse(agentResult)
     expect(result.success).toBe(false)
@@ -311,41 +373,40 @@ describe('ExecuteActionOptionsSchema', () => {
     const result = ExecuteActionOptionsSchema.parse({ headed: true })
     expect(result.headed).toBe(true)
   })
-
-  it('accepts trapContext', () => {
-    const result = ExecuteActionOptionsSchema.parse({
-      trapContext: {
-        focusHistory: [
-          { element: 'button#a', timestamp: 1 },
-          { element: 'button#b', timestamp: 2 },
-        ],
-      },
-    })
-    expect(result.trapContext?.focusHistory).toHaveLength(2)
-  })
 })
 
-describe('TrapContextSchema', () => {
-  it('validates trap context with focus history', () => {
-    const context = {
-      focusHistory: [
-        { element: 'input#name', timestamp: 1705312800000 },
-        { element: 'input#email', timestamp: 1705312801000 },
-        { element: 'button#submit', timestamp: 1705312802000 },
-      ],
-    }
-    const parsed = TrapContextSchema.parse(context)
-    expect(parsed.focusHistory).toHaveLength(3)
-    expect(parsed.focusHistory[0].element).toBe('input#name')
+// Test 42: the retired agent surface is gone.
+describe('the retired agent surface', () => {
+  it('is gone from the schemas and the module', () => {
+    expect(Object.keys(AgentResultSchema.shape)).not.toContain('focusHistory')
+    expect(Object.keys(AgentResultSchema.shape)).not.toContain('dynamicViolations')
+    expect(Object.keys(AgentResultSchema.shape)).not.toContain('trapDetected')
+    expect(Object.keys(AgentResultSchema.shape)).toContain('tabPresses')
+    expect(Object.keys(AgentResultSchema.shape)).toContain('keyboard')
+    expect(Object.keys(AgentResultSchema.shape)).toContain('contextChange')
+
+    expect('TrapContextSchema' in agentTypes).toBe(false)
+
+    // trapContext is no longer part of the options contract, so zod strips it.
+    const parsed = ExecuteActionOptionsSchema.parse({
+      trapContext: { focusHistory: [{ element: 'button#a', timestamp: 1 }] },
+    })
+    expect(parsed).toEqual({ headed: false })
   })
 
-  it('validates empty focus history', () => {
-    const context = { focusHistory: [] }
-    const parsed = TrapContextSchema.parse(context)
-    expect(parsed.focusHistory).toHaveLength(0)
-  })
-
-  it('rejects context without focus history', () => {
-    expect(() => TrapContextSchema.parse({})).toThrow()
+  it('records every Tab press on the agent result', () => {
+    const parsed = AgentResultSchema.parse({
+      success: true,
+      goal: 'walk the page',
+      steps: [],
+      violations: [],
+      summary: 'done',
+      tabPresses: [{ index: 1, key: 'Shift+Tab', element: 'a#one', timestamp: 1 }],
+      keyboard: TRAP_RESULT,
+      contextChange: CONTEXT_CHANGE_RESULT,
+    })
+    expect(parsed.tabPresses).toHaveLength(1)
+    expect(parsed.tabPresses?.[0].key).toBe('Shift+Tab')
+    expect(parsed.keyboard?.keyboardTrap).toBe(true)
   })
 })

@@ -1,15 +1,8 @@
 import { BrowserClient, BrowserPage } from '@at-agent/browser'
-import type { Violation, FocusHistory, DynamicViolation } from '@at-agent/accessibility'
-import { DynamicEvaluator } from '@at-agent/accessibility'
+import type { Violation, KeyboardTrapResult, ContextChangeResult } from '@at-agent/accessibility'
 import { createOpenAIClient, generateAction } from './openai.js'
 import { executeAction } from './tools.js'
-import {
-  AgentOptionsSchema,
-  type AgentOptions,
-  type AgentResult,
-  type Step,
-  type Action,
-} from './types.js'
+import { AgentOptionsSchema, type AgentOptions, type AgentResult, type Step, type TabPress } from './types.js'
 import type OpenAI from 'openai'
 
 export class Agent {
@@ -20,10 +13,7 @@ export class Agent {
     this.client = createOpenAIClient(apiKey)
   }
 
-  async run(
-    goal: string,
-    options: Partial<AgentOptions> & { startUrl: string }
-  ): Promise<AgentResult> {
+  async run(goal: string, options: Partial<AgentOptions> & { startUrl: string }): Promise<AgentResult> {
     const opts = AgentOptionsSchema.parse(options)
     this.stopped = false
 
@@ -32,9 +22,12 @@ export class Agent {
 
     const steps: Step[] = []
     const violations: Violation[] = []
-    const focusHistory: FocusHistory = []
-    const dynamicEvaluator = new DynamicEvaluator()
-    let trapDetected = false
+    // One entry per Tab PRESS, not per tab action.
+    const tabPresses: TabPress[] = []
+    // Last check wins, deliberately without a latch: latching a three-valued verdict would make one
+    // `undetermined` permanently non-pass and a stale `fail` unclearable.
+    let keyboard: KeyboardTrapResult | null = null
+    let contextChange: ContextChangeResult | null = null
     let page: BrowserPage | null = null
 
     try {
@@ -43,53 +36,36 @@ export class Agent {
 
       for (let stepNumber = 1; stepNumber <= opts.maxSteps; stepNumber++) {
         if (this.stopped) {
-          const dynamicResult = dynamicEvaluator.evaluate()
           return this.createResult(
             goal,
             steps,
             violations,
             false,
             'Agent stopped by user',
-            focusHistory,
-            trapDetected,
-            dynamicResult.violations
+            tabPresses,
+            keyboard,
+            contextChange,
           )
         }
 
-        const action = await generateAction(
-          this.client,
-          opts.model,
-          goal,
-          observation,
-          steps
-        )
+        const action = await generateAction(this.client, opts.model, goal, observation, steps)
 
         // Navigate to start URL on first step if action is not navigate
         if (stepNumber === 1 && action.type !== 'navigate') {
           await page.goto(opts.startUrl)
         }
 
-        // Build execute options, including trapContext for checkTrap action
-        const executeOptions = action.type === 'checkTrap'
-          ? { headed: opts.headed, trapContext: { focusHistory } }
-          : { headed: opts.headed }
+        const result = await executeAction(action, page, {
+          headed: opts.headed,
+        })
 
-        const result = await executeAction(action, page, executeOptions)
-
-        // Record interaction events for dynamic WCAG evaluation
-        this.recordInteractionEvent(dynamicEvaluator, action, result.focusedElement)
-
-        // Record focus events after tab actions
-        if (action.type === 'tab' && result.focusedElement) {
-          focusHistory.push({
-            element: result.focusedElement,
-            timestamp: Date.now(),
-          })
+        if (action.type === 'tab' && result.presses) {
+          tabPresses.push(...result.presses)
         }
 
-        // Track trap detection result
-        if (action.type === 'checkTrap' && result.trapDetected) {
-          trapDetected = true
+        if (action.type === 'checkKeyboard' && result.keyboard) {
+          keyboard = result.keyboard
+          contextChange = result.contextChange ?? null
         }
 
         const step: Step = {
@@ -109,63 +85,26 @@ export class Agent {
 
         // Check if done
         if (action.type === 'done') {
-          const dynamicResult = dynamicEvaluator.evaluate()
-          return this.createResult(goal, steps, violations, true, action.reason, focusHistory, trapDetected, dynamicResult.violations)
+          return this.createResult(goal, steps, violations, true, action.reason, tabPresses, keyboard, contextChange)
         }
       }
 
       // Reached max steps
-      const dynamicResult = dynamicEvaluator.evaluate()
       return this.createResult(
         goal,
         steps,
         violations,
         false,
         `Reached max steps (${opts.maxSteps}) without completing goal`,
-        focusHistory,
-        trapDetected,
-        dynamicResult.violations
+        tabPresses,
+        keyboard,
+        contextChange,
       )
     } finally {
       if (page) {
         await page.close()
       }
       await browser.close()
-    }
-  }
-
-  private recordInteractionEvent(
-    evaluator: DynamicEvaluator,
-    action: Action,
-    focusedElement?: string
-  ): void {
-    // Map agent actions to InteractionEvent types
-    switch (action.type) {
-      case 'click':
-        evaluator.recordEvent({
-          type: 'click',
-          element: action.target ?? null,
-        })
-        break
-      case 'fill':
-        evaluator.recordEvent({
-          type: 'input',
-          element: action.target ?? null,
-          metadata: action.value ? { value: action.value } : undefined,
-        })
-        break
-      case 'navigate':
-        evaluator.recordEvent({
-          type: 'navigate',
-          element: action.target ?? null,
-        })
-        break
-      case 'tab':
-        evaluator.recordEvent({
-          type: 'focus',
-          element: focusedElement ?? null,
-        })
-        break
     }
   }
 
@@ -179,9 +118,9 @@ export class Agent {
     violations: Violation[],
     success: boolean,
     summary: string,
-    focusHistory: FocusHistory,
-    trapDetected: boolean,
-    dynamicViolations: DynamicViolation[] = []
+    tabPresses: TabPress[],
+    keyboard: KeyboardTrapResult | null,
+    contextChange: ContextChangeResult | null,
   ): AgentResult {
     return {
       success,
@@ -189,9 +128,9 @@ export class Agent {
       steps,
       violations,
       summary,
-      focusHistory,
-      trapDetected,
-      dynamicViolations,
+      tabPresses,
+      keyboard,
+      contextChange,
     }
   }
 }
