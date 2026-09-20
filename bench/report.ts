@@ -105,18 +105,53 @@ export function legacyTrapFlagged(trap: {
   return trap.firstTrappedPress !== null;
 }
 
-export function ourCriteria(page: PageResult): Map<string, Set<string>> {
+function gapCriteria(page: PageResult): Map<string, Set<string>> {
   const out = new Map<string, Set<string>>();
   for (const gap of page.tools.gaps.findings ?? []) {
     for (const criterion of gap.wcag)
       addTo(out, criterion, `gap:${gap.gapType}`);
   }
+  return out;
+}
+
+export function ourCriteria(page: PageResult): Map<string, Set<string>> {
+  const out = gapCriteria(page);
   const legacy = page.tools.legacy.findings;
   if (legacy && legacyTrapFlagged(legacy.trap))
     addTo(out, "2.1.2", "legacy-trap");
   for (const v of legacy?.dynamicViolations ?? [])
     addTo(out, v.criterion, `legacy-dynamic:${v.criterion}`);
   return out;
+}
+
+// The AFTER column: the SAME gap detector plus the two walk judges. The gap component is shared
+// with ourCriteria above and is byte-for-byte the same criteria — a reader comparing the columns
+// would otherwise read the gap fixes into this delta, and they are not in it (they were measured
+// separately against cd3b122). Nothing here can emit 2.4.3: the focus-order rule is deleted, not
+// replaced (bench/COVERAGE.md).
+export function currentCriteria(page: PageResult): Map<string, Set<string>> {
+  const out = gapCriteria(page);
+  const walk = page.tools.walk.findings;
+  if (walk === null) return out;
+  if (walk.trap.verdict === "fail") addTo(out, "2.1.2", "judge-trap");
+  if (walk.contextChange.verdict === "fail")
+    addTo(out, "3.2.1", "judge-context-change");
+  return out;
+}
+
+// An evaluable page whose judge declined to decide this criterion. It stays in the denominator and
+// is never counted as flagged, so refusing to judge can never buy DETECTION. On the false-alarm
+// table a refusal scores like a clean pass, so score() prints the worst case beside it.
+export function currentUndetermined(
+  page: PageResult,
+  criterion: string,
+): boolean {
+  const walk = page.tools.walk.findings;
+  if (walk === null) return false;
+  if (criterion === "2.1.2") return walk.trap.verdict === "undetermined";
+  if (criterion === "3.2.1")
+    return walk.contextChange.verdict === "undetermined";
+  return false;
 }
 
 export function axeCriteria(page: PageResult): Map<string, Set<string>> {
@@ -132,7 +167,29 @@ export function axeCriteria(page: PageResult): Map<string, Set<string>> {
 
 const oursRan = (p: PageResult): boolean =>
   p.tools.gaps.findings !== null && p.tools.legacy.findings !== null;
+const currentRan = (p: PageResult): boolean =>
+  p.tools.gaps.findings !== null && p.tools.walk.findings !== null;
 const axeRan = (p: PageResult): boolean => p.tools.axe.findings !== null;
+
+// One scored column of the headline tables. `undetermined` is what the judges can report and the
+// frozen detectors cannot: it stays in the denominator and counts as a miss.
+type Column = {
+  ran: (p: PageResult) => boolean;
+  criteria: (p: PageResult) => Map<string, Set<string>>;
+  undetermined: (p: PageResult, criterion: string) => boolean;
+};
+const never = (): boolean => false;
+const BEFORE: Column = {
+  ran: oursRan,
+  criteria: ourCriteria,
+  undetermined: never,
+};
+const AFTER: Column = {
+  ran: currentRan,
+  criteria: currentCriteria,
+  undetermined: currentUndetermined,
+};
+const AXE: Column = { ran: axeRan, criteria: axeCriteria, undetermined: never };
 
 const f2 = (x: number): string => x.toFixed(2);
 const plural = (n: number, word: string): string =>
@@ -141,11 +198,18 @@ const clusterCount = (pages: readonly PageResult[]): number =>
   new Set(pages.map((p) => p.cluster)).size;
 
 // x/n · p̂ [Wilson 95%]; a zero count on clean pages also gets the rule-of-three upper bound.
-function rateCell(x: number, n: number, withRuleOfThree: boolean): string {
+function rateCell(
+  x: number,
+  n: number,
+  withRuleOfThree: boolean,
+  undetermined: number,
+): string {
   if (n === 0) return "n/a";
   const w = wilson(x, n);
   const cell = `${x}/${n} · ${f2(w.p)} [${f2(w.lower)}, ${f2(w.upper)}]`;
-  return withRuleOfThree && x === 0
+  // The rule of three reads "n observations, zero events". With u refusals only n-u pages were
+  // actually observed, so the bound would describe a sample that was never taken.
+  return withRuleOfThree && x === 0 && undetermined === 0
     ? `${cell} · rule of 3 ≤ ${f2(ruleOfThree(n))}`
     : cell;
 }
@@ -163,19 +227,41 @@ type Scored = { cell: string; evidence: string };
 
 function score(
   pages: readonly PageResult[],
-  ran: (p: PageResult) => boolean,
-  criteria: (p: PageResult) => Map<string, Set<string>>,
+  column: Column,
   criterion: string,
   withRuleOfThree: boolean,
 ): Scored {
-  const evaluable = pages.filter(ran);
-  const flagged = evaluable.filter((p) => criteria(p).has(criterion));
+  const evaluable = pages.filter(column.ran);
+  const flagged = evaluable.filter((p) => column.criteria(p).has(criterion));
   const excluded = pages.length - evaluable.length;
-  const cell = rateCell(flagged.length, evaluable.length, withRuleOfThree);
+  // Two different things, printed differently: "undetermined" ran and would not decide (it is in the
+  // denominator and scored as a miss); "excluded" means the tool never ran at all.
+  const undetermined = evaluable.filter((p) =>
+    column.undetermined(p, criterion),
+  ).length;
+  const rate = rateCell(
+    flagged.length,
+    evaluable.length,
+    withRuleOfThree,
+    undetermined,
+  );
+  // Asymmetry worth stating plainly: on a page that SHOULD be flagged, an undetermined verdict
+  // scores as a miss and costs detection. On a CLEAN page it scores exactly like a correct pass,
+  // so on the false-alarm table -- and only there -- refusing to judge does lower the rate. The
+  // worst case (every refusal was in fact a false alarm) is printed so that exposure is visible
+  // instead of implied.
+  const worstCase =
+    withRuleOfThree && undetermined > 0
+      ? ` (worst case ${flagged.length + undetermined}/${evaluable.length} · ${f2(wilson(flagged.length + undetermined, evaluable.length).p)})`
+      : "";
+  const cell =
+    undetermined > 0
+      ? `${rate} · ${undetermined} undetermined${worstCase}`
+      : rate;
   return {
     cell: excluded > 0 ? `${cell} (${excluded} excluded: tool error)` : cell,
     evidence: tally(
-      flagged.flatMap((p) => [...(criteria(p).get(criterion) ?? [])]),
+      flagged.flatMap((p) => [...(column.criteria(p).get(criterion) ?? [])]),
     ),
   };
 }
@@ -205,9 +291,11 @@ function renderTestBad(summary: Summary, truth: BadTruth | null): string[] {
   out.push(
     `Truth: page-level results in bench/corpus/test/bad-labels.json (two independent readers of the W3C evaluation reports). ${plural(summary.pages.length, "page")} from ${plural(clusters, "cluster")}: the Wilson intervals treat pages as independent, which pages of one site are not, so they are too narrow.`,
     "",
-    "Ours = gap detector (criteria from each gap's wcag list, i.e. GAP_WCAG_MAPPING) + legacy trap detector (2.1.2) + legacy DynamicEvaluator (by criterion). axe = violations through their wcagNNN tags. Cells: flagged/pages · rate [Wilson 95%]; a zero false-alarm count adds the rule-of-three 95% upper bound (3/pages).",
+    "Before is frozen ONLY on 2.1.2, 2.4.3 and 3.2.1. Its other criteria (1.1.1, 2.1.1, 2.4.7, 4.1.2) come from the CURRENT post-fix gap detector and are identical in the after column, so no part of the before/after delta is a gap fix. Before = current gap detector (criteria from each gap's wcag list, i.e. GAP_WCAG_MAPPING) + legacy trap detector (2.1.2) + legacy DynamicEvaluator (by criterion), replayed over THIS run's walk (bench/legacy.ts). After = the same gap detector + the 2.1.2 and 3.2.1 judges reading the same walk. axe = violations through their wcagNNN tags.",
     "",
-    "Each page counts once per criterion, before or after alike: a detection target where its report fails the criterion, a clean page where its report passes it.",
+    "Cells: flagged/pages · rate [Wilson 95%]; a zero false-alarm count adds the rule-of-three 95% upper bound (3/pages). `· N undetermined` counts evaluable pages the judge refused to decide: they stay in the denominator and score as misses, so refusing to judge can never buy detection. On a clean page a refusal scores like a correct pass, so the false-alarm cell also prints `(worst case ...)`, the rate if every refusal had been a false alarm, and drops the rule-of-three bound (which assumes every page was observed). See bench/COVERAGE.md. `(N excluded: tool error)` is a different thing — the tool never ran on those pages at all.",
+    "",
+    "Each page counts once per criterion: a detection target where its report fails the criterion, a clean page where its report passes it. The page counts (`4 before, 4 after`) are the W3C BAD site's OWN before/after demo pages — not the two checker columns.",
     "",
   );
   if (unlabelled.length > 0)
@@ -218,8 +306,10 @@ function renderTestBad(summary: Summary, truth: BadTruth | null): string[] {
       const pages = summary.pages.filter(
         (p) => truthResult(truth, p.pageId, c) === result,
       );
-      const ours = score(pages, oursRan, ourCriteria, c, result === "Pass");
-      const axe = score(pages, axeRan, axeCriteria, c, result === "Pass");
+      const clean = result === "Pass";
+      const before = score(pages, BEFORE, c, clean);
+      const after = score(pages, AFTER, c, clean);
+      const axe = score(pages, AXE, c, clean);
       const sides = (["before", "after"] as const)
         .map(
           (side) =>
@@ -230,18 +320,23 @@ function renderTestBad(summary: Summary, truth: BadTruth | null): string[] {
         pages.length === 0
           ? "0 pages"
           : `${plural(pages.length, "page")} (${sides}) / ${plural(clusterCount(pages), "cluster")}`;
-      return `| ${c} | ${size} | ${ours.cell} | ${ours.evidence} | ${axe.cell} | ${axe.evidence} |`;
+      return `| ${c} | ${size} | ${before.cell} | ${before.evidence} | ${after.cell} | ${after.evidence} | ${axe.cell} | ${axe.evidence} |`;
     });
     return [
-      `| SC | report says ${result} | ours flagged | ours: flagged by (pages) | axe flagged | axe: rules (pages) |`,
-      "|---|---|---|---|---|---|",
+      `| SC | report says ${result} | before flagged | before: flagged by (pages) | after flagged | after: flagged by (pages) | axe flagged | axe: rules (pages) |`,
+      "|---|---|---|---|---|---|---|---|",
       ...rows,
     ];
   };
+  // 2.4.3 is scored at zero rather than dropped: deleting the row would hide what the cut cost.
+  const cutNote =
+    "2.4.3 has no after-column detector: the focus-order rule was deleted rather than repaired, and nothing replaces it (bench/COVERAGE.md). Its row stays, scored at zero, so the cost of the cut stays visible.";
   out.push(
     "### Detection: pages whose report fails the criterion — flagged?",
     "",
     ...table("Fail"),
+    "",
+    cutNote,
     "",
   );
   out.push(
@@ -252,19 +347,27 @@ function renderTestBad(summary: Summary, truth: BadTruth | null): string[] {
   );
 
   out.push(
-    "#### Per page (F/P = report fails/passes the criterion; O = ours flags it, A = axe flags it, – = not flagged, E = tool error)",
+    "#### Per page (F/P = report fails/passes the criterion; O = the before column flags it, C = the after column flags it, U = after is undetermined for it, A = axe flags it, – = not flagged, E = tool error)",
     "",
     `| page | ${HEADLINE_CRITERIA.join(" | ")} |`,
     `|---|${HEADLINE_CRITERIA.map(() => "---").join("|")}|`,
   );
   for (const p of summary.pages) {
     const ours = ourCriteria(p);
+    const current = currentCriteria(p);
     const axe = axeCriteria(p);
     const cells = HEADLINE_CRITERIA.map((c) => {
       const t = truthResult(truth, p.pageId, c);
       const o = !oursRan(p) ? "E" : ours.has(c) ? "O" : "–";
+      const n = !currentRan(p)
+        ? "E"
+        : current.has(c)
+          ? "C"
+          : currentUndetermined(p, c)
+            ? "U"
+            : "–";
       const a = !axeRan(p) ? "E" : axe.has(c) ? "A" : "–";
-      return `${t === "Fail" ? "F" : t === "Pass" ? "P" : "?"} ${o}${a}`;
+      return `${t === "Fail" ? "F" : t === "Pass" ? "P" : "?"} ${o}${n}${a}`;
     });
     out.push(`| ${p.pageId} | ${cells.join(" | ")} |`);
   }
@@ -272,14 +375,86 @@ function renderTestBad(summary: Summary, truth: BadTruth | null): string[] {
   return out;
 }
 
-type Cell = "Y" | "N" | "E";
+// The criteria the two columns can differ on at all. Everything else in HEADLINE_CRITERIA comes from
+// the shared gap detector, so printing it here would be the same number twice.
+const DELTA_CRITERIA: Record<string, string> = {
+  "2.1.2": "the keyboard-trap judge replaces the periodicity rule",
+  "2.4.3": "SCOPE CUT — rule deleted",
+  "3.2.1":
+    "the context-change judge replaces the DynamicEvaluator's 3.2.1 — whose before column is 0 BY CONSTRUCTION, not by measurement: it could only fire after a 'navigate' event, which a scripted Tab walk never produces (bench/legacy.ts)",
+};
 
-// Did the old checker flag the seeded target? M5: legacy trap. M6: legacy 3.2.1. M1-M4: any gap on the target.
+// The headline decomposed per criterion, so a scope cut cannot be read as a fix. Both columns come
+// from ONE run: the before column replays the frozen detectors over the SAME walk the judges read.
+function renderHeadlineDelta(
+  summary: Summary,
+  truth: BadTruth | null,
+): string[] {
+  if (truth === null || summary.pages.length === 0) return [];
+  const gapOnly = HEADLINE_CRITERIA.filter(
+    (c) => DELTA_CRITERIA[c] === undefined,
+  );
+  const out = [
+    "## Headline: before → after",
+    "",
+    "One run, one set of pages, one browser session: the before column replays the frozen pre-fix detectors (bench/legacy-detectors.ts) over the same walk the judges read, so neither column can move because a live page changed between runs. The two columns read the same walk but not the same facts: the walk now records an idle baseline, an end-of-walk focusable count and a corrected focusLost that only the judges consume. That IS the fix — the old rule is scored on the signal it was written for, the new rule on the signal the walk now records — but it means this before column is not byte-comparable to the one published at cd3b122.",
+    "",
+    `The gap detector sits UNCHANGED in both columns, so none of the delta below is a gap fix; those were measured separately against cd3b122. ${gapOnly.join(", ")} come from the gaps alone and are identical in both columns, so they are not repeated here.`,
+    "",
+  ];
+  const tables = [
+    { label: "detection", result: "Fail" as const },
+    { label: "false alarms", result: "Pass" as const },
+  ];
+  const failing2_1_2 = summary.pages.filter(
+    (p) => truthResult(truth, p.pageId, "2.1.2") === "Fail",
+  ).length;
+  if (failing2_1_2 === 0) {
+    out.push(
+      "2.1.2 has no detection row to improve on: no BAD page's report fails 2.1.2, so its detection cell is n/a in both columns and the whole 2.1.2 delta is false alarms.",
+      "",
+    );
+  }
+  out.push(
+    "| criterion | table | before (frozen legacy + gaps) | after (judges + gaps) | source of the change |",
+    "|---|---|---|---|---|",
+  );
+  for (const [criterion, source] of Object.entries(DELTA_CRITERIA)) {
+    for (const { label, result } of tables) {
+      const pages = summary.pages.filter(
+        (p) => truthResult(truth, p.pageId, criterion) === result,
+      );
+      const clean = result === "Pass";
+      const before = score(pages, BEFORE, criterion, clean);
+      const after = score(pages, AFTER, criterion, clean);
+      out.push(
+        `| ${criterion} | ${label} | ${before.cell} | ${after.cell} | ${source} |`,
+      );
+    }
+  }
+  out.push("");
+  return out;
+}
+
+type Cell = "Y" | "N" | "E" | "U";
+
+// Did the checker flag the seeded target? M5 is the 2.1.2 oracle and M6 the 3.2.1 one, so they read a
+// different detector per column: before = the frozen legacy trap / legacy 3.2.1, after = the judges'
+// verdicts. M1-M4 and M7 are gap-target operators, and the gap detector is shared, so their cell is
+// the same in both columns by construction.
 function flaggedTarget(
   page: PageResult,
   v: Pick<VariantLabels, "operator" | "target">,
+  column: "before" | "after",
 ): Cell {
   if (v.operator === "M5" || v.operator === "M6") {
+    if (column === "after") {
+      const walk = page.tools.walk.findings;
+      if (walk === null) return "E";
+      const verdict =
+        v.operator === "M5" ? walk.trap.verdict : walk.contextChange.verdict;
+      return verdict === "fail" ? "Y" : verdict === "undetermined" ? "U" : "N";
+    }
     const legacy = page.tools.legacy.findings;
     if (legacy === null) return "E";
     const hit =
@@ -319,7 +494,9 @@ function renderDevVariants(
     rows.some((r) => r.label.operator === op),
   );
   out.push(
-    "Flagged = a gap on the target's data-bench-id (M1–M4), the legacy trap (M5), legacy 3.2.1 (M6, which a scripted walk can never produce). Y flagged · N missed · E tool error · · no variant. † the unmodified base page (dev-fixtures, same commit) already carries the same flag, so that Y is not evidence the seeded change was seen.",
+    "Flagged = a gap on the target's data-bench-id (M1–M4, M7), the 2.1.2 verdict (M5), the 3.2.1 verdict (M6). Y flagged · N missed · U undetermined (counted as a miss) · E tool error · · no variant. † the unmodified base page (dev-fixtures, same commit) already carries the same flag, so that Y is not evidence the seeded change was seen.",
+    "",
+    "A cell that changed between the columns prints before→after; an unchanged cell prints once. M1–M4 and M7 read the shared gap detector, so they can never change.",
     "",
     `| operator | ${bases.join(" | ")} |`,
     `|---|${bases.map(() => "---").join("|")}|`,
@@ -332,15 +509,19 @@ function renderDevVariants(
       if (hits.length === 0) return "·";
       return hits
         .map(({ page, label }) => {
-          const cell = flaggedTarget(page, label);
           const basePage = fixtures?.pages.find((p) => p.pageId === base);
-          const dagger =
-            cell === "Y" &&
-            basePage !== undefined &&
-            flaggedTarget(basePage, label) === "Y"
-              ? "†"
-              : "";
-          return `${cell}${dagger}`;
+          const mark = (column: "before" | "after"): string => {
+            const cell = flaggedTarget(page, label, column);
+            const dagger =
+              cell === "Y" &&
+              basePage !== undefined &&
+              flaggedTarget(basePage, label, column) === "Y"
+                ? "†"
+                : "";
+            return `${cell}${dagger}`;
+          };
+          const [before, after] = [mark("before"), mark("after")];
+          return before === after ? before : `${before}→${after}`;
         })
         .join(" ");
     });
@@ -349,9 +530,11 @@ function renderDevVariants(
   out.push("");
   const perOp = operators.map((op) => {
     const mine = rows.filter((r) => r.label.operator === op);
-    return `${op} ${mine.filter((r) => flaggedTarget(r.page, r.label) === "Y").length}/${mine.length}`;
+    const hits = (column: "before" | "after"): number =>
+      mine.filter((r) => flaggedTarget(r.page, r.label, column) === "Y").length;
+    return `${op} ${hits("before")}/${mine.length} → ${hits("after")}/${mine.length}`;
   });
-  out.push(`Flagged per operator: ${perOp.join(" · ")}.`, "");
+  out.push(`Flagged per operator (before → after): ${perOp.join(" · ")}.`, "");
   if (fixtures === undefined)
     out.push(
       "No dev-fixtures summary at this commit, so † could not be checked.",
@@ -418,22 +601,30 @@ function componentTallies(page: PageResult): {
   };
 }
 
-// The new walk's trap fact; undetermined pages never show a trap or an escape outcome (see WalkTrapSchema).
+// The 2.1.2 judge's verdict. Confinement and a violation are NOT the same cell: a correct modal
+// confines focus and releases it on Escape, and printing that as a trap would be a false positive in
+// this grid. Four marks, documented in WALK_TRAP_LEGEND below.
 function walkTrapCell(w: WalkStats): string {
-  if (w.trap === "no") return "—";
-  if (w.trap === "suspected")
-    return `suspected, ${w.escapeReachedAt === null ? "no escape" : `escape @${w.escapeReachedAt}`}`;
-  if (w.suspectedTrap === null) return "undetermined (walk error)";
-  const causes = [
-    ...(w.fIncompleteCauses.crossOriginFrames > 0
-      ? [plural(w.fIncompleteCauses.crossOriginFrames, "cross-origin frame")]
-      : []),
-    ...(w.fIncompleteCauses.closedShadowRoots > 0
-      ? [plural(w.fIncompleteCauses.closedShadowRoots, "closed shadow root")]
-      : []),
-  ];
-  return `undetermined (F lower bound: ${causes.join(", ")})`;
+  const trap = w.trap;
+  if (trap.verdict === "undetermined")
+    return `undetermined (${trap.reason ?? "reason not recorded"})`;
+  if (trap.verdict === "fail") {
+    const stuck = trap.directions.find((d) => d.stuckOn !== null)?.stuckOn;
+    const where =
+      stuck === undefined || stuck === null
+        ? ""
+        : ` (stuck on ${stuck.tag}${stuck.id === null ? "" : `#${stuck.id}`})`;
+    return `TRAP inescapable${where}`;
+  }
+  if (!trap.keyboardTrap) return "—";
+  const release = trap.directions.find(
+    (d) => d.confined && d.release !== "none" && d.release !== "not-probed",
+  )?.release;
+  return `confined, escapable${release === undefined ? "" : ` via ${release}`}`;
 }
+
+const WALK_TRAP_LEGEND =
+  'walk trap = the 2.1.2 judge: — no confinement · "confined, escapable" a correct modal, NOT a violation · "TRAP inescapable" the criterion fails · "undetermined (<reason>)" not judged, and counted as a miss wherever it is scored.';
 
 function trapLabel(labels: BaseLabelsFile | null, pageId: string): string {
   const page = labels?.pages[pageId]?.page;
@@ -516,11 +707,41 @@ function renderFlagTable(
   return [
     ...out,
     "",
+    WALK_TRAP_LEGEND,
+    "",
     `${lowerBound}Components (NODENAME + sorted class set, ×copies). Many copies of one component are one defect repeated, not independent findings.`,
     "",
     ...details,
     "",
   ];
+}
+
+// What class of evidence the 2.1.2 / 3.2.1 verdicts are, read off the launch facts each walk
+// recorded for itself — never asserted from the harness's own config.
+function evidenceClass(summaries: readonly Summary[]): string {
+  const walks = summaries.flatMap((s) =>
+    s.pages.flatMap((p) => {
+      const launch = p.tools.walk.findings?.launch;
+      return launch === undefined ? [] : [launch.executableBasename];
+    }),
+  );
+  if (walks.length === 0)
+    return "Evidence class: no walk recorded its launch facts in these summaries, so nothing can be said about where these verdicts were produced.";
+  const named = [
+    ...new Set(walks.filter((b): b is string => b !== null)),
+  ].sort();
+  const headlessOnly =
+    walks.every((b) => b !== null) &&
+    named.every((b) => b.includes("headless-shell"));
+  if (!headlessOnly) {
+    const unrecorded = walks.filter((b) => b === null).length;
+    const where =
+      named.length === 0
+        ? "no recorded executable"
+        : `${named.join(", ")}${unrecorded > 0 ? `, plus ${plural(unrecorded, "walk")} with no recorded executable` : ""}`;
+    return `Evidence class: of ${plural(walks.length, "walk")} in these summaries, ${where}, so the headless-shell-only claim does not hold for this report.`;
+  }
+  return `Evidence class: every walk in these summaries ran in the headless shell (executableBasename ${named.join(", ")}, ${plural(walks.length, "walk")}); no 2.1.2 or 3.2.1 verdict in this report has ever been observed in an activated browser.`;
 }
 
 function renderHeader(
@@ -534,7 +755,7 @@ function renderHeader(
   const out = [
     `# Baseline report — ${input.sha}`,
     "",
-    "The OLD (pre-fix) checker: the taskgen gap-detector port, plus the legacy KeyboardTrapDetector and DynamicEvaluator replayed over a scripted Tab walk; axe-core alongside for comparison. Regenerate with `npx tsx bench/report.ts " +
+    "Two columns over one run. BEFORE is the old checker ONLY where the two can differ (2.1.2, 2.4.3, 3.2.1): the legacy KeyboardTrapDetector and DynamicEvaluator replayed over this run's scripted Tab walk. Its remaining criteria come from the current post-fix gap detector and are identical in both columns. AFTER = the same gap detector plus the 2.1.2 and 3.2.1 judges reading that same walk. axe-core alongside for comparison. Regenerate with `npx tsx bench/report.ts " +
       input.sha +
       "`.",
     "",
@@ -598,6 +819,8 @@ function renderHeader(
     "",
     '- Legacy trap: a page counts as flagged if detectTrap() ever said trapped during the walk (firstTrappedPress), because the agent latches trapDetected on the first checkTrap that fires (packages/agent/src/agent.ts:91-92). "clear at end" marks pages where it no longer said trapped after the last press.',
     "",
+    `- ${evidenceClass(summaries)}`,
+    "",
   );
   return out;
 }
@@ -613,7 +836,10 @@ export function renderReport(input: ReportInput): string {
   }
   const out = renderHeader(input, full, subsets);
   const bad = full["test-bad"];
-  if (bad !== undefined) out.push(...renderTestBad(bad, input.badTruth));
+  if (bad !== undefined) {
+    out.push(...renderHeadlineDelta(bad, input.badTruth));
+    out.push(...renderTestBad(bad, input.badTruth));
+  }
   const variants = full["dev-variants"];
   if (variants !== undefined) {
     out.push(

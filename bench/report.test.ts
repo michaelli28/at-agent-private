@@ -1,9 +1,16 @@
 // report.ts on synthetic summaries: criterion mapping, Wilson / rule-of-three cells, cluster counts, variant grid,
-// subset runs kept out of the tables, and the walk's undetermined trap state.
+// subset runs kept out of the tables, and the after column the 2.1.2 / 3.2.1 judges feed.
+// Every page here is FABRICATED, so deleting a rule turns nothing red by itself: the assertions below
+// are the only guard on the after column.
 import { readFileSync } from "node:fs";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 import { describe, expect, it } from "vitest";
+import type {
+  KeyboardTrapResult,
+  TrapDirection,
+} from "../packages/accessibility/src/keyboard-trap.js";
+import type { ContextChangeResult } from "../packages/accessibility/src/context-change.js";
 import {
   VariantLabelsFileSchema,
   type ElementLabel,
@@ -12,6 +19,7 @@ import {
   BadTruthSchema,
   axeCriteria,
   criterionFromAxeTag,
+  currentCriteria,
   legacyTrapFlagged,
   ourCriteria,
   renderReport,
@@ -20,9 +28,7 @@ import {
 import {
   SUBSET_DIR_RE,
   SummarySchema,
-  WalkStatsSchema,
   runDirName,
-  walkTrap,
   type AxeFinding,
   type GapFinding,
   type PageResult,
@@ -47,6 +53,109 @@ type Fake = {
   walk?: Partial<WalkStats>;
 };
 
+const launchFacts = {
+  browserVersion: "143.0.7499.4",
+  executableBasename: "chrome-headless-shell",
+};
+
+const direction = (over: Partial<TrapDirection> = {}): TrapDirection => ({
+  direction: "forward",
+  verdict: "pass",
+  reason: null,
+  confined: false,
+  endOfPage: { signal: "body-unfocused", atPress: 4 },
+  release: "not-probed",
+  region: [11, 12, 13],
+  focusableCount: 3,
+  stuckOn: null,
+  escapeUrlChanged: false,
+  documentReplacements: [],
+  ...over,
+});
+
+// The 2.1.2 judge's four reportable states. Confinement and a violation are a PAIR: a correct modal
+// is confined AND escapable, which is not a 2.1.2 failure.
+const trapPass = (): KeyboardTrapResult => ({
+  wcagCriterion: "2.1.2",
+  verdict: "pass",
+  reason: null,
+  keyboardTrap: false,
+  trapEscapable: null,
+  singleDirection: false,
+  directionsWalked: ["forward"],
+  launch: launchFacts,
+  directions: [direction()],
+});
+const trapEscapable = (): KeyboardTrapResult => ({
+  ...trapPass(),
+  keyboardTrap: true,
+  trapEscapable: true,
+  directions: [
+    direction({ confined: true, endOfPage: null, release: "escape-key" }),
+  ],
+});
+const trapFail = (): KeyboardTrapResult => ({
+  ...trapPass(),
+  verdict: "fail",
+  keyboardTrap: true,
+  trapEscapable: false,
+  directions: [
+    direction({
+      verdict: "fail",
+      confined: true,
+      endOfPage: null,
+      release: "none",
+      stuckOn: {
+        backendNodeId: 11,
+        tag: "A",
+        id: "one",
+        isBody: false,
+        classAttr: null,
+      },
+    }),
+  ],
+});
+const trapUndetermined = (
+  reason: KeyboardTrapResult["reason"] = "focusables-incomplete",
+): KeyboardTrapResult => ({
+  ...trapPass(),
+  verdict: "undetermined",
+  reason,
+  directions: [direction({ verdict: "undetermined", reason, endOfPage: null })],
+});
+
+const contextPass = (): ContextChangeResult => ({
+  wcagCriterion: "3.2.1",
+  verdict: "pass",
+  reason: null,
+  fIncomplete: false,
+  findings: [],
+  unattributed: [],
+});
+const contextFail = (): ContextChangeResult => ({
+  ...contextPass(),
+  verdict: "fail",
+  findings: [
+    {
+      kind: "url-changed",
+      wcagCriterion: "3.2.1",
+      severity: "serious",
+      pressIndex: 3,
+      key: "Tab",
+      arrivedOn: null,
+      precedingStop: null,
+      fromUrl: "http://127.0.0.1/p",
+      toUrl: "http://127.0.0.1/p?changed=1",
+      documentReplaced: true,
+    },
+  ],
+});
+const contextUndetermined = (): ContextChangeResult => ({
+  ...contextPass(),
+  verdict: "undetermined",
+  reason: "page-navigates-without-input",
+});
+
 const cleanWalk: WalkStats = {
   F: 3,
   fIncomplete: false,
@@ -56,12 +165,10 @@ const cleanWalk: WalkStats = {
   wraps: 6,
   focusLost: 0,
   deep: { inside: 0, crossOrigin: 0, closedShadowRoot: 0 },
-  launch: {
-    browserVersion: "143.0.7499.4",
-    executableBasename: "chrome-headless-shell",
-  },
+  launch: launchFacts,
   suspectedTrap: false,
-  trap: "no",
+  trap: trapPass(),
+  contextChange: contextPass(),
   escapeReachedAt: null,
   error: null,
 };
@@ -134,7 +241,7 @@ function fakeSummary(
   pageFilter: string[] | null = null,
 ): Summary {
   return SummarySchema.parse({
-    schemaVersion: 1,
+    schemaVersion: 2,
     set,
     complete: true,
     createdAt: "2026-09-18T00:00:00.000Z",
@@ -264,6 +371,162 @@ describe("criterion mapping", () => {
   });
 });
 
+describe("after column: currentCriteria", () => {
+  const withWalk = (walk: Partial<WalkStats>): PageResult =>
+    fakePage("before/home", { gaps: [gap({})], walk });
+
+  it("maps an inescapable trap verdict to 2.1.2 and an escapable confinement to nothing", () => {
+    const inescapable = withWalk({ trap: trapFail() });
+    expect([...(currentCriteria(inescapable).get("2.1.2") ?? [])]).toEqual([
+      "judge-trap",
+    ]);
+    const escapable = withWalk({ trap: trapEscapable() });
+    expect(currentCriteria(escapable).has("2.1.2")).toBe(false);
+    expect(
+      currentCriteria(withWalk({ trap: trapUndetermined() })).has("2.1.2"),
+    ).toBe(false);
+  });
+
+  it("leaves the frozen before column untouched by either walk verdict", () => {
+    // The before column reads the legacy trap only; f.trapped is false on both pages.
+    expect(ourCriteria(withWalk({ trap: trapFail() })).has("2.1.2")).toBe(
+      false,
+    );
+    expect(ourCriteria(withWalk({ trap: trapEscapable() })).has("2.1.2")).toBe(
+      false,
+    );
+  });
+
+  it("maps a failing context-change verdict to 3.2.1 and never emits the deleted 2.4.3", () => {
+    const page = fakePage("before/home", {
+      dynamic: ["2.4.3", "3.2.1"],
+      walk: { contextChange: contextFail() },
+    });
+    expect([...(currentCriteria(page).get("3.2.1") ?? [])]).toEqual([
+      "judge-context-change",
+    ]);
+    expect(currentCriteria(page).has("2.4.3")).toBe(false);
+    // The before column still carries both legacy dynamic violations.
+    expect(ourCriteria(page).has("2.4.3")).toBe(true);
+    expect([...(ourCriteria(page).get("3.2.1") ?? [])]).toEqual([
+      "legacy-dynamic:3.2.1",
+    ]);
+  });
+
+  it("shares the gap criteria with the before column, so no gap fix hides in the delta", () => {
+    const page = fakePage("before/home", {
+      gaps: [gap({}), gap({ gapType: "not_focusable", wcag: ["2.1.1"] })],
+    });
+    expect([...currentCriteria(page).keys()].sort()).toEqual([
+      "2.1.1",
+      "4.1.2",
+    ]);
+    expect([...(currentCriteria(page).get("4.1.2") ?? [])]).toEqual([
+      "gap:missing_from_a11y_tree",
+    ]);
+  });
+});
+
+describe("an undetermined verdict counts as a miss", () => {
+  // Two pages whose report FAILS 3.2.1 (before/*) and two it PASSES (after/*), one fail and one
+  // undetermined on each side.
+  const summary = fakeSummary("test-bad", [
+    fakePage("before/home", { walk: { contextChange: contextFail() } }),
+    fakePage("before/news", { walk: { contextChange: contextUndetermined() } }),
+    fakePage("after/home", { walk: { contextChange: contextFail() } }),
+    fakePage("after/news", { walk: { contextChange: contextUndetermined() } }),
+  ]);
+  const md = renderReport(input({ "test-bad": summary }));
+
+  it("keeps the undetermined page in the detection denominator and prints the count", () => {
+    const r = row(md, "### Detection", "3.2.1");
+    expect(r).toContain("2 pages (2 before, 0 after) / 1 cluster");
+    expect(r).toContain("1/2 · 0.50 [0.09, 0.91] · 1 undetermined");
+    expect(r).not.toContain("1/1");
+  });
+
+  it("mirrors it on the false-alarm table", () => {
+    const r = row(md, "### False alarms", "3.2.1");
+    expect(r).toContain("2 pages (0 before, 2 after) / 1 cluster");
+    expect(r).toContain("1/2 · 0.50 [0.09, 0.91] · 1 undetermined");
+    expect(r).not.toContain("1/1");
+  });
+
+  it("prints an undetermined 2.1.2 verdict beside its rate too, and marks the page U", () => {
+    const traps = fakeSummary("test-bad", [
+      fakePage("after/home", { walk: { trap: trapFail() } }),
+      fakePage("after/news", { walk: { trap: trapUndetermined() } }),
+    ]);
+    const out = renderReport(input({ "test-bad": traps }));
+    expect(row(out, "### False alarms", "2.1.2")).toContain(
+      "1/2 · 0.50 [0.09, 0.91] · 1 undetermined",
+    );
+    const perPage = out.slice(out.indexOf("#### Per page"));
+    expect(perPage).toContain("U = after is undetermined");
+    const line = (id: string) =>
+      perPage.split("\n").find((l) => l.startsWith(`| ${id} |`)) ?? "";
+    // C, not N: N already means "missed" in the variant grid, so reusing it here would mislead.
+    expect(line("after/home")).toContain("| P –C– |");
+    expect(line("after/news")).toContain("| P –U– |");
+  });
+
+  it("prints the false-alarm worst case, because a refusal there scores like a clean pass", () => {
+    // The asymmetry this guards: on a page that SHOULD be flagged, an undetermined verdict costs
+    // detection. On a CLEAN page it is arithmetically identical to a correct pass, so without the
+    // worst case a checker could lower its false-alarm rate purely by refusing to decide.
+    const after = row(md, "### False alarms", "3.2.1")
+      .split("|")
+      .map((c) => c.trim())[5];
+    expect(after).toContain("1/2 · 0.50");
+    expect(after).toContain("1 undetermined (worst case 2/2 · 1.00)");
+  });
+
+  it("drops the rule-of-three bound when a page was never observed", () => {
+    // Rule of three reads "n observations, zero events". With a refusal in the denominator only
+    // n-1 pages were observed, so the bound would describe a sample that was never taken.
+    const clean = fakeSummary("test-bad", [
+      fakePage("after/home", {}),
+      fakePage("after/news", {
+        walk: { contextChange: contextUndetermined() },
+      }),
+    ]);
+    const cells = row(
+      renderReport(input({ "test-bad": clean })),
+      "### False alarms",
+      "3.2.1",
+    )
+      .split("|")
+      .map((c) => c.trim());
+    expect(cells[5]).toContain("0/2 · 0.00");
+    expect(cells[5]).toContain("1 undetermined (worst case 1/2 · 0.50)");
+    expect(cells[5]).not.toContain("rule of 3");
+    // The frozen before column has no refusals, so it keeps its bound: the drop is caused by the
+    // refusal, not by the table.
+    expect(cells[3]).toContain("rule of 3");
+  });
+
+  it("keeps the tool-error exclusion separate from an undetermined verdict", () => {
+    const broken = structuredClone(summary.pages[0]);
+    broken.tools.walk = {
+      status: "error",
+      error: "walk died",
+      budgetExceeded: false,
+      durationMs: 1,
+      load: null,
+      findings: null,
+    };
+    const out = renderReport(
+      input({
+        "test-bad": fakeSummary("test-bad", [broken, summary.pages[1]]),
+      }),
+    );
+    const r = row(out, "### Detection", "3.2.1");
+    expect(r).toContain(
+      "0/1 · 0.00 [0.00, 0.79] · 1 undetermined (1 excluded: tool error)",
+    );
+  });
+});
+
 describe("renderReport: test-bad", () => {
   const md = renderReport(input({ "test-bad": badSummary }));
   const DET = "### Detection";
@@ -279,6 +542,36 @@ describe("renderReport: test-bad", () => {
     expect(row(md, DET, "2.4.3")).toContain("1/1 · 1.00 [0.21, 1.00]");
     // No before-page fails 2.1.2, so there is nothing to detect.
     expect(row(md, DET, "2.1.2")).toContain("n/a");
+  });
+
+  it("keeps the 2.4.3 row after the cut, at zero, with the COVERAGE.md footnote", () => {
+    const r243 = row(md, DET, "2.4.3");
+    // before 1/1 (legacy focus-order rule) -> after 0/1: nothing replaces it.
+    expect(r243).toContain("1/1 · 1.00 [0.21, 1.00]");
+    expect(r243).toContain("0/1 · 0.00");
+    // The after column's evidence cell for 2.4.3 is empty.
+    const cells = r243.split("|").map((c) => c.trim());
+    expect(cells[5]).toContain("0/1 · 0.00");
+    expect(cells[6]).toBe("—");
+    expect(row(md, FA, "2.4.3")).toContain("0/7 · 0.00 [0.00, 0.35]");
+    expect(md).toContain(
+      "2.4.3 has no after-column detector: the focus-order rule was deleted rather than repaired, and nothing replaces it (bench/COVERAGE.md).",
+    );
+  });
+
+  it("scores the after column's 2.1.2 and 3.2.1 from the judge verdicts", () => {
+    // Every page's walk passes both judges, and the legacy trap fires on all eight.
+    expect(row(md, FA, "2.1.2")).toContain("8/8 · 1.00 [0.68, 1.00]");
+    const judged = fakeSummary("test-bad", [
+      fakePage("after/home", {
+        trapped: true,
+        walk: { trap: trapFail(), contextChange: contextFail() },
+      }),
+    ]);
+    const out = renderReport(input({ "test-bad": judged }));
+    expect(row(out, FA, "2.1.2")).toContain("judge-trap ×1");
+    expect(row(out, FA, "3.2.1")).toContain("judge-context-change ×1");
+    expect(row(out, FA, "2.1.2")).toContain("legacy-trap ×1");
   });
 
   it("scores false alarms on every page the report passes, before or after, adding the rule of three at zero", () => {
@@ -386,8 +679,17 @@ describe("renderReport: dev-variants and dev-fixtures", () => {
       cluster: "b1",
       gaps: [gap({ dataBenchId: "other" })],
     }),
-    fakePage("b2__M5__t3", { cluster: "b2", trapped: true }),
-    fakePage("b2__M6__t4", { cluster: "b2", dynamic: ["2.4.3"] }),
+    fakePage("b2__M5__t3", {
+      cluster: "b2",
+      trapped: true,
+      walk: { trap: trapFail() },
+    }),
+    // The legacy DynamicEvaluator never produced 3.2.1 on a scripted walk; the judge does.
+    fakePage("b2__M6__t4", {
+      cluster: "b2",
+      dynamic: ["2.4.3"],
+      walk: { contextChange: contextFail() },
+    }),
   ]);
   const fixtures = fakeSummary("dev-fixtures", [
     fakePage("cards", {
@@ -408,15 +710,45 @@ describe("renderReport: dev-variants and dev-fixtures", () => {
     ),
   );
 
+  const gridLine = (source: string, op: string) =>
+    source
+      .slice(source.indexOf("| operator |"))
+      .split("\n")
+      .find((l) => l.startsWith(`| ${op} |`)) ?? "";
+
   it("labels the variant grid regression-only and marks each seeded target flagged or missed", () => {
     expect(md).toContain("regression only — not a headline number");
-    const grid = md.slice(md.indexOf("| operator |"));
-    const line = (op: string) =>
-      grid.split("\n").find((l) => l.startsWith(`| ${op} |`)) ?? "";
+    const line = (op: string) => gridLine(md, op);
+    // M1-M4 read the shared gap detector, so their cell cannot differ between the columns.
     expect(line("M1")).toMatch(/\| Y \| · \|$/);
     expect(line("M3")).toMatch(/\| N \| · \|$/);
+    // M5: the legacy trap and the 2.1.2 judge both flag it, so the cell prints once.
     expect(line("M5")).toMatch(/\| · \| Y \|$/);
-    expect(line("M6")).toMatch(/\| · \| N \|$/);
+    // M6: the frozen column missed it; the 3.2.1 judge flags it.
+    expect(line("M6")).toMatch(/\| · \| N→Y \|$/);
+    expect(md).toContain("Flagged per operator (before → after):");
+  });
+
+  it("reads the after column's M5 oracle from trap.verdict and M6's from contextChange.verdict", () => {
+    const swapped = fakeSummary("dev-variants", [
+      // The legacy trap fires, the judge says the confinement is escapable: a correct modal.
+      fakePage("b2__M5__t3", {
+        cluster: "b2",
+        trapped: true,
+        walk: { trap: trapEscapable() },
+      }),
+      fakePage("b2__M6__t4", {
+        cluster: "b2",
+        walk: { contextChange: contextUndetermined() },
+      }),
+    ]);
+    const out = renderReport(
+      input({ "dev-variants": swapped }, { variantLabels }),
+    );
+    expect(gridLine(out, "M5")).toMatch(/\| Y→N \|$/);
+    // An undetermined verdict is its own mark, and the legend says it counts as a miss.
+    expect(gridLine(out, "M6")).toMatch(/\| N→U \|$/);
+    expect(out).toContain("U undetermined (counted as a miss)");
   });
 
   it("keeps the gap-type confusion matrix separate and counts acceptable types", () => {
@@ -435,6 +767,8 @@ describe("renderReport: dev-variants and dev-fixtures", () => {
   });
 
   it("marks a Y with † when the unmodified base page already had the same flag", () => {
+    // The base page carries the legacy trap flag but not the judge's fail, so only the before mark
+    // gets the dagger and the two columns print separately.
     const withBase = fakeSummary("dev-fixtures", [
       fakePage("b2", { cluster: "b2", trapped: true }),
     ]);
@@ -446,7 +780,7 @@ describe("renderReport: dev-variants and dev-fixtures", () => {
     );
     const m5 =
       grid.split("\n").find((l) => l.startsWith("| M5 |")) ?? "no M5 row";
-    expect(m5).toMatch(/\| · \| Y† \|$/);
+    expect(m5).toMatch(/\| · \| Y†→Y \|$/);
     const m1 =
       grid.split("\n").find((l) => l.startsWith("| M1 |")) ?? "no M1 row";
     expect(m1).toMatch(/\| Y \| · \|$/);
@@ -492,64 +826,138 @@ describe("subset runs", () => {
   });
 });
 
-describe("walk trap on pages whose F is a lower bound", () => {
-  it("derives the walk trap: a missing wrap is a suspected trap only when F is complete", () => {
-    expect(walkTrap({ suspectedTrap: false, fIncomplete: true })).toBe("no");
-    expect(walkTrap({ suspectedTrap: true, fIncomplete: false })).toBe(
-      "suspected",
-    );
-    expect(walkTrap({ suspectedTrap: true, fIncomplete: true })).toBe(
-      "undetermined",
-    );
-    expect(walkTrap({ suspectedTrap: null, fIncomplete: false })).toBe(
-      "undetermined",
-    );
-  });
-
-  it("rejects a summary that calls an fIncomplete no-wrap walk a suspected trap", () => {
-    const bad = {
-      ...cleanWalk,
-      fIncomplete: true,
-      suspectedTrap: true,
-      trap: "suspected",
-    };
-    expect(WalkStatsSchema.safeParse(bad).success).toBe(false);
-    expect(
-      WalkStatsSchema.safeParse({ ...bad, trap: "undetermined" }).success,
-    ).toBe(true);
-  });
-
-  it("prints undetermined with its cause and no escape outcome; the legacy verdict stays as-is", () => {
+describe("the walk-trap cell reads the 2.1.2 judge", () => {
+  const cell = (walk: Partial<WalkStats>): string => {
     const live = fakeSummary("dev-live", [
-      fakePage("frames.example", {
-        cluster: "frames.example",
-        trapped: true,
-        walk: {
-          F: 14,
-          fIncomplete: true,
-          fIncompleteCauses: { crossOriginFrames: 1, closedShadowRoots: 0 },
-          wraps: 0,
-          deep: { inside: 0, crossOrigin: 40, closedShadowRoot: 0 },
-          suspectedTrap: true,
-          trap: "undetermined",
-          escapeReachedAt: null,
-        },
-      }),
-      fakePage("dialog.example", {
-        cluster: "dialog.example",
-        walk: { wraps: 0, suspectedTrap: true, trap: "suspected" },
-      }),
+      fakePage("p.example", { cluster: "p.example", trapped: true, walk }),
     ]);
     const md = renderReport(input({ "dev-live": live }));
-    const line = (id: string) =>
-      md.split("\n").find((l) => l.startsWith(`| ${id} |`)) ?? "";
-    const frames = line("frames.example");
-    expect(frames).toContain(
-      "| ≥14 / 0 | 0 / 0 | Y @20 (cycle 4) | undetermined (F lower bound: 1 cross-origin frame) |",
+    return md.split("\n").find((l) => l.startsWith("| p.example |")) ?? "";
+  };
+
+  it("tells no trap, an escapable confinement, an inescapable trap and an undetermined verdict apart", () => {
+    expect(cell({})).toContain("| — |");
+    // A correct modal: confined AND escapable is NOT a 2.1.2 violation, so it must not read as a trap.
+    const modal = cell({ trap: trapEscapable() });
+    expect(modal).toContain("| confined, escapable via escape-key |");
+    expect(modal).not.toContain("TRAP");
+    expect(cell({ trap: trapFail() })).toContain(
+      "| TRAP inescapable (stuck on A#one) |",
     );
-    expect(frames).not.toContain("suspected");
-    expect(frames).not.toContain("escape");
+  });
+
+  it("prints an undetermined verdict with the judge's own reason and no escape outcome", () => {
+    const frames = cell({
+      F: 14,
+      fIncomplete: true,
+      fIncompleteCauses: { crossOriginFrames: 1, closedShadowRoots: 0 },
+      wraps: 0,
+      deep: { inside: 0, crossOrigin: 40, closedShadowRoot: 0 },
+      suspectedTrap: true,
+      trap: trapUndetermined("focusables-incomplete"),
+      escapeReachedAt: null,
+    });
+    expect(frames).toContain(
+      "| ≥14 / 0 | 0 / 0 | Y @20 (cycle 4) | undetermined (focusables-incomplete) |",
+    );
+    expect(frames).not.toContain("TRAP");
+    expect(cell({ trap: trapUndetermined("walk-error") })).toContain(
+      "| undetermined (walk-error) |",
+    );
+  });
+
+  it("documents the four marks in the legend and keeps the ≥F note", () => {
+    const md = renderReport(
+      input({
+        "dev-live": fakeSummary("dev-live", [
+          fakePage("p.example", {
+            cluster: "p.example",
+            walk: { fIncomplete: true },
+          }),
+        ]),
+      }),
+    );
+    expect(md).toContain(
+      'walk trap = the 2.1.2 judge: — no confinement · "confined, escapable" a correct modal, NOT a violation · "TRAP inescapable" the criterion fails · "undetermined (<reason>)" not judged, and counted as a miss wherever it is scored.',
+    );
     expect(md).toContain("≥F: a cross-origin frame or closed shadow root");
-    expect(line("dialog.example")).toContain("| suspected, no escape |");
+  });
+});
+
+describe("Headline: before → after", () => {
+  const md = renderReport(input({ "test-bad": badSummary }));
+  const block = md.slice(
+    md.indexOf("## Headline: before → after"),
+    md.indexOf("## test-bad"),
+  );
+  const hrow = (sc: string, table: string) =>
+    block.split("\n").find((l) => l.startsWith(`| ${sc} | ${table} |`)) ?? "";
+
+  it("decomposes the delta so a scope cut cannot read as a fix", () => {
+    expect(block).toContain("| criterion | table |");
+    expect(hrow("2.4.3", "detection")).toContain("SCOPE CUT — rule deleted");
+    expect(hrow("2.4.3", "false alarms")).toContain("SCOPE CUT — rule deleted");
+    expect(hrow("2.4.3", "detection")).toContain("1/1 · 1.00 [0.21, 1.00]");
+    expect(hrow("2.4.3", "detection")).toContain("0/1 · 0.00");
+    expect(hrow("2.1.2", "false alarms")).toContain("8/8 · 1.00 [0.68, 1.00]");
+    expect(hrow("2.1.2", "false alarms")).toContain("0/8 · 0.00");
+  });
+
+  it("says the gap detector is in both columns, so none of the delta is a gap fix", () => {
+    expect(block).toContain(
+      "The gap detector sits UNCHANGED in both columns, so none of the delta below is a gap fix",
+    );
+    // A criterion only the gaps can flag is identical in both columns, so it is not a row here.
+    expect(hrow("4.1.2", "detection")).toBe("");
+  });
+
+  it("states that 2.1.2 has no detection row to improve on, and only when that is true", () => {
+    // Verified against bench/results/cd3b122/REPORT-baseline.md:40 — 2.1.2 detection is "0 pages | n/a".
+    expect(block).toContain("no BAD page's report fails 2.1.2");
+    // green-guard: allow — new assertion, not a weakened one. The claim is conditional by spec
+    // (item 6: "drop the line if it is false"), so a truth file that DOES fail a page on 2.1.2
+    // must suppress it. Without this case the line could be a hardcoded string that is never checked.
+    const withTarget = renderReport(
+      input(
+        { "test-bad": badSummary },
+        {
+          badTruth: BadTruthSchema.parse({
+            pages: {
+              "before/home": { criteria: { "2.1.2": { result: "Fail" } } },
+            },
+          }),
+        },
+      ),
+    );
+    expect(withTarget).not.toContain("no BAD page's report fails 2.1.2");
+  });
+});
+
+describe("evidence class", () => {
+  it("names the launch these verdicts were produced in, from the recorded walk facts", () => {
+    const md = renderReport(input({ "test-bad": badSummary }));
+    expect(md).toContain(
+      "Evidence class: every walk in these summaries ran in the headless shell (executableBasename chrome-headless-shell, 8 walks); no 2.1.2 or 3.2.1 verdict in this report has ever been observed in an activated browser.",
+    );
+  });
+
+  it("refuses the headless-only claim when a walk recorded another executable", () => {
+    const activated = fakeSummary("test-bad", [
+      fakePage("after/home", {
+        walk: {
+          launch: {
+            browserVersion: "143.0.7499.4",
+            executableBasename: "Google Chrome for Testing",
+          },
+        },
+      }),
+    ]);
+    const md = renderReport(input({ "test-bad": activated }));
+    expect(md).toContain(
+      "Evidence class: of 1 walk in these summaries, Google Chrome for Testing, so the headless-shell-only claim does not hold",
+    );
+    expect(md).not.toContain(
+      "every walk in these summaries ran in the headless shell",
+    );
   });
 });

@@ -27,13 +27,15 @@ describe("the freeze", () => {
     expect(source).toContain('from "./legacy-detectors.js"');
     expect(source).not.toMatch(/packages\/accessibility\/src\/(keyboard-trap-detector|dynamic-evaluator)/);
 
-    // The live classes are gone, so the paths bench used to import can no longer resolve.
-    await expect(
-      import("../packages/accessibility/src/keyboard-trap-detector.js"),
-    ).rejects.toThrow();
-    await expect(
-      import("../packages/accessibility/src/dynamic-evaluator.js"),
-    ).rejects.toThrow();
+    // The live classes are gone, so the paths bench used to import can no longer resolve. The
+    // specifiers are variables on purpose: a literal would make tsc fail on a module that is
+    // SUPPOSED to be missing, which is the very thing this test asserts.
+    for (const retired of [
+      "../packages/accessibility/src/keyboard-trap-detector.js",
+      "../packages/accessibility/src/dynamic-evaluator.js",
+    ]) {
+      await expect(import(/* @vite-ignore */ retired)).rejects.toThrow();
+    }
   });
 });
 

@@ -119,10 +119,47 @@ describe("run.ts end-to-end on two dev fixtures", () => {
         executableBasename: "chrome-headless-shell",
       },
       suspectedTrap: false,
-      trap: "no",
+      trap: {
+        wcagCriterion: "2.1.2",
+        verdict: "pass",
+        reason: null,
+        keyboardTrap: false,
+        trapEscapable: null,
+        singleDirection: true,
+        directionsWalked: ["forward"],
+        launch: {
+          browserVersion: summary.launch.browserVersion,
+          executableBasename: "chrome-headless-shell",
+        },
+        directions: [
+          {
+            direction: "forward",
+            verdict: "pass",
+            reason: null,
+            confined: false,
+            endOfPage: { signal: "body-unfocused", atPress: 4 },
+            release: "not-probed",
+            // The browser assigns backendNodeIds, so the tail's identities are counted below, not pinned here.
+            region: expect.any(Array),
+            focusableCount: 3,
+            stuckOn: null,
+            escapeUrlChanged: false,
+            documentReplacements: [],
+          },
+        ],
+      },
+      contextChange: {
+        wcagCriterion: "3.2.1",
+        verdict: "pass",
+        reason: null,
+        fIncomplete: false,
+        findings: [],
+        unattributed: [],
+      },
       escapeReachedAt: null,
       error: null,
     });
+    expect(p.tools.walk.findings?.trap.directions[0].region).toHaveLength(3);
     expect(p.tools.legacy.findings?.trap).toMatchObject({
       trapped: true,
       firstTrappedPress: 20,
@@ -131,6 +168,25 @@ describe("run.ts end-to-end on two dev fixtures", () => {
     expect(
       p.tools.legacy.findings?.dynamicViolations.map((v) => v.criterion),
     ).toEqual(["2.4.3"]);
+  });
+
+  // The before/after, on one page, in one run, in one browser session: both columns read the SAME
+  // walk, so they cannot differ because the page moved between runs.
+  it("three-links: the frozen pre-fix checker still cries wolf on the same walk the judge passes", () => {
+    const p = page("three-links");
+    // BEFORE — the frozen replay of the pre-fix detector: a wrap-around cycle called a trap.
+    expect(p.tools.legacy.findings?.trap.trapped).toBe(true);
+    expect(p.tools.legacy.findings?.trap.firstTrappedPress).toBe(20);
+    // AFTER — the judge on that same walk: the page ends, so 2.1.2 passes.
+    expect(p.tools.walk.findings?.trap.verdict).toBe("pass");
+    expect(p.tools.walk.findings?.trap.keyboardTrap).toBe(false);
+    expect(p.tools.walk.findings?.trap.directions).toHaveLength(1);
+    expect(p.tools.walk.findings?.trap.directions[0].endOfPage?.signal).toBe(
+      "body-unfocused",
+    );
+    // And no 3.2.1 on a page where Tab never changes context.
+    expect(p.tools.walk.findings?.contextChange.verdict).toBe("pass");
+    expect(p.tools.walk.findings?.contextChange.findings).toEqual([]);
   });
 
   it("identical-links: twelve id-less 'Read more' links collide into a 1-cycle trap at press 5", () => {

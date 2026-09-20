@@ -9,6 +9,8 @@ import {
   LaunchFactsSchema,
   TabWalkResultSchema,
 } from "../packages/accessibility/src/tab-walk.js";
+import { KeyboardTrapResultSchema } from "../packages/accessibility/src/keyboard-trap.js";
+import { ContextChangeResultSchema } from "../packages/accessibility/src/context-change.js";
 import { ImpactSchema } from "../packages/accessibility/src/types.js";
 import { LegacyDynamicViolationSchema } from "./legacy-detectors.js";
 
@@ -128,21 +130,6 @@ export const AxeFindingSchema = z
   .strict();
 export type AxeFinding = z.infer<typeof AxeFindingSchema>;
 
-// What the new walk's trap facts support. no: focus wrapped past the end of the page. suspected: no wrap in the whole
-// walk and F is complete. undetermined: the walk stopped on an error, or F is only a lower bound (fIncomplete), so a
-// walk sized from F may end before the wrap; a missing wrap or a null escape reachedAt is then not evidence of a trap.
-export const WalkTrapSchema = z.enum(["no", "suspected", "undetermined"]);
-export type WalkTrap = z.infer<typeof WalkTrapSchema>;
-
-export function walkTrap(w: {
-  suspectedTrap: boolean | null;
-  fIncomplete: boolean;
-}): WalkTrap {
-  if (w.suspectedTrap === null) return "undetermined";
-  if (!w.suspectedTrap) return "no";
-  return w.fIncomplete ? "undetermined" : "suspected";
-}
-
 export const WalkStatsSchema = z
   .object({
     F: z.number().int().nonnegative(),
@@ -164,18 +151,20 @@ export const WalkStatsSchema = z
       .strict(),
     // runTabWalk's own launch facts (the summary's launch block is the harness's).
     launch: LaunchFactsSchema.strict(),
-    // The walk's raw fact (no wrapped marker in the whole walk; null on a walk error). Report trap, not this.
+    // The walk's raw fact (no wrapped marker in the whole walk; null on a walk error). A fact, not a
+    // verdict: repetition is normal, so only the judges below decide 2.1.2.
     suspectedTrap: z.boolean().nullable(),
-    trap: WalkTrapSchema,
+    // WCAG 2.1.2 and 3.2.1 as judged from this walk. Three-valued: an undetermined verdict is scored
+    // as a miss, never as a pass, so refusing to judge can never buy detection (report.ts prints
+    // the false-alarm worst case, where a refusal would otherwise score like a clean pass).
+    trap: KeyboardTrapResultSchema,
+    contextChange: ContextChangeResultSchema,
     // Raw escape-probe fact; on an fIncomplete page a null is not evidence of a trap.
     escapeReachedAt: z.number().int().positive().nullable(),
     // The walk's own recorded error (phase@index: message); the walk still returned its partial steps.
     error: z.string().nullable(),
   })
-  .strict()
-  .refine((w) => w.trap === walkTrap(w), {
-    message: "trap must be walkTrap(suspectedTrap, fIncomplete)",
-  });
+  .strict();
 export type WalkStats = z.infer<typeof WalkStatsSchema>;
 
 export const LoadFactsSchema = z
@@ -281,7 +270,7 @@ export const LaunchSchema = z
 
 export const SummarySchema = z
   .object({
-    schemaVersion: z.literal(1),
+    schemaVersion: z.literal(2),
     set: PageSetSchema,
     // false while the run is in progress or if it died; the report refuses to present incomplete summaries silently.
     complete: z.boolean(),
@@ -319,7 +308,7 @@ export type Summary = z.infer<typeof SummarySchema>;
 
 export const RawPageSchema = z
   .object({
-    schemaVersion: z.literal(1),
+    schemaVersion: z.literal(2),
     set: PageSetSchema,
     pageId: z.string(),
     url: z.string(),

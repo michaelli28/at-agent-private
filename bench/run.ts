@@ -25,6 +25,8 @@ import {
 import { z } from "zod";
 import { runAxe, type AxeResult } from "../packages/accessibility/src/axe.js";
 import { crawlPageWithGapDetection } from "../packages/accessibility/src/gaps/detect.js";
+import { judgeKeyboardTrap } from "../packages/accessibility/src/keyboard-trap.js";
+import { judgeContextChange } from "../packages/accessibility/src/context-change.js";
 import type {
   AccessibilityGap,
   DualCrawlResult,
@@ -43,7 +45,6 @@ import {
   SummarySchema,
   componentKey,
   runDirName,
-  walkTrap,
   type AxeFinding,
   type GapFinding,
   type LegacyReplay,
@@ -89,8 +90,8 @@ const NOTES = [
   "Legacy trap: detectTrap() is replayed after every walk press; trapped is its verdict after the last press, and firstTrappedPress is the first press where it said trapped (report.ts scores a page flagged if it ever did, as the agent latches trapDetected).",
   LEGACY_TRAP_NOTE,
   "The legacy identity is rebuilt from each press's immediate read (the walk's step.immediate: top-level document.activeElement as soon as keyboard.press resolves, with no settle), which is when executeTab reads it; focus a page script moves later is not seen, and focus inside frames or shadow roots shows as the container.",
-  "Walk trap (the new walk's facts, not the old checker): no = focus wrapped past the end of the page; suspected = no wrap in 5(F+1)+5 presses with F complete; undetermined = the walk stopped on an error, or F is a lower bound (fIncomplete: a cross-origin frame or closed shadow root may hide stops), where a missing wrap or a null escape reachedAt is not evidence of a trap. The legacy detector's verdicts are reported as-is.",
-  "Gaps come from the committed baseline port with its BASELINE-BUG markers unfixed (hidden elements never filtered, selector-only crawl, cursor signal always false).",
+  "Walk trap (the new checker): judgeKeyboardTrap over this walk. pass = focus reached the end of the page, or it was confined but Escape or the opposite Tab key got out (a correct modal). fail = confined with neither key escaping. undetermined = the walk errored, F is only a lower bound, the focusable count changed mid-walk, or no release probe ran; an undetermined verdict is scored as a miss, never as a pass. contextChange is judgeContextChange (3.2.1 incl. F55) over the same walk. The legacy detector's verdicts are reported as-is, unchanged, from the frozen copy in bench/legacy-detectors.ts.",
+  "Gaps come from the CURRENT post-fix detector (F1/F2/F3/F9 landed at 6b7abff and c1f94b2: hidden elements are filtered, reachability comes from the Tab walk). The same gap findings feed both the before and the after column, so the before/after delta isolates the keyboard rules and takes no credit for the gap fixes; those were measured separately against cd3b122.",
 ];
 
 type Args = {
@@ -447,7 +448,9 @@ function walkStats(w: TabWalkResult): WalkStats {
     },
     launch: w.launchFacts,
     suspectedTrap: w.suspectedTrap,
-    trap: walkTrap(w),
+    // One forward walk per page, so a trap armed only on reverse entry is not covered (bench/COVERAGE.md).
+    trap: judgeKeyboardTrap([w]),
+    contextChange: judgeContextChange(w),
     escapeReachedAt: w.escapeProbe?.reachedAt ?? null,
     error: w.error
       ? `${w.error.phase}@${w.error.index}: ${w.error.message}`
@@ -589,7 +592,7 @@ async function runPage(
     tools,
   };
   const raw: RawPage = {
-    schemaVersion: 1,
+    schemaVersion: 2,
     set: opts.set,
     pageId: spec.pageId,
     url: spec.url,
@@ -623,7 +626,7 @@ function describePage(p: PageResult): string {
     `axe ${axe.findings?.length ?? "-"} rules/${axe.findings?.reduce((n, v) => n + v.targets.length, 0) ?? "-"} nodes${flag(axe.status, axe.error)}`,
     walk.findings === null
       ? `walk -${flag(walk.status, walk.error)}`
-      : `walk F=${walk.findings.fIncomplete ? "≥" : ""}${walk.findings.F} ${walk.findings.presses}/${walk.findings.plannedPresses} presses, ${walk.findings.wraps} wraps${walk.findings.trap === "no" ? "" : `, trap ${walk.findings.trap}`}${flag(walk.status, walk.error)}`,
+      : `walk F=${walk.findings.fIncomplete ? "≥" : ""}${walk.findings.F} ${walk.findings.presses}/${walk.findings.plannedPresses} presses, ${walk.findings.wraps} wraps${walk.findings.trap.verdict === "pass" ? "" : `, trap ${walk.findings.trap.verdict}${walk.findings.trap.reason === null ? "" : ` (${walk.findings.trap.reason})`}`}${walk.findings.contextChange.verdict === "pass" ? "" : `, 3.2.1 ${walk.findings.contextChange.verdict}`}${flag(walk.status, walk.error)}`,
     trap === undefined
       ? `legacy -${flag(legacy.status, legacy.error)}`
       : `legacy trap ${trap.trapped ? `YES (first @${trap.firstTrappedPress}, cycle ${trap.cycleLength})` : "no"}, dynamic [${legacy.findings?.dynamicViolations.map((v) => v.criterion).join(",")}]`,
@@ -681,7 +684,7 @@ async function main(argv: readonly string[]): Promise<number> {
           : serveUrl(p.target.mount, p.target.rel, server?.origin),
     }));
     const base: Summary = {
-      schemaVersion: 1,
+      schemaVersion: 2,
       set: args.set,
       complete: false,
       createdAt: new Date().toISOString(),
