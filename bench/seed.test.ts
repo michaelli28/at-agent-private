@@ -199,6 +199,7 @@ describe("generation", () => {
         M4: "no_accessible_name",
         M5: null,
         M6: null,
+        M7: "not_focusable",
       };
       expect(target.expectedGapType, id).toBe(expectedGap[v.operator]);
       if (v.operator === "M1") {
@@ -332,6 +333,18 @@ describe("labels agree with the DOM", () => {
             expect(
               f.tabIndex >= 0 && !f.disabled && f.visible,
               `${where} is focusable`,
+            ).toBe(true);
+          } else if (
+            "target" in p.labels &&
+            p.labels.page.focusLostOnArrival &&
+            f.id === p.labels.target
+          ) {
+            // M7 takes keyboard access away at run time, not in the markup: a focus handler blurs the
+            // element, so it stays focusable in the DOM while a Tab walk can never leave focus on it.
+            // Asserting the markup side keeps this case honest instead of exempt.
+            expect(
+              f.tabIndex >= 0 && !f.disabled && f.visible,
+              `${where} is focusable in markup and blurred at run time`,
             ).toBe(true);
           } else if (label.interactive) {
             expect(f.tabIndex, `${where} is not focusable`).toBeLessThan(0);

@@ -1,4 +1,4 @@
-// Seeded defect operators M1-M6: which elements each applies to, how it mutates the DOM (in Chromium), the one inline
+// Seeded defect operators M1-M7: which elements each applies to, how it mutates the DOM (in Chromium), the one inline
 // script it may append, and how it changes the ground-truth labels.
 import {
   VariantLabelsSchema,
@@ -47,7 +47,8 @@ export const IN_PAGE_LIB = String.raw`(function () {
         visibleText(el) === '' && hasNameSource(el);
     },
     M5: focusable,
-    M6: focusable
+    M6: focusable,
+    M7: focusable
   };
   var MUTATE = {
     M1: function (el) {
@@ -68,7 +69,8 @@ export const IN_PAGE_LIB = String.raw`(function () {
       el.querySelectorAll('img[alt]').forEach(function (n) { n.setAttribute('alt', ''); });
     },
     M5: function () {},
-    M6: function () {}
+    M6: function () {},
+    M7: function () {}
   };
   // Document markup with operator scripts dropped and every tagged element collapsed to a slot, so two pages can be
   // compared outside their tagged elements.
@@ -246,6 +248,29 @@ export const OPERATORS: Record<OperatorId, Operator> = {
     }),
     reflag: (f) => ({ ...f, contextChangeOnFocus: true }),
     removesKeyboardAccess: false,
+  },
+  M7: {
+    summary:
+      "focus handler on one element that immediately blurs it (W3C F55 blur-on-focus)",
+    pageLevel: true,
+    changesMarkup: false,
+    // No guard is needed: focus is dropped to <body> and the next Tab continues AFTER this element
+    // (bench/probes/wrap/RESULT.md, fixture E), so the walk moves on instead of looping here.
+    script: (t) =>
+      `${byId(t)}.addEventListener('focus', function () { this.blur(); });`,
+    // Unlike M5/M6 the walk still completes here, so the target's own status is observable and is labelled:
+    // not_focusable carries 2.1.1 + 2.4.7 (gaps/gap-detector.ts), the page flag carries F55, and 3.2.1 is
+    // the context-change judge's. One observation, one criterion.
+    relabel: (l) =>
+      seeded(l, "M7", {
+        keyboardAccessible: false,
+        gap: "not_focusable",
+        what: "a focus handler blurs this element as soon as Tab reaches it (W3C F55), so a complete Tab walk never leaves focus on it and it can never be operated; focus continues past it, so this is NOT a 2.1.2 trap.",
+      }),
+    reflag: (f) => ({ ...f, focusLostOnArrival: true }),
+    // An element that cannot hold focus cannot be activated, so whatever it reveals is unreachable too.
+    // No M7 target in this corpus reveals another element, so this path is not exercised today.
+    removesKeyboardAccess: true,
   },
 };
 

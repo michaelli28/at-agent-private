@@ -47,15 +47,15 @@ Find an element by selector: DevTools → Elements, Cmd/Ctrl+F, paste the select
     - recorded: `interactive=true keyboardAccessible=true expectedGapType=null revealedBy=dropdown-toggle`: a.dropdown-item in the collapsed menu (display:none until opened). Hidden from everyone while closed, which is correct, not a gap.
     - agree? / note:
 
-## Dev page flags (2 of 35: base pages + seeded variants)
+## Dev page flags (2 of 41: base pages + seeded variants)
 
 9. [ ] **js-handlers (base page)**
     - open <http://127.0.0.1:4173/corpus/dev/base/js-handlers.html>
     - test: From a fresh load, Tab through every stop to the end of the page, then Shift+Tab back to the top, opening any menu or dialog on the way with Enter. Trap: focus cycles inside one region and cannot leave (then try Escape). Context change: focusing something, without pressing Enter, navigates or changes the URL. Focus lost: the focus ring vanishes as soon as Tab lands on an element (console: `document.activeElement === document.body`).
     - recorded: `keyboardTrap=false trapEscapable=null contextChangeOnFocus=false focusLostOnArrival=false`
     - agree? / note:
-10. [ ] **navbar__M1__dropdown-toggle (M1 applied to `[data-bench-id="dropdown-toggle"]`)**
-    - open <http://127.0.0.1:4173/variants/navbar__M1__dropdown-toggle.html>
+10. [ ] **navbar__M3__brand (M3 applied to `[data-bench-id="brand"]`)**
+    - open <http://127.0.0.1:4173/variants/navbar__M3__brand.html>
     - test: From a fresh load, Tab through every stop to the end of the page, then Shift+Tab back to the top, opening any menu or dialog on the way with Enter. Trap: focus cycles inside one region and cannot leave (then try Escape). Context change: focusing something, without pressing Enter, navigates or changes the URL. Focus lost: the focus ring vanishes as soon as Tab lands on an element (console: `document.activeElement === document.body`).
     - recorded: `keyboardTrap=false trapEscapable=null contextChangeOnFocus=false focusLostOnArrival=false`
     - agree? / note:
