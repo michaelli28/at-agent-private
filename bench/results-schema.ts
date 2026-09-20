@@ -9,10 +9,8 @@ import {
   LaunchFactsSchema,
   TabWalkResultSchema,
 } from "../packages/accessibility/src/tab-walk.js";
-import {
-  DynamicViolationSchema,
-  ImpactSchema,
-} from "../packages/accessibility/src/types.js";
+import { ImpactSchema } from "../packages/accessibility/src/types.js";
+import { LegacyDynamicViolationSchema } from "./legacy-detectors.js";
 
 export const PAGE_SETS = [
   "dev-fixtures",
@@ -83,7 +81,7 @@ export const LegacyReplaySchema = z
         .strict(),
     ),
     trap: LegacyTrapSchema,
-    dynamicViolations: z.array(DynamicViolationSchema),
+    dynamicViolations: z.array(LegacyDynamicViolationSchema),
   })
   .strict();
 export type LegacyReplay = z.infer<typeof LegacyReplaySchema>;

@@ -1,8 +1,7 @@
 // Replays the OLD (pre-fix) agent checks over a scripted Tab walk: the executeTab identity string, the
 // KeyboardTrapDetector exactly as executeCheckTrap configures it, and the DynamicEvaluator fed one focus event per
 // press as agent.ts recordInteractionEvent does for a 'tab' action.
-import { DynamicEvaluator } from "../packages/accessibility/src/dynamic-evaluator.js";
-import { KeyboardTrapDetector } from "../packages/accessibility/src/keyboard-trap-detector.js";
+import { DynamicEvaluator, KeyboardTrapDetector } from "./legacy-detectors.js";
 import type { FocusRead } from "../packages/accessibility/src/tab-walk.js";
 import type { LegacyReplay } from "./results-schema.js";
 
