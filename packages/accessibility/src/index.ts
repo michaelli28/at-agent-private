@@ -22,34 +22,6 @@ export { runAxe, type AxeResult } from './axe.js'
 export { Auditor, type AuditSummary } from './auditor.js'
 export { ScreenReaderSimulator, type ReadableItem, type Heading, type Landmark } from './screen-reader.js'
 export { ScreenReaderNavigator } from './screen-reader-navigator.js'
-export { KeyboardTrapDetector } from './keyboard-trap-detector.js'
-export { DynamicEvaluator } from './dynamic-evaluator.js'
-
-// Keyboard trap detection types
-export {
-  FocusEventSchema,
-  type FocusEvent,
-  FocusHistorySchema,
-  type FocusHistory,
-  TrapDetectionResultSchema,
-  type TrapDetectionResult,
-  TrapDetectionConfigSchema,
-  type TrapDetectionConfig,
-} from './types.js'
-
-// Dynamic WCAG evaluation types
-export {
-  InteractionEventSchema,
-  type InteractionEvent,
-  InteractionTraceSchema,
-  type InteractionTrace,
-  DynamicViolationSchema,
-  type DynamicViolation,
-  DynamicEvaluationResultSchema,
-  type DynamicEvaluationResult,
-  DynamicEvaluatorConfigSchema,
-  type DynamicEvaluatorConfig,
-} from './types.js'
 
 // Scripted Tab walk (no LLM): per-press focus record for trap, focus-order and focus-indicator checks
 export {
@@ -81,7 +53,47 @@ export {
   type TabWalkError,
   TabWalkResultSchema,
   type TabWalkResult,
+  IdleBaselineSchema,
+  type IdleBaseline,
+  focusStop,
 } from './tab-walk.js'
+
+// F4 keyboard-trap verdict (WCAG 2.1.2) over a Tab walk: confinement that no key escapes
+export {
+  judgeKeyboardTrap,
+  endOfPage,
+  TrapVerdictSchema,
+  type TrapVerdict,
+  TrapReleaseSchema,
+  type TrapRelease,
+  EndOfPageSignalSchema,
+  type EndOfPageSignal,
+  TrapUndeterminedReasonSchema,
+  type TrapUndeterminedReason,
+  EndOfPageSchema,
+  type EndOfPage,
+  TrapDirectionSchema,
+  type TrapDirection,
+  KeyboardTrapResultSchema,
+  type KeyboardTrapResult,
+} from './keyboard-trap.js'
+
+// F5 context-change verdict (WCAG 3.2.1, incl. F55 focus-removed-on-arrival) over a Tab walk
+export {
+  judgeContextChange,
+  ContextChangeKindSchema,
+  type ContextChangeKind,
+  UnattributedReasonSchema,
+  type UnattributedReason,
+  ContextChangeUndeterminedReasonSchema,
+  type ContextChangeUndeterminedReason,
+  ContextChangeFindingSchema,
+  type ContextChangeFinding,
+  UnattributedPressSchema,
+  type UnattributedPress,
+  ContextChangeResultSchema,
+  type ContextChangeResult,
+} from './context-change.js'
 
 // F7 focus-indicator check (WCAG 2.4.7) over a Tab walk: absent only with whole-viewport pixel confirmation
 export {

@@ -1,323 +1,314 @@
+import { readFileSync } from 'node:fs'
+import { dirname, join } from 'node:path'
+import { fileURLToPath, pathToFileURL } from 'node:url'
+import { gunzipSync } from 'node:zlib'
 import { describe, it, expect } from 'vitest'
-import {
-  FocusEventSchema,
-  FocusHistorySchema,
-  TrapDetectionResultSchema,
-  TrapDetectionConfigSchema,
-  type FocusEvent,
-  type FocusHistory,
-  type TrapDetectionResult,
-  type TrapDetectionConfig,
-} from './types.js'
-import { KeyboardTrapDetector } from './keyboard-trap-detector.js'
+import { TabWalkResultSchema, type FocusRead, type TabWalkResult, type TabWalkStep } from './tab-walk.js'
+import { endOfPage, judgeKeyboardTrap } from './keyboard-trap.js'
 
-describe('Keyboard Trap Detection Types', () => {
-  describe('FocusEventSchema', () => {
-    it('validates a focus event with element info and timestamp', () => {
-      const focusEvent: FocusEvent = {
-        element: 'button#submit',
-        timestamp: 1705312800000,
-      }
-      const parsed = FocusEventSchema.parse(focusEvent)
-      expect(parsed.element).toBe('button#submit')
-      expect(parsed.timestamp).toBe(1705312800000)
+// Dev material only (never bench/corpus/test or bench/results/*/test-*): the committed recorded walks.
+const RECORDS = join(dirname(fileURLToPath(import.meta.url)), '../../../bench/results/cd3b122')
+
+// bench/ sits outside this package's tsconfig rootDir, and `tsc` compiles src/**/*.test.ts, so a
+// static import of the frozen baseline would break `npm run build -w @at-agent/accessibility`.
+// The specifier is built at runtime so TypeScript never pulls bench/ into this program.
+type ReplayLegacy = (steps: ReadonlyArray<{ index: number; immediate: FocusRead }>) => {
+  trap: { firstTrappedPress: number | null }
+}
+
+async function loadReplayLegacy(): Promise<ReplayLegacy> {
+  const href = pathToFileURL(join(dirname(fileURLToPath(import.meta.url)), '../../../bench/legacy.ts')).href
+  const mod = (await import(href)) as { replayLegacy: ReplayLegacy }
+  return mod.replayLegacy
+}
+
+// The records predate two schema fields that the trap judge never reads: DeepFocus.classAttr and
+// TabWalkStep.indicator. Backfilling them with null is what makes the recording parse; it cannot move
+// a verdict, because no clause of the judge looks at either field.
+function backfill(node: unknown): unknown {
+  if (Array.isArray(node)) return node.map(backfill)
+  if (node === null || typeof node !== 'object') return node
+  const out: Record<string, unknown> = {}
+  for (const [k, v] of Object.entries(node as Record<string, unknown>)) out[k] = backfill(v)
+  if ('backendNodeId' in out && 'tag' in out && 'isBody' in out && !('classAttr' in out)) out.classAttr = null
+  if ('index' in out && 'immediate' in out && 'settled' in out && !('indicator' in out)) out.indicator = null
+  return out
+}
+
+function recorded(set: 'dev-fixtures' | 'dev-variants', page: string): TabWalkResult {
+  const raw = JSON.parse(gunzipSync(readFileSync(join(RECORDS, set, 'raw', `${page}.json.gz`))).toString('utf8'))
+  return TabWalkResultSchema.parse(backfill(raw.walk))
+}
+
+const EMPTY_READ: FocusRead = {
+  backendNodeId: null,
+  tag: null,
+  id: null,
+  className: null,
+  ariaLabel: null,
+  nameAttr: null,
+  nameProp: null,
+  text: null,
+  isBody: false,
+  hasFocus: false,
+  url: 'http://localhost/p',
+  container: null,
+  deep: null,
+  deepUnavailable: null,
+}
+
+function elementRead(backendNodeId: number, tag = 'a', id: string | null = null): FocusRead {
+  return {
+    ...EMPTY_READ,
+    backendNodeId,
+    tag,
+    id,
+    hasFocus: true,
+    deep: { backendNodeId, tag, id, isBody: false, classAttr: null },
+  }
+}
+
+function bodyRead(hasFocus: boolean): FocusRead {
+  return {
+    ...EMPTY_READ,
+    backendNodeId: 9,
+    tag: 'body',
+    id: null,
+    isBody: true,
+    hasFocus,
+    deep: {
+      backendNodeId: 9,
+      tag: 'body',
+      id: null,
+      isBody: true,
+      classAttr: null,
+    },
+  }
+}
+
+function synthStep(index: number, settled: FocusRead, over: Partial<TabWalkStep> = {}): TabWalkStep {
+  return {
+    index,
+    key: 'Tab',
+    immediate: settled,
+    settled,
+    focusStyle: null,
+    documentReplaced: false,
+    wrapped: false,
+    focusLost: false,
+    indicator: null,
+    ...over,
+  }
+}
+
+function synthWalk(steps: TabWalkStep[], over: Partial<TabWalkResult> = {}): TabWalkResult {
+  return {
+    direction: 'forward',
+    focusableCount: 3,
+    fIncomplete: false,
+    fIncompleteCauses: { crossOriginFrames: 0, closedShadowRoots: 0 },
+    defaultPresses: steps.length,
+    presses: steps.length,
+    settleMs: 150,
+    launchFacts: { browserVersion: null, executableBasename: null },
+    initial: bodyRead(true),
+    idle: null,
+    focusableCountEnd: null,
+    steps,
+    suspectedTrap: steps.some((s) => s.wrapped) ? false : true,
+    escapeProbe: null,
+    error: null,
+    ...over,
+  }
+}
+
+describe('judgeKeyboardTrap', () => {
+  // 1
+  it('clean page: the wrap is the end of the page, not a cycle', () => {
+    const walk = recorded('dev-fixtures', 'three-links')
+    const result = judgeKeyboardTrap([walk])
+    expect(result.verdict).toBe('pass')
+    expect(result.keyboardTrap).toBe(false)
+    expect(result.trapEscapable).toBeNull()
+    expect(result.directions[0].endOfPage).toEqual({
+      signal: 'body-unfocused',
+      atPress: 4,
     })
+    expect(endOfPage(walk)).toEqual({ signal: 'body-unfocused', atPress: 4 })
+  })
 
-    it('rejects focus event without element', () => {
-      expect(() =>
-        FocusEventSchema.parse({ timestamp: 1705312800000 })
-      ).toThrow()
-    })
+  // 2
+  it('the false alarm is gone while the frozen baseline still reproduces it', async () => {
+    const replayLegacy = await loadReplayLegacy()
+    const walk = recorded('dev-fixtures', 'three-links')
+    // The frozen pre-fix checker on the very same recorded walk.
+    expect(replayLegacy(walk.steps).trap.firstTrappedPress).toBe(20)
+    expect(judgeKeyboardTrap([walk]).verdict).toBe('pass')
+  })
 
-    it('rejects focus event without timestamp', () => {
-      expect(() =>
-        FocusEventSchema.parse({ element: 'button#submit' })
-      ).toThrow()
+  // 3
+  it('truncated clean walk: every counted stop visited is also the end of the page', () => {
+    const ids = [11, 12, 13, 11, 12, 13]
+    const walk = synthWalk(
+      ids.map((id, i) => synthStep(i + 1, elementRead(id))),
+      {
+        focusableCount: 3,
+        defaultPresses: 25,
+        presses: 6,
+        suspectedTrap: true,
+      },
+    )
+    const result = judgeKeyboardTrap([walk])
+    expect(result.verdict).toBe('pass')
+    expect(result.keyboardTrap).toBe(false)
+    expect(result.directions[0].endOfPage).toEqual({
+      signal: 'all-stops-visited',
+      atPress: 3,
     })
   })
 
-  describe('FocusHistorySchema', () => {
-    it('validates an array of focus events', () => {
-      const history: FocusHistory = [
-        { element: 'input#name', timestamp: 1705312800000 },
-        { element: 'input#email', timestamp: 1705312801000 },
-        { element: 'button#submit', timestamp: 1705312802000 },
-      ]
-      const parsed = FocusHistorySchema.parse(history)
-      expect(parsed).toHaveLength(3)
-      expect(parsed[0].element).toBe('input#name')
-    })
-
-    it('validates an empty focus history', () => {
-      const history: FocusHistory = []
-      const parsed = FocusHistorySchema.parse(history)
-      expect(parsed).toHaveLength(0)
-    })
+  // 4
+  it('M5 Tab-swallow is a trap: Escape and Shift+Tab both fail', () => {
+    const walk = recorded('dev-variants', 'three-links__M5__link-1')
+    const result = judgeKeyboardTrap([walk])
+    expect(result.verdict).toBe('fail')
+    expect(result.keyboardTrap).toBe(true)
+    expect(result.trapEscapable).toBe(false)
+    expect(result.directions[0].release).toBe('none')
+    expect(result.directions[0].confined).toBe(true)
+    expect(result.directions[0].stuckOn?.backendNodeId).toBe(13)
+    expect(result.directions[0].region).toEqual([13])
+    expect(result.directions[0].focusableCount).toBe(3)
   })
 
-  describe('TrapDetectionResultSchema', () => {
-    it('validates a result when no trap is detected', () => {
-      const result: TrapDetectionResult = {
-        trapped: false,
-        element: null,
-        cycleLength: 0,
-        wcagCriterion: '2.1.2',
-      }
-      const parsed = TrapDetectionResultSchema.parse(result)
-      expect(parsed.trapped).toBe(false)
-      expect(parsed.element).toBeNull()
-      expect(parsed.cycleLength).toBe(0)
-      expect(parsed.wcagCriterion).toBe('2.1.2')
-    })
-
-    it('validates a result when a trap is detected', () => {
-      const result: TrapDetectionResult = {
-        trapped: true,
-        element: 'div.modal',
-        cycleLength: 3,
-        wcagCriterion: '2.1.2',
-      }
-      const parsed = TrapDetectionResultSchema.parse(result)
-      expect(parsed.trapped).toBe(true)
-      expect(parsed.element).toBe('div.modal')
-      expect(parsed.cycleLength).toBe(3)
-      expect(parsed.wcagCriterion).toBe('2.1.2')
-    })
-
-    it('requires wcagCriterion to be 2.1.2', () => {
-      expect(() =>
-        TrapDetectionResultSchema.parse({
-          trapped: false,
-          element: null,
-          cycleLength: 0,
-          wcagCriterion: '2.1.1',
-        })
-      ).toThrow()
-    })
+  // 5
+  it('a cyclic trap is not end-of-page: the M5 record returns to its first element on press 2', () => {
+    const singleId = [
+      'three-links__M5__link-1',
+      'navbar__M5__brand',
+      'identical-links__M5__read-more-01',
+      'js-handlers__M5__custom-button',
+    ]
+    for (const page of singleId) {
+      const walk = recorded('dev-variants', page)
+      // The premise the deleted rule would have tripped on: press 2 is already back on press 1's element.
+      expect(walk.steps[1].settled.deep?.backendNodeId).toBe(walk.steps[0].settled.deep?.backendNodeId)
+      expect(endOfPage(walk)).toBeNull()
+      expect(judgeKeyboardTrap([walk]).verdict).toBe('fail')
+      expect(judgeKeyboardTrap([walk]).directions[0].endOfPage).toBeNull()
+    }
   })
 
-  describe('TrapDetectionConfigSchema', () => {
-    it('validates config with all options', () => {
-      const config: TrapDetectionConfig = {
-        minCycleCount: 5,
-        maxHistorySize: 100,
-      }
-      const parsed = TrapDetectionConfigSchema.parse(config)
-      expect(parsed.minCycleCount).toBe(5)
-      expect(parsed.maxHistorySize).toBe(100)
-    })
-
-    it('provides default for minCycleCount', () => {
-      const config = { maxHistorySize: 100 }
-      const parsed = TrapDetectionConfigSchema.parse(config)
-      expect(parsed.minCycleCount).toBe(5)
-    })
-
-    it('requires maxHistorySize', () => {
-      expect(() => TrapDetectionConfigSchema.parse({})).toThrow()
-    })
-  })
-})
-
-describe('KeyboardTrapDetector', () => {
-  describe('constructor', () => {
-    it('uses default config if none provided', () => {
-      const detector = new KeyboardTrapDetector()
-
-      // Verify defaults by checking behavior - maxHistorySize defaults to 50
-      // Record more than default maxHistorySize elements
-      for (let i = 0; i < 60; i++) {
-        detector.recordFocus(`element-${i}`)
-      }
-      const history = detector.getHistory()
-      expect(history.length).toBe(50) // default maxHistorySize
-    })
-
-    it('accepts custom config', () => {
-      const detector = new KeyboardTrapDetector({
-        minCycleCount: 3,
-        maxHistorySize: 20,
-      })
-
-      for (let i = 0; i < 30; i++) {
-        detector.recordFocus(`element-${i}`)
-      }
-      const history = detector.getHistory()
-      expect(history.length).toBe(20)
-    })
+  // 6
+  it('a correct modal is confined but escapable', () => {
+    const walk = recorded('dev-fixtures', 'modal')
+    const result = judgeKeyboardTrap([walk])
+    expect(result.verdict).toBe('pass')
+    expect(result.keyboardTrap).toBe(true)
+    expect(result.trapEscapable).toBe(true)
+    expect(result.directions[0].release).toBe('escape-key')
+    expect(result.directions[0].region).toHaveLength(4)
+    expect(result.directions[0].focusableCount).toBe(8)
   })
 
-  describe('recordFocus', () => {
-    it('adds focus event to history', () => {
-      const detector = new KeyboardTrapDetector()
+  // 7
+  it('region size is recorded, never a verdict input', () => {
+    const navbar = recorded('dev-fixtures', 'navbar')
+    const navbarResult = judgeKeyboardTrap([navbar])
+    expect(navbar.focusableCount).toBe(12)
+    expect(navbarResult.verdict).toBe('pass')
+    expect(navbarResult.directions[0].endOfPage?.signal).toBe('body-unfocused')
+    expect(navbarResult.directions[0].region.length).toBeLessThan(navbar.focusableCount)
 
-      detector.recordFocus('button#submit')
-      const history = detector.getHistory()
-
-      expect(history.length).toBe(1)
-      expect(history[0].element).toBe('button#submit')
-      expect(typeof history[0].timestamp).toBe('number')
-    })
-
-    it('maintains order of focus events', () => {
-      const detector = new KeyboardTrapDetector()
-
-      detector.recordFocus('input#first')
-      detector.recordFocus('input#second')
-      detector.recordFocus('button#third')
-
-      const history = detector.getHistory()
-      expect(history.map(e => e.element)).toEqual([
-        'input#first',
-        'input#second',
-        'button#third',
-      ])
-    })
+    const modal = recorded('dev-fixtures', 'modal')
+    const modalResult = judgeKeyboardTrap([modal])
+    expect(modalResult.verdict).toBe('pass')
+    expect(modalResult.directions[0].release).toBe('escape-key')
+    expect(modalResult.directions[0].region.length).toBeLessThan(modal.focusableCount)
   })
 
-  describe('detectTrap', () => {
-    it('returns no trap for empty history', () => {
-      const detector = new KeyboardTrapDetector()
+  // 8
+  it('undetermined never reads as a pass', () => {
+    const stuck = (n: number) => Array.from({ length: n }, (_, i) => synthStep(i + 1, elementRead(11)))
 
-      const result = detector.detectTrap()
-
-      expect(result.trapped).toBe(false)
-      expect(result.element).toBeNull()
-      expect(result.cycleLength).toBe(0)
-      expect(result.wcagCriterion).toBe('2.1.2')
+    const walkError = synthWalk(stuck(3), {
+      suspectedTrap: null,
+      error: { phase: 'walk', index: 4, message: 'page closed' },
     })
-
-    it('returns no trap for varied focus sequence', () => {
-      const detector = new KeyboardTrapDetector()
-
-      const elements = ['a', 'b', 'c', 'd', 'e', 'f', 'g', 'h', 'i', 'j']
-      elements.forEach(el => detector.recordFocus(el))
-
-      const result = detector.detectTrap()
-
-      expect(result.trapped).toBe(false)
-      expect(result.element).toBeNull()
-      expect(result.cycleLength).toBe(0)
+    const incomplete = synthWalk(stuck(25), {
+      fIncomplete: true,
+      defaultPresses: 25,
     })
-
-    it('returns trap when same cycle repeats minCycleCount times', () => {
-      const detector = new KeyboardTrapDetector({ minCycleCount: 5 })
-
-      // Cycle: A -> B -> C repeated 5 times = 15 focus events
-      const cycle = ['A', 'B', 'C']
-      for (let i = 0; i < 5; i++) {
-        cycle.forEach(el => detector.recordFocus(el))
-      }
-
-      const result = detector.detectTrap()
-
-      expect(result.trapped).toBe(true)
-      expect(result.element).toBe('A')
-      expect(result.cycleLength).toBe(3)
-      expect(result.wcagCriterion).toBe('2.1.2')
+    const changed = synthWalk(stuck(25), {
+      focusableCountEnd: 5,
+      defaultPresses: 25,
     })
+    const short = synthWalk(stuck(3), { defaultPresses: 25 })
+    const noProbe = synthWalk(stuck(25), { defaultPresses: 25 })
 
-    it('detects trap with cycle of length 2', () => {
-      const detector = new KeyboardTrapDetector({ minCycleCount: 5 })
-
-      // Cycle: X -> Y repeated 5 times
-      for (let i = 0; i < 5; i++) {
-        detector.recordFocus('X')
-        detector.recordFocus('Y')
-      }
-
-      const result = detector.detectTrap()
-
-      expect(result.trapped).toBe(true)
-      expect(result.cycleLength).toBe(2)
-    })
-
-    it('does not detect trap when cycle repeats fewer than minCycleCount times', () => {
-      const detector = new KeyboardTrapDetector({ minCycleCount: 5 })
-
-      // Cycle: A -> B -> C repeated only 4 times
-      const cycle = ['A', 'B', 'C']
-      for (let i = 0; i < 4; i++) {
-        cycle.forEach(el => detector.recordFocus(el))
-      }
-
-      const result = detector.detectTrap()
-
-      expect(result.trapped).toBe(false)
-    })
-
-    it('detects single element trap', () => {
-      const detector = new KeyboardTrapDetector({ minCycleCount: 5 })
-
-      // Same element focused 5+ times in a row (focus stuck on one element)
-      for (let i = 0; i < 5; i++) {
-        detector.recordFocus('stuck-button')
-      }
-
-      const result = detector.detectTrap()
-
-      expect(result.trapped).toBe(true)
-      expect(result.element).toBe('stuck-button')
-      expect(result.cycleLength).toBe(1)
-    })
+    const cases: ReadonlyArray<[TabWalkResult, string]> = [
+      [walkError, 'walk-error'],
+      [changed, 'focusables-changed'],
+      [incomplete, 'focusables-incomplete'],
+      [short, 'short-walk'],
+      [noProbe, 'no-release-probe'],
+    ]
+    for (const [walk, reason] of cases) {
+      const result = judgeKeyboardTrap([walk])
+      expect(result.verdict).toBe('undetermined')
+      expect(result.reason).toBe(reason)
+      expect(result.keyboardTrap).toBe(false)
+      expect(result.trapEscapable).toBeNull()
+    }
   })
 
-  describe('getHistory', () => {
-    it('returns copy of history', () => {
-      const detector = new KeyboardTrapDetector()
-      detector.recordFocus('element-a')
-
-      const history1 = detector.getHistory()
-      const history2 = detector.getHistory()
-
-      expect(history1).not.toBe(history2)
-      expect(history1).toEqual(history2)
+  // 9
+  it('identities are never compared across a document replacement', () => {
+    // Press 3 replaces the document and the new document re-mints 11 and 12: without segmentation the
+    // walk reads as a revisit of presses 1-2.
+    const steps = [
+      synthStep(1, elementRead(11)),
+      synthStep(2, elementRead(12)),
+      synthStep(3, elementRead(11), { documentReplaced: true }),
+      synthStep(4, elementRead(12)),
+      synthStep(5, elementRead(13)),
+    ]
+    const replaced = synthWalk(steps, {
+      focusableCount: 3,
+      defaultPresses: 5,
+      presses: 5,
     })
+    const replacedResult = judgeKeyboardTrap([replaced])
+    expect(replacedResult.verdict).toBe('undetermined')
+    expect(replacedResult.reason).toBe('document-replaced')
+    expect(replacedResult.directions[0].documentReplacements).toEqual([3])
+
+    const wrappedSteps = [...steps.slice(0, 4), synthStep(5, bodyRead(false), { wrapped: true })]
+    const wrapped = synthWalk(wrappedSteps, {
+      focusableCount: 3,
+      defaultPresses: 5,
+      presses: 5,
+    })
+    const wrappedResult = judgeKeyboardTrap([wrapped])
+    expect(wrappedResult.verdict).toBe('pass')
+    expect(wrappedResult.directions[0].endOfPage?.signal).toBe('body-unfocused')
   })
 
-  describe('reset', () => {
-    it('clears history', () => {
-      const detector = new KeyboardTrapDetector()
+  // 10
+  it('fail on one direction is a page fail; pass on one direction is recorded as single-direction', () => {
+    const clean = recorded('dev-fixtures', 'three-links')
+    const trapped = recorded('dev-variants', 'three-links__M5__link-1')
 
-      detector.recordFocus('element-1')
-      detector.recordFocus('element-2')
-      expect(detector.getHistory().length).toBe(2)
+    expect(judgeKeyboardTrap([trapped]).verdict).toBe('fail')
 
-      detector.reset()
+    const forwardOnly = judgeKeyboardTrap([clean])
+    expect(forwardOnly.verdict).toBe('pass')
+    expect(forwardOnly.singleDirection).toBe(true)
+    expect(forwardOnly.directionsWalked).toEqual(['forward'])
 
-      expect(detector.getHistory().length).toBe(0)
-    })
-
-    it('allows recording new events after reset', () => {
-      const detector = new KeyboardTrapDetector()
-
-      detector.recordFocus('old-element')
-      detector.reset()
-      detector.recordFocus('new-element')
-
-      const history = detector.getHistory()
-      expect(history.length).toBe(1)
-      expect(history[0].element).toBe('new-element')
-    })
-  })
-
-  describe('history size management', () => {
-    it('respects maxHistorySize by removing oldest events', () => {
-      const detector = new KeyboardTrapDetector({ maxHistorySize: 5 })
-
-      detector.recordFocus('element-1')
-      detector.recordFocus('element-2')
-      detector.recordFocus('element-3')
-      detector.recordFocus('element-4')
-      detector.recordFocus('element-5')
-      detector.recordFocus('element-6')
-      detector.recordFocus('element-7')
-
-      const history = detector.getHistory()
-
-      expect(history.length).toBe(5)
-      expect(history[0].element).toBe('element-3')
-      expect(history[4].element).toBe('element-7')
-    })
+    const both = judgeKeyboardTrap([clean, { ...trapped, direction: 'backward' }])
+    expect(both.verdict).toBe('fail')
+    expect(both.singleDirection).toBe(false)
+    expect(both.directionsWalked).toEqual(['forward', 'backward'])
   })
 })

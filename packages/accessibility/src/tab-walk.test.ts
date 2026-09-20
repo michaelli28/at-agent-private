@@ -1,3 +1,5 @@
+import { readdirSync, readFileSync } from 'node:fs'
+import { gunzipSync } from 'node:zlib'
 import { describe, it, expect, beforeAll, afterAll, afterEach, vi, type MockInstance } from 'vitest'
 import type { CDPSession, Page } from 'playwright'
 import { BrowserClient, BrowserPage } from '@at-agent/browser'
@@ -107,6 +109,54 @@ const root = document.getElementById('host').attachShadow({ mode: 'open' })
 root.innerHTML = '<a id="s1" href="#s1">S1</a><input id="trap" type="text" aria-label="Trap"><a id="s3" href="#s3">S3</a>'
 root.getElementById('trap').addEventListener('keydown', (e) => { if (e.key === 'Tab') e.preventDefault() })
 </script>`,
+)
+
+// Wraps three times, then press 10 opens a dialog that swallows every Tab. The whole-walk
+// suspectedTrap flag cannot see this trap; only the tail of the walk can.
+const LATE_TRAP = doc(
+  'Late trap',
+  `<p><a id="w1" href="#1">One</a></p>
+<p><a id="w2" href="#2">Two</a></p>
+<div id="dlg" hidden><input id="trap" type="text" aria-label="Trap"></div>
+<script>
+const dlg = document.getElementById('dlg')
+let n = 0
+document.addEventListener('keydown', (e) => {
+  if (e.key !== 'Tab') return
+  n++
+  if (n === 10) { dlg.hidden = false; document.getElementById('trap').focus() }
+  if (!dlg.hidden) e.preventDefault()
+})
+</script>`,
+)
+
+// Focus starts on the first link and its own Tab handler drops focus to the body, so press 1 is a
+// focusLost with no earlier step behind it: only `initial` can say focus was ever on an element.
+const AUTOFOCUS_DROP = doc(
+  'Autofocus drop',
+  `<p><a id="first" href="#1">First</a></p>
+<p><a id="second" href="#2">Second</a></p>
+<script>
+const first = document.getElementById('first')
+first.addEventListener('keydown', (e) => { if (e.key === 'Tab') { e.preventDefault(); first.blur() } })
+first.focus()
+</script>`,
+)
+
+// Two consecutive blur-on-focus stops: the step behind the second drop is itself a body read.
+const DOUBLE_DROP = doc(
+  'Double drop',
+  `<p><a id="d1" href="#1">One</a></p>
+<p><a id="d2" href="#2" onfocus="this.blur()">Two</a></p>
+<p><a id="d3" href="#3" onfocus="this.blur()">Three</a></p>`,
+)
+
+// Ten tab stops appear a second into the walk: F counted at the start no longer describes the page.
+const LATE_FOCUSABLES = doc(
+  'Late focusables',
+  `<p><a id="l0" href="#l0">L0</a></p>
+<div id="more"></div>
+<script>setTimeout(() => { document.getElementById('more').innerHTML = ${JSON.stringify(links('m', 10))} }, 1000)</script>`,
 )
 
 // MODAL moved into one open shadow root: opener, dialog and Escape target all share the host, so
@@ -1279,5 +1329,84 @@ describe('runTabWalk', () => {
 
     const keys = await pw.evaluate(() => Object.getOwnPropertyNames(window).filter((k) => k.startsWith('__atAgent')))
     expect(keys).toEqual(['__atAgentTabWalk'])
+  })
+
+  it('probe gate: a page that wraps early and traps late is still probed', async () => {
+    const page = await open(LATE_TRAP)
+    const result = await runTabWalk(page.playwrightPage, { settleMs: FAST })
+
+    expect(result.focusableCount).toBe(2)
+    expect(result.steps.filter((s) => s.wrapped).map((s) => s.index)).toEqual([3, 6, 9])
+    // The whole-walk flag stays false (gaps/keyboard.ts reads it); the tail of the walk gates the probe.
+    expect(result.suspectedTrap).toBe(false)
+    expect(result.steps.slice(-3).every((s) => s.settled.id === 'trap')).toBe(true)
+
+    const probe = result.escapeProbe
+    expect(probe).not.toBeNull()
+    if (!probe) return
+    expect(probe.escape.unseenElement).toBe(false)
+    expect(probe.escape.wrapped).toBe(false)
+    expect(probe.reachedAt).toBeNull()
+  })
+
+  it('focusLost: a press-1 drop on an autofocused page is marked', async () => {
+    const page = await open(AUTOFOCUS_DROP)
+    const result = await runTabWalk(page.playwrightPage, {
+      settleMs: FAST,
+      escapeProbe: false,
+    })
+
+    expect(label(result.initial)).toBe('first')
+    expect(label(result.steps[0].settled)).toBe('body')
+    expect(result.steps[0].focusLost).toBe(true)
+  })
+
+  it('focusLost: a second consecutive drop is marked', async () => {
+    const page = await open(DOUBLE_DROP)
+    const result = await runTabWalk(page.playwrightPage, { settleMs: FAST })
+
+    expect(result.steps.slice(0, 3).map((s) => label(s.settled))).toEqual(['d1', 'body', 'body'])
+    expect(result.steps.slice(0, 3).map((s) => s.focusLost)).toEqual([false, true, true])
+  })
+
+  it('idle baseline and end-of-walk focusable count are recorded', async () => {
+    const clean = await open(FIXTURE_A)
+    const still = await runTabWalk(clean.playwrightPage, { settleMs: FAST })
+
+    expect(still.idle).not.toBeNull()
+    expect(still.idle?.urlChanged).toBe(false)
+    expect(still.idle?.documentReplaced).toBe(false)
+    expect(still.idle?.after.isBody).toBe(true)
+    expect(still.focusableCountEnd).toBe(still.focusableCount)
+
+    const growing = await open(LATE_FOCUSABLES)
+    const grown = await runTabWalk(growing.playwrightPage, {
+      settleMs: 120,
+      escapeProbe: false,
+    })
+
+    expect(grown.idle?.urlChanged).toBe(false)
+    expect(grown.focusableCount).toBe(1)
+    expect(grown.focusableCountEnd).toBe(11)
+  })
+})
+
+// The recorded walks every judge suite is tested against. A new TabWalkResult field that does not
+// default stops every committed record parsing and takes those fixtures away.
+describe('committed dev walk records', () => {
+  it('every committed dev walk still parses', () => {
+    const counts: number[] = []
+    for (const set of ['dev-fixtures', 'dev-variants']) {
+      const dir = new URL(`../../../bench/results/cd3b122/${set}/raw/`, import.meta.url)
+      const files = readdirSync(dir)
+        .filter((name) => name.endsWith('.json.gz'))
+        .sort()
+      counts.push(files.length)
+      for (const name of files) {
+        const record: unknown = JSON.parse(gunzipSync(readFileSync(new URL(name, dir))).toString())
+        expect(() => TabWalkResultSchema.parse((record as { walk: unknown }).walk), `${set}/${name}`).not.toThrow()
+      }
+    }
+    expect(counts).toEqual([8, 27])
   })
 })

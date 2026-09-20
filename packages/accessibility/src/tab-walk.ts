@@ -348,7 +348,8 @@ export const DeepFocusSchema = z.object({
   // in it, or focus dropped inside it), so it is neither a wrap nor focusLost.
   isBody: z.boolean(),
   // Raw class attribute (also set on SVG elements, unlike className); groups findings by component.
-  classAttr: z.string().nullable(),
+  // Defaulted: the walks recorded at cd3b122 predate this field and are the judges' test fixtures.
+  classAttr: z.string().nullable().default(null),
 })
 export type DeepFocus = z.infer<typeof DeepFocusSchema>
 
@@ -455,7 +456,8 @@ export const TabWalkStepSchema = z.object({
   focusLost: z.boolean(),
   // Focus-indicator facts for the settled deep element; null when there is none to read (body,
   // nothing focused, or focus behind a cross-origin frame or closed shadow root).
-  indicator: StepIndicatorSchema.nullable(),
+  // Defaulted for the same reason as DeepFocusSchema.classAttr.
+  indicator: StepIndicatorSchema.nullable().default(null),
 })
 export type TabWalkStep = z.infer<typeof TabWalkStepSchema>
 
@@ -504,6 +506,15 @@ export const LaunchFactsSchema = z.object({
 })
 export type LaunchFacts = z.infer<typeof LaunchFactsSchema>
 
+export const IdleBaselineSchema = z.object({
+  // Focus/URL state read before any keypress and again after one settle. A page that navigates or
+  // replaces itself with no input cannot have its later context changes attributed to focus.
+  after: FocusReadSchema,
+  documentReplaced: z.boolean(),
+  urlChanged: z.boolean(),
+})
+export type IdleBaseline = z.infer<typeof IdleBaselineSchema>
+
 export const TabWalkResultSchema = z.object({
   direction: z.enum(['forward', 'backward']),
   // F: light DOM + open shadow roots + same-origin frames (see COUNT_FOCUSABLE_FN).
@@ -519,6 +530,11 @@ export const TabWalkResultSchema = z.object({
   settleMs: z.number().int().nonnegative(),
   launchFacts: LaunchFactsSchema,
   initial: FocusReadSchema,
+  // Defaulted so walks recorded before these fields existed still parse.
+  idle: IdleBaselineSchema.nullable().default(null),
+  // F re-counted after the last press. When it differs from focusableCount the page added or
+  // removed tab stops during the walk, which makes every F-based verdict unsafe.
+  focusableCountEnd: z.number().int().nonnegative().nullable().default(null),
   steps: z.array(TabWalkStepSchema),
   // No wrapped marker in the whole walk; null when the walk stopped on an error.
   suspectedTrap: z.boolean().nullable(),
@@ -630,13 +646,20 @@ export async function runTabWalk(page: Page, options: TabWalkOptions = {}): Prom
     await injectMarker(ctx)
     const initial = (await readFocus(ctx)).read
 
-    const walked = await walkPresses(ctx, key, presses)
+    // The causality control: a page that navigates or replaces itself with no keypress at all
+    // cannot have its later context changes attributed to focus.
+    const idle = await readIdleBaseline(ctx, initial)
+    const walked = await walkPresses(ctx, key, presses, initial)
     const steps = walked.steps
     let error = walked.error
+    const focusableCountEnd = await recountFocusables(session)
 
     const suspectedTrap = error ? null : !steps.some((s) => s.wrapped)
+    // The probe is gated on the END of the walk, not the whole of it: a page that wrapped early and
+    // then opened a trapping dialog is invisible to suspectedTrap, which gaps/keyboard.ts still reads.
+    const tailWrapped = steps.slice(-(focusableCount + 1)).some((s) => s.wrapped)
     let escapeProbe: EscapeProbe | null = null
-    if (suspectedTrap && opts.escapeProbe) {
+    if (!error && !tailWrapped && opts.escapeProbe) {
       const probed = await runEscapeProbe(ctx, key, focusableCount, steps)
       escapeProbe = probed.probe
       error = probed.error
@@ -655,6 +678,8 @@ export async function runTabWalk(page: Page, options: TabWalkOptions = {}): Prom
       settleMs: opts.settleMs,
       launchFacts,
       initial,
+      idle,
+      focusableCountEnd,
       steps,
       suspectedTrap,
       escapeProbe,
@@ -671,17 +696,30 @@ export function focusIdentity(read: FocusRead): number | null {
   return read.deep?.backendNodeId ?? read.backendNodeId
 }
 
+// The tab stop a read is on, for naming it in a finding. `deep` is already the top-level element
+// unless focus sits inside a container; when focus is behind a boundary page JS cannot cross, the
+// container itself is the most specific stop we can name.
+export function focusStop(read: FocusRead): DeepFocus | null {
+  if (read.deep !== null) return read.deep
+  if (read.tag === null || read.isBody || read.backendNodeId === null) return null
+  return { backendNodeId: read.backendNodeId, tag: read.tag, id: read.id, isBody: false, classAttr: read.className }
+}
+
 // Each press stores the settled element's focused style in the page as a visit; later presses read
 // every open visit until focus has left the element's subtree (the unfocused read), then once more.
 async function walkPresses(
   ctx: WalkContext,
   key: TabKey,
   presses: number,
+  initial: FocusRead,
 ): Promise<{ steps: TabWalkStep[]; error: TabWalkError | null }> {
   const steps: TabWalkStep[] = []
   const open = new Map<number, OpenVisit>()
   let error: TabWalkError | null = null
   let index = 1
+  // Walk-scoped: has focus been on a real element at any point in the current document? Reading the
+  // previous step instead would make press 1 unable to lose focus and would miss a second drop in a row.
+  let lastRealSeen = isRealElement(initial)
   try {
     for (; index <= presses; index++) {
       const r = await pressAndRead(ctx, key, index)
@@ -696,7 +734,6 @@ async function walkPresses(
           documentReplaced: r.documentReplaced,
         })
       }
-      const previous = steps.at(-1)?.settled
       steps.push({
         index,
         key,
@@ -705,7 +742,7 @@ async function walkPresses(
         focusStyle: r.focusStyle,
         documentReplaced: r.documentReplaced,
         wrapped: isWrapped(r.settled),
-        focusLost: r.settled.isBody && r.settled.hasFocus && previous !== undefined && isRealElement(previous),
+        focusLost: r.settled.isBody && r.settled.hasFocus && lastRealSeen,
         indicator: !readable
           ? null
           : r.snapshotError === null
@@ -717,6 +754,10 @@ async function walkPresses(
                 unfocusedError: `focused read failed: ${r.snapshotError}`,
               },
       })
+      // Updated only after the step is pushed, so each step is computed with the incoming value. A
+      // replaced document re-mints every element, so what the old one showed says nothing about it.
+      const sawReal = isRealElement(r.immediate) || isRealElement(r.settled)
+      lastRealSeen = r.documentReplaced ? sawReal : lastRealSeen || sawReal
       if (readable && r.snapshotted) open.set(index, { drift: false, checkedAt: null })
     }
   } catch (err) {
@@ -907,6 +948,22 @@ async function runEscapeProbe(
   }
 }
 
+// One settle with no keypress in between: the control every focus-attributed finding is measured
+// against. A page that navigates or replaces itself here did so on its own.
+async function readIdleBaseline(ctx: WalkContext, initial: FocusRead): Promise<IdleBaseline> {
+  await sleep(ctx.settleMs)
+  const after = await readFocus(ctx)
+  if (!after.markerPresent) {
+    await ctx.session.send('DOM.getDocument', { depth: 0 })
+    await injectMarker(ctx)
+  }
+  return {
+    after: after.read,
+    documentReplaced: !after.markerPresent,
+    urlChanged: after.read.url !== initial.url,
+  }
+}
+
 // visit: store the settled deep element's focused style under this press index.
 async function pressAndRead(ctx: WalkContext, key: string, visit?: number): Promise<PressRead> {
   await ctx.page.keyboard.press(key)
@@ -1055,7 +1112,16 @@ function toRawRead(raw: z.infer<typeof RawReadSchema>, backendNodeId: number | n
 }
 
 async function countFocusables(session: CDPSession): Promise<FocusableCount> {
-  const inPage = InPageCountSchema.parse(
+  return {
+    ...(await countFocusablesInPage(session)),
+    closedShadowRoots: await countClosedShadowRoots(session),
+  }
+}
+
+// The in-page half of the count on its own: what focusableCount is, and what the end-of-walk
+// re-count must be, so the two numbers are only ever compared like with like.
+async function countFocusablesInPage(session: CDPSession): Promise<z.infer<typeof InPageCountSchema>> {
+  return InPageCountSchema.parse(
     unwrap(
       await session.send('Runtime.evaluate', {
         expression: `(${COUNT_FOCUSABLE_FN})(${JSON.stringify(FOCUSABLE_SELECTOR)}, ${JSON.stringify(FRAME_TAGS)})`,
@@ -1063,9 +1129,16 @@ async function countFocusables(session: CDPSession): Promise<FocusableCount> {
       }),
     ),
   )
-  return {
-    ...inPage,
-    closedShadowRoots: await countClosedShadowRoots(session),
+}
+
+// F after the last press. A difference from focusableCount means the page added or removed tab stops
+// during the walk, which makes every F-based verdict unsafe. Unreadable (closed page, dead context)
+// is recorded as null rather than failing a walk that otherwise succeeded.
+async function recountFocusables(session: CDPSession): Promise<number | null> {
+  try {
+    return (await countFocusablesInPage(session)).count
+  } catch {
+    return null
   }
 }
 

@@ -1108,6 +1108,8 @@ function walkOf(steps: TabWalkStep[], error: TabWalkResult['error'] = null): Tab
     settleMs: 0,
     launchFacts: { browserVersion: null, executableBasename: null },
     initial: read('body'),
+    idle: null,
+    focusableCountEnd: null,
     steps,
     suspectedTrap: error ? null : false,
     escapeProbe: null,

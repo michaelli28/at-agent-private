@@ -16,6 +16,26 @@ import {
 
 const ROOT = resolve(dirname(fileURLToPath(import.meta.url)), "..");
 const TOOLS_TS = join(ROOT, "packages", "agent", "src", "tools.ts");
+const LEGACY_TS = join(ROOT, "bench", "legacy.ts");
+
+describe("the freeze", () => {
+  // The BEFORE column of the before/after is produced by these replays. If bench ever imports the
+  // LIVE checker again, fixing a bug in packages/ silently rewrites results already published under
+  // bench/results/cd3b122 — and nothing else in the suite would notice.
+  it("is real: bench replays a frozen copy, never the live checker", async () => {
+    const source = readFileSync(LEGACY_TS, "utf8");
+    expect(source).toContain('from "./legacy-detectors.js"');
+    expect(source).not.toMatch(/packages\/accessibility\/src\/(keyboard-trap-detector|dynamic-evaluator)/);
+
+    // The live classes are gone, so the paths bench used to import can no longer resolve.
+    await expect(
+      import("../packages/accessibility/src/keyboard-trap-detector.js"),
+    ).rejects.toThrow();
+    await expect(
+      import("../packages/accessibility/src/dynamic-evaluator.js"),
+    ).rejects.toThrow();
+  });
+});
 
 // The exact in-page expression executeTab evaluates, read from the source so the test tracks tools.ts.
 function toolsIdentityExpression(): string {

@@ -1,0 +1,379 @@
+import { describe, it, expect, beforeAll, afterAll, afterEach } from 'vitest'
+import { readFileSync } from 'node:fs'
+import { fileURLToPath } from 'node:url'
+import { gunzipSync } from 'node:zlib'
+import { BrowserClient, BrowserPage } from '@at-agent/browser'
+import { judgeContextChange } from './context-change.js'
+import { runTabWalk, TabWalkResultSchema, type FocusRead, type TabWalkResult, type TabWalkStep } from './tab-walk.js'
+
+// Recorded walks committed at cd3b122. Each file's `.walk` key is a TabWalkResult as the recorder
+// wrote it then. Read-only on disk: these records ARE the measurement, never edit one.
+const RESULTS = fileURLToPath(new URL('../../../bench/results/cd3b122/', import.meta.url))
+
+function loadWalk(set: 'dev-fixtures' | 'dev-variants', page: string): TabWalkResult {
+  const raw = gunzipSync(readFileSync(`${RESULTS}${set}/raw/${page}.json.gz`)).toString('utf8')
+  const record = JSON.parse(raw) as { walk: unknown }
+  return TabWalkResultSchema.parse(record.walk)
+}
+
+const BASE_PAGES = [
+  'form',
+  'good-operable',
+  'identical-links',
+  'js-handlers',
+  'modal',
+  'navbar',
+  'react-div-button',
+  'three-links',
+] as const
+
+const M5_VARIANTS = [
+  'form__M5__email-input',
+  'good-operable__M5__nav-about',
+  'identical-links__M5__read-more-01',
+  'js-handlers__M5__custom-button',
+  'navbar__M5__brand',
+  'three-links__M5__link-1',
+] as const
+
+// Press index of the seeded navigation on each M6 variant, read off the recorded walk: the step
+// whose immediate read already carries ?changed=1.
+const M6_VARIANTS = [
+  { page: 'three-links__M6__link-1', pressIndex: 1 },
+  { page: 'navbar__M6__brand', pressIndex: 1 },
+  { page: 'identical-links__M6__read-more-01', pressIndex: 1 },
+  { page: 'js-handlers__M6__custom-button', pressIndex: 1 },
+  { page: 'form__M6__email-input', pressIndex: 2 },
+  { page: 'good-operable__M6__nav-about', pressIndex: 5 },
+] as const
+
+const BASE_URL = 'http://walk.test/page.html'
+
+function bodyRead(url: string, hasFocus: boolean, backendNodeId = 9): FocusRead {
+  return {
+    backendNodeId,
+    tag: 'body',
+    id: null,
+    className: null,
+    ariaLabel: null,
+    nameAttr: null,
+    nameProp: null,
+    text: null,
+    isBody: true,
+    hasFocus,
+    url,
+    container: null,
+    deep: {
+      backendNodeId,
+      tag: 'body',
+      id: null,
+      isBody: true,
+      classAttr: null,
+    },
+    deepUnavailable: null,
+  }
+}
+
+function elementRead(backendNodeId: number, url: string, tag = 'a'): FocusRead {
+  return {
+    backendNodeId,
+    tag,
+    id: `e${backendNodeId}`,
+    className: null,
+    ariaLabel: null,
+    nameAttr: null,
+    nameProp: null,
+    text: null,
+    isBody: false,
+    hasFocus: true,
+    url,
+    container: null,
+    deep: {
+      backendNodeId,
+      tag,
+      id: `e${backendNodeId}`,
+      isBody: false,
+      classAttr: null,
+    },
+    deepUnavailable: null,
+  }
+}
+
+function step(index: number, settled: FocusRead, over: Partial<TabWalkStep> = {}): TabWalkStep {
+  return {
+    index,
+    key: 'Tab',
+    immediate: settled,
+    settled,
+    focusStyle: null,
+    documentReplaced: false,
+    wrapped: false,
+    focusLost: false,
+    indicator: null,
+    ...over,
+  }
+}
+
+function makeWalk(steps: TabWalkStep[], over: Partial<TabWalkResult> = {}): TabWalkResult {
+  return {
+    direction: 'forward',
+    focusableCount: 3,
+    fIncomplete: false,
+    fIncompleteCauses: { crossOriginFrames: 0, closedShadowRoots: 0 },
+    defaultPresses: Math.max(steps.length, 1),
+    presses: Math.max(steps.length, 1),
+    settleMs: 150,
+    launchFacts: { browserVersion: null, executableBasename: null },
+    initial: bodyRead(BASE_URL, true),
+    idle: null,
+    focusableCountEnd: null,
+    steps,
+    suspectedTrap: false,
+    escapeProbe: null,
+    error: null,
+    ...over,
+  }
+}
+
+describe('judgeContextChange', () => {
+  it('M6 first-stop navigation: exactly one finding, no element named', () => {
+    const walk = loadWalk('dev-variants', 'three-links__M6__link-1')
+    const result = judgeContextChange(walk)
+
+    expect(result.wcagCriterion).toBe('3.2.1')
+    expect(result.verdict).toBe('fail')
+    expect(result.reason).toBeNull()
+    expect(result.unattributed).toEqual([])
+    expect(result.findings).toHaveLength(1)
+
+    const finding = result.findings[0]
+    expect(finding.kind).toBe('url-changed')
+    expect(finding.wcagCriterion).toBe('3.2.1')
+    expect(finding.severity).toBe('serious')
+    expect(finding.pressIndex).toBe(1)
+    expect(finding.key).toBe('Tab')
+    // The culprit is the first tab stop: the immediate read has tag null, so nothing is invented.
+    expect(finding.arrivedOn).toBeNull()
+    expect(finding.precedingStop).toBeNull()
+    expect(finding.fromUrl).toBe(walk.initial.url)
+    expect(finding.toUrl.endsWith('?changed=1')).toBe(true)
+    expect(finding.documentReplaced).toBe(true)
+  })
+
+  it('M6 second-stop navigation names the preceding stop', () => {
+    const walk = loadWalk('dev-variants', 'form__M6__email-input')
+    const result = judgeContextChange(walk)
+
+    expect(result.verdict).toBe('fail')
+    expect(result.findings).toHaveLength(1)
+
+    const finding = result.findings[0]
+    expect(finding.kind).toBe('url-changed')
+    expect(finding.pressIndex).toBe(2)
+    expect(finding.precedingStop).toEqual({
+      backendNodeId: 18,
+      tag: 'input',
+      id: 'name',
+      isBody: false,
+      classAttr: null,
+    })
+    expect(finding.fromUrl).toBe(walk.steps[0].settled.url)
+    expect(finding.toUrl.endsWith('?changed=1')).toBe(true)
+    // Presses 3-8 walk the replaced document. Nothing more is emitted there.
+    expect(result.findings.filter((f) => f.pressIndex >= 3 && f.pressIndex <= 8)).toEqual([])
+    expect(result.unattributed).toEqual([])
+  })
+
+  it('all six M6 variants: exactly one url-changed finding each', () => {
+    for (const { page, pressIndex } of M6_VARIANTS) {
+      const result = judgeContextChange(loadWalk('dev-variants', page))
+      const shape = result.findings.map((f) => `${f.kind}@${f.pressIndex}`)
+      expect(shape, page).toEqual([`url-changed@${pressIndex}`])
+      expect(result.verdict, page).toBe('fail')
+      expect(result.unattributed, page).toEqual([])
+    }
+  })
+
+  it('clean pages and M5 traps produce nothing', () => {
+    for (const page of BASE_PAGES) {
+      const result = judgeContextChange(loadWalk('dev-fixtures', page))
+      expect(result.findings, page).toEqual([])
+      expect(result.unattributed, page).toEqual([])
+      expect(result.verdict, page).toBe('pass')
+      expect(result.reason, page).toBeNull()
+    }
+    for (const page of M5_VARIANTS) {
+      const result = judgeContextChange(loadWalk('dev-variants', page))
+      expect(result.findings, page).toEqual([])
+      expect(result.unattributed, page).toEqual([])
+      expect(result.verdict, page).toBe('pass')
+    }
+  })
+
+  it('F55: a drop after a real stop is a 3.2.1 failure', () => {
+    const walk = makeWalk([
+      step(1, elementRead(11, BASE_URL)),
+      step(2, elementRead(12, BASE_URL)),
+      step(3, bodyRead(BASE_URL, true), { focusLost: true }),
+      step(4, elementRead(11, BASE_URL)),
+    ])
+    const result = judgeContextChange(walk)
+
+    expect(result.verdict).toBe('fail')
+    expect(result.unattributed).toEqual([])
+    expect(result.findings).toHaveLength(1)
+
+    const finding = result.findings[0]
+    expect(finding.kind).toBe('focus-removed')
+    expect(finding.wcagCriterion).toBe('3.2.1')
+    expect(finding.pressIndex).toBe(3)
+    expect(finding.precedingStop).toEqual({
+      backendNodeId: 12,
+      tag: 'a',
+      id: 'e12',
+      isBody: false,
+      classAttr: null,
+    })
+    expect(finding.arrivedOn).toBeNull()
+    expect(finding.documentReplaced).toBe(false)
+    expect(finding.fromUrl).toBe(BASE_URL)
+    expect(finding.toUrl).toBe(BASE_URL)
+  })
+
+  it('a wrap is never a context change', () => {
+    const steps: TabWalkStep[] = []
+    for (let i = 1; i <= 8; i++) {
+      steps.push(
+        i % 4 === 0
+          ? step(i, bodyRead(BASE_URL, false), { wrapped: true })
+          : step(i, elementRead(10 + (i % 4), BASE_URL)),
+      )
+    }
+    const result = judgeContextChange(makeWalk(steps))
+
+    expect(result.findings).toEqual([])
+    expect(result.unattributed).toEqual([])
+    expect(result.verdict).toBe('pass')
+  })
+
+  it('refused, not reported: the three unattributed classes', () => {
+    const noPrecedingStop = judgeContextChange(
+      makeWalk([
+        step(1, bodyRead(BASE_URL, true)),
+        step(2, elementRead(11, BASE_URL)),
+        step(3, elementRead(12, BASE_URL)),
+      ]),
+    )
+    expect(noPrecedingStop.findings).toEqual([])
+    expect(noPrecedingStop.unattributed).toEqual([{ pressIndex: 1, reason: 'no-preceding-stop' }])
+    expect(noPrecedingStop.verdict).toBe('pass')
+
+    const replacedNoUrlChange = judgeContextChange(
+      makeWalk([
+        step(1, elementRead(11, BASE_URL)),
+        step(2, elementRead(21, BASE_URL), { documentReplaced: true }),
+        step(3, elementRead(22, BASE_URL)),
+      ]),
+    )
+    expect(replacedNoUrlChange.findings).toEqual([])
+    expect(replacedNoUrlChange.unattributed).toEqual([{ pressIndex: 2, reason: 'document-replaced-no-url-change' }])
+
+    const afterSettle = judgeContextChange(
+      makeWalk([
+        step(1, elementRead(11, BASE_URL)),
+        step(2, elementRead(12, `${BASE_URL}?changed=1`), {
+          immediate: elementRead(12, BASE_URL),
+        }),
+        step(3, elementRead(13, `${BASE_URL}?changed=1`)),
+      ]),
+    )
+    expect(afterSettle.findings).toEqual([])
+    expect(afterSettle.unattributed).toEqual([{ pressIndex: 2, reason: 'url-changed-after-settle' }])
+  })
+
+  it('fragment-only URL changes are not context changes', () => {
+    const steps = [1, 2, 3, 4].map((i) => step(i, elementRead(10 + i, `${BASE_URL}#section-${i}`)))
+    const result = judgeContextChange(makeWalk(steps))
+
+    expect(result.findings).toEqual([])
+    expect(result.unattributed).toEqual([])
+    expect(result.verdict).toBe('pass')
+  })
+
+  it('a page that navigates with no input cannot attribute anything to focus', () => {
+    const walk = makeWalk([step(1, elementRead(11, BASE_URL)), step(2, elementRead(12, BASE_URL))], {
+      idle: {
+        after: bodyRead(BASE_URL, true),
+        documentReplaced: false,
+        urlChanged: true,
+      },
+    })
+    const result = judgeContextChange(walk)
+
+    expect(result.verdict).toBe('undetermined')
+    expect(result.reason).toBe('page-navigates-without-input')
+    expect(result.findings).toEqual([])
+  })
+
+  it('the causality control outranks a finding a load-time navigation manufactures', () => {
+    // walk.initial is read BEFORE the idle settle, so a page that navigates on its own leaves
+    // press 1 comparing against a URL the page has already left: clause A fires and invents a
+    // focus-caused change. The idle baseline is the only evidence that tells the two apart, so it
+    // has to outrank the finding it manufactures — otherwise the control is unreachable on exactly
+    // the page it exists for.
+    const moved = `${BASE_URL}?redirected=1`
+    const walk = makeWalk([step(1, elementRead(11, moved)), step(2, elementRead(12, moved))], {
+      idle: { after: bodyRead(moved, true), documentReplaced: false, urlChanged: true },
+    })
+    const result = judgeContextChange(walk)
+
+    expect(result.verdict).toBe('undetermined')
+    expect(result.reason).toBe('page-navigates-without-input')
+    // Recorded, never silent: the press that looked like a context change stays on the result.
+    expect(result.findings).toHaveLength(1)
+    expect(result.findings[0].pressIndex).toBe(1)
+  })
+})
+
+// Inline on purpose: no dev-corpus page sets focusLostOnArrival, so the F55 clause has no recorded
+// fixture. The second of four links blurs itself the moment focus arrives.
+const BLUR_ON_FOCUS = `<!doctype html><html lang="en"><head><meta charset="utf-8"><title>Blur on focus</title></head><body>
+<h1>F55: the second link throws focus away</h1>
+<p><a id="k1" href="#one">One</a></p>
+<p><a id="k2" href="#two" onfocus="this.blur()">Two</a></p>
+<p><a id="k3" href="#three">Three</a></p>
+<p><a id="k4" href="#four">Four</a></p>
+</body></html>`
+
+describe('judgeContextChange on a live page', () => {
+  let client: BrowserClient
+  const pages: BrowserPage[] = []
+
+  beforeAll(async () => {
+    client = new BrowserClient()
+    await client.launch()
+  })
+
+  afterEach(async () => {
+    await Promise.all(pages.splice(0).map((p) => p.close()))
+  })
+
+  afterAll(async () => {
+    await client.close()
+  })
+
+  it('F55 live: blur-on-focus on the second of four links', async () => {
+    const page = await client.newPage()
+    pages.push(page)
+    await page.playwrightPage.setContent(BLUR_ON_FOCUS, { waitUntil: 'load' })
+
+    const walk = await runTabWalk(page.playwrightPage, { settleMs: 20 })
+    const result = judgeContextChange(walk)
+
+    expect(result.verdict).toBe('fail')
+    expect(result.findings.every((f) => f.kind === 'focus-removed')).toBe(true)
+    expect(result.findings.length).toBeGreaterThanOrEqual(5)
+    const named = new Set(result.findings.map((f) => f.precedingStop?.id ?? null))
+    expect([...named]).toEqual(['k1'])
+  })
+})
