@@ -91,6 +91,7 @@ const NOTES = [
   LEGACY_TRAP_NOTE,
   "The legacy identity is rebuilt from each press's immediate read (the walk's step.immediate: top-level document.activeElement as soon as keyboard.press resolves, with no settle), which is when executeTab reads it; focus a page script moves later is not seen, and focus inside frames or shadow roots shows as the container.",
   "Walk trap (the new checker): judgeKeyboardTrap over this walk. pass = focus reached the end of the page, or it was confined but Escape or the opposite Tab key got out (a correct modal). fail = confined with neither key escaping. undetermined = the walk errored, F is only a lower bound, the focusable count changed mid-walk, or no release probe ran; an undetermined verdict is scored as a miss, never as a pass. contextChange is judgeContextChange (3.2.1 incl. F55) over the same walk. The legacy detector's verdicts are reported as-is, unchanged, from the frozen copy in bench/legacy-detectors.ts.",
+  "Gaps run their own Tab walk on their own load (tabWalk: true). F3 needs it: without a walk the detector never emits not_focusable at all, so a run without it reports 0 not_focusable whatever the page does. That is a SECOND walk per page, separate from the one the judges read, and it roughly doubles the per-page keyboard cost.",
   "Gaps come from the CURRENT post-fix detector (F1/F2/F3/F9 landed at 6b7abff and c1f94b2: hidden elements are filtered, reachability comes from the Tab walk). The same gap findings feed both the before and the after column, so the before/after delta isolates the keyboard rules and takes no credit for the gap fixes; those were measured separately against cd3b122.",
 ];
 
@@ -525,7 +526,13 @@ async function runPage(
     browser,
     env,
     async (page, tracker) => {
-      const result = await crawlPageWithGapDetection(page, spec.url);
+      // tabWalk is REQUIRED for F3: without it not_focusable is never emitted
+      // (gaps/detect.ts GapDetectionOptionsSchema), so the harness would measure the gap detector
+      // in a configuration where one of the shipped fixes is structurally disabled -- and a
+      // not-assessed check would read as a missed one. The CLI has always passed it.
+      const result = await crawlPageWithGapDetection(page, spec.url, {
+        tabWalk: true,
+      });
       // The detector loads the page itself; its second-navigation fact can only be read afterwards.
       const second = !spec.secondNavigation
         ? "not-expected"
