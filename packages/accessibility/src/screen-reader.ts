@@ -1,4 +1,4 @@
-import type { BrowserPage, AccessibilityNode } from "@at-agent/browser"
+import type { BrowserPage, AccessibilityNode } from '@at-agent/browser'
 
 export interface ReadableItem {
   role: string
@@ -58,18 +58,24 @@ export class ScreenReaderSimulator {
   private isReadable(node: AccessibilityNode): boolean {
     // Include nodes that have names or are interactive
     const meaningfulRoles = [
-      "heading", "link", "button", "textbox", "checkbox",
-      "radio", "combobox", "listitem", "img", "figure",
-      "paragraph", "text"
+      'heading',
+      'link',
+      'button',
+      'textbox',
+      'checkbox',
+      'radio',
+      'combobox',
+      'listitem',
+      'img',
+      'figure',
+      'paragraph',
+      'text',
     ]
-    return (
-      meaningfulRoles.includes(node.role) ||
-      (node.name !== null && node.name.trim() !== "")
-    )
+    return meaningfulRoles.includes(node.role) || (node.name !== null && node.name.trim() !== '')
   }
 
   private extractHeadings(node: AccessibilityNode, headings: Heading[] = []): Heading[] {
-    if (node.role === "heading" && node.name) {
+    if (node.role === 'heading' && node.name) {
       // Extract level from role if available, default to 2
       const level = this.getHeadingLevel(node)
       headings.push({ level, text: node.name })
@@ -82,17 +88,14 @@ export class ScreenReaderSimulator {
     return headings
   }
 
-  private getHeadingLevel(_node: AccessibilityNode): number {
-    // Try to determine heading level from the node
-    // Default to 1 for main headings
-    return 1
+  // The snapshot's own level. Falls back to 1 only when it stated none, which is a guess and is
+  // why getHeadings' callers should not treat a lone level 1 as evidence of document structure.
+  private getHeadingLevel(node: AccessibilityNode): number {
+    return node.level ?? 1
   }
 
   private extractLandmarks(node: AccessibilityNode, landmarks: Landmark[] = []): Landmark[] {
-    const landmarkRoles = [
-      "banner", "navigation", "main", "complementary",
-      "contentinfo", "search", "form", "region"
-    ]
+    const landmarkRoles = ['banner', 'navigation', 'main', 'complementary', 'contentinfo', 'search', 'form', 'region']
 
     if (landmarkRoles.includes(node.role)) {
       landmarks.push({ role: node.role, name: node.name })
