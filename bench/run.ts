@@ -41,12 +41,14 @@ import { LEGACY_3_2_1_NOTE, LEGACY_TRAP_NOTE, replayLegacy } from "./legacy.js";
 import {
   PAGE_SETS,
   PageSetSchema,
+  RESULTS_SCHEMA_VERSION,
   RawPageSchema,
   SummarySchema,
   componentKey,
   runDirName,
   type AxeFinding,
   type GapFinding,
+  type GapsFindings,
   type LegacyReplay,
   type LegacyRun,
   type LoadFacts,
@@ -92,6 +94,7 @@ const NOTES = [
   "The legacy identity is rebuilt from each press's immediate read (the walk's step.immediate: top-level document.activeElement as soon as keyboard.press resolves, with no settle), which is when executeTab reads it; focus a page script moves later is not seen, and focus inside frames or shadow roots shows as the container.",
   "Walk trap (the new checker): judgeKeyboardTrap over this walk. pass = focus reached the end of the page, or it was confined but Escape or the opposite Tab key got out (a correct modal). fail = confined with neither key escaping. undetermined = the walk errored, F is only a lower bound, the focusable count changed mid-walk, or no release probe ran; an undetermined verdict is scored as a miss, never as a pass. contextChange is judgeContextChange (3.2.1 incl. F55) over the same walk. The legacy detector's verdicts are reported as-is, unchanged, from the frozen copy in bench/legacy-detectors.ts.",
   "Gaps run their own Tab walk on their own load (tabWalk: true). F3 needs it: without a walk the detector never emits not_focusable at all, so a run without it reports 0 not_focusable whatever the page does. That is a SECOND walk per page, separate from the one the judges read, and it roughly doubles the per-page keyboard cost.",
+  "Each page's gaps run records the detector's own keyboard evidence (tools.gaps.findings.keyboard): whether the walk ran, whether not_focusable was assessed, and the reasons if it was not. A page where it was NOT assessed is scored undetermined for 2.1.1 and 2.4.7 in BOTH columns -- a miss, never a pass -- and drops the rule-of-three bound there, because the only gap type carrying those criteria could not be emitted at all. Without this record a check that could not run is indistinguishable in the report from a check that ran and found nothing.",
   "Gaps come from the CURRENT post-fix detector (F1/F2/F3/F9 landed at 6b7abff and c1f94b2: hidden elements are filtered, reachability comes from the Tab walk). The same gap findings feed both the before and the after column, so the before/after delta isolates the keyboard rules and takes no credit for the gap fixes; those were measured separately against cd3b122.",
 ];
 
@@ -381,6 +384,22 @@ function status(hasFindings: boolean, error: string | null): ToolStatus {
   return "error";
 }
 
+// The crawl's flags plus its own account of whether the keyboard-gated flag could be emitted at all.
+// reachedBackendNodeIds is one id per walk read, so only its count rides in the summary; the full list
+// stays in the raw record.
+function toGapsFindings(result: DualCrawlResult): GapsFindings {
+  return {
+    gaps: result.gaps.map(toGapFinding),
+    keyboard: {
+      walkRan: result.keyboard.walkRan,
+      notFocusableAssessed: result.keyboard.notFocusableAssessed,
+      unassessedReasons: result.keyboard.unassessedReasons,
+      walkError: result.keyboard.walkError,
+      reachedCount: result.keyboard.reachedBackendNodeIds.length,
+    },
+  };
+}
+
 function toGapFinding(gap: AccessibilityGap): GapFinding {
   const attrs = gap.domElement.attributes;
   return {
@@ -577,7 +596,11 @@ async function runPage(
     findings,
   });
   const tools = {
-    gaps: toolRun(gaps, gaps.value?.gaps.map(toGapFinding) ?? null, gaps.error),
+    gaps: toolRun(
+      gaps,
+      gaps.value === null ? null : toGapsFindings(gaps.value),
+      gaps.error,
+    ),
     walk: toolRun(walk, stats, walkError),
     legacy: legacy.run,
     axe: toolRun(
@@ -599,7 +622,7 @@ async function runPage(
     tools,
   };
   const raw: RawPage = {
-    schemaVersion: 2,
+    schemaVersion: RESULTS_SCHEMA_VERSION,
     set: opts.set,
     pageId: spec.pageId,
     url: spec.url,
@@ -612,6 +635,7 @@ async function runPage(
             domElementCount: gaps.value.domElements.length,
             axElementCount: gaps.value.accessibilityTree.elements.size,
             gaps: gaps.value.gaps,
+            keyboard: gaps.value.keyboard,
           },
     walk: walk.value,
     legacy: legacy.replay,
@@ -629,7 +653,7 @@ function describePage(p: PageResult): string {
     s === "ok" ? "" : ` [${s.toUpperCase()}: ${error}]`;
   const trap = legacy.findings?.trap;
   const parts = [
-    `gaps ${gaps.findings?.length ?? "-"}${flag(gaps.status, gaps.error)}`,
+    `gaps ${gaps.findings?.gaps.length ?? "-"}${gaps.findings !== null && !gaps.findings.keyboard.notFocusableAssessed ? ` [not_focusable NOT assessed: ${gaps.findings.keyboard.unassessedReasons.join(",")}]` : ""}${flag(gaps.status, gaps.error)}`,
     `axe ${axe.findings?.length ?? "-"} rules/${axe.findings?.reduce((n, v) => n + v.targets.length, 0) ?? "-"} nodes${flag(axe.status, axe.error)}`,
     walk.findings === null
       ? `walk -${flag(walk.status, walk.error)}`
@@ -691,7 +715,7 @@ async function main(argv: readonly string[]): Promise<number> {
           : serveUrl(p.target.mount, p.target.rel, server?.origin),
     }));
     const base: Summary = {
-      schemaVersion: 2,
+      schemaVersion: RESULTS_SCHEMA_VERSION,
       set: args.set,
       complete: false,
       createdAt: new Date().toISOString(),

@@ -4,6 +4,8 @@ import { z } from "zod";
 import {
   AccessibilityGapSchema,
   AccessibilityGapTypeSchema,
+  KeyboardEvidenceSchema,
+  KeyboardUnassessedReasonSchema,
 } from "../packages/accessibility/src/gaps/types.js";
 import {
   LaunchFactsSchema,
@@ -13,6 +15,12 @@ import { KeyboardTrapResultSchema } from "../packages/accessibility/src/keyboard
 import { ContextChangeResultSchema } from "../packages/accessibility/src/context-change.js";
 import { ImpactSchema } from "../packages/accessibility/src/types.js";
 import { LegacyDynamicViolationSchema } from "./legacy-detectors.js";
+
+// One version line for summary.json AND raw/<page>.json.gz. Both files are written from the same run
+// and read back by the same report, so a bump that reached only one of them would be a silently
+// half-migrated artifact: the summary would parse and the raw record would not. Bumped to 3 when the
+// gaps run started carrying its keyboard evidence (see KeyboardEvidenceSummarySchema).
+export const RESULTS_SCHEMA_VERSION = 3;
 
 export const PAGE_SETS = [
   "dev-fixtures",
@@ -56,6 +64,45 @@ export const GapFindingSchema = z
   })
   .strict();
 export type GapFinding = z.infer<typeof GapFindingSchema>;
+
+// The gap detector's own keyboard evidence (packages/accessibility/src/gaps/keyboard.ts), carried into
+// the summary so the report can tell "not_focusable was not assessed" from "not_focusable was assessed
+// and found nothing". Those two read identically in a findings array, which is how a structurally
+// disabled check read as a check that ran and found nothing (fixed at 118bb99); recording the evidence
+// is what stops that from being invisible a second time.
+// Compact by design: KeyboardEvidence.reachedBackendNodeIds is one id per walk read and unbounded, so
+// the summary keeps only its count. RawPageSchema below carries the evidence in full.
+export const KeyboardEvidenceSummarySchema = z
+  .object({
+    walkRan: z.boolean(),
+    notFocusableAssessed: z.boolean(),
+    unassessedReasons: z.array(KeyboardUnassessedReasonSchema),
+    walkError: z.string().nullable(),
+    reachedCount: z.number().int().nonnegative(),
+  })
+  .strict()
+  // keyboard.ts's own rule (notFocusableAssessed = reasons.length === 0). Restated here so a bad
+  // projection fails at the write, not silently as an over-confident report cell.
+  .refine(
+    (k) => k.notFocusableAssessed === (k.unassessedReasons.length === 0),
+    {
+      message: "notFocusableAssessed must equal unassessedReasons being empty",
+    },
+  );
+export type KeyboardEvidenceSummary = z.infer<
+  typeof KeyboardEvidenceSummarySchema
+>;
+
+// The gaps tool's findings: the flags AND the evidence about whether the keyboard-gated flag could be
+// emitted at all. One object so that toolRunSchema's status/findings rule still holds — on a failed
+// crawl there is no keyboard evidence either, and findings goes null as a whole.
+export const GapsFindingsSchema = z
+  .object({
+    gaps: z.array(GapFindingSchema),
+    keyboard: KeyboardEvidenceSummarySchema,
+  })
+  .strict();
+export type GapsFindings = z.infer<typeof GapsFindingsSchema>;
 
 export const LegacyTrapSchema = z
   .object({
@@ -209,7 +256,7 @@ function toolRunSchema<T extends z.ZodTypeAny>(findings: T) {
     });
 }
 
-export const GapsRunSchema = toolRunSchema(z.array(GapFindingSchema));
+export const GapsRunSchema = toolRunSchema(GapsFindingsSchema);
 export const WalkRunSchema = toolRunSchema(WalkStatsSchema);
 export const LegacyRunSchema = toolRunSchema(LegacyFindingsSchema);
 export const AxeRunSchema = toolRunSchema(z.array(AxeFindingSchema));
@@ -270,7 +317,7 @@ export const LaunchSchema = z
 
 export const SummarySchema = z
   .object({
-    schemaVersion: z.literal(2),
+    schemaVersion: z.literal(RESULTS_SCHEMA_VERSION),
     set: PageSetSchema,
     // false while the run is in progress or if it died; the report refuses to present incomplete summaries silently.
     complete: z.boolean(),
@@ -308,7 +355,7 @@ export type Summary = z.infer<typeof SummarySchema>;
 
 export const RawPageSchema = z
   .object({
-    schemaVersion: z.literal(2),
+    schemaVersion: z.literal(RESULTS_SCHEMA_VERSION),
     set: PageSetSchema,
     pageId: z.string(),
     url: z.string(),
@@ -319,6 +366,10 @@ export const RawPageSchema = z
         domElementCount: z.number().int().nonnegative(),
         axElementCount: z.number().int().nonnegative(),
         gaps: z.array(AccessibilityGapSchema),
+        // The crawl's keyboard evidence in full, reached ids included -- the summary keeps only their
+        // count. Which elements the walk actually reached is what a not_focusable miss is diagnosed
+        // from, and it cannot be recovered afterwards from the flags alone.
+        keyboard: KeyboardEvidenceSchema,
       })
       .strict()
       .nullable(),

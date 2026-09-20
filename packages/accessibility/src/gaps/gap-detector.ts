@@ -12,7 +12,12 @@ import type {
 
 // Port of taskgen/src/gap-detector.ts (GapDetector) as functions.
 
-const GAP_WCAG_MAPPING: Record<AccessibilityGapType, string[]> = {
+// The gap types a Tab walk gates: the F3 guard below emits them only when keyboard.notFocusableAssessed,
+// so on a page without an assessed walk their absence is "never looked", not "looked and found nothing".
+// The bench report reads this to keep those two apart (bench/report.ts).
+export const WALK_GATED_GAP_TYPES = ['not_focusable'] as const
+
+export const GAP_WCAG_MAPPING: Record<AccessibilityGapType, string[]> = {
   missing_from_a11y_tree: ['4.1.2'],
   no_accessible_name: ['4.1.2', '1.1.1'],
   wrong_role: ['4.1.2'],

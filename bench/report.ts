@@ -21,11 +21,16 @@ import {
   type VariantLabelsFile,
 } from "./corpus/labels-schema.js";
 import {
+  GAP_WCAG_MAPPING,
+  WALK_GATED_GAP_TYPES,
+} from "../packages/accessibility/src/gaps/gap-detector.js";
+import {
   PAGE_SETS,
   PageSetSchema,
   SUBSET_DIR_RE,
   SummarySchema,
   componentKey,
+  type KeyboardEvidenceSummary,
   type PageResult,
   type PageSet,
   type Summary,
@@ -107,7 +112,7 @@ export function legacyTrapFlagged(trap: {
 
 function gapCriteria(page: PageResult): Map<string, Set<string>> {
   const out = new Map<string, Set<string>>();
-  for (const gap of page.tools.gaps.findings ?? []) {
+  for (const gap of page.tools.gaps.findings?.gaps ?? []) {
     for (const criterion of gap.wcag)
       addTo(out, criterion, `gap:${gap.gapType}`);
   }
@@ -154,6 +159,54 @@ export function currentUndetermined(
   return false;
 }
 
+const isWalkGated = (gapType: string): boolean =>
+  (WALK_GATED_GAP_TYPES as readonly string[]).includes(gapType);
+
+// The criteria a missing walk leaves UNOBSERVED: those every carrying gap type is walk-gated. A criterion
+// some other gap type also carries was still observed, so marking it undetermined would overstate the
+// damage. Derived from the detector's own table so the two cannot drift; today it is 2.1.1 and 2.4.7.
+const WALK_GATED_CRITERIA = new Set(
+  WALK_GATED_GAP_TYPES.flatMap((t) => GAP_WCAG_MAPPING[t]).filter((criterion) =>
+    GAP_TYPES.filter((t) => GAP_WCAG_MAPPING[t].includes(criterion)).every(
+      isWalkGated,
+    ),
+  ),
+);
+
+// A page whose Tab walk never assessed not_focusable did not OBSERVE 2.1.1 or 2.4.7: the flag that carries
+// them could not be emitted at all. Counting that page as a clean pass is exactly how a check that could
+// not run scores like a check that ran and found nothing -- the failure shipped at 118bb99. It belongs to
+// BOTH columns: the gap detector is the same in each, so neither column observed the page.
+export function gapUndetermined(page: PageResult, criterion: string): boolean {
+  const gaps = page.tools.gaps.findings;
+  if (gaps === null) return false;
+  return (
+    WALK_GATED_CRITERIA.has(criterion) && !gaps.keyboard.notFocusableAssessed
+  );
+}
+
+// The seeded target's own gap types decide whether the walk gates its cell. Gated only when EVERY gap type
+// that could have flagged this target is walk-gated -- if any other type could have, the detector did look.
+function walkGatedTarget(
+  v: Pick<VariantLabels, "target" | "elements">,
+): boolean {
+  const label = v.elements[v.target];
+  if (label === undefined) return false;
+  const types = [
+    ...(label.expectedGapType === null ? [] : [label.expectedGapType]),
+    ...(label.acceptableGapTypes ?? []),
+  ];
+  return types.length > 0 && types.every(isWalkGated);
+}
+
+// Why not_focusable could not be assessed, printed beside the page's gap count so a zero there is never
+// read as a clean page.
+function keyboardCell(keyboard: KeyboardEvidenceSummary): string {
+  if (keyboard.notFocusableAssessed) return "";
+  const why = keyboard.unassessedReasons.join(", ") || "reason not recorded";
+  return ` (not_focusable not assessed: ${why})`;
+}
+
 export function axeCriteria(page: PageResult): Map<string, Set<string>> {
   const out = new Map<string, Set<string>>();
   for (const v of page.tools.axe.findings ?? []) {
@@ -179,15 +232,19 @@ type Column = {
   undetermined: (p: PageResult, criterion: string) => boolean;
 };
 const never = (): boolean => false;
+// Both columns inherit gapUndetermined: the frozen legacy detectors never emit 2.1.1 or 2.4.7 either, so
+// an unassessed walk leaves those criteria unobserved on the before side exactly as it does on the after
+// side. Keeping it out of BEFORE would make the frozen column look more complete than it was.
 const BEFORE: Column = {
   ran: oursRan,
   criteria: ourCriteria,
-  undetermined: never,
+  undetermined: gapUndetermined,
 };
 const AFTER: Column = {
   ran: currentRan,
   criteria: currentCriteria,
-  undetermined: currentUndetermined,
+  undetermined: (p, criterion) =>
+    currentUndetermined(p, criterion) || gapUndetermined(p, criterion),
 };
 const AXE: Column = { ran: axeRan, criteria: axeCriteria, undetermined: never };
 
@@ -444,7 +501,7 @@ type Cell = "Y" | "N" | "E" | "U";
 // the same in both columns by construction.
 function flaggedTarget(
   page: PageResult,
-  v: Pick<VariantLabels, "operator" | "target">,
+  v: Pick<VariantLabels, "operator" | "target" | "elements">,
   column: "before" | "after",
 ): Cell {
   if (v.operator === "M5" || v.operator === "M6") {
@@ -465,7 +522,12 @@ function flaggedTarget(
   }
   const gaps = page.tools.gaps.findings;
   if (gaps === null) return "E";
-  return gaps.some((g) => g.dataBenchId === v.target) ? "Y" : "N";
+  if (gaps.gaps.some((g) => g.dataBenchId === v.target)) return "Y";
+  // A miss is only a miss if the check could run. not_focusable is the one gap type a Tab walk gates
+  // (gaps/gap-detector.ts), so when the walk did not assess it, a target whose expected gap is
+  // not_focusable was never examined -- "U", which is already scored as a miss, not "N", which claims
+  // the detector looked. Targets expecting any other gap type were examined and keep their "N".
+  return walkGatedTarget(v) && !gaps.keyboard.notFocusableAssessed ? "U" : "N";
 }
 
 function renderDevVariants(
@@ -559,7 +621,7 @@ function renderDevVariants(
     const reported = targets.map(
       (r) =>
         new Set(
-          (r.page.tools.gaps.findings ?? [])
+          (r.page.tools.gaps.findings?.gaps ?? [])
             .filter((g) => g.dataBenchId === r.label.target)
             .map((g) => g.gapType),
         ),
@@ -589,7 +651,7 @@ function componentTallies(page: PageResult): {
   gapComponents: number;
   axeComponents: number;
 } {
-  const gapKeys = (page.tools.gaps.findings ?? []).map((g) =>
+  const gapKeys = (page.tools.gaps.findings?.gaps ?? []).map((g) =>
     componentKey(g.nodeName, g.class),
   );
   const axeKeys = (page.tools.axe.findings ?? []).flatMap((v) => v.components);
@@ -669,7 +731,7 @@ function renderFlagTable(
         : `${walk.findings.fIncomplete ? "≥" : ""}${walk.findings.F} / ${walk.findings.wraps}${walk.findings.presses < walk.findings.plannedPresses ? ` (${walk.findings.presses}/${walk.findings.plannedPresses} presses)` : ""}`,
       gaps.findings === null
         ? "E"
-        : `${gaps.findings.length} / ${t.gapComponents}`,
+        : `${gaps.findings.gaps.length} / ${t.gapComponents}${keyboardCell(gaps.findings.keyboard)}`,
       trap === undefined
         ? "E"
         : legacyTrapFlagged(trap)

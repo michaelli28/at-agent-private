@@ -59,6 +59,15 @@ nonetheless touched a decision, stated here rather than left for a reader to fin
 - **No aggregate precision is computed.** The report scores per criterion. Any single headline
   X → Y must name which criteria it aggregates and must state that 2.4.3 contributes a before 7/7
   → after 0/7 false-alarm change that comes from DELETING a rule, not from fixing one.
-- **The pre-fix summaries at cd3b122 predate this schema.** `SummarySchema` is now version 2
-  (`WalkStats.trap` became a judge verdict), so those files fail to parse on version rather than
-  silently mis-parsing. Re-render them at their own commit; they are a frozen artifact.
+- **A page whose Tab walk did not assess `not_focusable` is not scored for 2.1.1 or 2.4.7.** That
+  gap type is the only one carrying those criteria and the detector emits it only after an assessed
+  walk, so such a page counts as `undetermined` in BOTH columns — a miss, never a pass — and drops
+  the rule-of-three bound there. `summary.json` records the reason per page
+  (`tools.gaps.findings.keyboard`) and the report prints it beside the page's gap count. Before this
+  was recorded, a check that could not run was indistinguishable from one that found nothing; that
+  is how the harness shipped `not_focusable 0/7` with the walk structurally disabled (fixed 118bb99).
+- **The pre-fix summaries at cd3b122 predate this schema.** `SummarySchema` is now version 3
+  (`WalkStats.trap` became a judge verdict in v2; the gaps run gained its keyboard evidence in v3),
+  so those files fail to parse on version rather than silently mis-parsing. Re-render them at their
+  own commit; they are a frozen artifact. The same now applies to the v2 dev runs at e1eb294 and
+  118bb99.

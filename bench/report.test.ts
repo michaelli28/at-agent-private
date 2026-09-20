@@ -26,11 +26,14 @@ import {
   type ReportInput,
 } from "./report.js";
 import {
+  KeyboardEvidenceSummarySchema,
+  RESULTS_SCHEMA_VERSION,
   SUBSET_DIR_RE,
   SummarySchema,
   runDirName,
   type AxeFinding,
   type GapFinding,
+  type KeyboardEvidenceSummary,
   type PageResult,
   type PageSet,
   type Summary,
@@ -51,6 +54,28 @@ type Fake = {
   axe?: AxeFinding[];
   cluster?: string;
   walk?: Partial<WalkStats>;
+  keyboard?: Partial<KeyboardEvidenceSummary>;
+};
+
+// The default is an ASSESSED walk, because that is what the harness now always produces: bench/run.ts
+// passes tabWalk: true on every page (118bb99). A fixture defaulting to unassessed would make most of
+// this file assert the not-assessed path by accident. The unassessed path is covered explicitly, by the
+// tests that pass `keyboard`.
+const ASSESSED_KEYBOARD: KeyboardEvidenceSummary = {
+  walkRan: true,
+  notFocusableAssessed: true,
+  unassessedReasons: [],
+  walkError: null,
+  reachedCount: 3,
+};
+// notFocusableAssessed must agree with unassessedReasons (KeyboardEvidenceSummarySchema refines it), so
+// callers say WHY and the flag follows.
+const keyboardOf = (f: Fake): KeyboardEvidenceSummary => {
+  const merged = { ...ASSESSED_KEYBOARD, ...f.keyboard };
+  return {
+    ...merged,
+    notFocusableAssessed: merged.unassessedReasons.length === 0,
+  };
 };
 
 const launchFacts = {
@@ -208,7 +233,11 @@ function fakePage(pageId: string, f: Fake): PageResult {
     durationMs: 3,
     rawFile: null,
     tools: {
-      gaps: { ...base, status: "ok", findings: f.gaps ?? [] },
+      gaps: {
+        ...base,
+        status: "ok",
+        findings: { gaps: f.gaps ?? [], keyboard: keyboardOf(f) },
+      },
       walk: { ...base, status: "ok", findings: { ...cleanWalk, ...f.walk } },
       legacy: {
         ...base,
@@ -241,7 +270,7 @@ function fakeSummary(
   pageFilter: string[] | null = null,
 ): Summary {
   return SummarySchema.parse({
-    schemaVersion: 2,
+    schemaVersion: RESULTS_SCHEMA_VERSION,
     set,
     complete: true,
     createdAt: "2026-09-18T00:00:00.000Z",
@@ -959,5 +988,127 @@ describe("evidence class", () => {
     expect(md).not.toContain(
       "every walk in these summaries ran in the headless shell",
     );
+  });
+});
+
+// Recording the gap detector's keyboard evidence is what keeps "not_focusable was never assessed" apart
+// from "not_focusable was assessed and found nothing". At 118bb99 the harness ran the detector with its
+// Tab walk structurally disabled and every table here read the result as a clean page.
+describe("keyboard evidence: a check that could not run is not a check that passed", () => {
+  const unassessed: Partial<KeyboardEvidenceSummary> = {
+    unassessedReasons: ["walk-error"],
+    walkError: "boom",
+  };
+  const twoPages = (): Summary =>
+    fakeSummary("test-bad", [
+      fakePage("after/home", {}),
+      fakePage("after/news", { keyboard: unassessed }),
+    ]);
+  const faCells = (sc: string): string[] =>
+    row(renderReport(input({ "test-bad": twoPages() })), "### False alarms", sc)
+      .split("|")
+      .map((c) => c.trim());
+
+  it("refuses a projection whose assessed flag disagrees with its reasons", () => {
+    expect(() =>
+      KeyboardEvidenceSummarySchema.parse({
+        walkRan: true,
+        notFocusableAssessed: true,
+        unassessedReasons: ["walk-error"],
+        walkError: "boom",
+        reachedCount: 0,
+      }),
+    ).toThrow();
+  });
+
+  it("names the reason beside the page's gap count instead of printing a bare zero", () => {
+    const md = renderReport(
+      input({
+        "dev-live": fakeSummary("dev-live", [
+          fakePage("walked", {}),
+          fakePage("unwalked", { keyboard: unassessed }),
+        ]),
+      }),
+    );
+    const line = (id: string): string =>
+      md.split("\n").find((l) => l.startsWith(`| ${id} |`)) ?? `no row ${id}`;
+    expect(line("walked")).not.toContain("not assessed");
+    expect(line("unwalked")).toContain("not_focusable not assessed: walk-error");
+  });
+
+  it("counts an unassessed page as undetermined for 2.1.1 in BOTH columns", () => {
+    // The gap detector is the same in each column, so neither observed the page. Leaving the frozen
+    // before column at "clean" would make it look more complete than the run actually was.
+    const cells = faCells("2.1.1");
+    expect(cells[3]).toContain("1 undetermined");
+    expect(cells[5]).toContain("1 undetermined");
+  });
+
+  it("drops the rule-of-three bound on a criterion the walk left unobserved", () => {
+    const cells = faCells("2.1.1");
+    expect(cells[3]).not.toContain("rule of 3");
+    expect(cells[5]).not.toContain("rule of 3");
+  });
+
+  it("leaves a criterion another gap type can carry fully observed", () => {
+    // 4.1.2 rides on missing_from_a11y_tree and others that no walk gates, so an unassessed walk
+    // takes nothing away from it. Marking it undetermined would overstate the damage.
+    expect(faCells("4.1.2")[5]).not.toContain("undetermined");
+  });
+
+  it("marks a walk-gated seeded target undetermined rather than missed", () => {
+    const el = (over: Partial<ElementLabel> = {}): ElementLabel => ({
+      interactive: true,
+      keyboardAccessible: true,
+      expectedGapType: null,
+      note: "n",
+      ...over,
+    });
+    const flags = {
+      keyboardTrap: false,
+      trapEscapable: null,
+      contextChangeOnFocus: false,
+      focusLostOnArrival: false,
+    };
+    const variant = (op: "M3" | "M7", target: string, label: ElementLabel) => [
+      `b1__${op}__${target}`,
+      {
+        file: `b1__${op}__${target}.html`,
+        page: flags,
+        elements: { [target]: label },
+        base: "b1",
+        operator: op,
+        target,
+      },
+    ];
+    const variantLabels = VariantLabelsFileSchema.parse({
+      schemaVersion: 1,
+      variants: Object.fromEntries([
+        // M7 blur-on-focus: only a Tab walk can decide it, so an unassessed walk never examined it.
+        variant(
+          "M7",
+          "t1",
+          el({ keyboardAccessible: false, expectedGapType: "not_focusable" }),
+        ),
+        // M3 expects a gap no walk gates, so its miss on the same page is a real miss.
+        variant("M3", "t2", el({ expectedGapType: "hidden_but_interactive" })),
+      ]),
+    });
+    const grid = renderReport(
+      input(
+        {
+          "dev-variants": fakeSummary("dev-variants", [
+            fakePage("b1__M7__t1", { cluster: "b1", keyboard: unassessed }),
+            fakePage("b1__M3__t2", { cluster: "b1", keyboard: unassessed }),
+          ]),
+        },
+        { variantLabels },
+      ),
+    );
+    const line = (op: string): string =>
+      grid.split("\n").find((l) => l.startsWith(`| ${op} |`)) ?? `no ${op} row`;
+    expect(line("M7")).toContain("U");
+    expect(line("M7")).not.toMatch(/\| N \|/);
+    expect(line("M3")).toMatch(/\| N \|/);
   });
 });
