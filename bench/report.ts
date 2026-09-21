@@ -266,10 +266,13 @@ function rateCell(
   const cell = `${x}/${n} · ${f2(w.p)} [${f2(w.lower)}, ${f2(w.upper)}]`;
   // The rule of three reads "n observations, zero events". With u refusals only n-u pages were
   // actually observed, so the bound would describe a sample that was never taken.
-  // Both bounds are printed because they answer different questions and disagree: Wilson above is
-  // TWO-sided, the rule of three is an approximation (-ln(0.05) rounded to 3), and exactZeroUpper is
-  // the exact one-sided Clopper-Pearson bound, which is the tightest claim the data supports. At
-  // n=20 that is 16.1% / 15.0% / 13.9%. Quoting only the loosest would understate what was shown.
+  // Three bounds that answer different questions and do NOT agree: the Wilson upper above is
+  // two-sided and approximate, the rule of three is an approximation of a one-sided bound
+  // (-ln(0.05) rounded to 3), and exactZeroUpper is the exact one-sided Clopper-Pearson bound with
+  // guaranteed coverage. Exact is not always the smallest: at n=20 it is 13.9% against Wilson's
+  // 16.1%, but at n=4 it is 52.7% against 49.0%, because a two-sided approximation is
+  // anti-conservative on tiny samples. The exact one is the DEFENSIBLE one-sided claim; picking
+  // whichever number is smallest per row would be choosing the bound by its answer.
   return withRuleOfThree && x === 0 && undetermined === 0
     ? `${cell} · rule of 3 ≤ ${f2(ruleOfThree(n))} · exact 1-sided ≤ ${f2(exactZeroUpper(n))}`
     : cell;

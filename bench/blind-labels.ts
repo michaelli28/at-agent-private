@@ -227,6 +227,7 @@ function render(
   seed: string,
   sha: string,
   total: number,
+  caveats: readonly string[],
 ): string {
   const out = [
     "# Blind labelling — held-out flags",
@@ -238,6 +239,9 @@ function render(
     "`BLIND-LABELS.key.json`; do not open that file until every item is labelled, or the blind is gone.",
     "",
     "Copies are collapsed per component, so many copies of one component count once.",
+    ...(caveats.length > 0
+      ? ["", "**This list is not complete:**", ...caveats.map((c) => `- ${c}`)]
+      : []),
     "",
     `Drive it with: \`npx tsx bench/spotcheck-ui.ts --file bench/BLIND-LABELS.md --port 4175\``,
     "",
@@ -299,20 +303,25 @@ function main(argv: readonly string[]): void {
 
   const items: BlindItem[] = [];
   const missing: PageSet[] = [];
+  const partial: string[] = [];
   for (const set of sets) {
     const s = readSummary(sha, set);
     if (s === null) {
       missing.push(set);
       continue;
     }
-    if (!s.complete)
-      console.warn(
-        `WARNING: ${set} at ${sha} is incomplete (${s.pages.length} pages); its flags are partial.`,
-      );
+    if (!s.complete) partial.push(`${set} (${s.pages.length} pages)`);
     for (const p of s.pages) items.push(...flagsOnPage(set, p, origin));
   }
-  if (missing.length > 0)
-    console.warn(`no summary for: ${missing.join(", ")} — skipped`);
+  // A console warning vanishes with the terminal while the file goes on claiming to be every flag
+  // on the held-out pages. Whatever is missing has to travel WITH the artifact.
+  const caveats = [
+    ...(missing.length > 0 ? [`no summary was found for: ${missing.join(", ")}`] : []),
+    ...(partial.length > 0
+      ? [`these sets were INCOMPLETE when this was built, so their flags are partial: ${partial.join(", ")}`]
+      : []),
+  ];
+  for (const c of caveats) console.warn(`WARNING: ${c}`);
   if (items.length === 0) {
     console.error(`no flags found for ${sha}`);
     process.exit(2);
@@ -343,7 +352,7 @@ function main(argv: readonly string[]): void {
         });
   // ":order" so the final sequence is independent of the per-source draw above.
   const shuffled = shuffle(drawn, `${seed}:order`, (i) => i.id);
-  writeFileSync(OUT_MD, render(shuffled, seed, sha, items.length));
+  writeFileSync(OUT_MD, render(shuffled, seed, sha, items.length, caveats));
   writeFileSync(
     OUT_KEY,
     `${JSON.stringify(
@@ -351,6 +360,18 @@ function main(argv: readonly string[]): void {
         sha,
         seed,
         sets,
+        caveats,
+        // Per-source pool sizes: without them the interval the header promises cannot be computed
+        // from the saved artifacts alone.
+        pool: Object.fromEntries(
+          [...new Set(items.map((i) => i.source))].map((src) => [
+            src,
+            {
+              total: items.filter((i) => i.source === src).length,
+              drawn: shuffled.filter((i) => i.source === src).length,
+            },
+          ]),
+        ),
         // Position in the worklist -> what produced it. The join the report needs afterwards.
         key: shuffled.map((it, i) => ({
           n: i + 1,
