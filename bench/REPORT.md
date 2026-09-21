@@ -4,9 +4,9 @@ Run: **`bench/results/74c4349/`** — both held-out sets, one commit, one browse
 Generated tables: `bench/results/74c4349/REPORT-baseline.md` (regenerate with
 `npx tsx bench/report.ts 74c4349`).
 
-**One section is still open.** Precision needs blind hand-labelling that only a human can do
-(§6). Everything else below is final: whatever this run recorded is the answer, and no held-out
-set will be re-run to improve a number.
+**One thing is deferred, not missing.** Precision scored by hand-labelling is not part of this
+measurement (§6 says why, and why the result below does not rest on it). Everything else is final:
+whatever this run recorded is the answer, and no held-out set will be re-run to improve a number.
 
 ---
 
@@ -21,8 +21,11 @@ pages chosen in advance, once, and report whatever comes out.
 **What we found:** on 20 real websites, the old checker raised a false-alarm-shaped flag about
 keyboard traps on **12 of 18** pages it could evaluate. The rebuilt checker raised **none**. A
 second rule that fired on **every single page** (18 of 18) was deleted outright rather than
-repaired. Those are the two results worth quoting — with the caveat in §4 that "flag" is not yet
-"false alarm", because confirming that needs labelling nobody has done yet.
+repaired. Those are the two results worth quoting. Both rules can be shown to have been bound to
+misfire — one fired whenever focus wrapped back to the top, which every page does — so the case
+does not rest on anyone's opinion. What is still unmeasured is how often the **rebuilt** checker is
+right when it does raise something; that needs hand-labelling, and §6 explains why the one attempt
+at it measured nothing.
 
 **The honest bit:** the big demo-site numbers are much less impressive than the live ones, and a
 figure we were ready to headline earlier turned out to be an artifact of our own practice pages.
@@ -112,7 +115,8 @@ false alarms at the cost of the single detection it had. Present it as a deletio
 | 3.2.1     | 0/18              | 2/18                      | before could not fire on a scripted walk |
 
 > **These are FLAG COUNTS, not precision.** No published labels exist for live sites, so whether
-> those 12 are false alarms is exactly what §6 decides. Do not write "false alarm" here yet.
+> those 12 are false alarms is not settled by a label. §6 makes the mechanical case; these columns
+> stay flag counts.
 
 **Why the old rule fired so often — and why our earlier explanation was wrong.**
 
@@ -166,26 +170,44 @@ would have been counted as clean.
 
 ---
 
-## 6. Precision, grouped by component — OPEN, needs blind labelling
+## 6. Precision by human label — not established, and the headline does not rest on it
 
-The brief requires precision to be scored **blind**: a shuffled mix of flags with the producing
-version hidden, grouped by component so many copies of one component count once.
+Human-labelled precision was attempted once and is **not** part of this measurement. One 58-item
+blind worklist was drawn from the 436 collapsed flag groups at `74c4349` and labelled in full; every
+item came back **agree**. The sheet measures nothing, because the claims it put to the reviewer were
+not the ones the detectors made:
 
-`bench/blind-labels.ts` builds that worklist with the source stripped; the mapping back to source is
-in `BLIND-LABELS.key.json`, **which must not be opened until labelling is finished**.
+| criterion | what the detector asserted                                                                                           | what the worklist asked                                                        |
+| --------- | -------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------ |
+| 2.4.3     | "focus returned to previously visited element within short sequence" (`dynamic-evaluator.js:53`) — ordinary wrapping | "this page takes focus through its controls in an **illogical order**"         |
+| 2.1.2     | the last 5·L focus-identity strings repeat — "a property of the string sequence, not of F" (`bench/legacy.ts:16`)    | "keyboard focus **gets stuck somewhere** on this page and cannot be moved out" |
 
-```
-npx tsx bench/blind-labels.ts 74c4349 --sample 10 --origin http://127.0.0.1:4175
-npx tsx bench/spotcheck-ui.ts --file bench/BLIND-LABELS.md --port 4175
-```
+Neither question can be answered "no" about a real page, so agreement was the honest answer to both
+and carries no information. Against the 13 BAD-page items — the only subset with published labels —
+the sheet scores 10 of 13, exactly what an unconditional "agree" scores. The reviewer answered what
+was asked; the instrument was wrong. `bench/blind-labels.ts` has been repaired (claims now name what
+would make them FALSE, and an "agree" requires an observation in the note), the answers are kept at
+`bench/BLIND-LABELS-answers.json` as the record, and **no precision figure is quoted from them**.
 
-Verified blind after the fixes: no source occupies a contiguous block, every criterion renders as a
-dotted success-criterion number, each page-level criterion has exactly one wording whoever raised
-it, and all local URLs point at the reviewer's own port.
+**The before→after result in §3 and §4 does not depend on this.** Both deleted rules are shown to be
+false-alarm generators by their own definitions and by the walk telemetry, with no human judgement
+in the loop:
 
-**Until those labels exist, no precision number can be stated** — 349 gap flags were raised across
-the live pages, and a flag is not a defect. The brief also asks for a test–retest κ from re-labelling
-20 items after 24 hours; that has not been done.
+- The legacy **2.4.3** rule fires when focus returns to a previously visited element within a short
+  sequence — that is what wrapping _is_. It fired on 18 of 18 evaluable live pages and 8 of 8 BAD
+  pages, and W3C's published labels mark 7 of those 8 BAD pages **clean** for 2.4.3. A rule that
+  fires on every page cannot be discriminating between them.
+- The legacy **2.1.2** rule is explicitly "a property of the string sequence, not of F" — five
+  consecutive identical focus identities trip it, so repeated indistinguishable controls (icon rows,
+  pagination, "read more" links) fire it on clean pages. On 11 of the 12 live pages it flagged, the
+  recorded Tab walk wrapped the whole focus cycle 3–60 times with `focusLost: 0` and
+  `suspectedTrap: false`; `vdc.ru` wrapped 60 times. Focus that returns to the start sixty times is
+  not trapped.
+
+So the deletions removed flags that were mechanically bound to misfire. What remains unmeasured is
+the _positive_ precision of what the rebuilt checker now raises — the 349 live gap flags and the 2
+new 3.2.1 detections. Quantifying that needs a valid labelling pass, which is deferred, along with
+the test–retest κ the brief asks for.
 
 ---
 
@@ -193,7 +215,9 @@ the live pages, and a flag is not a defect. The brief also asks for a test–ret
 
 - **2.1.2 detection on real pages.** No held-out page is known to contain a trap; detection evidence
   is 6 synthetic seeded variants.
-- **That the 12 live 2.1.2 flags are false.** That is §6's job.
+- **That the 12 live 2.1.2 flags are false.** §6 shows the rule that raised them was bound to
+  misfire, and the walk telemetry contradicts 11 of the 12 — but no published label exists for a
+  live site, so this is a strong mechanical case, not a scored result.
 - **3.2.1 as an improvement ratio.** The before column is structurally zero on this harness.
 - **2.4.7.** The focus-indicator check is built, exported and tested but **not wired into the
   harness**, so 2.4.7 scores only the gap detector's `not_focusable` mapping and **understates** the
@@ -219,6 +243,17 @@ the live pages, and a flag is not a defect. The brief also asks for a test–ret
   summary's notes. Both sets were re-run from scratch at `74c4349`. No detector rule changed between
   the two runs, so this is a repaired instrument, not a retuned one.
   `bench/results/722307b/test-live` is left on disk as evidence; **do not cite it**.
+- **The first blind labelling pass measured nothing, because the worklist asked the wrong
+  questions.** Each page-level item restated its flag as a WCAG accusation far broader than what the
+  detector observed — "an illogical order" for a rule that fires on ordinary focus wrapping, "focus
+  gets stuck somewhere" for a rule that is "a property of the string sequence, not of F"
+  (`bench/legacy.ts:16`). Neither can be answered "no" about a real page, and all 58 items came back
+  `agree`. Against the published W3C labels on the 13 BAD-page items the sheet scores 10 of 13,
+  exactly what an unconditional "agree" scores. `bench/blind-labels.ts` has been repaired: claims
+  are now falsifiable and name what would make them FALSE. The answers are kept at
+  `bench/BLIND-LABELS-answers.json` as the record of the attempt; **do not cite them as precision**.
+  See §6.1. This is an instrument failure, like the browser death above — the reviewer answered the
+  questions that were put to them, and the recording path was audited and is sound.
 - **`test-bad` reproduced identically** across the two runs, cell for cell.
 
 ## 9. Reproducing this

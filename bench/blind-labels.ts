@@ -83,12 +83,18 @@ function pageUrl(p: PageResult, origin: string): string {
 
 // One wording per page-level criterion, whichever detector raised it: these are the only claims the
 // two versions both produce, so any difference in phrasing is a direct label for the source.
+// Each claim states the success criterion in terms a reviewer can falsify at the keyboard, and
+// names what would make it FALSE. The first pass used softer wordings ("an illogical order",
+// "focus gets stuck somewhere") that no page can be cleared of, and all 58 items came back "agree".
+// Do not quote the detector's own trigger either: the legacy 2.4.3 rule fires on ordinary wrapping
+// (packages/accessibility/dist/dynamic-evaluator.js:53), which would invite agreement just as much.
 const PAGE_CLAIM: Record<string, string> = {
   "2.1.2":
-    "keyboard focus gets stuck somewhere on this page and cannot be moved out with the keyboard alone",
+    "focus reaches a control or group on this page that Tab, Shift+Tab and Escape cannot get out of — escaping it needs the mouse. FALSE if you can Tab onward to the end of the page, or back out to the browser's own toolbar",
   "3.2.1":
-    "merely focusing something on this page changes the context (navigates, or changes the URL) without being activated",
-  "2.4.3": "this page takes focus through its controls in an illogical order",
+    "moving focus onto a control here — with no Enter, no Space, no click — by itself navigates, changes the URL, opens a window, or substantially rewrites the page. FALSE if the control has to be activated before anything happens",
+  "2.4.3":
+    "Tab visits this page's controls in an order that departs from its reading order in a way that changes meaning or stops you finishing a task. FALSE if the order is merely untidy, and FALSE if it simply wraps back to the top at the end — wrapping is normal",
 };
 
 // One wording for a component claim too, so phrasing never separates the gap detector from axe.
@@ -218,9 +224,9 @@ function flagsOnPage(
 }
 
 const PAGE_TEST =
-  "Open the page fresh. Decide ONE thing: is this claim TRUE of this page? agree = a real defect, disagree = a false alarm, not sure = you could not tell. Judge the claim on its own terms; do not think about which tool said it.";
+  "Open the page fresh and work the keyboard. Decide ONE thing: is this claim TRUE of this page? agree = a real defect, disagree = a false alarm, not sure = you could not tell. The claim names what would make it FALSE — check that first. If you agree, write in the note WHAT YOU SAW (which control, roughly which Tab press): an agreement with no observation behind it cannot be audited. Judge the claim on its own terms; do not think about which tool said it.";
 const COMPONENT_TEST =
-  "Open the page fresh and find the component. Decide ONE thing: does it really fail this success criterion? agree = a real defect, disagree = a false alarm, not sure = you could not tell. Judge the claim on its own terms; do not think about which tool said it.";
+  "Open the page fresh and find the component. Decide ONE thing: does it really fail this success criterion? agree = a real defect, disagree = a false alarm, not sure = you could not tell. If you agree, write in the note WHAT YOU SAW: an agreement with no observation behind it cannot be audited. Judge the claim on its own terms; do not think about which tool said it.";
 
 function render(
   items: readonly BlindItem[],
