@@ -179,7 +179,7 @@ not the ones the detectors made:
 
 | criterion | what the detector asserted                                                                                           | what the worklist asked                                                        |
 | --------- | -------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------ |
-| 2.4.3     | "focus returned to previously visited element within short sequence" (`dynamic-evaluator.js:53`) — ordinary wrapping | "this page takes focus through its controls in an **illogical order**"         |
+| 2.4.3     | "focus returned to previously visited element within short sequence" (`dynamic-evaluator.js:54`) — ordinary wrapping | "this page takes focus through its controls in an **illogical order**"         |
 | 2.1.2     | the last 5·L focus-identity strings repeat — "a property of the string sequence, not of F" (`bench/legacy.ts:16`)    | "keyboard focus **gets stuck somewhere** on this page and cannot be moved out" |
 
 Neither question can be answered "no" about a real page, so agreement was the honest answer to both
@@ -200,9 +200,9 @@ in the loop:
 - The legacy **2.1.2** rule is explicitly "a property of the string sequence, not of F" — five
   consecutive identical focus identities trip it, so repeated indistinguishable controls (icon rows,
   pagination, "read more" links) fire it on clean pages. On 11 of the 12 live pages it flagged, the
-  recorded Tab walk wrapped the whole focus cycle 3–60 times with `focusLost: 0` and
-  `suspectedTrap: false`; `vdc.ru` wrapped 60 times. Focus that returns to the start sixty times is
-  not trapped.
+  recorded Tab walk wrapped the whole focus cycle 3–60 times with `suspectedTrap: false`, and
+  `focusLost: 0` on 10 of the 11 (`fashionbeans.com` recorded 5); `vdc.ru` wrapped 60 times. Focus
+  that returns to the start sixty times is not trapped.
 
 So the deletions removed flags that were mechanically bound to misfire. What remains unmeasured is
 the _positive_ precision of what the rebuilt checker now raises — the 349 live gap flags and the 2

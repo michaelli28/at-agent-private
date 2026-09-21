@@ -87,7 +87,7 @@ function pageUrl(p: PageResult, origin: string): string {
 // names what would make it FALSE. The first pass used softer wordings ("an illogical order",
 // "focus gets stuck somewhere") that no page can be cleared of, and all 58 items came back "agree".
 // Do not quote the detector's own trigger either: the legacy 2.4.3 rule fires on ordinary wrapping
-// (packages/accessibility/dist/dynamic-evaluator.js:53), which would invite agreement just as much.
+// (packages/accessibility/dist/dynamic-evaluator.js:54), which would invite agreement just as much.
 const PAGE_CLAIM: Record<string, string> = {
   "2.1.2":
     "focus reaches a control or group on this page that Tab, Shift+Tab and Escape cannot get out of — escaping it needs the mouse. FALSE if you can Tab onward to the end of the page, or back out to the browser's own toolbar",
