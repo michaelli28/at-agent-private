@@ -307,6 +307,15 @@ const joinErrors = (...errors: Array<string | null>): string | null =>
 
 // One tool, one fresh context. On budget expiry the context is closed (aborting in-flight page calls) and whatever
 // the tool still returns within the grace period is kept as a partial result.
+// One browser serves the whole set, so a page that crashes it takes every later page with it: each
+// one records "could not open a browser context" and is scored as a tool error, which is a page the
+// instrument never looked at. Relaunching costs one process start and keeps the remaining pages
+// measurable. The relaunch is recorded in the summary's notes, because the launch facts it reports
+// then describe the FIRST browser only.
+export async function liveBrowser(browser: Browser): Promise<Browser> {
+  return browser.isConnected() ? browser : chromium.launch();
+}
+
 export async function runTool<T>(
   browser: Browser,
   env: { localOnly: boolean; deadline: number; budgetMs: number },
@@ -385,8 +394,8 @@ function status(hasFindings: boolean, error: string | null): ToolStatus {
 }
 
 // The crawl's flags plus its own account of whether the keyboard-gated flag could be emitted at all.
-// reachedBackendNodeIds is one id per walk read, so only its count rides in the summary; the full list
-// stays in the raw record.
+// reachedBackendNodeIds is the deduplicated set of elements the walk focused, so only its size rides in
+// the summary; the full list stays in the raw record.
 function toGapsFindings(result: DualCrawlResult): GapsFindings {
   return {
     gaps: result.gaps.map(toGapFinding),
@@ -706,6 +715,9 @@ async function main(argv: readonly string[]): Promise<number> {
 
   const server = prepared.localOnly ? await startStaticServer(MOUNTS) : null;
   const browser = await chromium.launch();
+  // Hoisted: a relaunch replaces this, and the finally must close whichever browser is current or
+  // the dead one's replacement outlives the run as an orphaned Chromium process.
+  let active = browser;
   try {
     const resolved: ResolvedPage[] = pages.map((p) => ({
       ...p,
@@ -743,9 +755,18 @@ async function main(argv: readonly string[]): Promise<number> {
     };
     writeSummary(setDir, base);
     const results: PageResult[] = [];
+    const relaunched: string[] = [];
     for (const [i, spec] of resolved.entries()) {
       const rawFile = `raw/${spec.pageId.replaceAll("/", "__")}.json.gz`;
-      const { result, raw } = await runPage(browser, spec, {
+      const live = await liveBrowser(active);
+      if (live !== active) {
+        relaunched.push(spec.pageId);
+        console.log(
+          `  browser died on the previous page; relaunched before ${spec.pageId}`,
+        );
+        active = live;
+      }
+      const { result, raw } = await runPage(active, spec, {
         localOnly: prepared.localOnly,
         budgetMs: args.budgetMs,
         set: args.set,
@@ -760,7 +781,14 @@ async function main(argv: readonly string[]): Promise<number> {
       writeSummary(setDir, { ...base, pages: results });
       console.log(`[${i + 1}/${resolved.length}] ${describePage(result)}`);
     }
-    writeSummary(setDir, { ...base, complete: true, pages: results });
+    const notes =
+      relaunched.length === 0
+        ? base.notes
+        : [
+            ...base.notes,
+            `The browser died mid-run and was relaunched before ${relaunched.length} page(s): ${relaunched.join(", ")}. The launch block above describes the FIRST browser; a relaunched one is a fresh process of the same build. Pages recorded before a relaunch were measured by a different process than those after it.`,
+          ];
+    writeSummary(setDir, { ...base, notes, complete: true, pages: results });
     const summaryPath = join(setDir, "summary.json");
     const shown = relative(process.cwd(), summaryPath);
     console.log(
@@ -768,7 +796,9 @@ async function main(argv: readonly string[]): Promise<number> {
     );
     return 0;
   } finally {
-    await browser.close();
+    await active.close().catch(() => undefined);
+    // A replaced browser is already dead, but close it too rather than assume why it died.
+    if (active !== browser) await browser.close().catch(() => undefined);
     await server?.close();
   }
 }

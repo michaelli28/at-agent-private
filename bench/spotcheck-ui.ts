@@ -10,7 +10,13 @@
 // explicit "write into SPOTCHECK.md" action, because spotcheck.ts rewrites that file wholesale.
 import { createHash } from "node:crypto";
 import { createServer } from "node:http";
-import { existsSync, readFileSync, writeFileSync } from "node:fs";
+import {
+  existsSync,
+  readFileSync,
+  realpathSync,
+  statSync,
+  writeFileSync,
+} from "node:fs";
 import { dirname, extname, join, resolve, sep } from "node:path";
 import { fileURLToPath } from "node:url";
 import { z } from "zod";
@@ -171,10 +177,21 @@ function staticFile(pathname: string): { body: Buffer; type: string } | null {
   const file = resolve(join(root, pathname.slice(prefix.length)));
   // Refuse anything that escapes its mount.
   if (file !== root && !file.startsWith(root + sep)) return null;
-  if (!existsSync(file)) return null;
+  // realpath before the check: resolve()/join() are string operations and readFileSync follows
+  // symlinks, so a link inside a mount would otherwise read straight through it.
+  let real: string;
+  try {
+    real = realpathSync(file);
+  } catch {
+    return null;
+  }
+  if (real !== root && !real.startsWith(root + sep)) return null;
+  // A directory (e.g. GET /corpus/, which resolves to the mount root) is not a file: readFileSync
+  // would throw EISDIR out of the request handler and take the whole review server down mid-review.
+  if (!statSync(real).isFile()) return null;
   return {
-    body: readFileSync(file),
-    type: MIME[extname(file).toLowerCase()] ?? "application/octet-stream",
+    body: readFileSync(real),
+    type: MIME[extname(real).toLowerCase()] ?? "application/octet-stream",
   };
 }
 
@@ -267,13 +284,29 @@ function main(argv: readonly string[]): void {
       const done = Object.values(file.answers).filter(
         (a) => a.verdict !== null,
       ).length;
-      // Writing an empty answer set would un-tick every box -- i.e. destroy the record instead of
-      // saving it. There is no case where blanking the file is the intent, so refuse.
-      if (done === 0)
+      // mergeIntoMd rewrites every checkbox and every answer line from the json, so anything the
+      // file already records but the json does not would be erased. Refuse unless the json is a
+      // superset of what is already written: saving must never subtract.
+      const already = parseSpotcheck(md).filter((i) =>
+        /\[[xX]\]/.test(
+          md.split("\n").find((l) => l.startsWith(`${i.n}. `)) ?? "",
+        ),
+      );
+      const wouldLose = already.filter(
+        (i) => file.answers[String(i.n)]?.verdict == null,
+      );
+      if (done === 0 || wouldLose.length > 0)
         return send(
           200,
           MIME[".json"],
-          JSON.stringify({ ok: false, done: 0, reason: "no verdicts to write" }),
+          JSON.stringify({
+            ok: false,
+            done,
+            reason:
+              done === 0
+                ? "no verdicts to write"
+                : `refusing: ${wouldLose.length} item(s) already answered in the file have no verdict here (${wouldLose.map((i) => i.n).join(", ")})`,
+          }),
         );
       writeFileSync(mdPath, mergeIntoMd(md, file.answers));
       return send(200, MIME[".json"], JSON.stringify({ ok: true, done }));

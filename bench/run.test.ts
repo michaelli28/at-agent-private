@@ -21,7 +21,7 @@ import {
   type Summary,
 } from "./results-schema.js";
 import { Refusal, checkHeldOutTree, dirtyPathsFrom } from "./run-inputs.js";
-import { runTool } from "./run.js";
+import { liveBrowser, runTool } from "./run.js";
 
 const BENCH = dirname(fileURLToPath(import.meta.url));
 const ROOT = resolve(BENCH, "..");
@@ -377,4 +377,37 @@ describe("dirtyPathsFrom", () => {
       "b.ts",
     ]);
   });
+});
+
+// A live page can crash the browser outright. One browser serves the whole set, so without a
+// relaunch every REMAINING page fails to open a context and is recorded as a tool error -- on the
+// test-live run at 722307b that cost 14 of 20 pages, and the run still reported complete and
+// exited 0. Pages the instrument never looked at must not be silently priced in.
+describe("a crashed browser does not cost the rest of the set", () => {
+  it("hands back the same browser while it is alive", async () => {
+    const browser = await chromium.launch();
+    try {
+      const again = await liveBrowser(browser);
+      expect(again).toBe(browser);
+      expect(again.isConnected()).toBe(true);
+    } finally {
+      await browser.close();
+    }
+  });
+
+  it("relaunches once the browser has died, so later pages can still be measured", async () => {
+    const browser = await chromium.launch();
+    await browser.close();
+    expect(browser.isConnected()).toBe(false);
+    const replacement = await liveBrowser(browser);
+    try {
+      expect(replacement).not.toBe(browser);
+      expect(replacement.isConnected()).toBe(true);
+      // The point of relaunching: a context opens again.
+      const context = await replacement.newContext();
+      await context.close();
+    } finally {
+      await replacement.close();
+    }
+  }, 60_000);
 });

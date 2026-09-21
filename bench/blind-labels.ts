@@ -3,6 +3,7 @@
 // version -- or which tool -- produced each claim while judging it.
 //
 //   npx tsx bench/blind-labels.ts <shortSha> [--sets test-bad,test-live] [--seed <text>]
+//                                  [--sample <n per source>] [--origin http://127.0.0.1:4175]
 //
 // Writes bench/BLIND-LABELS.md (spotcheck-shaped, so bench/spotcheck-ui.ts --file drives it) plus
 // bench/BLIND-LABELS.key.json, which maps each item back to its source. DO NOT read the key while
@@ -15,6 +16,7 @@ import { createHash } from "node:crypto";
 import { existsSync, readFileSync, writeFileSync } from "node:fs";
 import { dirname, join, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
+import { criterionFromAxeTag } from "./report.js";
 import {
   PAGE_SETS,
   SummarySchema,
@@ -56,8 +58,12 @@ export type BlindItem = {
 const sha256 = (s: string): string =>
   createHash("sha256").update(s).digest("hex");
 
-// Deterministic order from the seed: Math.random would make the draw unreproducible, and the shuffle
+// Deterministic order from the seed: Math.random would make the draw unreproducible, and the order
 // has to be re-derivable to defend the result later.
+// The seed is part of the sort key, so ordering with a DIFFERENT seed than the draw used is what
+// keeps position from leaking source: selecting each source's k smallest hashes and then sorting the
+// union by that same hash lands every source in a contiguous block, ordered by how hard it was
+// sampled -- a perfect index of which tool produced what.
 function shuffle<T>(
   items: readonly T[],
   seed: string,
@@ -68,18 +74,39 @@ function shuffle<T>(
   );
 }
 
-function pageUrl(p: PageResult): string {
-  return p.url;
+// The recorded url carries whatever ephemeral port that run bound, so a local one is dead by the
+// time anybody labels it. Re-point local pages at the reviewer's own origin; live urls pass through.
+function pageUrl(p: PageResult, origin: string): string {
+  const m = /^https?:\/\/(127\.0\.0\.1|localhost):\d+(\/.*)$/.exec(p.url);
+  return m === null ? p.url : `${origin}${m[2]}`;
 }
 
-function flagsOnPage(set: PageSet, p: PageResult): BlindItem[] {
+// One wording per page-level criterion, whichever detector raised it: these are the only claims the
+// two versions both produce, so any difference in phrasing is a direct label for the source.
+const PAGE_CLAIM: Record<string, string> = {
+  "2.1.2":
+    "keyboard focus gets stuck somewhere on this page and cannot be moved out with the keyboard alone",
+  "3.2.1":
+    "merely focusing something on this page changes the context (navigates, or changes the URL) without being activated",
+  "2.4.3": "this page takes focus through its controls in an illogical order",
+};
+
+// One wording for a component claim too, so phrasing never separates the gap detector from axe.
+const describeGap = (what: string, component: string): string =>
+  `${component} — ${what}`;
+
+function flagsOnPage(
+  set: PageSet,
+  p: PageResult,
+  origin: string,
+): BlindItem[] {
   const out: BlindItem[] = [];
   const add = (o: Omit<BlindItem, "id" | "set" | "pageId" | "url">): void => {
     out.push({
       ...o,
       set,
       pageId: p.pageId,
-      url: pageUrl(p),
+      url: pageUrl(p, origin),
       id: sha256(
         [set, p.pageId, o.component ?? "-", o.criterion, o.source].join("|"),
       ).slice(0, 12),
@@ -110,25 +137,38 @@ function flagsOnPage(set: PageSet, p: PageResult): BlindItem[] {
               ? `#${g.id}`
               : null,
         criterion,
-        claim: `${g.gapType.replace(/_/g, " ")} — ${g.nodeName}${g.class === null ? "" : `.${g.class.trim().split(/\s+/).join(".")}`}`,
+        claim: describeGap(g.gapType.replace(/_/g, " "), comp),
         copies: n,
         source: "shared:gaps",
       });
     }
   }
 
-  // axe, collapsed the same way so it is judged on equal terms.
+  // axe, collapsed the same way so it is judged on equal terms -- which means its criterion must be
+  // written the way every other source writes one. Its raw tags are slugs (wcag412, wcag2a), and
+  // rendering those verbatim named axe on sight in a list whose whole purpose is to hide the source.
+  // Rules carrying no success-criterion tag at all (region, landmark-one-main) are dropped: a blank
+  // criterion is both a tell and an unanswerable question.
   for (const v of p.tools.axe.findings ?? []) {
-    const comps = [...new Set(v.components)];
-    for (const comp of comps) {
-      add({
-        component: comp,
-        selector: null,
-        criterion: v.wcagTags.join(","),
-        claim: `${v.id} — ${comp}`,
-        copies: v.components.filter((c) => c === comp).length,
-        source: "axe",
-      });
+    const criteria = [
+      ...new Set(
+        v.wcagTags
+          .map(criterionFromAxeTag)
+          .filter((c): c is string => c !== null),
+      ),
+    ].sort();
+    if (criteria.length === 0) continue;
+    for (const comp of [...new Set(v.components)]) {
+      for (const criterion of criteria) {
+        add({
+          component: comp,
+          selector: null,
+          criterion,
+          claim: describeGap(v.id.replace(/-/g, " "), comp),
+          copies: v.components.filter((c) => c === comp).length,
+          source: "axe",
+        });
+      }
     }
   }
 
@@ -139,7 +179,7 @@ function flagsOnPage(set: PageSet, p: PageResult): BlindItem[] {
       component: null,
       selector: null,
       criterion: "2.1.2",
-      claim: `this page traps keyboard focus${legacy.trap.element === null ? "" : ` at ${legacy.trap.element}`}`,
+      claim: PAGE_CLAIM["2.1.2"],
       copies: 1,
       source: "before:legacy-trap",
     });
@@ -148,7 +188,8 @@ function flagsOnPage(set: PageSet, p: PageResult): BlindItem[] {
       component: null,
       selector: null,
       criterion: v.criterion,
-      claim: v.description,
+      // The detector's own description is its signature; the criterion already says what is claimed.
+      claim: PAGE_CLAIM[v.criterion] ?? `this page fails WCAG ${v.criterion}`,
       copies: 1,
       source: "before:legacy-dynamic",
     });
@@ -159,8 +200,7 @@ function flagsOnPage(set: PageSet, p: PageResult): BlindItem[] {
       component: null,
       selector: null,
       criterion: "2.1.2",
-      claim:
-        "this page traps keyboard focus: focus was confined and neither Escape nor the opposite Tab key got out",
+      claim: PAGE_CLAIM["2.1.2"],
       copies: 1,
       source: "after:judge-trap",
     });
@@ -169,8 +209,7 @@ function flagsOnPage(set: PageSet, p: PageResult): BlindItem[] {
       component: null,
       selector: null,
       criterion: "3.2.1",
-      claim:
-        "focusing an element on this page changed the context on its own, with no activation",
+      claim: PAGE_CLAIM["3.2.1"],
       copies: 1,
       source: "after:judge-context-change",
     });
@@ -244,6 +283,16 @@ function main(argv: readonly string[]): void {
           .filter((s): s is PageSet =>
             (PAGE_SETS as readonly string[]).includes(s),
           );
+  // Where the reviewer will serve the corpus. Local page urls are re-pointed here because the ones
+  // recorded in the summary carry the ephemeral port that run bound, which is long gone.
+  const originFlag = argv.indexOf("--origin");
+  const origin = (
+    originFlag === -1 ? "http://127.0.0.1:4175" : (argv[originFlag + 1] ?? "")
+  ).replace(/\/$/, "");
+  if (!/^https?:\/\/[^/]+$/.test(origin)) {
+    console.error("--origin must look like http://host:port");
+    process.exit(2);
+  }
   const seedFlag = argv.indexOf("--seed");
   const seed =
     seedFlag === -1 ? `blind-${sha}` : (argv[seedFlag + 1] ?? `blind-${sha}`);
@@ -260,7 +309,7 @@ function main(argv: readonly string[]): void {
       console.warn(
         `WARNING: ${set} at ${sha} is incomplete (${s.pages.length} pages); its flags are partial.`,
       );
-    for (const p of s.pages) items.push(...flagsOnPage(set, p));
+    for (const p of s.pages) items.push(...flagsOnPage(set, p, origin));
   }
   if (missing.length > 0)
     console.warn(`no summary for: ${missing.join(", ")} — skipped`);
@@ -292,7 +341,8 @@ function main(argv: readonly string[]): void {
             console.log(`  ${src}: drew ${perSource} of ${pool.length}`);
           return pool.slice(0, perSource);
         });
-  const shuffled = shuffle(drawn, seed, (i) => i.id);
+  // ":order" so the final sequence is independent of the per-source draw above.
+  const shuffled = shuffle(drawn, `${seed}:order`, (i) => i.id);
   writeFileSync(OUT_MD, render(shuffled, seed, sha, items.length));
   writeFileSync(
     OUT_KEY,

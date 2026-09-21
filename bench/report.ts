@@ -408,7 +408,7 @@ function renderTestBad(summary: Summary, truth: BadTruth | null): string[] {
   );
 
   out.push(
-    "#### Per page (F/P = report fails/passes the criterion; O = the before column flags it, C = the after column flags it, U = after is undetermined for it, A = axe flags it, – = not flagged, E = tool error)",
+    "#### Per page (F/P = report fails/passes the criterion; O = the before column flags it, C = the after column flags it, U = that column did not observe it (undetermined, scored as a miss), A = axe flags it, – = not flagged, E = tool error)",
     "",
     `| page | ${HEADLINE_CRITERIA.join(" | ")} |`,
     `|---|${HEADLINE_CRITERIA.map(() => "---").join("|")}|`,
@@ -419,12 +419,21 @@ function renderTestBad(summary: Summary, truth: BadTruth | null): string[] {
     const axe = axeCriteria(p);
     const cells = HEADLINE_CRITERIA.map((c) => {
       const t = truthResult(truth, p.pageId, c);
-      const o = !oursRan(p) ? "E" : ours.has(c) ? "O" : "–";
+      // "–" means the column looked and did not flag. A criterion the walk never assessed was not
+      // looked at, so it prints "U" here exactly as it scores in the aggregate tables -- otherwise
+      // this grid would show a clean dash for a page the totals above count as undetermined.
+      const o = !oursRan(p)
+        ? "E"
+        : ours.has(c)
+          ? "O"
+          : gapUndetermined(p, c)
+            ? "U"
+            : "–";
       const n = !currentRan(p)
         ? "E"
         : current.has(c)
           ? "C"
-          : currentUndetermined(p, c)
+          : currentUndetermined(p, c) || gapUndetermined(p, c)
             ? "U"
             : "–";
       const a = !axeRan(p) ? "E" : axe.has(c) ? "A" : "–";

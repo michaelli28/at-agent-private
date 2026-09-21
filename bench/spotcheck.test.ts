@@ -117,8 +117,22 @@ describe("drawSpotcheck", () => {
       drawSpotcheck(loadSources(variantsDir), SPOTCHECK_SEED),
     );
     expect(fresh).toBe(renderSpotcheck(drawn));
-    // Stale if the labels, operators or draw changed without rerunning: npx tsx bench/spotcheck.ts
-    expect(readFileSync(SPOTCHECK_PATH, "utf8")).toBe(fresh);
+    // Stale if the labels, operators or draw changed without rerunning: npx tsx bench/spotcheck.ts.
+    // The committed file also carries the reviewer's VERDICTS (ticked boxes, filled "agree? / note:"
+    // lines), which are answers layered on top of the draw and are not what this test pins. Both
+    // sides are stripped back to the drawn state so the draw stays byte-pinned while the answers are
+    // free to change -- stripping anything else would let a changed draw pass unnoticed.
+    const drawnStateOnly = (md: string): string =>
+      md
+        .replace(/^(\d+\. )\[[ xX]\]/gm, "$1[ ]")
+        .replace(/^(\s+- agree\? \/ note:).*$/gm, "$1");
+    expect(drawnStateOnly(readFileSync(SPOTCHECK_PATH, "utf8"))).toBe(
+      drawnStateOnly(fresh),
+    );
+    // The stripping must not be a blanket normaliser: a real change to the draw still fails.
+    expect(drawnStateOnly(fresh.replace("1. [ ]", "1. [ ] CHANGED"))).not.toBe(
+      drawnStateOnly(fresh),
+    );
     const other = drawSpotcheck(sources, "another-seed");
     expect(other.items.map((i) => i.key)).not.toEqual(
       drawn.items.map((i) => i.key),

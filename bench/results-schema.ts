@@ -70,8 +70,10 @@ export type GapFinding = z.infer<typeof GapFindingSchema>;
 // and found nothing". Those two read identically in a findings array, which is how a structurally
 // disabled check read as a check that ran and found nothing (fixed at 118bb99); recording the evidence
 // is what stops that from being invisible a second time.
-// Compact by design: KeyboardEvidence.reachedBackendNodeIds is one id per walk read and unbounded, so
-// the summary keeps only its count. RawPageSchema below carries the evidence in full.
+// Compact by design: reachedBackendNodeIds is the DEDUPLICATED set of elements the walk focused, so it
+// grows with the page's focusable count (46-61 on a real page, and every id repeated per page in a
+// committable summary). The summary keeps its size; RawPageSchema below carries the list in full,
+// which is what a not_focusable miss is actually diagnosed from.
 export const KeyboardEvidenceSummarySchema = z
   .object({
     walkRan: z.boolean(),

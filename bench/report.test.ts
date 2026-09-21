@@ -491,7 +491,9 @@ describe("an undetermined verdict counts as a miss", () => {
       "1/2 · 0.50 [0.09, 0.91] · 1 undetermined",
     );
     const perPage = out.slice(out.indexOf("#### Per page"));
-    expect(perPage).toContain("U = after is undetermined");
+    // U is no longer an after-column-only mark: a criterion the walk never assessed is unobserved in
+    // BOTH columns, so the legend has to say which column a U belongs to rather than assume.
+    expect(perPage).toContain("U = that column did not observe it");
     const line = (id: string) =>
       perPage.split("\n").find((l) => l.startsWith(`| ${id} |`)) ?? "";
     // C, not N: N already means "missed" in the variant grid, so reusing it here would mislead.
