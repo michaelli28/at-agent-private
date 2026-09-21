@@ -24,6 +24,7 @@ import {
   GAP_WCAG_MAPPING,
   WALK_GATED_GAP_TYPES,
 } from "../packages/accessibility/src/gaps/gap-detector.js";
+import { ACCESSIBILITY_GAP_TYPES } from "../packages/accessibility/src/gaps/types.js";
 import {
   PAGE_SETS,
   PageSetSchema,
@@ -164,12 +165,15 @@ const isWalkGated = (gapType: string): boolean =>
 
 // The criteria a missing walk leaves UNOBSERVED: those every carrying gap type is walk-gated. A criterion
 // some other gap type also carries was still observed, so marking it undetermined would overstate the
-// damage. Derived from the detector's own table so the two cannot drift; today it is 2.1.1 and 2.4.7.
+// damage. Today it is 2.1.1 and 2.4.7.
+// It scans the DETECTOR's own gap-type list, not bench/corpus's mirror of it: a new gap type added
+// beside GAP_WCAG_MAPPING but not yet mirrored here would otherwise be skipped, and a criterion that
+// type also carries would keep being called unobserved when the detector could still emit it.
 const WALK_GATED_CRITERIA = new Set(
   WALK_GATED_GAP_TYPES.flatMap((t) => GAP_WCAG_MAPPING[t]).filter((criterion) =>
-    GAP_TYPES.filter((t) => GAP_WCAG_MAPPING[t].includes(criterion)).every(
-      isWalkGated,
-    ),
+    ACCESSIBILITY_GAP_TYPES.filter((t) =>
+      GAP_WCAG_MAPPING[t].includes(criterion),
+    ).every(isWalkGated),
   ),
 );
 
