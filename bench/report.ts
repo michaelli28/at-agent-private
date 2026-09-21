@@ -36,7 +36,7 @@ import {
   type Summary,
   type WalkStats,
 } from "./results-schema.js";
-import { ruleOfThree, wilson } from "./stats.js";
+import { exactZeroUpper, ruleOfThree, wilson } from "./stats.js";
 
 const BENCH = dirname(fileURLToPath(import.meta.url));
 const ROOT = resolve(BENCH, "..");
@@ -266,8 +266,12 @@ function rateCell(
   const cell = `${x}/${n} · ${f2(w.p)} [${f2(w.lower)}, ${f2(w.upper)}]`;
   // The rule of three reads "n observations, zero events". With u refusals only n-u pages were
   // actually observed, so the bound would describe a sample that was never taken.
+  // Both bounds are printed because they answer different questions and disagree: Wilson above is
+  // TWO-sided, the rule of three is an approximation (-ln(0.05) rounded to 3), and exactZeroUpper is
+  // the exact one-sided Clopper-Pearson bound, which is the tightest claim the data supports. At
+  // n=20 that is 16.1% / 15.0% / 13.9%. Quoting only the loosest would understate what was shown.
   return withRuleOfThree && x === 0 && undetermined === 0
-    ? `${cell} · rule of 3 ≤ ${f2(ruleOfThree(n))}`
+    ? `${cell} · rule of 3 ≤ ${f2(ruleOfThree(n))} · exact 1-sided ≤ ${f2(exactZeroUpper(n))}`
     : cell;
 }
 

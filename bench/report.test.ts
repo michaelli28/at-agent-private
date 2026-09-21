@@ -994,6 +994,38 @@ describe("evidence class", () => {
 // Recording the gap detector's keyboard evidence is what keeps "not_focusable was never assessed" apart
 // from "not_focusable was assessed and found nothing". At 118bb99 the harness ran the detector with its
 // Tab walk structurally disabled and every table here read the result as a clean page.
+// The brief asks for the rule of three AND notes that Wilson is two-sided while the exact one-sided
+// bound is tighter (0/20: 16.1% vs 13.9%). Printing only the rule of three overstates the bound the
+// data supports, so a zero cell must carry the exact bound too.
+describe("a zero cell carries the exact one-sided bound, not just the rule of three", () => {
+  const clean = (): Summary =>
+    fakeSummary("test-bad", [fakePage("after/home", {}), fakePage("after/news", {})]);
+
+  it("prints the exact one-sided bound beside the rule of three", () => {
+    const cells = row(
+      renderReport(input({ "test-bad": clean() })),
+      "### False alarms",
+      "4.1.2",
+    )
+      .split("|")
+      .map((c) => c.trim());
+    expect(cells[5]).toContain("rule of 3");
+    expect(cells[5]).toContain("exact 1-sided");
+  });
+
+  it("states a tighter bound than the rule of three", () => {
+    // n=2: rule of three gives 1.50 (nonsense above 1); the exact bound is 0.78.
+    const cell = row(
+      renderReport(input({ "test-bad": clean() })),
+      "### False alarms",
+      "4.1.2",
+    );
+    const exact = /exact 1-sided \u2264 ([0-9.]+)/.exec(cell);
+    expect(exact).not.toBeNull();
+    expect(Number(exact?.[1])).toBeLessThanOrEqual(1);
+  });
+});
+
 describe("keyboard evidence: a check that could not run is not a check that passed", () => {
   const unassessed: Partial<KeyboardEvidenceSummary> = {
     unassessedReasons: ["walk-error"],
