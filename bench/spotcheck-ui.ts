@@ -30,9 +30,11 @@ const AnswerSchema = z
   .strict();
 const AnswersFileSchema = z
   .object({
-    // Which SPOTCHECK.md these answers belong to: a redraw changes the items under the same numbers,
-    // so answers carried across one would silently describe different elements.
-    spotcheckSha256: z.string(),
+    // Which DRAWN ITEMS these answers belong to: a redraw changes the items under the same numbers,
+    // so answers carried across one would silently describe different elements. Keyed on the items'
+    // own fields, NOT the file bytes -- writing verdicts back into the file changes its bytes, and
+    // hashing those made the write invalidate the very answers it had just saved.
+    itemsSha256: z.string(),
     answers: z.record(z.string(), AnswerSchema),
   })
   .strict();
@@ -128,17 +130,25 @@ export function mergeIntoMd(
 const sha256 = (s: string): string =>
   createHash("sha256").update(s).digest("hex");
 
-function readAnswers(spotSha: string): AnswersFile {
-  if (!existsSync(ANSWERS_JSON))
-    return { spotcheckSha256: spotSha, answers: {} };
-  const parsed = AnswersFileSchema.safeParse(
-    JSON.parse(readFileSync(ANSWERS_JSON, "utf8")),
+// Identity of the drawn set: everything spotcheck.ts chose, and nothing a verdict can change.
+const itemsKey = (items: readonly SpotUiItem[]): string =>
+  sha256(
+    items
+      .map((i) => [i.n, i.title, i.url, i.selector, i.test, i.recorded].join("\u0000"))
+      .join("\n"),
   );
-  if (!parsed.success) return { spotcheckSha256: spotSha, answers: {} };
+
+function readAnswers(answersPath: string, spotSha: string): AnswersFile {
+  if (!existsSync(answersPath))
+    return { itemsSha256: spotSha, answers: {} };
+  const parsed = AnswersFileSchema.safeParse(
+    JSON.parse(readFileSync(answersPath, "utf8")),
+  );
+  if (!parsed.success) return { itemsSha256: spotSha, answers: {} };
   // A redraw remaps numbers to different items; keep the old answers on disk but never show them
   // against items they were not written for.
-  if (parsed.data.spotcheckSha256 !== spotSha)
-    return { spotcheckSha256: spotSha, answers: {} };
+  if (parsed.data.itemsSha256 !== spotSha)
+    return { itemsSha256: spotSha, answers: {} };
   return parsed.data;
 }
 
@@ -176,9 +186,18 @@ function main(argv: readonly string[]): void {
     console.error("--port must be a positive integer");
     process.exit(2);
   }
-  if (!existsSync(SPOTCHECK_MD)) {
+  // --file lets the same reviewer drive any spotcheck-shaped worklist (e.g. BLIND-LABELS.md);
+  // each worklist keeps its verdicts in its own <name>-answers.json.
+  const fileFlag = argv.indexOf("--file");
+  const mdPath =
+    fileFlag === -1 ? SPOTCHECK_MD : resolve(argv[fileFlag + 1] ?? SPOTCHECK_MD);
+  const answersPath =
+    fileFlag === -1
+      ? ANSWERS_JSON
+      : mdPath.replace(/\.md$/i, "") + "-answers.json";
+  if (!existsSync(mdPath)) {
     console.error(
-      `${SPOTCHECK_MD} does not exist. Draw it first: npx tsx bench/spotcheck.ts`,
+      `${mdPath} does not exist. Draw it first: npx tsx bench/spotcheck.ts`,
     );
     process.exit(2);
   }
@@ -198,8 +217,12 @@ function main(argv: readonly string[]): void {
       return send(200, "text/html; charset=utf-8", PAGE);
 
     if (url.pathname === "/api/items") {
-      const md = readFileSync(SPOTCHECK_MD, "utf8");
-      const items = parseSpotcheck(md).map((i) => ({
+      const md = readFileSync(mdPath, "utf8");
+      const drawn = parseSpotcheck(md);
+      // Key on the drawn items, BEFORE the preview url is rewritten below: the identity of an item
+      // is what spotcheck.ts chose, not which port this process happens to serve it on.
+      const key = itemsKey(drawn);
+      const items = drawn.map((i) => ({
         ...i,
         // Point the preview at this server so it is same-origin and the target can be outlined.
         url: i.url === null ? null : i.url.replace(SERVE_ORIGIN, origin),
@@ -207,7 +230,7 @@ function main(argv: readonly string[]): void {
       return send(
         200,
         MIME[".json"],
-        JSON.stringify({ items, ...readAnswers(sha256(md)) }),
+        JSON.stringify({ items, ...readAnswers(answersPath, key) }),
       );
     }
 
@@ -225,26 +248,34 @@ function main(argv: readonly string[]): void {
           .safeParse(JSON.parse(raw || "{}"));
         if (!parsed.success)
           return send(400, MIME[".json"], JSON.stringify({ ok: false }));
-        const spotSha = sha256(readFileSync(SPOTCHECK_MD, "utf8"));
-        const file = readAnswers(spotSha);
+        const spotSha = itemsKey(parseSpotcheck(readFileSync(mdPath, "utf8")));
+        const file = readAnswers(answersPath, spotSha);
         file.answers[String(parsed.data.n)] = {
           verdict: parsed.data.verdict,
           note: parsed.data.note,
         };
-        file.spotcheckSha256 = spotSha;
-        writeFileSync(ANSWERS_JSON, `${JSON.stringify(file, null, 2)}\n`);
+        file.itemsSha256 = spotSha;
+        writeFileSync(answersPath, `${JSON.stringify(file, null, 2)}\n`);
         send(200, MIME[".json"], JSON.stringify({ ok: true }));
       });
       return;
     }
 
     if (url.pathname === "/api/write-md" && req.method === "POST") {
-      const md = readFileSync(SPOTCHECK_MD, "utf8");
-      const file = readAnswers(sha256(md));
-      writeFileSync(SPOTCHECK_MD, mergeIntoMd(md, file.answers));
+      const md = readFileSync(mdPath, "utf8");
+      const file = readAnswers(answersPath, itemsKey(parseSpotcheck(md)));
       const done = Object.values(file.answers).filter(
         (a) => a.verdict !== null,
       ).length;
+      // Writing an empty answer set would un-tick every box -- i.e. destroy the record instead of
+      // saving it. There is no case where blanking the file is the intent, so refuse.
+      if (done === 0)
+        return send(
+          200,
+          MIME[".json"],
+          JSON.stringify({ ok: false, done: 0, reason: "no verdicts to write" }),
+        );
+      writeFileSync(mdPath, mergeIntoMd(md, file.answers));
       return send(200, MIME[".json"], JSON.stringify({ ok: true, done }));
     }
 
@@ -263,8 +294,8 @@ function main(argv: readonly string[]): void {
   });
   server.listen(port, "127.0.0.1", () => {
     console.log(`spot-check UI  ${origin}`);
-    console.log(`  items    ${SPOTCHECK_MD}`);
-    console.log(`  verdicts ${ANSWERS_JSON} (saved as you type)`);
+    console.log(`  items    ${mdPath}`);
+    console.log(`  verdicts ${answersPath} (saved as you type)`);
     console.log("  Ctrl+C to stop");
   });
 }
