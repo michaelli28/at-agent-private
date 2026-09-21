@@ -1,5 +1,5 @@
 {
-  "itemsSha256": "6c8876a436b20d595b4428f68641fb1fe5dc339d92879de69c99152292bdfae8",
+  "itemsSha256": "27520ae445de17e8615704f7f99d9282595d1b28def253d01d6c18d19731b25e",
   "answers": {
     "1": {
       "verdict": "agree",
@@ -81,5 +81,6 @@
       "verdict": "agree",
       "note": ""
     }
-  }
+  },
+  "superseded": []
 }
