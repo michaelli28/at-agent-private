@@ -10,3 +10,8 @@ corpus/dev/.deps/
 corpus/dev/base/react-div-button/app.js
 # Full per-page harness records (bench/run.ts); summary.json and reports stay committable
 results/**/raw/
+# The blind worklist and its key, regenerated deterministically from (sha, seed, sets) by
+# bench/blind-labels.ts. The KEY must not be read while labelling; the verdicts
+# (BLIND-LABELS-answers.json) are the record worth keeping and are NOT ignored.
+BLIND-LABELS.md
+BLIND-LABELS.key.json
