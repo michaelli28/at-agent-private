@@ -48,6 +48,7 @@ export async function runGaps(options: GapsCommandOptions): Promise<GapsCommandR
             url: result.pageUrl,
             summary,
             keyboard: { notFocusableAssessed, unassessedReasons, walkError },
+            errors: result.errors,
             gaps: result.gaps,
           }),
         }
@@ -57,7 +58,7 @@ export async function runGaps(options: GapsCommandOptions): Promise<GapsCommandR
         success: true,
         gaps: result.gaps,
         summary,
-        output: formatGapReport(summary, result.gaps, result.keyboard),
+        output: formatGapReport(summary, result.gaps, result.keyboard, result.errors),
       }
     } finally {
       await page.close()
@@ -76,6 +77,7 @@ function formatGapReport(
   summary: GapSummary,
   gaps: readonly AccessibilityGap[],
   keyboard: DualCrawlResult['keyboard'],
+  errors: DualCrawlResult['errors'],
 ): string {
   const lines = [
     `Accessibility Gap Detection Results`,
@@ -91,6 +93,18 @@ function formatGapReport(
   if (!keyboard.notFocusableAssessed) {
     const why = keyboard.unassessedReasons.join(', ')
     lines.push(`not_focusable not assessed: ${why}${keyboard.walkError ? ` (${keyboard.walkError})` : ''}`)
+  }
+
+  // A failed read loses signals, for one element or, in a discover-* stage, for every handler-only
+  // element: a lost listener or cursor hides a gap, a lost visibility or focus fact can invent one.
+  // tab-walk is reported above, by the not_focusable line.
+  const unreported = errors.filter((error) => error.stage !== 'tab-walk')
+  if (unreported.length > 0) {
+    const byStage = new Map<string, number>()
+    for (const error of unreported) byStage.set(error.stage, (byStage.get(error.stage) ?? 0) + 1)
+    const stages = [...byStage].map(([stage, n]) => `${stage} \u00d7${n}`).join(', ')
+    const reads = unreported.length === 1 ? 'page read' : 'page reads'
+    lines.push(`Incomplete: ${unreported.length} ${reads} failed (${stages}); some gaps may be missing or wrong`)
   }
 
   if (gaps.length > 0) {

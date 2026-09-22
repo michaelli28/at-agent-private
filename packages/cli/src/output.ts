@@ -47,9 +47,17 @@ export function formatAgentResult(result: AgentResult): string {
     `Goal: ${result.goal}`,
     `Steps: ${stepCount} step${stepCount !== 1 ? 's' : ''}`,
     `Violations: ${violationCount}`,
-    ``,
-    `Summary: ${result.summary}`,
   ]
+
+  // Only when the agent ran checkKeyboard; axe's count above never includes these.
+  if (result.keyboard) {
+    lines.push(`Keyboard trap (WCAG 2.1.2): ${withReason(result.keyboard)}`)
+  }
+  if (result.contextChange) {
+    lines.push(`Change of context on focus (WCAG 3.2.1): ${withReason(result.contextChange)}`)
+  }
+
+  lines.push(``, `Summary: ${result.summary}`)
 
   if (result.steps.length > 0) {
     lines.push(``, `Steps taken:`)
@@ -59,6 +67,10 @@ export function formatAgentResult(result: AgentResult): string {
   }
 
   return lines.join('\n')
+}
+
+function withReason(result: { verdict: string; reason: string | null }): string {
+  return result.reason === null ? result.verdict : `${result.verdict} (${result.reason})`
 }
 
 export function formatJSON<T>(data: T): string {

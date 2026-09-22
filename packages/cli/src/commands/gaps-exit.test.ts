@@ -5,12 +5,6 @@ import { runGaps, type GapsCommandResult } from './gaps.js'
 
 vi.mock('./gaps.js', () => ({ runGaps: vi.fn() }))
 
-class ExitCalled extends Error {
-  constructor(readonly code: number) {
-    super(`process.exit(${code})`)
-  }
-}
-
 function summary(bySeverity: Partial<GapSummary['bySeverity']>): GapSummary {
   const severities = {
     critical: 0,
@@ -32,26 +26,21 @@ function summary(bySeverity: Partial<GapSummary['bySeverity']>): GapSummary {
   }
 }
 
-// Runs `at-agent gaps <url>` and returns the code the process would exit with (0 when exit is never called).
+// Runs `at-agent gaps <url>` and returns the exit code it leaves in process.exitCode.
 async function exitCodeFor(result: GapsCommandResult): Promise<number> {
   vi.mocked(runGaps).mockResolvedValueOnce(result)
-  try {
-    await createProgram().parseAsync(['gaps', 'https://example.com'], {
-      from: 'user',
-    })
-    return 0
-  } catch (error) {
-    if (error instanceof ExitCalled) return error.code
-    throw error
-  }
+  await createProgram().parseAsync(['gaps', 'https://example.com'], {
+    from: 'user',
+  })
+  return Number(process.exitCode ?? 0)
 }
 
 describe('gaps command exit code', () => {
   beforeEach(() => {
     vi.clearAllMocks()
-    // A real exit stops the action, so the stub throws instead of returning.
-    vi.spyOn(process, 'exit').mockImplementation((code?: string | number | null) => {
-      throw new ExitCalled(Number(code ?? 0))
+    // process.exit drops stdout still buffered for a pipe: `gaps --json | jq` got 65,536 of 423,097 bytes.
+    vi.spyOn(process, 'exit').mockImplementation(() => {
+      throw new Error('process.exit truncates piped stdout; set process.exitCode instead')
     })
     vi.spyOn(console, 'log').mockImplementation(() => {})
     vi.spyOn(console, 'error').mockImplementation(() => {})
@@ -59,6 +48,7 @@ describe('gaps command exit code', () => {
 
   afterEach(() => {
     vi.restoreAllMocks()
+    process.exitCode = undefined
   })
 
   it('exits 1 when a critical gap is found', async () => {

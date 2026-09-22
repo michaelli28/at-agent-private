@@ -154,6 +154,54 @@ describe('runGaps', () => {
     })
   })
 
+  // A failed read loses signals, for one element or, in a discover-* stage, for every handler-only
+  // element, so gaps can silently be missing or wrong.
+  it('reports failed page reads in text and JSON output', async () => {
+    const detected = await crawlPageWithGapDetection(
+      {} as Parameters<typeof crawlPageWithGapDetection>[0],
+      'https://example.com',
+    )
+    const partial = {
+      ...detected,
+      errors: [
+        { stage: 'listeners' as const, backendNodeId: 5, message: 'No node with given id found' },
+        { stage: 'listeners' as const, backendNodeId: 6, message: 'No node with given id found' },
+        { stage: 'cursor' as const, backendNodeId: 7, message: 'Target closed' },
+        { stage: 'tab-walk' as const, backendNodeId: null, message: 'walk failed' },
+      ],
+      // A recorded tab-walk error always comes with not_focusable unassessed (gaps/detect.ts).
+      keyboard: {
+        ...detected.keyboard,
+        notFocusableAssessed: false,
+        unassessedReasons: ['walk-error' as const],
+        walkError: 'walk failed',
+      },
+    }
+    vi.mocked(crawlPageWithGapDetection).mockResolvedValueOnce(partial).mockResolvedValueOnce(partial)
+
+    const text = await runGaps({ url: 'https://example.com' })
+    expect(text.output).toContain('3 page reads failed (listeners ×2, cursor ×1); some gaps may be missing or wrong')
+    // The tab-walk failure is reported once, by the not_focusable line; JSON keeps every error.
+    expect(text.output).toContain('not_focusable not assessed: walk-error (walk failed)')
+
+    const json = await runGaps({ url: 'https://example.com', json: true })
+    expect(JSON.parse(json.output!).errors).toEqual(partial.errors)
+  })
+
+  it('names a single failed read in the singular', async () => {
+    const detected = await crawlPageWithGapDetection(
+      {} as Parameters<typeof crawlPageWithGapDetection>[0],
+      'https://example.com',
+    )
+    vi.mocked(crawlPageWithGapDetection).mockResolvedValueOnce({
+      ...detected,
+      errors: [{ stage: 'cursor' as const, backendNodeId: 7, message: 'Target closed' }],
+    })
+
+    const text = await runGaps({ url: 'https://example.com' })
+    expect(text.output).toContain('Incomplete: 1 page read failed (cursor ×1)')
+  })
+
   it('returns the error when detection fails', async () => {
     vi.mocked(crawlPageWithGapDetection).mockRejectedValueOnce(new Error('net::ERR_CONNECTION_REFUSED'))
 

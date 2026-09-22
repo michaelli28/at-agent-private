@@ -3,6 +3,8 @@ import { runAudit } from './commands/audit.js'
 import { runFlow } from './commands/flow.js'
 import { runGaps } from './commands/gaps.js'
 
+// Exit codes go through process.exitCode, never process.exit: exit drops stdout still buffered for a
+// pipe, and on macOS the old `at-agent gaps <url> --json | jq` received 65,536 of 423,097 bytes.
 export function createProgram(): Command {
   const program = new Command()
 
@@ -25,12 +27,13 @@ export function createProgram(): Command {
 
       if (!result.success) {
         console.error(`Error: ${result.error}`)
-        process.exit(1)
+        process.exitCode = 1
+        return
       }
 
       // Exit with non-zero if critical/serious violations found
       if (result.summary && (result.summary.byImpact.critical > 0 || result.summary.byImpact.serious > 0)) {
-        process.exit(1)
+        process.exitCode = 1
       }
     })
 
@@ -58,7 +61,7 @@ export function createProgram(): Command {
 
       if (!result.success) {
         console.error(`Error: ${result.error}`)
-        process.exit(1)
+        process.exitCode = 1
       }
     })
 
@@ -75,12 +78,13 @@ export function createProgram(): Command {
 
       if (!result.success) {
         console.error(`Error: ${result.error}`)
-        process.exit(1)
+        process.exitCode = 1
+        return
       }
 
       // Exit with non-zero if critical/serious gaps found
       if (result.summary && (result.summary.bySeverity.critical > 0 || result.summary.bySeverity.serious > 0)) {
-        process.exit(1)
+        process.exitCode = 1
       }
     })
 
