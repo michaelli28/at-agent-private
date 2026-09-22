@@ -86,15 +86,16 @@ function pageUrl(p: PageResult, origin: string): string {
 // Each claim states the success criterion in terms a reviewer can falsify at the keyboard, and
 // names what would make it FALSE. The first pass used softer wordings ("an illogical order",
 // "focus gets stuck somewhere") that no page can be cleared of, and all 58 items came back "agree".
-// Do not quote the detector's own trigger either: the legacy 2.4.3 rule fires on ordinary wrapping
-// (packages/accessibility/dist/dynamic-evaluator.js:54), which would invite agreement just as much.
+// Do not quote the detector's own trigger as the claim either: the legacy 2.4.3 rule fires when one
+// focus identity recurs within five focus events (bench/legacy-detectors.ts:187, :251) — usually two
+// identical-looking controls a few stops apart, not wrapping. It appears below only as a falsifier.
 const PAGE_CLAIM: Record<string, string> = {
   "2.1.2":
     "focus reaches a control or group on this page that Tab, Shift+Tab and Escape cannot get out of — escaping it needs the mouse. FALSE if you can Tab onward to the end of the page, or back out to the browser's own toolbar",
   "3.2.1":
     "moving focus onto a control here — with no Enter, no Space, no click — by itself navigates, changes the URL, opens a window, or substantially rewrites the page. FALSE if the control has to be activated before anything happens",
   "2.4.3":
-    "Tab visits this page's controls in an order that departs from its reading order in a way that changes meaning or stops you finishing a task. FALSE if the order is merely untidy, and FALSE if it simply wraps back to the top at the end — wrapping is normal",
+    "Tab visits this page's controls in an order that departs from its reading order in a way that changes meaning or stops you finishing a task. FALSE if the order is merely untidy, if the only oddity is two similar-looking controls a few stops apart, or if it simply wraps back to the top at the end — wrapping is normal",
 };
 
 // One wording for a component claim too, so phrasing never separates the gap detector from axe.

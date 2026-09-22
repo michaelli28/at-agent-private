@@ -103,8 +103,9 @@ function addTo(
 
 // Our old checker's criteria on a page -> what flagged them. Gap criteria are each gap's wcag list, which the
 // detector fills from GAP_WCAG_MAPPING (packages/accessibility/src/gaps/gap-detector.ts).
-// The agent latches trapDetected on the first checkTrap that fires (packages/agent/src/agent.ts:91-92),
-// and the walk replay checks after every press, so "ever trapped" is the old checker's page verdict.
+// The old agent latched trapDetected on the first checkTrap that fired (packages/agent/src/agent.ts:91-92
+// at d9e2cb5, the commit legacy-detectors.ts freezes; the latch is gone from the current agent), and the
+// walk replay checks after every press, so "ever trapped" is the old checker's page verdict.
 export function legacyTrapFlagged(trap: {
   firstTrappedPress: number | null;
 }): boolean {
@@ -899,7 +900,7 @@ function renderHeader(
     "",
     "Scoring (this report):",
     "",
-    '- Legacy trap: a page counts as flagged if detectTrap() ever said trapped during the walk (firstTrappedPress), because the agent latches trapDetected on the first checkTrap that fires (packages/agent/src/agent.ts:91-92). "clear at end" marks pages where it no longer said trapped after the last press.',
+    '- Legacy trap: a page counts as flagged if detectTrap() ever said trapped during the walk (firstTrappedPress), because the old agent latched trapDetected on the first checkTrap that fired (packages/agent/src/agent.ts:91-92 at d9e2cb5). "clear at end" marks pages where it no longer said trapped after the last press.',
     "",
     `- ${evidenceClass(summaries)}`,
     "",
