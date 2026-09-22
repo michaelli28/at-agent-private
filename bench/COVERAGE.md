@@ -16,11 +16,11 @@
 - **Recall lost — one page.** The pre-fix baseline scores 2.4.3 detection `1/1 · 1.00 [0.21, 1.00]` on a single page (bench/results/cd3b122/REPORT-baseline.md:41), identified by bench/SPOTCHECK.md:113-116 as BAD's `before/survey`, SC 2.4.3 on `#page #ev`, technique F85, reader A only. After the cut that row reads `0/1`. The row stays in the report; it is not deleted.
 - **What that recall cost.** The same rule scored `7/7 · 1.00 [0.65, 1.00]` false alarms on clean pages (bench/results/cd3b122/REPORT-baseline.md:52) — seven false positives for one true one.
 - **No substitute.** axe contributed `0/1` on 2.4.3 in the baseline (bench/results/cd3b122/REPORT-baseline.md:41). Whether axe-core ships any 2.4.3 rule at all is unverified.
-- **The dead `checkFocusIndicator` config flag went with the class.** It was never read. WCAG 2.4.7 is covered by `packages/accessibility/src/focus-indicator.ts`, driven by the Tab walk.
+- **The dead `checkFocusIndicator` config flag went with the class.** It was never read. WCAG 2.4.7 has a Tab-walk-driven check in `packages/accessibility/src/focus-indicator.ts`, but nothing calls it yet: not the agent, the CLI or this harness (see below).
 
 ## What the 2.1.2 and 3.2.1 verdicts do not establish (decided 2026-09-19)
 
-- **A backward-armed trap is not covered.** A page is judged from one forward Tab walk; a second walk runs only when the forward verdict is not a clean pass. A handler that traps only on reverse entry is invisible.
+- **A backward-armed trap is not covered.** A page is judged from one forward Tab walk; no second walk in either direction is judged (the gap detector's own walk, bench/run.ts:96, feeds no judge). A handler that traps only on reverse entry is invisible.
 - **A trap needing two Escape presses reads as inescapable.** The probe presses Escape exactly once, in `runEscapeProbe` (packages/accessibility/src/tab-walk.ts).
 - **Shift+Tab is never independent evidence.** Escape is pressed before the probe key, so only the conjunction "Escape failed AND the opposite key failed" is meaningful.
 - **F55 ships with no recorded dev fixture.** `focusLostOnArrival` is false on all 8 dev bases (bench/corpus/dev/labels.json) and on all 27 variants recorded at cd3b122, because no operator in bench/corpus/dev/operators.ts produced it when they were seeded. The M7 blur-on-focus operator was added at 4d7356a so the rule has dev-corpus evidence, but the variants recorded at cd3b122 predate it: until a fresh dev-variant run is recorded, the focus-removed rule is proven on synthetic and inline fixtures plus the M7 variant, not on any recorded baseline walk.
@@ -52,16 +52,16 @@ nonetheless touched a decision, stated here rather than left for a reader to fin
 ## What the harness does NOT measure (decided 2026-09-20)
 
 - **The F7 focus-indicator check is not in the harness.** `bench/run.ts` imports no focus-indicator
-  module, so the 2.4.7 row scores only the gap detector's `not_focusable` mapping. The 2.4.7 number
-  therefore UNDERSTATES the current checker, and the claim above that 2.4.7 is covered by
-  `focus-indicator.ts` is not backed by any number in this report.
+  module, so the 2.4.7 row scores only the gap detector's `not_focusable` mapping. No shipped path
+  runs `focus-indicator.ts` either (the agent's `checkKeyboard` and `at-agent gaps` do not call it), so
+  that check has no number anywhere in this report.
 - **One forward walk per page.** A trap armed only on reverse entry is not covered.
 - **No aggregate precision is computed.** The report scores per criterion. Any single headline
   X → Y must name which criteria it aggregates and must state that 2.4.3 contributes a before 7/7
   → after 0/7 false-alarm change that comes from DELETING a rule, not from fixing one.
 - **A page whose Tab walk did not assess `not_focusable` is not scored for 2.1.1 or 2.4.7.** That
   gap type is the only one carrying those criteria and the detector emits it only after an assessed
-  walk, so such a page counts as `undetermined` in BOTH columns — a miss, never a pass — and drops
+  walk, so such a page counts as `undetermined` in BOTH columns — never flagged: a miss on detection, a clean-looking pass on a false-alarm count — and drops
   the rule-of-three bound there. `summary.json` records the reason per page
   (`tools.gaps.findings.keyboard`) and the report prints it beside the page's gap count. Before this
   was recorded, a check that could not run was indistinguishable from one that found nothing; that

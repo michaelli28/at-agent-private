@@ -3,7 +3,13 @@ import { dirname, join } from 'node:path'
 import { fileURLToPath, pathToFileURL } from 'node:url'
 import { gunzipSync } from 'node:zlib'
 import { describe, it, expect } from 'vitest'
-import { TabWalkResultSchema, type FocusRead, type TabWalkResult, type TabWalkStep } from './tab-walk.js'
+import {
+  TabWalkResultSchema,
+  type EscapeProbe,
+  type FocusRead,
+  type TabWalkResult,
+  type TabWalkStep,
+} from './tab-walk.js'
 import { endOfPage, judgeKeyboardTrap } from './keyboard-trap.js'
 
 // Dev material only (never bench/corpus/test or bench/results/*/test-*): the committed recorded walks.
@@ -101,6 +107,28 @@ function synthStep(index: number, settled: FocusRead, over: Partial<TabWalkStep>
   }
 }
 
+// Escape and every Shift+Tab stay inside `region`: a probe that got nowhere.
+function confinedProbe(region: number[]): EscapeProbe {
+  const last = elementRead(region[region.length - 1])
+  return {
+    probeKey: 'Shift+Tab',
+    seenBackendNodeIds: region,
+    before: last,
+    escape: { after: last, documentReplaced: false, urlChanged: false, unseenElement: false, wrapped: false },
+    maxPresses: 5,
+    steps: [1, 2, 3, 4, 5].map((index) => ({
+      index,
+      key: 'Shift+Tab' as const,
+      // Shift+Tab walks the region backwards from its last member, wrapping inside it.
+      settled: elementRead(region[(((region.length - 1 - index) % region.length) + region.length) % region.length]),
+      documentReplaced: false,
+      unseenElement: false,
+      wrapped: false,
+    })),
+    reachedAt: null,
+  }
+}
+
 function synthWalk(steps: TabWalkStep[], over: Partial<TabWalkResult> = {}): TabWalkResult {
   return {
     direction: 'forward',
@@ -165,6 +193,42 @@ describe('judgeKeyboardTrap', () => {
       signal: 'all-stops-visited',
       atPress: 3,
     })
+  })
+
+  // KNOWN FALSE PASSES, pinned so that fixing them is noticed: a trap the walk meets only after it has
+  // visited every counted stop — stuck on the last stop, cycling on the last two (a dialog appended to
+  // <body> that does not take focus), or closing after one lap of the page. The count is complete, so
+  // clause 4 passes the page before clauses 9-11 read the probe that already failed. Every recorded M5
+  // trap catches focus earlier, so no recorded walk reaches this; bench/REPORT.md §7 discloses it.
+  // When the judge is fixed, drop `.fails`.
+  it.fails('KNOWN FALSE PASS: a Tab-swallow trap on the last stop is judged a trap', () => {
+    const ids = [11, 12, 13, ...Array<number>(22).fill(13)]
+    const walk = synthWalk(
+      ids.map((id, i) => synthStep(i + 1, elementRead(id))),
+      { focusableCount: 3, suspectedTrap: true, escapeProbe: confinedProbe([13]) },
+    )
+    expect(judgeKeyboardTrap([walk]).verdict).toBe('fail')
+  })
+
+  it.fails('KNOWN FALSE PASS: a cyclic trap on the last two stops is judged a trap', () => {
+    const ids = [11, 12, 13, 14, ...Array.from({ length: 21 }, (_, i) => (i % 2 === 0 ? 13 : 14))]
+    const walk = synthWalk(
+      ids.map((id, i) => synthStep(i + 1, elementRead(id))),
+      { focusableCount: 4, suspectedTrap: true, escapeProbe: confinedProbe([13, 14]) },
+    )
+    expect(judgeKeyboardTrap([walk]).verdict).toBe('fail')
+  })
+
+  it.fails('KNOWN FALSE PASS: a trap that closes after one lap of the page is judged a trap', () => {
+    const lap = [11, 12, 13].map((id, i) => synthStep(i + 1, elementRead(id)))
+    const wrap = synthStep(4, bodyRead(false), { wrapped: true })
+    const stuck = [11, 12, ...Array<number>(19).fill(13)].map((id, i) => synthStep(i + 5, elementRead(id)))
+    const walk = synthWalk([...lap, wrap, ...stuck], {
+      focusableCount: 3,
+      suspectedTrap: true,
+      escapeProbe: confinedProbe([13]),
+    })
+    expect(judgeKeyboardTrap([walk]).verdict).toBe('fail')
   })
 
   // 4

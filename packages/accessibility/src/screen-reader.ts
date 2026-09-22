@@ -76,7 +76,6 @@ export class ScreenReaderSimulator {
 
   private extractHeadings(node: AccessibilityNode, headings: Heading[] = []): Heading[] {
     if (node.role === 'heading' && node.name) {
-      // Extract level from role if available, default to 2
       const level = this.getHeadingLevel(node)
       headings.push({ level, text: node.name })
     }

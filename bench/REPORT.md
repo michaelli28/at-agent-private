@@ -43,7 +43,9 @@ No live page in this test is known to contain a real keyboard trap, so this run 
 caught the rebuilt trap check missing one. The only evidence that it can find a trap at all comes
 from practice pages we built and planted traps in — the same pages the check was developed against,
 with all six traps made the same way. There it flagged all 6 and none of the 35 without a trap (the
-old rule flagged all 41). That shows the check is not a constant; it is not a measured detection
+old rule flagged all 41). All six catch focus before the walk has reached every stop the check counted;
+a trap it meets only after that — on the last stop, among the last few, or closing after one lap of
+the page — is passed (§7). That shows the check is not a constant; it is not a measured detection
 rate. What is still unmeasured is how often the **rebuilt** checker is right when it does raise
 something on a real site; that needs hand-labelling, and §6 explains why the one attempt at it
 measured nothing.
@@ -282,8 +284,10 @@ including the 3 BAD-page items whose published W3C answer is "no" (`before/home`
 the sheet scores 10 of 13, exactly what an unconditional "agree" scores. The reviewer answered what
 was asked; the instrument was wrong. `bench/blind-labels.ts` has been repaired — the three
 **page-level** claims now name what would make them FALSE, and the worklist asks a reviewer who
-agrees to record what they saw. Two limits on that repair: the component-level claims
-(`describeGap`, 26 of the 58 items in this draw) still name no falsifier, and the note rule is
+agrees to record what they saw. Three limits on that repair: the component-level claims
+(`describeGap`, 26 of the 58 items in this draw) still name no falsifier; their wording names the
+tool that raised them (each phrase is one of the gap detector's five gap types or an axe rule id, and
+no phrase is on both lists), so for those items the source is not hidden; and the note rule is
 instruction to the reviewer, not a constraint the instrument enforces — `bench/spotcheck-ui.ts`
 accepts and records an `agree` with an empty note. **The repaired instrument has never been
 administered.** The answers are kept at `bench/BLIND-LABELS-answers.json` as the record, and **no
@@ -365,7 +369,18 @@ needs a valid labelling pass, which is deferred, along with the test–retest κ
   (`:29`). This is **development-set evidence, not held-out evidence**: the pages and the one trap
   operator (M5) are our own, and the judge's end-of-page rules were chosen by how they scored on these
   same 6 fixtures (`packages/accessibility/src/keyboard-trap.ts:23-25`, `:111-113`). It shows the
-  check is not a constant; it is not a detection rate.
+  check is not a constant; it is not a detection rate. It also misses traps the six never test:
+  each catches focus before the walk has reached every counted stop, and a trap the walk meets only
+  after that is passed — one on the last stop, one cycling among the last few, or one that closes
+  only after focus has gone round the page once. Reaching every counted stop completes the count, so the
+  "all stops visited" end-of-page rule (`packages/accessibility/src/keyboard-trap.ts:132`, applied
+  at `:193`) passes the page before the release probe it already ran is read. Reproduced 2026-09-22
+  in `chrome-headless-shell` on `three-links`: M5 on `link-1` fail, on `link-2` fail, on `link-3`
+  **pass**; a two-button dialog appended after the links that cycles Tab between its buttons,
+  **pass**; `link-3` trapping only from its second visit, **pass**. All three kinds are pinned as
+  known false passes (synthetic walks) in
+  `packages/accessibility/src/keyboard-trap.test.ts`. No held-out verdict took that path: all 24
+  held-out passes (16 live, 8 BAD) carry the other end-of-page signal, `body-unfocused`.
 - **That this run could have caught a 2.1.2 regression.** It contains **no positive control**: no
   BAD page fails 2.1.2 and no live page is known to contain a trap. A checker hardwired to return
   `pass` reproduces §3's 0/8 exactly and would score §4's row as 0/18 with no refusals — the only
@@ -391,8 +406,9 @@ needs a valid labelling pass, which is deferred, along with the test–retest κ
   held-out page's walk.
 - **3.2.1 as an improvement ratio.** The before column is structurally zero on this harness.
 - **2.4.7.** The focus-indicator check is built, exported and tested but **not wired into the
-  harness**, so 2.4.7 scores only the gap detector's `not_focusable` mapping and **understates** the
-  checker. Deliberate; recorded in `COVERAGE.md`.
+  harness, the agent or the CLI**, so 2.4.7 scores only the gap detector's `not_focusable` mapping and
+  the check itself has no number. Leaving it out of the harness was deliberate (`COVERAGE.md`);
+  nothing in the agent or the CLI calls it yet either.
 - **Any single aggregate precision number.** None is computed. A headline "X → Y" must name which
   criteria it aggregates and state that 2.4.3 contributes a deletion, not a fix.
 - **A tight bound on the label key.** 20 of 20 spot-checked labels were agreed, but the draw is
@@ -439,6 +455,15 @@ needs a valid labelling pass, which is deferred, along with the test–retest κ
   them as precision**. The parse, merge and archive helpers the recording goes through are covered
   by 15 tests in `bench/spotcheck-ui.test.ts`; the HTTP handler that wrote each verdict
   (`POST /api/answer`) is not under test.
+- **The gap detector's read failures were never recorded.** When a per-element CDP read fails, the
+  element loses what that read supplied: a lost click listener or pointer cursor can hide a gap, and
+  a lost visibility or disabled/group fact keeps a hidden, disabled or arrow-reachable element in
+  play, so a false gap can appear. Some crawl-stage failures drop an element without recording
+  anything. `crawlPageWithGapDetection` returns the failures it does record as `errors`, but neither
+  `summary.json` (`bench/run.ts`, `toGapsFindings`) nor the raw records keep that list, so this run
+  cannot say whether any gap-derived cell (1.1.1, 2.1.1, 2.4.7, 4.1.2) gained or lost a flag that
+  way. The gap detector is shared by both columns, so no before/after delta can come from it. The
+  run's "never dropped" covers a tool that throws, not these.
 - **`test-bad` reproduced identically** across the two runs, cell for cell.
 - **The spot-check in §7 shares one flaw with the pass above, not the fatal one.** All 20 verdicts
   are bare `agree`s with empty notes (`bench/spotcheck-answers.json`), so what the reviewer saw is

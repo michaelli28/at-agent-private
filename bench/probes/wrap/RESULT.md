@@ -11,12 +11,12 @@ Nothing under `packages/` was modified; the detector was imported read-only.
 
 ## Answers
 
-1. **Where does focus go after the last element?** It depends on the mode.
+1. **Where does focus go after the last element?** It depends on the mode. **Superseded:** it depends on window activation, not the launch mode (see Verifier corrections at the end).
    - **Headless shell** (the default `chromium.launch()`, which is what `BrowserClient` uses, packages/browser/src/client.ts:17-18): the next Tab puts `document.activeElement === document.body` with `document.hasFocus() === false`. The Tab after that goes to the first element. The cycle is F+1, with body on every wrap. This matches the earlier ASSUMED model.
    - **New headless** (`channel: 'chromium'`): wraps alternate. On odd wraps, focus goes **straight from the last element to the first, with no body in between**. On even wraps it passes through body with `hasFocus() === false`. The cycle is 2F+1 and deterministic (identical across 2 runs, and it held for 50 presses).
    - **Headed**: usually the same as new headless, but **not deterministic**. Run and rerun differed, a single walk mixed both wrap types, and 2 of 406 presses coincided with document replacements (see Anomalies).
-2. **Does it pass through body?** Shell: every wrap. New headless: every second wrap. Headed: irregular, mostly every second wrap.
-3. **Is it mode-dependent?** Yes. Shell and new headless differ deterministically, and headed is non-deterministic. Shift+Tab mirrors each mode's pattern.
+2. **Does it pass through body?** Shell: every wrap. New headless: every second wrap. Headed: irregular, mostly every second wrap. **Superseded:** with the window activated before every press, every mode passes through body on every wrap (see Verifier corrections).
+3. **Is it mode-dependent?** Yes. Shell and new headless differ deterministically, and headed is non-deterministic. Shift+Tab mirrors each mode's pattern. **Refuted in Verifier corrections:** with the window activated before every press, all three modes wrap like the shell.
 4. **Does a real recorded sequence make the existing detector report a false trap?** Yes. None of fixtures A–E has a WCAG 2.1.2 trap, so every "trapped" below is a false positive.
    - Headless shell: **all 5 fixtures, both directions, both identity schemes**, trapped at press 5·(F+1) with `cycleLength = F+1`.
    - New headless: **B** (both identity schemes) at press 15 with cycle 3. **D with tools.ts identities** at press 5 with cycle 1, because `a "Read more"` ×6 in a row matches a cycle of length 1. **A, C, D, E** once the walk is long enough: 50-press walks trapped at press 35 (cycle 7) and 45 (C, cycle 9).
@@ -72,7 +72,7 @@ Nothing under `packages/` was modified; the detector was imported read-only.
 
 - **Wrap-around is normal, and in every mode it repeats.** Any repetition-only test flags normal pages. Do not infer a trap from a cycle's length or from how many times it repeats.
 - **End of page = `activeElement === body && document.hasFocus() === false`**, or a return to the first-visited element's backendNodeId. Both signals are needed, because in new headless the first wrap skips body entirely.
-- **Do not assume body appears on every wrap, or that the cycle is F+1.** That holds only in the headless shell. Pin the launch mode (the product default is the headless shell) and record it with every walk.
+- **Do not assume body appears on every wrap, or that the cycle is F+1.** That holds only in the headless shell. Pin the launch mode (the product default is the headless shell) and record it with every walk. (Superseded: activation, not the mode, decides it; see Verifier corrections.)
 - **`body` with `hasFocus() === true` means focus was dropped inside the page** (F55 signal). It is not the end of the page, and the next Tab continues after the dropped element, so the walk must continue past it.
 - **Identify elements by backendNodeId, not the tools.ts string**, and reset history when the document is replaced (all ids change).
 - **One read per keypress is enough in headless** (0 of 1,660 presses drifted within 150 ms). Headed mode is not a reliable place for scripted walks.

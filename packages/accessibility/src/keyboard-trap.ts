@@ -83,7 +83,7 @@ export type KeyboardTrapResult = z.infer<typeof KeyboardTrapResultSchema>
 const isReal = (read: FocusRead): boolean => read.tag !== null && !read.isBody
 
 // A step that replaced the document BEGINS a new segment: every backendNodeId is re-minted on
-// replacement (bench/probes/wrap/RESULT.md:78), so an identity from before it names nothing after it.
+// replacement (bench/probes/wrap/RESULT.md:77), so an identity from before it names nothing after it.
 function lastSegment(steps: readonly TabWalkStep[]): readonly TabWalkStep[] {
   let start = 0
   for (let i = 0; i < steps.length; i++) if (steps[i].documentReplaced) start = i
@@ -135,7 +135,7 @@ export function endOfPage(walk: TabWalkResult): EndOfPage | null {
 }
 
 // The escape probe's Shift+Tab steps are NEVER independent evidence: Escape is pressed first
-// (tab-walk.ts:866), so they describe the post-Escape document, not the trapped one. Only the
+// (runEscapeProbe in tab-walk.ts), so they describe the post-Escape document, not the trapped one. Only the
 // conjunction — no end of page, Escape did not release, the opposite key did not release — is a trap.
 function judgeWalk(walk: TabWalkResult): TrapDirection {
   const segment = lastSegment(walk.steps)
