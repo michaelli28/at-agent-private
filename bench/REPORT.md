@@ -23,9 +23,11 @@ pages chosen in advance, take one scored run, and report whatever comes out.
 
 **What we found:** on the 18 real websites the test could evaluate, the old checker raised a
 keyboard-trap alarm on **12** (on 9 of them the alarm had cleared before the walk ended); the
-rebuilt checker raised **none on the 16 it could judge** and declined to decide the other 2. Two
-of the 12 are not clear-cut either way (§4). A second rule that fired on **every single page** (18
-of 18) was deleted outright rather than repaired. On the one demo page that really has a
+rebuilt checker raised **none on the 16 it could judge** and declined to decide the other 2. One
+of the 12 is not clear-cut either way (§4). On another, Chrome's own Tab behaviour bounces focus
+between an empty chat-widget frame and the browser's toolbar — a nuisance for a keyboard user, but
+not a trap (§6). A second rule that fired on **every single page** (18 of 18) was deleted outright
+rather than repaired. On the one demo page that really has a
 focus-order problem the tool now raises nothing — but the old rule's flag there was the same one it
 raised on every page, so it had not found the problem either. Those are the two results worth
 quoting.
@@ -160,8 +162,8 @@ page counts as flagged if `detectTrap()` ever said trapped during the walk. Only
 still trapped at the end of it — `zelesta.nl`, `ironplanet.com`, `vdc.ru`; the other 9 had cleared.
 
 **The two undetermined pages are `ekdromi.gr` (`walk-error`) and `zelesta.nl`
-(`focusables-changed`), and `zelesta.nl` is one of two flagged pages where the evidence is mixed**
-(the other is `vdc.ru`, §6). Forward Tab never left a dialog in 765 presses, so it is the only live
+(`focusables-changed`), and `zelesta.nl` is the one flagged page where the evidence is mixed.**
+Forward Tab never left a dialog in 765 presses, so it is the only live
 page with `wraps: 0`. The flag counted here fired at press 20 inside a 4-stop cookie-consent dialog,
 where focus stayed for presses 1–58; it left that dialog only because a discount pop-up took it at
 press 59, and no release key was ever tried on the cookie dialog. The release probe ran once, at the end
@@ -289,7 +291,8 @@ precision figure is quoted from them**.
 
 **The before→after result in §3 and §4 does not depend on this.** Both old rules are shown to be
 false-alarm generators by their own definitions, with no human judgement in the loop; on 10 of the
-12 flagged live pages the walk telemetry is consistent with that, within the limits below.
+12 flagged live pages the walk telemetry is consistent with that, and on an 11th, `vdc.ru`, a
+test-informed probe shows why its telemetry looks odd, within the limits below.
 
 - The legacy **2.4.3** rule fires whenever the same focus identity recurs within five consecutive
   focus events (`FOCUS_WINDOW_SIZE = 5`, `bench/legacy-detectors.ts:187`). It therefore acts as a
@@ -317,16 +320,28 @@ false-alarm generators by their own definitions, with no human judgement in the 
   to suspectedTrap" (`packages/accessibility/src/tab-walk.ts:658-659`; also
   `packages/accessibility/src/keyboard-trap.ts:93-94`). And every judged walk is forward-only (§7).
 
-  **The other 2 are the mixed cases.** `zelesta.nl` (§4) never wrapped: its flag fired inside a
-  cookie-consent dialog that was never probed for release. **`vdc.ru` bears on the rebuilt checker
-  itself.** Its 60 "wraps" are not laps: from press 51 to 170, forward Tab alternated between a
-  chat-widget iframe and the end of the document, 60 times each, and never again reached any of the
-  50 stops it had visited before. That loop is what the old rule fired on (press 60, L=2). The
-  rebuilt judge passed the page only because its clause 1 accepts any walk with an end-of-page state
-  in its last F+1 presses (`packages/accessibility/src/keyboard-trap.ts:114-121`, `:173-175`), and
-  this loop is full of them. This run does not settle whether that is a real 2.1.2 trap — which
-  would make it one the rebuilt checker missed — or an artefact of how headless shell tabs through
-  this iframe.
+  **`vdc.ru`'s loop is real browser behaviour, and not a trap.** Its 60 "wraps" are not laps: from
+  press 51 to 170, forward Tab alternated between a chat-widget iframe (Tab reached only the frame's
+  own body) and the outside of the document, and never again reached any of the 50 stops it had
+  visited before. That loop is what the old rule fired on (press 60, L=2). A follow-up probe
+  (`bench/probes/iframe-reentry/`) reproduces it on plain pages with no JavaScript: when the last Tab
+  stop is an iframe with nothing to focus inside, Chromium 143 re-enters at that iframe after every
+  wrap — in headless shell, new headless and headed mode alike once the window is active. Focus is
+  never stuck: each cycle leaves the document, which the recording itself shows for `vdc.ru` (60 of
+  60), and on the fixtures Shift+Tab from either half of the loop lands back on the links. So the
+  old rule's 2.1.2 alarm is a false one, and the rebuilt judge's `pass` agrees — though its clause 1
+  (`packages/accessibility/src/keyboard-trap.ts:114-121`, `:173-175`) passes any walk with a wrap in
+  its last F+1 presses, so it would have passed this recording whatever caused the loop. For a
+  keyboard user the loop is still a nuisance: forward Tab never returns to the top of the page. It is
+  the only live page that re-enters at an iframe after a wrap, in either run; `hostway.com`, whose
+  last stop is an iframe holding a button, re-enters at its first link instead. The probe is
+  **test-informed** — written after reading this held-out page's walk — and it moved this page out
+  of the "not clear-cut" count; it changes no recorded number and no detector. Whether `vdc.ru`'s own
+  widget script adds anything is not shown: the site was not revisited, and Shift+Tab was tried only
+  on the fixtures.
+
+  **The 12th page is `zelesta.nl`** (§4), the one mixed case: it never wrapped, and its flag fired
+  inside a cookie-consent dialog that was never probed for release.
 
 So the old rules were mechanically bound to misfire — a claim about the rules, not a verdict on each
 of the 12 flags they raised (§7). What remains unmeasured is the _positive_ precision of what the
@@ -357,11 +372,10 @@ needs a valid labelling pass, which is deferred, along with the test–retest κ
   live sign that the judge is not a constant is its two refusals. What distinguishes "fixed" from
   "stopped looking" is the seeded evidence above, not this run.
 - **That the 12 live 2.1.2 flags are false.** §6 shows the rule that raised them was bound to
-  misfire, and the walk telemetry is consistent with a false alarm on 10 of the 12 — but no
+  misfire, the walk telemetry is consistent with a false alarm on 10 of the 12, and a test-informed
+  probe shows the 11th, `vdc.ru`, is Chromium's own Tab behaviour rather than a trap (§6) — but no
   published label exists for a live site, so this is a strong mechanical case, not a scored result.
-  The other 2 are mixed: `zelesta.nl` fired inside a real cookie dialog that was never probed for
-  release (§4), and `vdc.ru` fired on an iframe loop the rebuilt judge passed on a clause that
-  cannot tell that loop from reaching the end of the page (§6).
+  The 12th, `zelesta.nl`, fired inside a real cookie dialog that was never probed for release (§4).
 - **Anything about reverse-entry traps.** Every judged walk is forward-only — one walk per page
   (`bench/run.ts:480`) — so a trap armed only on reverse entry is out of scope
   (`bench/COVERAGE.md:58`). The release probe (Escape, then Shift+Tab) ran on exactly one live page,
@@ -373,7 +387,8 @@ needs a valid labelling pass, which is deferred, along with the test–retest κ
   `bench/COVERAGE.md:42` records that the 2.4.3 deletion "was decided with held-out numbers in
   hand". No BAD page was opened to design the rule and no BAD output was read (`:39`), but §2's 4/4
   is produced by exactly that rule, and this report should not be read without those two
-  disclosures.
+  disclosures. Likewise, the probe that re-classified `vdc.ru` (§6) was designed after reading that
+  held-out page's walk.
 - **3.2.1 as an improvement ratio.** The before column is structurally zero on this harness.
 - **2.4.7.** The focus-indicator check is built, exported and tested but **not wired into the
   harness**, so 2.4.7 scores only the gap detector's `not_focusable` mapping and **understates** the
@@ -455,11 +470,16 @@ first wrap, from `legacy.identities` and `walk.steps[].wrapped`); the `zelesta.n
 §4 (`judgeKeyboardTrap` on the recorded walk with `focusableCountEnd` set to `focusableCount`); the
 `vdc.ru` loop in §6 (`walk.steps[].settled.backendNodeId` from press 51); and §4's "cycle L at first
 fire" (`legacy.trapByPress`). Note that `results/**/raw/` is gitignored, so they can be rechecked
-only on the machine that ran the set.
+only on the machine that ran the set. The mechanism behind the `vdc.ru` loop is reproduced on
+script-free fixtures by `bench/probes/iframe-reentry/probe.ts` and `activated.ts` (outside the
+sandbox; they open headed windows) — test-informed, since they were written after reading that walk;
+results in `bench/probes/iframe-reentry/RESULT.md`.
 
 Evidence class for every number above: **local run, one machine, `chrome-headless-shell`
 143.0.7499.4** (Playwright 1.57.0, axe-core 4.11.0, Node v24.10.0). Not "headless Chromium"
-generically: `bench/probes/wrap/RESULT.md` records that wrap behaviour differs between headless
-shell, new headless and headed Chromium, and the before column reads its focus identities off that
-walk — so its flag counts could plausibly differ in another browser mode. No verdict here has been
-observed in an activated browser, and no LLM agent was run.
+generically: `bench/probes/wrap/RESULT.md` ("Verifier corrections") records that wrap behaviour in
+new headless and headed Chromium depends on whether the window is activated, while headless shell
+behaves like an active window; `bench/probes/iframe-reentry/RESULT.md` found the same for the
+`vdc.ru` loop. The before column reads its focus identities off that walk, so its flag counts could
+differ under a harness that does not match an active window. No verdict here has been observed in
+an activated browser, and no LLM agent was run.
