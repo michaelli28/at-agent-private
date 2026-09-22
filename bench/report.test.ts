@@ -909,7 +909,7 @@ describe("the walk-trap cell reads the 2.1.2 judge", () => {
       }),
     );
     expect(md).toContain(
-      'walk trap = the 2.1.2 judge: — no confinement · "confined, escapable" a correct modal, NOT a violation · "TRAP inescapable" the criterion fails · "undetermined (<reason>)" not judged, and counted as a miss wherever it is scored.',
+      'walk trap = the 2.1.2 judge: — no confinement · "confined, escapable" a correct modal, NOT a violation · "TRAP inescapable" the criterion fails · "undetermined (<reason>)" not judged: a miss on a detection count, and scored like a clean pass on a false-alarm count, with the worst case printed beside it.',
     );
     expect(md).toContain("≥F: a cross-origin frame or closed shadow root");
   });

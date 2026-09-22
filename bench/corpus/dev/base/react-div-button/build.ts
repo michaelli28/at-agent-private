@@ -2,7 +2,14 @@
 // package.json), the same approach as bench/probes/react/build.mjs. app.js is gitignored; esbuild output is deterministic.
 import { build } from "esbuild";
 import { execFileSync } from "node:child_process";
-import { existsSync, mkdirSync, readFileSync } from "node:fs";
+import {
+  existsSync,
+  mkdirSync,
+  readFileSync,
+  renameSync,
+  rmSync,
+  writeFileSync,
+} from "node:fs";
 import { dirname, join, resolve, sep } from "node:path";
 import { fileURLToPath } from "node:url";
 import { z } from "zod";
@@ -22,27 +29,59 @@ function installedVersion(pkg: string): string | null {
     .version;
 }
 
+// Written only after npm install succeeded in a private directory. A raced install from before this
+// guard left react-dom's package.json without client.js, which read as installed by version alone.
+const COMPLETE_MARKER = join(PREFIX, ".complete");
+
 const pinned = (): boolean =>
+  existsSync(COMPLETE_MARKER) &&
   installedVersion("react") === REACT_VERSION &&
   installedVersion("react-dom") === REACT_VERSION;
 
+// Bench test files run in parallel and several build this fixture, so on a fresh checkout their
+// installs raced into PREFIX and npm deleted each other's files. Each caller installs privately and
+// renames into place: PREFIX only ever appears complete, and a caller that loses the rename uses it.
 function ensurePinnedReact(): void {
   if (pinned()) return;
-  mkdirSync(PREFIX, { recursive: true });
-  execFileSync(
-    "npm",
-    [
-      "install",
-      "--prefix",
-      PREFIX,
-      "--no-audit",
-      "--no-fund",
-      "--prefer-offline",
-      `react@${REACT_VERSION}`,
-      `react-dom@${REACT_VERSION}`,
-    ],
-    { stdio: ["ignore", "ignore", "inherit"] },
-  );
+  const staging = `${PREFIX}.staging-${process.pid}`;
+  const stale = (n: number): string => `${PREFIX}.stale-${process.pid}-${n}`;
+  rmSync(staging, { recursive: true, force: true });
+  mkdirSync(staging, { recursive: true });
+  try {
+    execFileSync(
+      "npm",
+      [
+        "install",
+        "--prefix",
+        staging,
+        "--no-audit",
+        "--no-fund",
+        "--prefer-offline",
+        `react@${REACT_VERSION}`,
+        `react-dom@${REACT_VERSION}`,
+      ],
+      { stdio: ["ignore", "ignore", "inherit"] },
+    );
+    writeFileSync(join(staging, ".complete"), REACT_VERSION);
+    // The rename lands only on a missing (or empty) PREFIX, so a marked install is never replaced. An
+    // unmarked one was left by an older, unguarded install and nothing can land until it is moved.
+    for (let n = 0; n < 3 && !pinned(); n++) {
+      try {
+        renameSync(staging, PREFIX);
+      } catch {
+        if (pinned()) break; // another caller's install landed first
+        try {
+          renameSync(PREFIX, stale(n));
+        } catch {
+          // Another caller moved the unmarked install first; retry the rename.
+        }
+      }
+    }
+  } finally {
+    rmSync(staging, { recursive: true, force: true });
+    for (let n = 0; n < 3; n++)
+      rmSync(stale(n), { recursive: true, force: true });
+  }
   if (!pinned())
     throw new Error(
       `react/react-dom ${REACT_VERSION} missing from ${NODE_MODULES} after npm install`,

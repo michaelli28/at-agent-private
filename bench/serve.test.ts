@@ -126,6 +126,19 @@ describe("bench/serve.ts", () => {
     expect(r.body).toContain('data-bench-id="button"');
   });
 
+  // A stray `%`, a `%00` or a `//` target threw inside the handler and killed the server, and
+  // bench/run.ts runs the same server in its own process.
+  it("answers malformed paths with 400 and keeps serving", async () => {
+    for (const path of [
+      "/corpus/dev/base/100%.png",
+      "/corpus/a%00b.html",
+      "//",
+    ]) {
+      expect((await get(path)).status, path).toBe(400);
+    }
+    expect((await get("/corpus/dev/base/navbar.html")).status).toBe(200);
+  });
+
   // green-guard: allow environment-gated: bench/vendor/bad is gitignored and vendoring it needs the network; the
   // reason is printed above and the no-fetch branch below runs instead.
   it.skipIf(!HAS_BAD)(

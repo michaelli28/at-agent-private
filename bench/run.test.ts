@@ -28,13 +28,17 @@ const ROOT = resolve(BENCH, "..");
 const execFileAsync = promisify(execFile);
 
 // `node --import tsx`, not the tsx CLI: its IPC pipe is refused inside the Claude Bash sandbox.
-function runBench(args: string[]): Promise<{ stdout: string; stderr: string }> {
+function runBench(
+  args: string[],
+  opts: { env?: NodeJS.ProcessEnv; timeout?: number } = {},
+): Promise<{ stdout: string; stderr: string }> {
   return execFileAsync(
     process.execPath,
     ["--import", "tsx", join(BENCH, "run.ts"), ...args],
     {
       cwd: ROOT,
-      timeout: 280_000,
+      env: opts.env ?? process.env,
+      timeout: opts.timeout ?? 280_000,
       maxBuffer: 16 * 1024 * 1024,
     },
   );
@@ -273,6 +277,35 @@ describe("run.ts refusals", () => {
     await expect(runBench(["dev-everything"])).rejects.toMatchObject({
       code: 2,
       stderr: expect.stringContaining("dev-everything"),
+    });
+  }, 60_000);
+});
+
+// The static server starts before the browser; a failed launch left its socket open and the
+// process hung forever instead of exiting 1.
+describe("run.ts when Chromium cannot launch", () => {
+  it("exits 1 instead of hanging", async () => {
+    const run = runBench(
+      [
+        "dev-fixtures",
+        "--pages",
+        "three-links",
+        "--allow-dirty",
+        "--out",
+        mkdtempSync(join(tmpdir(), "bench-run-")),
+      ],
+      {
+        env: {
+          ...process.env,
+          PLAYWRIGHT_BROWSERS_PATH: mkdtempSync(join(tmpdir(), "no-browsers-")),
+        },
+        timeout: 30_000,
+      },
+    );
+    await expect(run).rejects.toMatchObject({
+      code: 1,
+      killed: false,
+      stderr: expect.stringContaining("Executable doesn't exist"),
     });
   }, 60_000);
 });

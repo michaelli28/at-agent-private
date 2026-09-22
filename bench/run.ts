@@ -1,6 +1,6 @@
-// Benchmark harness for the OLD (pre-fix) checker plus axe-core over one page set. Per page, every tool gets its own
-// fresh browser context and fresh load: the gap-detector port, runTabWalk with defaults, the legacy trap detector and
-// DynamicEvaluator replayed over that walk (bench/legacy.ts), and axe-core. Writes
+// Benchmark harness over one page set: the frozen pre-fix checker, the rebuilt judges and axe-core. Per page, every tool
+// gets its own fresh browser context and fresh load: the gap detector, runTabWalk with defaults (judged by the new judges,
+// and replayed through the legacy trap detector and DynamicEvaluator, bench/legacy.ts), and axe-core. Writes
 // <out>/<shortSha>[-dirty]/<set>/summary.json (compact, committable) and raw/<page>.json.gz (full records, gitignored);
 // a --pages run writes <set>--subset-<hash>/ instead, which the report never uses for its tables.
 //
@@ -8,7 +8,7 @@
 //   npx tsx bench/run.ts <dev-fixtures|dev-variants|dev-live|test-bad|test-live>
 //     [--pages id,id] [--budget-ms <per-page ms, default 20 min>] [--allow-dirty] [--out <dir, default bench/results>]
 // test-live refuses --allow-dirty and any uncommitted change: the held-out set runs once, from a clean commit.
-// Exit 0: ran (tool errors are recorded per page, never dropped). Exit 2: refused or bad usage. Exit 1: crashed.
+// Exit 0: ran (a tool that throws is recorded per page, never dropped). Exit 2: refused or bad usage. Exit 1: crashed.
 import { createHash } from "node:crypto";
 import { mkdirSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { createRequire } from "node:module";
@@ -92,9 +92,9 @@ const NOTES = [
   "Legacy trap: detectTrap() is replayed after every walk press; trapped is its verdict after the last press, and firstTrappedPress is the first press where it said trapped (report.ts scores a page flagged if it ever did, as the agent latches trapDetected).",
   LEGACY_TRAP_NOTE,
   "The legacy identity is rebuilt from each press's immediate read (the walk's step.immediate: top-level document.activeElement as soon as keyboard.press resolves, with no settle), which is when executeTab reads it; focus a page script moves later is not seen, and focus inside frames or shadow roots shows as the container.",
-  "Walk trap (the new checker): judgeKeyboardTrap over this walk. pass = focus reached the end of the page, or it was confined but Escape or the opposite Tab key got out (a correct modal). fail = confined with neither key escaping. undetermined = the walk errored, F is only a lower bound, the focusable count changed mid-walk, or no release probe ran; an undetermined verdict is scored as a miss, never as a pass. contextChange is judgeContextChange (3.2.1 incl. F55) over the same walk. The legacy detector's verdicts are reported as-is, unchanged, from the frozen copy in bench/legacy-detectors.ts.",
+  "Walk trap (the new checker): judgeKeyboardTrap over this walk. pass = focus reached the end of the page, or it was confined but Escape or the opposite Tab key got out (a correct modal). fail = confined with neither key escaping. undetermined = the walk errored, F is only a lower bound, the focusable count changed mid-walk, or no release probe ran; an undetermined verdict is never counted as flagged: a miss on a detection count, and on a false-alarm count it scores like a clean pass, with the worst case printed beside it. contextChange is judgeContextChange (3.2.1 incl. F55) over the same walk. The legacy detector's verdicts are reported as-is, unchanged, from the frozen copy in bench/legacy-detectors.ts.",
   "Gaps run their own Tab walk on their own load (tabWalk: true). F3 needs it: without a walk the detector never emits not_focusable at all, so a run without it reports 0 not_focusable whatever the page does. That is a SECOND walk per page, separate from the one the judges read, and it roughly doubles the per-page keyboard cost.",
-  "Each page's gaps run records the detector's own keyboard evidence (tools.gaps.findings.keyboard): whether the walk ran, whether not_focusable was assessed, and the reasons if it was not. A page where it was NOT assessed is scored undetermined for 2.1.1 and 2.4.7 in BOTH columns -- a miss, never a pass -- and drops the rule-of-three bound there, because the only gap type carrying those criteria could not be emitted at all. Without this record a check that could not run is indistinguishable in the report from a check that ran and found nothing.",
+  "Each page's gaps run records the detector's own keyboard evidence (tools.gaps.findings.keyboard): whether the walk ran, whether not_focusable was assessed, and the reasons if it was not. A page where it was NOT assessed is scored undetermined for 2.1.1 and 2.4.7 in BOTH columns -- never counted as flagged: a miss on a detection count, a clean-looking pass on a false-alarm count, whose worst case is printed beside it -- and drops the rule-of-three bound there, because the only gap type carrying those criteria could not be emitted at all. Without this record a check that could not run is indistinguishable in the report from a check that ran and found nothing.",
   "Gaps come from the CURRENT post-fix detector (F1/F2/F3/F9 landed at 6b7abff and c1f94b2: hidden elements are filtered, reachability comes from the Tab walk). The same gap findings feed both the before and the after column, so the before/after delta isolates the keyboard rules and takes no credit for the gap fixes; those were measured separately against cd3b122.",
 ];
 
@@ -305,8 +305,6 @@ function firstLine(err: unknown): string {
 const joinErrors = (...errors: Array<string | null>): string | null =>
   errors.filter((e): e is string => e !== null).join("; ") || null;
 
-// One tool, one fresh context. On budget expiry the context is closed (aborting in-flight page calls) and whatever
-// the tool still returns within the grace period is kept as a partial result.
 // One browser serves the whole set, so a page that crashes it takes every later page with it: each
 // one records "could not open a browser context" and is scored as a tool error, which is a page the
 // instrument never looked at. Relaunching costs one process start and keeps the remaining pages
@@ -316,6 +314,8 @@ export async function liveBrowser(browser: Browser): Promise<Browser> {
   return browser.isConnected() ? browser : chromium.launch();
 }
 
+// One tool, one fresh context. On budget expiry the context is closed (aborting in-flight page calls) and whatever
+// the tool still returns within the grace period is kept as a partial result.
 export async function runTool<T>(
   browser: Browser,
   env: { localOnly: boolean; deadline: number; budgetMs: number },
@@ -714,7 +714,11 @@ async function main(argv: readonly string[]): Promise<number> {
   mkdirSync(join(setDir, "raw"), { recursive: true });
 
   const server = prepared.localOnly ? await startStaticServer(MOUNTS) : null;
-  const browser = await chromium.launch();
+  // Outside the try below, so close the server here: its open socket would keep the process alive.
+  const browser = await chromium.launch().catch(async (err: unknown) => {
+    await server?.close();
+    throw err;
+  });
   // Hoisted: a relaunch replaces this, and the finally must close whichever browser is current or
   // the dead one's replacement outlives the run as an orphaned Chromium process.
   let active = browser;

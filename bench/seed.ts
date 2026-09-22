@@ -13,7 +13,11 @@
 // --check also regenerates everything and fails if the files on disk are stale.
 //
 // Usage (launches Chromium, so outside the sandbox): npx tsx bench/seed.ts [--check] [--out <dir>]
-import { createServer } from "node:http";
+import {
+  createServer,
+  type IncomingMessage,
+  type ServerResponse,
+} from "node:http";
 import {
   existsSync,
   mkdirSync,
@@ -70,6 +74,15 @@ export function startStaticServer(
   port = 0,
 ): Promise<StaticServer> {
   const server = createServer((req, res) => {
+    // A stray `%`, a `%00` or a `//` target throws below, and an uncaught throw here kills
+    // bench/run.ts too: it runs this server in its own process.
+    try {
+      serve(req, res);
+    } catch {
+      res.writeHead(400).end("bad request");
+    }
+  });
+  const serve = (req: IncomingMessage, res: ServerResponse): void => {
     const pathname = decodeURIComponent(
       new URL(req.url ?? "/", "http://local").pathname,
     );
@@ -99,7 +112,7 @@ export function startStaticServer(
         })
         .end(body);
     });
-  });
+  };
   return new Promise((resolveServer, reject) => {
     server.once("error", reject);
     server.listen(port, "127.0.0.1", () => {
@@ -454,7 +467,11 @@ async function main(argv: string[]): Promise<number> {
     "/corpus/": CORPUS_DIR,
     "/variants/": args.out,
   });
-  const browser = await chromium.launch();
+  // Outside the try below, so close the server here: its open socket would keep the process alive.
+  const browser = await chromium.launch().catch(async (err: unknown) => {
+    await server.close();
+    throw err;
+  });
   try {
     const ctxNoJs = await browser.newContext({ javaScriptEnabled: false });
     if (args.check)

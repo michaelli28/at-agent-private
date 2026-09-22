@@ -238,7 +238,7 @@ const WRAP: Partial<Read> = {
 };
 
 describe("replayLegacy", () => {
-  it("uses the thresholds tools.ts passes", () => {
+  it("uses the thresholds executeCheckTrap passed at d9e2cb5", () => {
     expect(LEGACY_TRAP_CONFIG).toEqual({
       minCycleCount: 5,
       maxHistorySize: 50,

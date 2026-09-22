@@ -1,11 +1,11 @@
-// Replays the OLD (pre-fix) agent checks over a scripted Tab walk: the executeTab identity string, the
-// KeyboardTrapDetector exactly as executeCheckTrap configures it, and the DynamicEvaluator fed one focus event per
-// press as agent.ts recordInteractionEvent does for a 'tab' action.
+// Replays the OLD (pre-fix) agent checks, as they stood at d9e2cb5, over a scripted Tab walk: the executeTab identity
+// string, the KeyboardTrapDetector exactly as executeCheckTrap configured it, and the DynamicEvaluator fed one focus
+// event per press as agent.ts recordInteractionEvent did for a 'tab' action (both functions are deleted since).
 import { DynamicEvaluator, KeyboardTrapDetector } from "./legacy-detectors.js";
 import type { FocusRead } from "../packages/accessibility/src/tab-walk.js";
 import type { LegacyReplay } from "./results-schema.js";
 
-// packages/agent/src/tools.ts executeCheckTrap passes these; they equal the detector's defaults.
+// packages/agent/src/tools.ts executeCheckTrap passed these at d9e2cb5; they equal the detector's defaults.
 export const LEGACY_TRAP_CONFIG = {
   minCycleCount: 5,
   maxHistorySize: 50,
@@ -26,7 +26,7 @@ export type IdentityFields = Pick<
   "tag" | "isBody" | "id" | "className" | "ariaLabel" | "nameProp" | "text"
 >;
 
-// Rebuilds the executeTab identity string (packages/agent/src/tools.ts ~221-240) from a walk read's raw fields.
+// Rebuilds the executeTab identity string (its evaluate<string> in packages/agent/src/tools.ts) from a walk read's raw fields.
 // tools.ts tests el.name for truthiness; nameProp is String(el.name) or null, which agrees for every DOM value
 // (strings, a clobbering form control, undefined).
 export function legacyIdentity(read: IdentityFields): string {
