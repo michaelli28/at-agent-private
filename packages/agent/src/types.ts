@@ -23,14 +23,15 @@ export type ActionType = z.infer<typeof ActionTypeSchema>
 export const ActionSchema = z.object({
   type: ActionTypeSchema,
   target: z.string().nullish(), // nullish allows null, undefined, or string
-  value: z.string().nullish(),
+  // The prompt calls tab's value a "press count", so a model may send a JSON number.
+  value: z.union([z.string(), z.number().transform(String)]).nullish(),
   reason: z.string(),
 })
 export type Action = z.infer<typeof ActionSchema>
 
 // One Tab press and the element it landed on, read immediately after that press. One record per
 // PRESS: a single read after N presses reports an N-press run as one element, which the retired
-// detector then read as a one-element cycle (bench/probes/wrap/RESULT.md:347).
+// detector then read as a one-element cycle (bench/probes/wrap/RESULT.md:345).
 export const TabPressSchema = z.object({
   index: z.number().int().positive(),
   key: TabKeySchema,

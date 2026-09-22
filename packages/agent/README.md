@@ -51,7 +51,7 @@ const agent = new Agent(apiKey: string)
 interface AgentOptions {
   startUrl: string      // URL to start from
   maxSteps?: number     // Maximum steps (default: 20)
-  model?: string        // OpenAI model (default: 'gpt-4o')
+  model?: string        // OpenAI model (default: 'gpt-5')
 }
 ```
 

@@ -64,7 +64,7 @@ describe('tab action', () => {
 
   // Test 35. The retired shape pressed N times and read focus ONCE, at the end: on a three-stop
   // page a 4-press action reported a single element and the legacy detector read that as a
-  // 1-cycle trap (bench/probes/wrap/RESULT.md:347, fixtures A, D and E).
+  // 1-cycle trap (bench/probes/wrap/RESULT.md:345, fixtures A, D and E).
   it('every Tab press is recorded', async () => {
     const mockPage = createMockPage()
     const evaluateMock = mockPage.playwrightPage.evaluate as ReturnType<typeof vi.fn>
@@ -103,6 +103,41 @@ describe('tab action', () => {
 
     expect(result.success).toBe(false)
     expect(result.observation).toContain('Tab failed')
+  })
+
+  // The system prompt calls tab's value a "press count", so a model may send it as a JSON number;
+  // a string-only schema threw in generateAction and ended the whole run.
+  it('accepts a numeric press count from the model, and a zero-padded one', async () => {
+    expect(ActionSchema.parse({ type: 'tab', value: 3, reason: 'Tab 3 times' }).value).toBe('3')
+
+    const mockPage = createMockPage()
+    const evaluateMock = mockPage.playwrightPage.evaluate as ReturnType<typeof vi.fn>
+    evaluateMock.mockResolvedValue('a#one')
+    const result = await executeAction({ type: 'tab', value: '02', reason: 'Tab twice' }, mockPage)
+    expect(result.success).toBe(true)
+    expect(mockPage.playwrightPage.keyboard.press).toHaveBeenCalledTimes(2)
+  })
+
+  it('refuses a press count that is not a whole number of at least 1, without pressing', async () => {
+    for (const value of ['three', '0', '-2', '1.5']) {
+      const mockPage = createMockPage()
+      const result = await executeAction({ type: 'tab', value, reason: 'Tab' }, mockPage)
+      expect(result.success, value).toBe(false)
+      expect(result.observation, value).toContain('press count')
+      expect(mockPage.playwrightPage.keyboard.press, value).not.toHaveBeenCalled()
+    }
+  })
+
+  it('keeps the presses already recorded when a later read fails', async () => {
+    const mockPage = createMockPage()
+    const evaluateMock = mockPage.playwrightPage.evaluate as ReturnType<typeof vi.fn>
+    evaluateMock.mockResolvedValueOnce('a#one').mockRejectedValueOnce(new Error('Execution context was destroyed'))
+
+    const result = await executeAction({ type: 'tab', value: '3', reason: 'Tab 3 times' }, mockPage)
+
+    expect(result.success).toBe(false)
+    expect(result.observation).toContain('Execution context was destroyed')
+    expect(result.presses?.map((p) => p.element)).toEqual(['a#one'])
   })
 })
 

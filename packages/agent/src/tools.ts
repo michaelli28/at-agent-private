@@ -203,20 +203,27 @@ function executeDone(action: Action): ActionResult {
 }
 
 async function executeTab(action: Action, page: BrowserPage): Promise<ActionResult> {
-  try {
-    const isReverse = action.target === 'previous'
-    const count = action.value ? parseInt(action.value, 10) : 1
-    const key: TabKey = isReverse ? 'Shift+Tab' : 'Tab'
+  const raw = action.value?.trim() || '1'
+  const count = /^\d+$/.test(raw) ? Number(raw) : 0
+  if (count < 1) {
+    return {
+      success: false,
+      observation: `Tab failed: the press count must be a whole number of at least 1, in digits; got "${action.value}"`,
+    }
+  }
+  const key: TabKey = action.target === 'previous' ? 'Shift+Tab' : 'Tab'
 
-    // One read per PRESS, not one after the run: reading only at the end reports an N-press run as
-    // a single element, which the pre-fix detector scored as a one-element cycle.
-    const presses: TabPress[] = []
+  // One read per PRESS, not one after the run: reading only at the end reports an N-press run as
+  // a single element, which the pre-fix detector scored as a one-element cycle.
+  const presses: TabPress[] = []
+  try {
     for (let i = 0; i < count; i++) {
       await page.playwrightPage.keyboard.press(key)
 
-      // WHY the expression below must not change: bench/legacy.test.ts:21-29 regex-extracts the first
-      // playwrightPage.evaluate<string> template literal out of this source file and replays it against
-      // a live page to produce the frozen BEFORE column. Keep it a plain template, no interpolation.
+      // WHY the expression below must not change: bench/legacy.test.ts toolsIdentityExpression()
+      // regex-extracts the first playwrightPage.evaluate<string> template literal out of this file and
+      // checks in Chromium that bench/legacy.ts rebuilds the frozen BEFORE column's focus strings
+      // exactly as it does. Keep it a plain template, no interpolation.
       const element = await page.playwrightPage.evaluate<string>(`
       (() => {
         const el = document.activeElement;
@@ -247,9 +254,11 @@ async function executeTab(action: Action, page: BrowserPage): Promise<ActionResu
 
     return { success: true, observation, presses }
   } catch (error) {
+    // The presses read before the failure happened; the run's tabPresses keeps them.
     return {
       success: false,
       observation: `Tab failed: ${error instanceof Error ? error.message : 'Unknown error'}`,
+      presses,
     }
   }
 }
