@@ -6,8 +6,8 @@ import { BrowserClient, BrowserPage } from '@at-agent/browser'
 import { judgeContextChange } from './context-change.js'
 import { runTabWalk, TabWalkResultSchema, type FocusRead, type TabWalkResult, type TabWalkStep } from './tab-walk.js'
 
-// Recorded walks committed at cd3b122. Each file's `.walk` key is a TabWalkResult as the recorder
-// wrote it then. Read-only on disk: these records ARE the measurement, never edit one.
+// Walks recorded at cd3b122, committed once bench/.gitignore re-included them. Each file's `.walk` key
+// is a TabWalkResult as the recorder wrote it then. Read-only on disk: these records ARE the measurement, never edit one.
 const RESULTS = fileURLToPath(new URL('../../../bench/results/cd3b122/', import.meta.url))
 
 function loadWalk(set: 'dev-fixtures' | 'dev-variants', page: string): TabWalkResult {
