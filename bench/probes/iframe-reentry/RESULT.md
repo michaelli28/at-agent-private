@@ -54,7 +54,7 @@ their first laps differ run to run (headed #1 first wraps at press 12, new headl
 3. **Is it a trap?** No, in any mode. Each forward cycle leaves the document, and Shift+Tab from
    either half of the loop lands back on the links.
 4. **What does the rebuilt judge say?** `pass` on every fixture in every mode. It passes through
-   clause 1 (a wrap in the last F+1 presses, `keyboard-trap.ts:114-121`, `:173-175`), so it would
+   clause 1 (a wrap in the last F+1 presses, `keyboard-trap.ts:114-121`, `:173-175` at `8eb184f`), so it would
    pass this walk whatever caused the loop: the verdict is right, but the judge did not tell a loop
    from an ordinary end of page.
 

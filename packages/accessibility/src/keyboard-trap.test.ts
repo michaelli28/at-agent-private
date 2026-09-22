@@ -195,31 +195,34 @@ describe('judgeKeyboardTrap', () => {
     })
   })
 
-  // KNOWN FALSE PASSES, pinned so that fixing them is noticed: a trap the walk meets only after it has
-  // visited every counted stop — stuck on the last stop, cycling on the last two (a dialog appended to
-  // <body> that does not take focus), or closing after one lap of the page. The count is complete, so
-  // clause 4 passes the page before clauses 9-11 read the probe that already failed. Every recorded M5
-  // trap catches focus earlier, so no recorded walk reaches this; bench/REPORT.md §7 discloses it.
-  // When the judge is fixed, drop `.fails`.
-  it.fails('KNOWN FALSE PASS: a Tab-swallow trap on the last stop is judged a trap', () => {
+  // A trap the walk meets only after it has visited every counted stop: stuck on the last stop, cycling
+  // on the last two (a dialog appended to <body> that does not take focus), or closing after one lap of
+  // the page. The count is complete, which used to pass the page before the release probe that had
+  // already failed was read. Every recorded M5 trap catches focus earlier, so no recorded walk is one.
+  it('a Tab-swallow trap on the last stop is a trap, not the end of the page', () => {
     const ids = [11, 12, 13, ...Array<number>(22).fill(13)]
     const walk = synthWalk(
       ids.map((id, i) => synthStep(i + 1, elementRead(id))),
       { focusableCount: 3, suspectedTrap: true, escapeProbe: confinedProbe([13]) },
     )
-    expect(judgeKeyboardTrap([walk]).verdict).toBe('fail')
+    const result = judgeKeyboardTrap([walk])
+    expect(result.verdict).toBe('fail')
+    expect(result.directions[0].release).toBe('none')
+    expect(result.directions[0].stuckOn?.backendNodeId).toBe(13)
   })
 
-  it.fails('KNOWN FALSE PASS: a cyclic trap on the last two stops is judged a trap', () => {
+  it('a cyclic trap on the last two stops is a trap', () => {
     const ids = [11, 12, 13, 14, ...Array.from({ length: 21 }, (_, i) => (i % 2 === 0 ? 13 : 14))]
     const walk = synthWalk(
       ids.map((id, i) => synthStep(i + 1, elementRead(id))),
       { focusableCount: 4, suspectedTrap: true, escapeProbe: confinedProbe([13, 14]) },
     )
-    expect(judgeKeyboardTrap([walk]).verdict).toBe('fail')
+    const result = judgeKeyboardTrap([walk])
+    expect(result.verdict).toBe('fail')
+    expect(result.directions[0].region).toEqual([13, 14])
   })
 
-  it.fails('KNOWN FALSE PASS: a trap that closes after one lap of the page is judged a trap', () => {
+  it('a trap that closes after one lap of the page is a trap', () => {
     const lap = [11, 12, 13].map((id, i) => synthStep(i + 1, elementRead(id)))
     const wrap = synthStep(4, bodyRead(false), { wrapped: true })
     const stuck = [11, 12, ...Array<number>(19).fill(13)].map((id, i) => synthStep(i + 5, elementRead(id)))
@@ -229,6 +232,39 @@ describe('judgeKeyboardTrap', () => {
       escapeProbe: confinedProbe([13]),
     })
     expect(judgeKeyboardTrap([walk]).verdict).toBe('fail')
+  })
+
+  // The case the count exists for. Unactivated new headless skips body on odd wraps
+  // (bench/probes/wrap/RESULT.md:16), so a clean walk's last F+1 presses can hold no wrap and its
+  // release probe may get nowhere; the count ends the page. A rule that deferred to the probe here, or
+  // waited for the first stop's node to come back, would invent a trap.
+  it('a clean page whose last F+1 presses hold no wrap still ends at all stops visited', () => {
+    const cycle = [11, 12, 13, 11, 12, 13, 0]
+    const steps = Array.from({ length: 25 }, (_, i) => {
+      const id = cycle[i % cycle.length]
+      return id === 0
+        ? synthStep(i + 1, bodyRead(false), { wrapped: true })
+        : synthStep(i + 1, elementRead(id))
+    })
+    const walk = synthWalk(steps, { focusableCount: 3, suspectedTrap: false, escapeProbe: confinedProbe([11, 12, 13]) })
+    const result = judgeKeyboardTrap([walk])
+    expect(result.verdict).toBe('pass')
+    expect(result.directions[0].endOfPage).toEqual({ signal: 'all-stops-visited', atPress: 3 })
+  })
+
+  it('a clean page whose first stop is re-rendered mid-walk still ends at all stops visited', () => {
+    // The same unactivated new-headless cycle, with 11 re-rendered as 21 after its first visit: the first
+    // stop's node never comes back, but the last F+1 presses still reach every stop.
+    const cycle = [11, 12, 13, 11, 12, 13, 0]
+    const steps = Array.from({ length: 25 }, (_, i) => {
+      const id = cycle[i % cycle.length]
+      if (id === 0) return synthStep(i + 1, bodyRead(false), { wrapped: true })
+      return synthStep(i + 1, elementRead(id === 11 && i > 0 ? 21 : id))
+    })
+    const walk = synthWalk(steps, { focusableCount: 3, suspectedTrap: false, escapeProbe: confinedProbe([21, 12, 13]) })
+    const result = judgeKeyboardTrap([walk])
+    expect(result.verdict).toBe('pass')
+    expect(result.directions[0].endOfPage).toEqual({ signal: 'all-stops-visited', atPress: 3 })
   })
 
   // 4

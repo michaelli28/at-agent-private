@@ -123,6 +123,10 @@ export function endOfPage(walk: TabWalkResult): EndOfPage | null {
   // F was counted on the document the walk started in, so it only describes segment 0. F === 0 leaves
   // nothing to have visited, and would otherwise report an end-of-page at a press that never happened.
   if (walk.focusableCount === 0 || walk.steps.some((step) => step.documentReplaced)) return null
+  // Completing the count only means the walk ARRIVED on every stop, and a trap met after that (on the
+  // last stop, among the last few, or closing after a lap) completes it too. The page ended only if the
+  // last F+1 presses still reach F distinct stops, which a trap confined to fewer than F cannot do.
+  if (identitiesOf(tail).length < walk.focusableCount) return null
   const seen = new Set<number>()
   for (const step of segment) {
     if (!isReal(step.settled)) continue
@@ -229,9 +233,9 @@ function judgeWalk(walk: TabWalkResult): TrapDirection {
   }
 }
 
-// region.size is NEVER compared with focusableCount: F legitimately over-counts (the recorded navbar
-// walk has F=12 and reaches 8 real stops, the modal F=8 and reaches 4), so any rule that reaches a
-// verdict from that gap invents 2.1.2 failures on clean pages.
+// region.size never decides a verdict by itself: F legitimately over-counts (the recorded navbar walk
+// has F=12 and reaches 8 real stops, the modal F=8 and reaches 4). It only holds back the
+// all-stops-visited end of page (endOfPage), which sends a wrapless tail to the release probe.
 export function judgeKeyboardTrap(walks: readonly TabWalkResult[]): KeyboardTrapResult {
   const directions = walks.map(judgeWalk)
   const passes = directions.filter((direction) => direction.verdict === 'pass')

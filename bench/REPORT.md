@@ -44,8 +44,9 @@ caught the rebuilt trap check missing one. The only evidence that it can find a 
 from practice pages we built and planted traps in — the same pages the check was developed against,
 with all six traps made the same way. There it flagged all 6 and none of the 35 without a trap (the
 old rule flagged all 41). All six catch focus before the walk has reached every stop the check counted;
-a trap it meets only after that — on the last stop, among the last few, or closing after one lap of
-the page — is passed (§7). That shows the check is not a constant; it is not a measured detection
+the judge as measured passed a trap it meets only after that — on the last stop, among the last few,
+or closing after one lap of the page. That is fixed since, except for the cases §7 lists, and
+re-judging every recorded walk with the fix changes no verdict (§7). That shows the check is not a constant; it is not a measured detection
 rate. What is still unmeasured is how often the **rebuilt** checker is right when it does raise
 something on a real site; that needs hand-labelling, and §6 explains why the one attempt at it
 measured nothing.
@@ -261,7 +262,7 @@ evidence, the five would have been counted as clean, and `topjobs.lk`'s gap outp
 `no-wrap` is `zelesta.nl`, and here the two walks agree: neither ever wrapped. The gap walk reached
 only 7 elements, the buttons of a cookie dialog and a discount pop-up. The judge's recorded
 `confined: false` is not an observation — every `undetermined` verdict carries it
-(`packages/accessibility/src/keyboard-trap.ts:152-160`). §4 has the full case.
+(`packages/accessibility/src/keyboard-trap.ts:156-164`). §4 has the full case.
 
 ---
 
@@ -334,7 +335,7 @@ test-informed probe shows why its telemetry looks odd, within the limits below.
   never stuck: each cycle leaves the document, which the recording itself shows for `vdc.ru` (60 of
   60), and on the fixtures Shift+Tab from either half of the loop lands back on the links. So the
   old rule's 2.1.2 alarm is a false one, and the rebuilt judge's `pass` agrees — though its clause 1
-  (`packages/accessibility/src/keyboard-trap.ts:114-121`, `:173-175`) passes any walk with a wrap in
+  (`packages/accessibility/src/keyboard-trap.ts:114-121`, `:177-179`) passes any walk with a wrap in
   its last F+1 presses, so it would have passed this recording whatever caused the loop. For a
   keyboard user the loop is still a nuisance: forward Tab never returns to the top of the page. It is
   the only live page that re-enters at an iframe after a wrap, in either run; `hostway.com`, whose
@@ -369,18 +370,27 @@ needs a valid labelling pass, which is deferred, along with the test–retest κ
   (`:29`). This is **development-set evidence, not held-out evidence**: the pages and the one trap
   operator (M5) are our own, and the judge's end-of-page rules were chosen by how they scored on these
   same 6 fixtures (`packages/accessibility/src/keyboard-trap.ts:23-25`, `:111-113`). It shows the
-  check is not a constant; it is not a detection rate. It also misses traps the six never test:
-  each catches focus before the walk has reached every counted stop, and a trap the walk meets only
-  after that is passed — one on the last stop, one cycling among the last few, or one that closes
-  only after focus has gone round the page once. Reaching every counted stop completes the count, so the
-  "all stops visited" end-of-page rule (`packages/accessibility/src/keyboard-trap.ts:132`, applied
-  at `:193`) passes the page before the release probe it already ran is read. Reproduced 2026-09-22
-  in `chrome-headless-shell` on `three-links`: M5 on `link-1` fail, on `link-2` fail, on `link-3`
-  **pass**; a two-button dialog appended after the links that cycles Tab between its buttons,
-  **pass**; `link-3` trapping only from its second visit, **pass**. All three kinds are pinned as
-  known false passes (synthetic walks) in
-  `packages/accessibility/src/keyboard-trap.test.ts`. No held-out verdict took that path: all 24
-  held-out passes (16 live, 8 BAD) carry the other end-of-page signal, `body-unfocused`.
+  check is not a constant; it is not a detection rate. It also missed traps the six never test:
+  each catches focus before the walk has reached every counted stop, and the judge as measured
+  passed a trap the walk meets only after that — one on the last stop, one cycling among the last
+  few, or one that closes only after focus has gone round the page once. Reaching every counted stop
+  completes the count, so the "all stops visited" end-of-page rule
+  (`packages/accessibility/src/keyboard-trap.ts:132` and `:193` at `74c4349`) passed the page before
+  the release probe it had already run was read. Reproduced 2026-09-22 in `chrome-headless-shell` on
+  `three-links`: M5 on `link-1` fail, on `link-2` fail, on `link-3` **pass**; a two-button dialog
+  appended after the links that cycles Tab between its buttons, **pass**; `link-3` trapping only from
+  its second visit, **pass**. **Fixed after the run:** the count now ends the page only if the walk's
+  last F+1 presses still reach F distinct stops, which a trap confined to fewer than F stops cannot do
+  (`packages/accessibility/src/keyboard-trap.ts:126-129`). All three return `fail` in the headless
+  shell and in unactivated new headless, the clean pages tried still pass in both, and each kind is a
+  test in `packages/accessibility/src/keyboard-trap.test.ts`. A trap whose loop covers F or more
+  distinct stops still reads as the end of the page: one on a page's only Tab stop, a script loop
+  over every stop, a region padded with stops F does not count, or an element re-rendered on every
+  press. In unactivated new headless (not what the run used), a clean page whose F over-counts and
+  whose stops re-render now leans on the release probe. Re-judging all 230 recorded walks on disk with
+  the fixed judge (every dev and held-out set whose local raw records hold a walk) changes no
+  verdict: all 24 held-out passes (16 live, 8 BAD) came through the other end-of-page signal,
+  `body-unfocused`. Every 2.1.2 number here therefore also describes the fixed judge.
 - **That this run could have caught a 2.1.2 regression.** It contains **no positive control**: no
   BAD page fails 2.1.2 and no live page is known to contain a trap. A checker hardwired to return
   `pass` reproduces §3's 0/8 exactly and would score §4's row as 0/18 with no refusals — the only
