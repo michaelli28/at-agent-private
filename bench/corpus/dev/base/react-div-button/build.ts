@@ -16,6 +16,8 @@ import { z } from "zod";
 
 const HERE = dirname(fileURLToPath(import.meta.url));
 const REACT_VERSION = "18.3.1";
+// Long enough for a cold `npm install` on a slow network, short enough to fail the suite rather than hang.
+const LOCK_WAIT_MS = 180_000;
 const PREFIX = resolve(HERE, "..", "..", ".deps", `react-${REACT_VERSION}`);
 const NODE_MODULES = join(PREFIX, "node_modules");
 export const REACT_BUNDLE = join(HERE, "app.js");
@@ -24,9 +26,13 @@ const PackageJsonSchema = z.object({ version: z.string() });
 
 function installedVersion(pkg: string): string | null {
   const file = join(NODE_MODULES, pkg, "package.json");
-  if (!existsSync(file)) return null;
-  return PackageJsonSchema.parse(JSON.parse(readFileSync(file, "utf8")))
-    .version;
+  let text: string;
+  try {
+    text = readFileSync(file, "utf8");
+  } catch {
+    return null; // absent, or moved aside by the installer below while we read
+  }
+  return PackageJsonSchema.parse(JSON.parse(text)).version;
 }
 
 // Written only after npm install succeeded in a private directory. A raced install from before this
@@ -38,11 +44,43 @@ const pinned = (): boolean =>
   installedVersion("react") === REACT_VERSION &&
   installedVersion("react-dom") === REACT_VERSION;
 
+// Waits for whoever holds the lock directory, then re-checks: one process installs, the rest use it.
+// Without this, callers read PREFIX while another moved an unmarked install aside, and the read threw.
+function waitForInstaller(lock: string): boolean {
+  const deadline = Date.now() + LOCK_WAIT_MS;
+  while (Date.now() < deadline) {
+    Atomics.wait(new Int32Array(new SharedArrayBuffer(4)), 0, 0, 100);
+    if (pinned()) return true;
+    if (!existsSync(lock)) return false; // holder died or finished without installing; take a turn
+  }
+  // A lock this old belongs to a process that was killed mid-install.
+  rmSync(lock, { recursive: true, force: true });
+  return false;
+}
+
 // Bench test files run in parallel and several build this fixture, so on a fresh checkout their
-// installs raced into PREFIX and npm deleted each other's files. Each caller installs privately and
-// renames into place: PREFIX only ever appears complete, and a caller that loses the rename uses it.
+// installs raced into PREFIX and npm deleted each other's files. One caller at a time installs into a
+// private directory and renames it into place; PREFIX only ever appears complete, marker and all.
 function ensurePinnedReact(): void {
   if (pinned()) return;
+  const lock = `${PREFIX}.lock`;
+  mkdirSync(dirname(PREFIX), { recursive: true });
+  let holding = false;
+  for (let attempt = 0; attempt < 3 && !holding; attempt++) {
+    if (pinned()) return;
+    try {
+      mkdirSync(lock); // fails while another caller holds it
+      holding = true;
+    } catch {
+      if (waitForInstaller(lock)) return; // their install finished; use it
+    }
+  }
+  if (!holding)
+    throw new Error(`could not take ${lock} to install react ${REACT_VERSION}`);
+  if (pinned()) {
+    rmSync(lock, { recursive: true, force: true }); // installed while we waited
+    return;
+  }
   const staging = `${PREFIX}.staging-${process.pid}`;
   const stale = (n: number): string => `${PREFIX}.stale-${process.pid}-${n}`;
   rmSync(staging, { recursive: true, force: true });
@@ -81,6 +119,7 @@ function ensurePinnedReact(): void {
     rmSync(staging, { recursive: true, force: true });
     for (let n = 0; n < 3; n++)
       rmSync(stale(n), { recursive: true, force: true });
+    rmSync(lock, { recursive: true, force: true });
   }
   if (!pinned())
     throw new Error(
