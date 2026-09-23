@@ -215,15 +215,22 @@ async function openPage(
     blocked: [],
     load: null,
   };
-  if (localOnly) {
-    await context.route("**/*", (route) => {
-      const url = route.request().url();
-      if (isLocalUrl(url)) return route.continue();
-      tracker.blocked.push(url);
-      return route.abort("blockedbyclient");
-    });
+  let page: Page;
+  try {
+    if (localOnly) {
+      await context.route("**/*", (route) => {
+        const url = route.request().url();
+        if (isLocalUrl(url)) return route.continue();
+        tracker.blocked.push(url);
+        return route.abort("blockedbyclient");
+      });
+    }
+    page = await context.newPage();
+  } catch (err: unknown) {
+    // The caller never gets this context, so nothing else would close it before the browser does.
+    await context.close().catch(() => undefined);
+    throw err;
   }
-  const page = await context.newPage();
   page.on("framenavigated", (frame) => {
     if (frame === page.mainFrame()) tracker.navigations++;
   });

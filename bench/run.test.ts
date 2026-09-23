@@ -358,6 +358,38 @@ describe("runTool budget", () => {
   });
 });
 
+describe("runTool when a context cannot be set up", () => {
+  // runTool gets no context handle back when openPage throws, so nothing else closes it before the
+  // browser does at the end of the run: each failed tool on each page would leave one behind.
+  it.each(["route", "newPage"] as const)(
+    "closes the context it opened when %s() then throws",
+    async (method) => {
+      const browser = await chromium.launch();
+      try {
+        const failing = {
+          newContext: async () =>
+            Object.assign(await browser.newContext(), {
+              [method]: () => Promise.reject(new Error(`${method} failed`)),
+            }),
+        } as unknown as Parameters<typeof runTool>[0];
+        const out = await runTool(
+          failing,
+          { localOnly: true, deadline: Date.now() + 10_000, budgetMs: 10_000 },
+          async () => "unreachable",
+        );
+        expect(out).toMatchObject({
+          value: null,
+          error: `could not open a browser context: ${method} failed`,
+        });
+        expect(browser.contexts()).toHaveLength(0);
+      } finally {
+        await browser.close();
+      }
+    },
+    60_000,
+  );
+});
+
 // The legacy column replays the walk's presses, so its label must say whether THAT replay was cut
 // short or ran on the placeholder -- not merely whether the walk tool hit its budget somewhere.
 describe("legacyFrom labels the legacy replay", () => {
