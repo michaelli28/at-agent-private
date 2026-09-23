@@ -14,7 +14,12 @@ const FOCUSABLE_SELECTOR = [
   'select',
   'textarea',
   'summary',
-  '[contenteditable=true]',
+  // Every editing host: the bare attribute, and `true` or `plaintext-only` in any case (enumerated values are
+  // ASCII case-insensitive). Chromium also stops on a keyboard-focusable scroller, which is deliberately not
+  // counted: telling one apart would re-implement Chromium's rule in page JS (bench/COVERAGE.md).
+  '[contenteditable=""]',
+  '[contenteditable="true" i]',
+  '[contenteditable="plaintext-only" i]',
   '[tabindex]:not([tabindex="-1"])',
 ].join(', ')
 

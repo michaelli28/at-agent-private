@@ -103,6 +103,54 @@ with the fix.
   press on it: Enter on the copy does nothing. The label stays `keyboardAccessible: true`, because the
   schema's rule is reachable and operable from a fresh page load, and from a fresh load Tab reaches the
   original, which Enter operates.
+- **2.1.2: a complete stop count ends the page only after a recent wrap** (acc-walk#1's residuals).
+  Reaching as many distinct stops as F in the last F+1 presses now also needs a wrap within the last
+  2·max(F, L)+1 presses, L being the longest lap the walk measured. Without one, the release probe
+  decides, so a trap on the page's only stop (`one-button__M5`), a loop over every stop (M10, labelled a
+  trap above) and a loop padded with scrollers (M12) now fail. A trap armed too late to leave that many
+  trapped presses before the walk ends still passes.
+- **2.1.2: a walk's release read through node identity is refused when
+  its last F+1 presses reach more stops than F**, as `undetermined / focusables-exceeded`. F then misses
+  stops or the page re-creates nodes, so reaching an "unseen" element proves nothing. A wrap or a
+  replaced document still releases, and a probe that gets nowhere still fails.
+- **2.1.2: a stop re-rendered on every press (M11) is refused, not failed.** Each press lands on a new
+  node, which the walk cannot tell from moving on; failing it needs an identity beyond the DOM node, which
+  the rebuild removed on purpose. It counts as a miss. A trap where only some stops re-render can still
+  pass, and so can a trap whose Escape handler re-creates the focused stop: the new node reads as Escape
+  releasing it (`pass [escape-key]`).
+- **2.1.2: scrollers are Tab stops F does not count.** Chromium stops on a scrollable box with no
+  focusable child, and counting one would re-implement that rule in page JS. F does count every editing
+  host (bare `contenteditable`, `true` or `plaintext-only` in any case), and the gap detector's walk
+  shares that count. F also misses image-map areas, which Chromium stops on: the selector's `a[href]`
+  does not match `area[href]`, and round 2 did not add it. A link and 14 areas (F = 1) is refused, where
+  13 pass (the cost below; measured, not pinned). No dev page has an image map.
+- **2.1.2: what the recent-wrap rule and the refusal cost on clean pages** (synthetic pages walked in
+  chrome-headless-shell 143). A page with F ≥ 1 loses `all-stops-visited` when no wrap falls in its
+  walk's last 2·max(F, L)+1 presses, and the release probe decides. If a Shift+Tab reaches a wrap, or a
+  stop outside the last F+1 presses, the page passes, unless it was a stop and those presses reached
+  more stops than F: then it is refused (`focusables-exceeded`). If all F+2 Shift+Tabs stay on those
+  presses' stops, as inside a stop that takes several presses, it fails (next bullet), whether the walk
+  ended inside that stop or just after it. 12 scrollers then a datetime-local passes
+  (`pass [opposite-key]`): the walk ends on the input's third field, so the third Shift+Tab gets out.
+  With one-press stops and focus starting at the top, the 5(F+1)+5-press walk misses the wrap exactly
+  when the page has 4F+10 or more stops F does not count, and the page is refused (pinned in
+  `keyboard-trap.test.ts`). Autofocus breaks that bound: a button, 17 scrollers and an autofocused last
+  button (F = 2, so 4F+10 = 18) wrap on the first press only and are refused. Several-press stops need
+  fewer: one datetime-local then 8 scrollers (F = 1, 7 + 8 = 15 presses) is refused, where 7 scrollers
+  pass. Only the 4F+10 bound is pinned. A page where F is 0 (only scrollers, say) is refused unless its
+  walk ends on its first stop or on a wrap.
+- **2.1.2: stops that take several Tab presses give wrong verdicts both ways.** Tab steps through the
+  fields of a date or time input, and through the controls of `<audio controls>`, on one element
+  (chrome-headless-shell 143: datetime-local 7 presses, date and time 4, month 3, audio with a silent
+  clip 5), and the walk and its probe count presses as if every stop took one. A clean page with two
+  datetime-local inputs fails, and a dialog loop over a date input and a button, a trap, passes. The
+  recent-wrap rule adds false fails on clean pages whose walk never wraps and whose probe stays inside
+  such a stop: 8 to 11 scrollers then a datetime-local (the walk ends inside it); 7 scrollers, a
+  datetime-local and one more scroller, or with F = 2 a link, 10 scrollers, a datetime-local and 2 more
+  (the walk ends just after it); and a link and 10 scrollers then `<audio controls>`. `it.fails` pins
+  five (`tab-walk.test.ts`): the two-datetime page, the date loop, 8 scrollers then a datetime-local,
+  7 scrollers with one after the input, and the audio page. No dev page has a date, time or media input,
+  so no dev number measures this.
 - **`native-dialog` is labelled clean.** Its age gate is a `<dialog>` opened with `showModal()` on
   load. The page behind it is inert until Confirm closes the dialog and is then reachable with Tab, so
   the background controls are labelled accessible with no gap. Tab from Confirm leaves the page for the

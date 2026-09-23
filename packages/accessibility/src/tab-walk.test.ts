@@ -4,6 +4,7 @@ import { describe, it, expect, beforeAll, afterAll, afterEach, vi, type MockInst
 import type { CDPSession, Page } from 'playwright'
 import { BrowserClient, BrowserPage } from '@at-agent/browser'
 import { runTabWalk, TabWalkResultSchema, focusIdentity, type FocusRead, type StyleChange } from './tab-walk.js'
+import { judgeKeyboardTrap } from './keyboard-trap.js'
 
 // Fixtures A, D, E are copied from bench/probes/wrap/fixtures (shell-mode sequences in bench/probes/wrap/RESULT.md).
 const FIXTURE_A = `<!doctype html><html lang="en"><head><meta charset="utf-8"><title>Fixture A</title></head><body>
@@ -339,6 +340,102 @@ const SLOW_RING = doc(
   `<style>a.slow { transition: box-shadow 2s linear } a.slow:focus { outline: none; box-shadow: 0 0 0 3px rgb(0, 0, 255) }
 a.bare:focus { outline: none }</style>
 <p><a id="p" class="slow" href="#p">P</a> <a id="q" class="bare" href="#q">Q</a></p>`,
+)
+
+// 2.1.2 (acc-walk#1's residuals): traps whose last F+1 presses reach F distinct stops without leaving the page,
+// the Tab stops F does not count, and the date and time inputs that bound the fix. A scroller is a
+// keyboard-focusable box with no focusable child: Chromium stops on it, and FOCUSABLE_SELECTOR does not count it.
+const LOREM = 'Lorem ipsum dolor sit amet. '.repeat(20)
+const scroller = (id: string): string =>
+  `<div id="${id}" style="width:200px;height:40px;overflow:auto;border:1px solid">${LOREM}</div>`
+const scrollers = (n: number, prefix = 's'): string =>
+  Array.from({ length: n }, (_, i) => scroller(`${prefix}${i}`)).join('')
+
+// Tab on the last of `loopIds` focuses the first; Shift+Tab on the first focuses the last.
+const tabLoop = (loopIds: string[]): string => `<script>
+const loop = ${JSON.stringify(loopIds)}.map((id) => document.getElementById(id))
+document.addEventListener('keydown', (e) => {
+  if (e.key !== 'Tab') return
+  const i = loop.indexOf(document.activeElement)
+  if (!e.shiftKey && i === loop.length - 1) { e.preventDefault(); loop[0].focus() }
+  if (e.shiftKey && i === 0) { e.preventDefault(); loop[loop.length - 1].focus() }
+})
+</script>`
+
+const THREE_LINKS = '<a id="l1" href="#1">1</a> <a id="l2" href="#2">2</a> <a id="l3" href="#3">3</a>'
+
+const ONLY_STOP_TRAP = doc(
+  'Only stop trap',
+  `<button id="only" type="button">Only</button>
+<script>document.getElementById('only').addEventListener('keydown', (e) => { if (e.key === 'Tab') e.preventDefault() })</script>`,
+)
+
+const LOOP_EVERY_STOP = doc('Loop every stop', `${THREE_LINKS}\n${tabLoop(['l1', 'l2', 'l3'])}`)
+
+// F counts l1, l2 and OK; the loop is OK and the two scrollers, so it reaches exactly F.
+const PADDED_LOOP = doc(
+  'Padded loop',
+  `<a id="l1" href="#1">1</a> <a id="l2" href="#2">2</a>
+<div role="dialog" aria-label="Dialog"><button id="ok" type="button">OK</button>${scroller('s1')}${scroller('s2')}</div>
+${tabLoop(['ok', 's1', 's2'])}`,
+)
+
+// Tab and Shift+Tab on the button replace it with a copy and focus the copy: a new node on every press.
+const RERENDER_EVERY_PRESS = doc(
+  'Re-render every press',
+  `${THREE_LINKS} <button id="re" type="button">Re</button>
+<script>
+document.addEventListener('keydown', (e) => {
+  if (e.key !== 'Tab' || e.target.id !== 're') return
+  e.preventDefault()
+  const copy = e.target.cloneNode(true)
+  e.target.replaceWith(copy)
+  copy.focus()
+})
+</script>`,
+)
+
+const EDITING_HOSTS = doc(
+  'Editing hosts',
+  `<a id="l1" href="#1">1</a>
+<div id="ce-bare" contenteditable>bare</div>
+<div id="ce-plain" contenteditable="plaintext-only">plain</div>
+<div id="ce-plain-upper" contenteditable="PLAINTEXT-ONLY">plain upper</div>
+<div id="ce-upper" contenteditable="TRUE">upper</div>
+<div id="ce-true" contenteditable="true">true</div>
+<div id="ce-false" contenteditable="false">false</div>`,
+)
+
+const TWO_SCROLLERS = doc('Two scrollers', `${THREE_LINKS}${scroller('s1')}${scroller('s2')}`)
+
+const LONE_DATETIME = doc('Lone datetime', '<label>Meeting time <input id="when" type="datetime-local"></label>')
+
+const TWO_DATETIMES = doc(
+  'Two datetimes',
+  '<label>Start <input id="start" type="datetime-local"></label> <label>End <input id="end" type="datetime-local"></label>',
+)
+
+const DATE_LOOP = doc(
+  'Date loop',
+  `<a id="l1" href="#1">1</a>
+<div role="dialog" aria-label="Dialog"><label>Date <input id="d" type="date"></label> <button id="save" type="button">Save</button></div>
+${tabLoop(['d', 'save'])}`,
+)
+
+const PICKUP_TIME = '<label>Pick-up time <input id="when" type="datetime-local"></label>'
+
+const SCROLLERS_THEN_DATETIME = doc('Scrollers then datetime', `${scrollers(8)}\n${PICKUP_TIME}`)
+
+const SCROLLERS_DATETIME_SCROLLER = doc(
+  'Scrollers, datetime, scroller',
+  `${scrollers(7)}\n${PICKUP_TIME}${scroller('t0')}`,
+)
+
+// A silent clip: Tab stops on five of its controls, all on the one element.
+const LINK_SCROLLERS_AUDIO = doc(
+  'Link, scrollers, audio',
+  `<a id="l1" href="#1">1</a>${scrollers(10)}
+<audio id="au" controls src="data:audio/wav;base64,UklGRiQAAABXQVZFZm10IBAAAAABAAEAQB8AAEAfAAABAAgAZGF0YQAAAAA="></audio>`,
 )
 
 const OUTLINE_KEYS = ['outline-color', 'outline-offset', 'outline-style', 'outline-width']
@@ -1388,6 +1485,122 @@ describe('runTabWalk', () => {
     expect(grown.idle?.urlChanged).toBe(false)
     expect(grown.focusableCount).toBe(1)
     expect(grown.focusableCountEnd).toBe(11)
+  })
+
+  describe('2.1.2: a complete count is the end of the page only after a recent wrap', () => {
+    it('one Tab stop that swallows Tab: no wrap, the probe gets nowhere, judged fail', async () => {
+      const page = await open(ONLY_STOP_TRAP)
+      const walk = await runTabWalk(page.playwrightPage, { settleMs: FAST })
+
+      expect(walk.focusableCount).toBe(1)
+      expect(walk.steps.some((s) => s.wrapped)).toBe(false)
+      expect(walk.escapeProbe?.reachedAt).toBeNull()
+      expect(judgeKeyboardTrap([walk]).verdict).toBe('fail')
+    })
+
+    it('a script loop over every stop: no wrap, the probe gets nowhere, judged fail', async () => {
+      const page = await open(LOOP_EVERY_STOP)
+      const walk = await runTabWalk(page.playwrightPage, { settleMs: FAST })
+
+      expect(walk.focusableCount).toBe(3)
+      expect(walk.steps.some((s) => s.wrapped)).toBe(false)
+      expect(walk.escapeProbe?.reachedAt).toBeNull()
+      expect(judgeKeyboardTrap([walk]).verdict).toBe('fail')
+    })
+
+    it('a loop padded with two scrollers F does not count, reaching exactly F: judged fail', async () => {
+      const page = await open(PADDED_LOOP)
+      const walk = await runTabWalk(page.playwrightPage, { settleMs: FAST })
+
+      expect(walk.focusableCount).toBe(3)
+      expect(walk.steps.some((s) => s.wrapped)).toBe(false)
+      expect(new Set(walk.steps.slice(-3).map((s) => label(s.settled)))).toEqual(new Set(['ok', 's1', 's2']))
+      const result = judgeKeyboardTrap([walk])
+      expect(result.verdict).toBe('fail')
+      expect(result.directions[0].region).toHaveLength(3)
+    })
+
+    it('a stop re-rendered on every press: each press and the first Shift+Tab land on a new node; undetermined', async () => {
+      const page = await open(RERENDER_EVERY_PRESS)
+      const walk = await runTabWalk(page.playwrightPage, { settleMs: FAST })
+
+      const tail = walk.steps.slice(-(walk.focusableCount + 1))
+      expect(tail.every((s) => label(s.settled) === 're')).toBe(true)
+      expect(new Set(tail.map((s) => focusIdentity(s.settled))).size).toBe(tail.length)
+      expect(walk.escapeProbe?.reachedAt).toBe(1)
+      expect(walk.escapeProbe?.steps[0].unseenElement).toBe(true)
+      const result = judgeKeyboardTrap([walk])
+      expect(result.verdict).toBe('undetermined')
+      expect(result.reason).toBe('focusables-exceeded')
+    })
+
+    it('F counts contenteditable editing hosts in every spelling', async () => {
+      const page = await open(EDITING_HOSTS)
+      const walk = await runTabWalk(page.playwrightPage, { settleMs: FAST })
+
+      expect(new Set(walk.steps.map((s) => label(s.settled)))).toEqual(
+        new Set(['l1', 'ce-bare', 'ce-plain', 'ce-plain-upper', 'ce-upper', 'ce-true', 'body!']),
+      )
+      expect(walk.focusableCount).toBe(6)
+    })
+
+    // Pinned, not fixed: counting scrollers would re-implement Chromium's rule in page JS.
+    it('a keyboard-focusable scroller is a Tab stop F does not count', async () => {
+      const page = await open(TWO_SCROLLERS)
+      const walk = await runTabWalk(page.playwrightPage, { settleMs: FAST })
+
+      expect(walk.focusableCount).toBe(3)
+      expect(walk.steps.slice(0, 6).map((s) => label(s.settled))).toEqual(['l1', 'l2', 'l3', 's1', 's2', 'body!'])
+      expect(judgeKeyboardTrap([walk]).verdict).toBe('pass')
+    })
+
+    it('a lone datetime-local input: Tab steps through its fields on one element, judged pass', async () => {
+      const page = await open(LONE_DATETIME)
+      const walk = await runTabWalk(page.playwrightPage, { settleMs: FAST })
+
+      expect(walk.focusableCount).toBe(1)
+      const firstWrap = walk.steps.findIndex((s) => s.wrapped)
+      expect(firstWrap).toBeGreaterThan(1)
+      expect(walk.steps.slice(0, firstWrap).every((s) => label(s.settled) === 'when')).toBe(true)
+      const result = judgeKeyboardTrap([walk])
+      expect(result.verdict).toBe('pass')
+      expect(result.directions[0].endOfPage?.signal).toBe('all-stops-visited')
+    })
+
+    // Known wrong verdicts (bench/COVERAGE.md): a date or time input takes several Tab presses on one element,
+    // and the walk and its probe are budgeted in presses. Drop it.fails when they are budgeted in stops.
+    it.fails('known wrong: two datetime-local inputs, a clean page, should pass', async () => {
+      const page = await open(TWO_DATETIMES)
+      const walk = await runTabWalk(page.playwrightPage, { settleMs: FAST })
+      expect(judgeKeyboardTrap([walk]).verdict).toBe('pass')
+    })
+
+    it.fails('known wrong: a dialog loop over a date input and a button, a trap, should fail', async () => {
+      const page = await open(DATE_LOOP)
+      const walk = await runTabWalk(page.playwrightPage, { settleMs: FAST })
+      expect(judgeKeyboardTrap([walk]).verdict).toBe('fail')
+    })
+
+    // The recent-wrap rule introduced these three: the stops fill the 15-press walk, which never wraps, and the
+    // probe's Shift+Tabs stay inside the input, whether the walk ended inside it or just after it.
+    it.fails('known wrong: eight scrollers then a datetime-local, a clean page, should pass', async () => {
+      const page = await open(SCROLLERS_THEN_DATETIME)
+      const walk = await runTabWalk(page.playwrightPage, { settleMs: FAST })
+      expect(judgeKeyboardTrap([walk]).verdict).toBe('pass')
+    })
+
+    it.fails('known wrong: seven scrollers, a datetime-local, one scroller, a clean page, should pass', async () => {
+      const page = await open(SCROLLERS_DATETIME_SCROLLER)
+      const walk = await runTabWalk(page.playwrightPage, { settleMs: FAST })
+      expect(judgeKeyboardTrap([walk]).verdict).toBe('pass')
+    })
+
+    // Media controls are Tab stops on one element too, so the class is wider than date and time inputs.
+    it.fails('known wrong: a link, ten scrollers, then <audio controls>, a clean page, should pass', async () => {
+      const page = await open(LINK_SCROLLERS_AUDIO)
+      const walk = await runTabWalk(page.playwrightPage, { settleMs: FAST })
+      expect(judgeKeyboardTrap([walk]).verdict).toBe('pass')
+    })
   })
 })
 

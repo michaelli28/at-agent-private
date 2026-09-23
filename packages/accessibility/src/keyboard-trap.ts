@@ -20,9 +20,10 @@ export type TrapVerdict = z.infer<typeof TrapVerdictSchema>
 export const TrapReleaseSchema = z.enum(['escape-key', 'opposite-key', 'none', 'not-probed'])
 export type TrapRelease = z.infer<typeof TrapReleaseSchema>
 
-// Two independent signals, both needed: in new-headless the first wrap skips body entirely, so a
-// body read alone misses it; and a cyclic trap also revisits its first element, so "returned to the
-// first element" is NOT a signal (it passes 4 of 6 M5 fixtures).
+// Two signals: in new-headless the first wrap skips body entirely, so a body read in the last F+1
+// presses alone misses it, and the count covers that, but only after a recent wrap, because a loop over
+// every stop completes the count too (endOfPage). A cyclic trap also revisits its first element, so
+// "returned to the first element" is NOT a signal (it passes 4 of 6 M5 fixtures).
 export const EndOfPageSignalSchema = z.enum(['body-unfocused', 'all-stops-visited'])
 export type EndOfPageSignal = z.infer<typeof EndOfPageSignalSchema>
 
@@ -30,6 +31,7 @@ export const TrapUndeterminedReasonSchema = z.enum([
   'walk-error',
   'focusables-changed',
   'focusables-incomplete',
+  'focusables-exceeded',
   'document-replaced',
   'short-walk',
   'focus-unreadable',
@@ -106,7 +108,20 @@ function identitiesOf(steps: readonly TabWalkStep[]): number[] {
   return out
 }
 
-// Did the walk reach the end of the page? Two independent signals, and NEVER "focus returned to the
+// The most presses from one wrap to the next that the segment measured, its start counting as a wrap;
+// 0 when it never wrapped.
+function longestLap(segment: readonly TabWalkStep[]): number {
+  let lap = 0
+  let lastWrap = 0
+  for (const [i, step] of segment.entries()) {
+    if (!step.wrapped) continue
+    lap = Math.max(lap, i + 1 - lastWrap)
+    lastWrap = i + 1
+  }
+  return lap
+}
+
+// Did the walk reach the end of the page? Two signals, and NEVER "focus returned to the
 // first element it visited" — every cyclic trap does that, and it silently passes 4 of the 6 M5
 // fixtures (bench/results/cd3b122/dev-variants).
 export function endOfPage(walk: TabWalkResult): EndOfPage | null {
@@ -122,9 +137,16 @@ export function endOfPage(walk: TabWalkResult): EndOfPage | null {
   // nothing to have visited, and would otherwise report an end-of-page at a press that never happened.
   if (walk.focusableCount === 0 || walk.steps.some((step) => step.documentReplaced)) return null
   // Completing the count only means the walk ARRIVED on every stop, and a trap met after that (on the
-  // last stop, among the last few, or closing after a lap) completes it too. The page ended only if the
-  // last F+1 presses still reach F distinct stops, which a trap confined to fewer than F cannot do.
+  // last stop, among the last few, or closing after a lap) completes it too. The last F+1 presses must
+  // still reach F distinct stops, which a trap confined to fewer than F cannot do.
   if (identitiesOf(tail).length < walk.focusableCount) return null
+  // A trap confined to F or more completes that too: the page's only stop, a script loop over every stop,
+  // a region padded with stops F does not count. Only a recent wrap tells the page's own lap from a loop.
+  // Unactivated new headless shows body on every other wrap (bench/probes/wrap/RESULT.md:16), and a date or
+  // time input takes several Tab presses on one element, so the window is two of the longest laps the walk
+  // measured, at least 2F+1.
+  const lapWindow = 2 * Math.max(walk.focusableCount, longestLap(segment)) + 1
+  if (!segment.slice(-lapWindow).some((step) => step.wrapped)) return null
   const seen = new Set<number>()
   for (const step of segment) {
     if (!isReal(step.settled)) continue
@@ -212,12 +234,19 @@ function judgeWalk(walk: TabWalkResult): TrapDirection {
   // 8
   const probe = walk.escapeProbe
   if (probe === null) return undetermined('no-release-probe')
+  // "Unseen" is a release read through node identity. More distinct stops in the last F+1 presses than
+  // F counts means F misses stops (a keyboard-focusable scroller) or the page re-creates nodes as focus
+  // moves; either way a new node is no evidence of a new place, so such a release is refused. A wrap or a
+  // replaced document is not read through identity and stays a release; a probe that got nowhere still fails.
+  const exceeded = region.length > walk.focusableCount
   // 9
-  if (probe.escape.unseenElement || probe.escape.wrapped || probe.escape.documentReplaced) {
-    return released('escape-key')
-  }
+  if (probe.escape.wrapped || probe.escape.documentReplaced) return released('escape-key')
+  if (probe.escape.unseenElement) return exceeded ? undetermined('focusables-exceeded') : released('escape-key')
   // 10
-  if (probe.reachedAt !== null) return released('opposite-key')
+  if (probe.reachedAt !== null) {
+    const byWrap = probe.steps[probe.reachedAt - 1]?.wrapped === true
+    return exceeded && !byWrap ? undetermined('focusables-exceeded') : released('opposite-key')
+  }
   // 11 — clause 7 guarantees the tail holds at least one real stop.
   const stuck = [...tail].reverse().find((step) => isReal(step.settled))
   return {
@@ -231,9 +260,10 @@ function judgeWalk(walk: TabWalkResult): TrapDirection {
   }
 }
 
-// region.size never decides a verdict by itself: F legitimately over-counts (the recorded navbar walk
-// has F=12 and reaches 8 real stops, the modal F=8 and reaches 4). It only holds back the
-// all-stops-visited end of page (endOfPage), which sends a wrapless tail to the release probe.
+// A region smaller than F never decides a verdict by itself: F legitimately over-counts (the recorded
+// navbar walk has F=12 and reaches 8 real stops, the modal F=8 and reaches 4). It only holds back the
+// all-stops-visited end of page (endOfPage), which sends a wrapless tail to the release probe. A region
+// larger than F refuses a release read through node identity (clauses 9-10).
 export function judgeKeyboardTrap(walks: readonly TabWalkResult[]): KeyboardTrapResult {
   const directions = walks.map(judgeWalk)
   const passes = directions.filter((direction) => direction.verdict === 'pass')
