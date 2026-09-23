@@ -83,7 +83,8 @@ nonetheless touched a decision, stated here rather than left for a reader to fin
 
 The labelling calls the round-2 dev material needed, and the two Run A cross-product cells no design predicted
 (the old checker at 0a71e4e, `bench/results/0a71e4e/dev-variants`). What each fix covers and costs is added
-with the fix.
+with the fix. Run B, the new checker on the same dev pages at 145b3da (`bench/results/145b3da/`), shows the
+same dev changes as the bullets below; `bench/REPORT.md` §10 has the Run A → Run B table.
 
 - **M10, a script loop from the last stop the script counts to the first, is labelled a 2.1.2 trap.** Once
   focus is in the loop, Tab and Shift+Tab never take it out. WCAG 2.1.2 is worded per component, and
