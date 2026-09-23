@@ -53,6 +53,9 @@ const AnswersFileSchema = z
     // (a different --sample, a re-run at a new sha), and it used to prune this file to nothing on
     // the next keystroke. The worklist is disposable; this file is the record. It only ever grows.
     superseded: z.array(GenerationSchema).default([]),
+    // What write-md last copied into the worklist, so its guard can tell that copy from a hand
+    // edit. Not a verdict: a redraw starts a generation without it.
+    writtenToMd: z.record(z.string(), AnswerSchema).optional(),
   })
   .strict();
 export type AnswersFile = z.infer<typeof AnswersFileSchema>;
@@ -358,7 +361,8 @@ function main(argv: readonly string[]): void {
           .safeParse(JSON.parse(raw || "{}"));
         if (!parsed.success)
           return send(400, MIME[".json"], JSON.stringify({ ok: false }));
-        const spotSha = itemsKey(parseSpotcheck(readFileSync(mdPath, "utf8")));
+        const md = readFileSync(mdPath, "utf8");
+        const spotSha = itemsKey(parseSpotcheck(md));
         // If the worklist was regenerated while this page was open, item 7 on screen is not item 7
         // on disk. Accepting the verdict would file a judgement against a flag nobody looked at.
         if (parsed.data.itemsSha256 !== spotSha)
@@ -372,6 +376,11 @@ function main(argv: readonly string[]): void {
             }),
           );
         const file = readAnswers(answersPath, spotSha);
+        // A worklist written before writtenToMd existed (both committed ones) left write-md no copy
+        // to recognise, so the first changed answer locked it. A file that reads exactly what the
+        // saved verdicts would write is that copy; one out of step may carry a hand edit, so is not.
+        if (file.writtenToMd === undefined && mergeIntoMd(md, file.answers) === md)
+          file.writtenToMd = { ...file.answers };
         file.answers[String(parsed.data.n)] = {
           verdict: parsed.data.verdict,
           note: parsed.data.note,
@@ -397,13 +406,22 @@ function main(argv: readonly string[]): void {
       const already = parseSpotcheck(md).filter(
         (i) => i.answered || i.answerLine !== "",
       );
-      const wouldLose = already.filter((i) => {
-        const a = file.answers[String(i.n)];
-        if (a?.verdict == null) return true;
-        // Writing would also drop reasoning the file carries and the record does not.
-        const carried = `${a.verdict}${a.note.trim() ? ` — ${a.note.trim().replace(/\s+/g, " ")}` : ""}`;
-        return i.answerLine !== "" && i.answerLine !== carried;
-      });
+      // Compare like with like: what each item would read after this write, and what it read after
+      // this tool's last one. Checking only the first, through a hand-copied format that did not
+      // match mergeIntoMd's, made the tool's own earlier copy look like a hand edit -- so changing a
+      // verdict, or writing a note-only item, locked this button for good.
+      const byN = (text: string): Map<number, SpotUiItem> =>
+        new Map(parseSpotcheck(text).map((i) => [i.n, i]));
+      const next = byN(mergeIntoMd(md, file.answers));
+      const copied = byN(mergeIntoMd(md, file.writtenToMd ?? {}));
+      // Nothing is lost if the other side shows it too: the tick, and any answer text.
+      const keeps = (i: SpotUiItem, j: SpotUiItem | undefined): boolean =>
+        j !== undefined &&
+        (!i.answered || j.answered) &&
+        (i.answerLine === "" || i.answerLine === j.answerLine);
+      const wouldLose = already.filter(
+        (i) => !keeps(i, next.get(i.n)) && !keeps(i, copied.get(i.n)),
+      );
       if (done === 0 || wouldLose.length > 0)
         return send(
           200,
@@ -414,10 +432,14 @@ function main(argv: readonly string[]): void {
             reason:
               done === 0
                 ? "no verdicts to write"
-                : `refusing: ${wouldLose.length} item(s) already answered in the file have no verdict here (${wouldLose.map((i) => i.n).join(", ")})`,
+                : `refusing: ${wouldLose.length} item(s) answered in the file differ from the saved verdicts (${wouldLose.map((i) => i.n).join(", ")})`,
           }),
         );
       writeFileSync(mdPath, mergeIntoMd(md, file.answers));
+      writeFileSync(
+        answersPath,
+        `${JSON.stringify({ ...file, writtenToMd: file.answers }, null, 2)}\n`,
+      );
       return send(200, MIME[".json"], JSON.stringify({ ok: true, done }));
     }
 
@@ -705,7 +727,7 @@ async function writeMd() {
   // A real alert() would freeze the page against automation; say it on the button instead.
   const el = document.getElementById("writemd");
   const old = el.textContent;
-  el.textContent = d.ok ? "Wrote " + d.done + " verdict(s)" : "Could not write";
+  el.textContent = d.ok ? "Wrote " + d.done + " verdict(s)" : d.reason || "Could not write";
   setTimeout(() => { el.textContent = old; }, 2200);
 }
 
