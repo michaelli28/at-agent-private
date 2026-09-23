@@ -6,6 +6,12 @@ uncommitted at run time; committed unchanged as 9f057fa), and at c6f061f, the fi
 synthetic, except `modal-*`, which loads the dev base `bench/corpus/dev/base/modal.html`. No held-out page was
 opened or run.
 
+Commit ids above are from before the branch was rebased onto the B2 and B3 merges. 9f057fa is now a8de747 and
+c6f061f is now e02f706. 925960f's detector was B3's, merged as 6ee3b83; the only difference is B2's
+contenteditable selector, which no probe page uses. Re-run at e618d9d (e02f706's code plus the guarded crawl
+mark) on 2026-09-23: every row matches the fix column. Only `cost` differs, at 169, 139 and 194 ms, measured at
+load 4-8.
+
 ## In plain English
 
 **What we checked:** the gap checker reads a page three times: the accessibility tree (what a screen reader
