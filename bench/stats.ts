@@ -10,7 +10,7 @@ function requireRange(ok: boolean, message: string): void {
 export const Z_975 = 1.9599639845400543;
 
 // Wilson 1927: inverts the score test, solving |p̂-p| = z·sqrt(p(1-p)/n) for p.
-// Counts may be non-integer so design-effect-deflated x/deff, n/deff can be passed.
+// Counts may be non-integer.
 export function wilson(x: number, n: number, z = Z_975): Interval {
   requireRange(
     n > 0 && x >= 0 && x <= n && z > 0,

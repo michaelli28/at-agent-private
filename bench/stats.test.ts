@@ -24,7 +24,7 @@ describe("wilson", () => {
     expect(w.upper).toBeCloseTo(0.9541, 4);
   });
 
-  it("accepts non-integer counts so design-effect-deflated x/deff, n/deff work", () => {
+  it("accepts non-integer counts", () => {
     const w = wilson(110 / 2.5, 120 / 2.5);
     expect(w.p).toBeCloseTo(110 / 120, 12);
     expect(w.upper - w.lower).toBeGreaterThan(0.9541 - 0.8534);
