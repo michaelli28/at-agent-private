@@ -21,6 +21,10 @@ const BENCH = dirname(fileURLToPath(import.meta.url));
 const ROOT = resolve(BENCH, "..");
 
 const DEV_DIR = join(BENCH, "corpus", "dev");
+// Scripts dev bases load from a file (the React bundle aside): an edit to one changes the page without touching it.
+const DEV_BASE_SCRIPTS = ["native-dialog.js", "remount-on-keydown.js"].map(
+  (f) => join(DEV_DIR, "base", f),
+);
 const VARIANTS_DIR = MOUNTS["/variants/"];
 const BAD_LABELS = join(BENCH, "corpus", "test", "bad-labels.json");
 const BAD_MANIFEST = join(BENCH, "corpus", "test", "bad-manifest.json");
@@ -119,7 +123,7 @@ export async function prepare(set: PageSet): Promise<Prepared> {
       );
       return {
         pages,
-        inputs: [labelsPath, ...files, REACT_BUNDLE],
+        inputs: [labelsPath, ...files, ...DEV_BASE_SCRIPTS, REACT_BUNDLE],
         localOnly: true,
       };
     }

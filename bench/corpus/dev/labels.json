@@ -475,6 +475,205 @@
           "keyboardAccessible": false,
           "expectedGapType": null,
           "note": "Plain text div with no handler (negative control)."
+        },
+        "portal-host": {
+          "interactive": false,
+          "keyboardAccessible": false,
+          "expectedGapType": null,
+          "note": "The header <div> React portals the share button into. React 17+ marks it _reactListening and delegates the portal's events from it, but it is a container, not a control."
+        },
+        "share-button": {
+          "interactive": true,
+          "keyboardAccessible": true,
+          "expectedGapType": null,
+          "note": "A native <button> React portals into the page header; focusable, named by its text, Enter works."
+        }
+      }
+    },
+    "disclosure-tabs": {
+      "file": "base/disclosure-tabs.html",
+      "page": {
+        "keyboardTrap": false,
+        "trapEscapable": null,
+        "contextChangeOnFocus": false,
+        "focusLostOnArrival": false
+      },
+      "elements": {
+        "a-skip-link": {
+          "interactive": true,
+          "keyboardAccessible": true,
+          "expectedGapType": null,
+          "note": "Skip link to the product details; a native link."
+        },
+        "float-tablist": {
+          "interactive": false,
+          "keyboardAccessible": false,
+          "expectedGapType": null,
+          "note": "The first tablist's container: zero height, because its tabs float and nothing inside it clears them. Its keydown handler serves the arrow keys for its tabs; a container, not a control."
+        },
+        "float-tab-1": {
+          "interactive": true,
+          "keyboardAccessible": true,
+          "expectedGapType": null,
+          "note": "The selected tab (tabindex=0), a Tab stop; arrow keys move focus between the tabs (roving tabindex) and select the focused one."
+        },
+        "float-tab-2": {
+          "interactive": true,
+          "keyboardAccessible": true,
+          "expectedGapType": null,
+          "note": "The unselected tab (tabindex=-1): out of the Tab order by design and reached with ArrowRight from the first tab (the WAI-ARIA tabs pattern), so keyboard-accessible."
+        },
+        "contents-tablist": {
+          "interactive": false,
+          "keyboardAccessible": false,
+          "expectedGapType": null,
+          "note": "The second tablist's container: display: contents, so it has no box of its own. Its keydown handler serves the arrow keys for its tabs; a container, not a control."
+        },
+        "contents-tab-1": {
+          "interactive": true,
+          "keyboardAccessible": true,
+          "expectedGapType": null,
+          "note": "The selected tab (tabindex=0), a Tab stop; arrow keys move focus between the tabs (roving tabindex) and select the focused one."
+        },
+        "contents-tab-2": {
+          "interactive": true,
+          "keyboardAccessible": true,
+          "expectedGapType": null,
+          "note": "The unselected tab (tabindex=-1): out of the Tab order by design and reached with ArrowRight from the first tab (the WAI-ARIA tabs pattern), so keyboard-accessible."
+        },
+        "faq-shipping": {
+          "interactive": false,
+          "keyboardAccessible": false,
+          "expectedGapType": null,
+          "note": "A <details> disclosure: a group, not a control; its <summary> is the control."
+        },
+        "faq-shipping-summary": {
+          "interactive": true,
+          "keyboardAccessible": true,
+          "expectedGapType": null,
+          "note": "The <summary> that opens and closes its <details>: native, a Tab stop, Enter toggles it."
+        },
+        "faq-returns": {
+          "interactive": false,
+          "keyboardAccessible": false,
+          "expectedGapType": null,
+          "note": "A <details> disclosure: a group, not a control; its <summary> is the control."
+        },
+        "faq-returns-summary": {
+          "interactive": true,
+          "keyboardAccessible": true,
+          "expectedGapType": null,
+          "note": "The <summary> that opens and closes its <details>: native, a Tab stop, Enter toggles it."
+        }
+      }
+    },
+    "native-dialog": {
+      "file": "base/native-dialog.html",
+      "page": {
+        "keyboardTrap": false,
+        "trapEscapable": null,
+        "contextChangeOnFocus": false,
+        "focusLostOnArrival": false
+      },
+      "elements": {
+        "shop-link": {
+          "interactive": true,
+          "keyboardAccessible": true,
+          "expectedGapType": null,
+          "note": "Behind the age-gate <dialog> that showModal() opens on load: inert until Confirm closes it, then reachable with Tab. Content a modal dialog blocks is not an accessibility gap."
+        },
+        "join-button": {
+          "interactive": true,
+          "keyboardAccessible": true,
+          "expectedGapType": null,
+          "note": "Behind the age-gate <dialog> that showModal() opens on load: inert until Confirm closes it, then reachable with Tab. Content a modal dialog blocks is not an accessibility gap."
+        },
+        "confirm-button": {
+          "interactive": true,
+          "keyboardAccessible": true,
+          "expectedGapType": null,
+          "note": "The age gate's Confirm button (a form method=dialog submit): focused when the dialog opens; Enter closes the dialog. Tab from it leaves the page for the browser's own UI, so the native modal is no trap."
+        }
+      }
+    },
+    "one-button": {
+      "file": "base/one-button.html",
+      "page": {
+        "keyboardTrap": false,
+        "trapEscapable": null,
+        "contextChangeOnFocus": false,
+        "focusLostOnArrival": false
+      },
+      "elements": {
+        "only-button": {
+          "interactive": true,
+          "keyboardAccessible": true,
+          "expectedGapType": null,
+          "note": "The page's only Tab stop: a native button; Enter subscribes."
+        }
+      }
+    },
+    "scroll-panel": {
+      "file": "base/scroll-panel.html",
+      "page": {
+        "keyboardTrap": false,
+        "trapEscapable": null,
+        "contextChangeOnFocus": false,
+        "focusLostOnArrival": false
+      },
+      "elements": {
+        "link-1": {
+          "interactive": true,
+          "keyboardAccessible": true,
+          "expectedGapType": null,
+          "note": "A native link."
+        },
+        "link-2": {
+          "interactive": true,
+          "keyboardAccessible": true,
+          "expectedGapType": null,
+          "note": "A native link."
+        },
+        "agree-button": {
+          "interactive": true,
+          "keyboardAccessible": true,
+          "expectedGapType": null,
+          "note": "A native button; Enter agrees. The two scroll regions after it are untagged Tab stops (keyboard-focusable scrollers) that the walk's focusable count does not include."
+        }
+      }
+    },
+    "remount-on-keydown": {
+      "file": "base/remount-on-keydown.html",
+      "page": {
+        "keyboardTrap": false,
+        "trapEscapable": null,
+        "contextChangeOnFocus": false,
+        "focusLostOnArrival": false
+      },
+      "elements": {
+        "home-link": {
+          "interactive": true,
+          "keyboardAccessible": true,
+          "expectedGapType": null,
+          "note": "A native link. The page re-renders <main> on its first keydown, so Tab reaches a new node with the same markup."
+        },
+        "about-link": {
+          "interactive": true,
+          "keyboardAccessible": true,
+          "expectedGapType": null,
+          "note": "A native link. The page re-renders <main> on its first keydown, so Tab reaches a new node with the same markup."
+        },
+        "buy-button": {
+          "interactive": true,
+          "keyboardAccessible": true,
+          "expectedGapType": null,
+          "note": "A native button; its click handler is delegated to the document, so Enter works on the re-rendered node too."
+        },
+        "cart-button": {
+          "interactive": true,
+          "keyboardAccessible": true,
+          "expectedGapType": null,
+          "note": "A role=button div with tabindex=0; Enter and Space are handled on the document, so it works on the re-rendered node too."
         }
       }
     }

@@ -25,6 +25,7 @@ export const OPERATOR_IDS = [
   "M9",
   "M10",
   "M11",
+  "M12",
   "M13",
 ] as const;
 export const OperatorIdSchema = z.enum(OPERATOR_IDS);

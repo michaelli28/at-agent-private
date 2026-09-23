@@ -534,7 +534,7 @@ type Cell = "Y" | "N" | "E" | "U";
 // Operators scored by a page-level verdict rather than a gap on the target: 2.1.2 for the traps, 3.2.1 for M6's
 // navigation and for M8/M9, which exist to show the 3.2.1 judge's two timing fixes. M7 plants the same focus drop
 // but is scored on its target's not_focusable gap. Every other operator reads the shared gap detector.
-const TRAP_OPERATORS: readonly OperatorId[] = ["M5", "M10", "M11"];
+const TRAP_OPERATORS: readonly OperatorId[] = ["M5", "M10", "M11", "M12"];
 const CONTEXT_OPERATORS: readonly OperatorId[] = ["M6", "M8", "M9"];
 // A decoy's target is labelled with no gap, so a Y on it is a false alarm.
 const DECOY_OPERATORS: readonly OperatorId[] = ["M13"];

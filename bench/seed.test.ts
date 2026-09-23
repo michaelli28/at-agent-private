@@ -204,6 +204,7 @@ describe("generation", () => {
         M9: "not_focusable",
         M10: null,
         M11: null,
+        M12: null,
         // The decoy: the page switched the target off, so the right answer is no gap.
         M13: null,
       };
@@ -221,7 +222,7 @@ describe("generation", () => {
           "missing_from_a11y_tree",
         ]);
       }
-      const trap = ["M5", "M10", "M11"].includes(v.operator);
+      const trap = ["M5", "M10", "M11", "M12"].includes(v.operator);
       expect(v.page.keyboardTrap, id).toBe(
         trap ? true : base.page.keyboardTrap,
       );
@@ -306,6 +307,8 @@ const FactsSchema = z.array(
     tabIndex: z.number(),
     disabled: z.boolean(),
     visible: z.boolean(),
+    // Inside a composite widget (the roles gaps/dom-crawler.ts COMPOSITE_ROLES lists), counting from the parent.
+    widgetMember: z.boolean(),
   }),
 );
 
@@ -325,12 +328,16 @@ describe("labels agree with the DOM", () => {
           labels: v,
         })),
       ];
+      const roving = new Set<string>();
       for (const p of pages) {
         const page = await open(p.path, Object.keys(p.labels.elements));
         const facts = FactsSchema.parse(
           await page.evaluate(`Array.prototype.map.call(document.querySelectorAll('[data-bench-id]'), function (el) {
             return { id: el.getAttribute('data-bench-id'), tabIndex: el.tabIndex, disabled: el.disabled === true,
-              visible: el.checkVisibility({ visibilityProperty: true, opacityProperty: true }) };
+              visible: el.checkVisibility({ visibilityProperty: true, opacityProperty: true }),
+              widgetMember: el.parentElement !== null && el.parentElement.closest(
+                '[role="radiogroup"], [role="tablist"], [role="menu"], [role="menubar"], [role="listbox"], ' +
+                '[role="grid"], [role="treegrid"], [role="tree"], [role="toolbar"]') !== null };
           })`),
         );
         await page.close();
@@ -342,7 +349,23 @@ describe("labels agree with the DOM", () => {
           const where = `${p.id} ${f.id}`;
           if (label.revealedBy) {
             expect(f.visible, `${where} is hidden until revealed`).toBe(false);
+          } else if (
+            label.interactive &&
+            label.keyboardAccessible &&
+            f.widgetMember &&
+            f.tabIndex === -1
+          ) {
+            // Roving tabindex: a composite widget's inactive member is out of the Tab order by design and reached
+            // with arrow keys. The markup side is asserted here, the arrow keys in "base pages behave as labelled"
+            // (disclosure-tabs); the pinned list below keeps a new member from slipping through untested.
+            roving.add(`${"base" in p.labels ? p.labels.base : p.id} ${f.id}`);
+            expect(
+              !f.disabled && f.visible,
+              `${where} is a visible roving-tabindex member`,
+            ).toBe(true);
           } else if (label.interactive && label.keyboardAccessible) {
+            // native-dialog's background controls pass only because el.tabIndex ignores inertness: the modal
+            // opened on load blocks them until Confirm closes it ("base pages behave as labelled").
             expect(
               f.tabIndex >= 0 && !f.disabled && f.visible,
               `${where} is focusable`,
@@ -364,6 +387,10 @@ describe("labels agree with the DOM", () => {
           }
         }
       }
+      expect([...roving].sort()).toEqual([
+        "disclosure-tabs contents-tab-2",
+        "disclosure-tabs float-tab-2",
+      ]);
     },
     LONG,
   );
@@ -559,10 +586,35 @@ describe("operators behave as labelled", () => {
           `${id}: Escape releases nothing`,
         ).toBe(true);
         await page.close();
+        // Shift+Tab from a fresh load enters at the page's last Tab stop. With the Tab walk above, this puts every
+        // stop Chromium reaches from load in the loop, on every base but scroll-panel (next test).
+        if (!id.startsWith("scroll-panel__")) {
+          const fresh = await open(`/variants/${v.file}`, [v.target]);
+          await fresh.keyboard.press("Shift+Tab");
+          expect(await inLoop(fresh), `${id}: Shift+Tab from load`).toBe(true);
+          await fresh.close();
+        }
       }
     },
     LONG,
   );
+
+  it("scroll-panel__M10: the two scroll regions sit outside the loop, so Shift+Tab from a fresh load reaches one and the next Tab leaves the page", async () => {
+    const found = ofOperator("M10").find(([id]) =>
+      id.startsWith("scroll-panel__"),
+    );
+    if (!found) throw new Error("no M10 variant on scroll-panel");
+    const [, v] = found;
+    const page = await open(`/variants/${v.file}`, [v.target]);
+    await page.keyboard.press("Shift+Tab");
+    expect(
+      await page.evaluate("document.activeElement.getAttribute('aria-label')"),
+    ).toBe("Privacy notice text");
+    await page.keyboard.press("Tab");
+    expect(await onBody(page)).toBe(true);
+    expect(await page.evaluate("document.hasFocus()")).toBe(false);
+    await page.close();
+  });
 
   it(
     "M11 replaces its target with a copy on Tab and Shift+Tab and focuses the copy, so focus never leaves it",
@@ -579,6 +631,36 @@ describe("operators behave as labelled", () => {
           await page.evaluate("window.__benchFirst.isConnected"),
           `${id}: the focused node is a copy`,
         ).toBe(false);
+        await page.close();
+      }
+    },
+    LONG,
+  );
+
+  it(
+    "M12 loops Tab among its target and the two scroll regions after it, and Shift+Tab the other way",
+    async () => {
+      for (const [id, v] of ofOperator("M12")) {
+        const page = await open(`/variants/${v.file}`, [v.target]);
+        // 0 = the target, 1 and 2 = the scroll regions after it, -1 = anywhere else.
+        const at = async (): Promise<unknown> =>
+          page.evaluate(`(function () {
+            var t = document.querySelector('${sel(v.target)}');
+            return [t, t.nextElementSibling, t.nextElementSibling.nextElementSibling].indexOf(document.activeElement);
+          })()`);
+        await page.focus(sel(v.target));
+        const path: unknown[] = [];
+        for (const key of ["Tab", "Tab", "Tab", "Tab", "Tab", "Tab"]) {
+          await page.keyboard.press(key);
+          path.push(await at());
+        }
+        for (const key of ["Shift+Tab", "Shift+Tab", "Shift+Tab", "Escape"]) {
+          await page.keyboard.press(key);
+          path.push(await at());
+        }
+        await page.keyboard.press("Tab");
+        path.push(await at());
+        expect(path, id).toEqual([1, 2, 0, 1, 2, 0, 2, 1, 0, 0, 1]);
         await page.close();
       }
     },
@@ -743,6 +825,149 @@ describe("base pages behave as labelled", () => {
     expect(
       await page.evaluate('document.getElementById("status").textContent'),
     ).toBe("Saved to wishlist");
+    // The share button is portalled into the static header's host div, and works from the keyboard there.
+    expect(
+      await page.evaluate(
+        `document.querySelector('${sel("portal-host")}').contains(document.querySelector('${sel("share-button")}'))`,
+      ),
+    ).toBe(true);
+    await page.focus(sel("share-button"));
+    await page.keyboard.press("Enter");
+    expect(
+      await page.evaluate('document.getElementById("status").textContent'),
+    ).toBe("Link copied");
+    await page.close();
+  });
+
+  const tabPath = async (page: Page, presses: number): Promise<unknown[]> => {
+    const path: unknown[] = [];
+    for (let i = 0; i < presses; i++) {
+      await page.keyboard.press("Tab");
+      path.push(await activeId(page));
+    }
+    return path;
+  };
+
+  it("native-dialog: focus starts in the dialog, Tab leaves the page instead of reaching the background, and Confirm opens the page", async () => {
+    const labels = baseLabels.pages["native-dialog"];
+    expect(labels.page).toMatchObject({ keyboardTrap: false });
+    const page = await open(
+      `/corpus/${labels.file}`,
+      Object.keys(labels.elements),
+    );
+    // null: focus has left the document for the browser's own UI, so the native modal confines nothing.
+    expect([await activeId(page), ...(await tabPath(page, 4))]).toEqual([
+      "confirm-button",
+      null,
+      "confirm-button",
+      null,
+      "confirm-button",
+    ]);
+    await page.keyboard.press("Enter");
+    expect(
+      await page.evaluate('document.getElementById("age-gate").open'),
+    ).toBe(false);
+    expect(await tabPath(page, 2)).toEqual(["shop-link", "join-button"]);
+    await page.close();
+  });
+
+  it("disclosure-tabs: Tab reaches each tablist's selected tab and each summary, ArrowRight moves to tab 2, Enter opens a details", async () => {
+    const labels = baseLabels.pages["disclosure-tabs"];
+    const page = await open(
+      `/corpus/${labels.file}`,
+      Object.keys(labels.elements),
+    );
+    expect(await tabPath(page, 5)).toEqual([
+      "a-skip-link",
+      "float-tab-1",
+      "contents-tab-1",
+      "faq-shipping-summary",
+      "faq-returns-summary",
+    ]);
+    for (const list of ["float", "contents"]) {
+      await page.focus(sel(`${list}-tab-1`));
+      await page.keyboard.press("ArrowRight");
+      expect(await activeId(page), list).toBe(`${list}-tab-2`);
+    }
+    await page.focus(sel("faq-shipping-summary"));
+    await page.keyboard.press("Enter");
+    expect(
+      await page.evaluate(
+        `document.querySelector('${sel("faq-shipping")}').open`,
+      ),
+    ).toBe(true);
+    await page.close();
+  });
+
+  it("one-button: Tab reaches the only button, Enter works, and the next Tab leaves the page", async () => {
+    const labels = baseLabels.pages["one-button"];
+    const page = await open(
+      `/corpus/${labels.file}`,
+      Object.keys(labels.elements),
+    );
+    expect(await tabPath(page, 1)).toEqual(["only-button"]);
+    await page.keyboard.press("Enter");
+    expect(
+      await page.evaluate('document.getElementById("status").textContent'),
+    ).toBe("Subscribed");
+    expect(await tabPath(page, 2)).toEqual([null, "only-button"]);
+    await page.close();
+  });
+
+  it("scroll-panel: Tab passes the button, then both scroll regions (untagged Tab stops), then leaves the page", async () => {
+    const labels = baseLabels.pages["scroll-panel"];
+    const page = await open(
+      `/corpus/${labels.file}`,
+      Object.keys(labels.elements),
+    );
+    const path: unknown[] = [];
+    for (let i = 0; i < 6; i++) {
+      await page.keyboard.press("Tab");
+      path.push(
+        await page.evaluate(
+          "document.activeElement.getAttribute('data-bench-id') || document.activeElement.getAttribute('aria-label')",
+        ),
+      );
+    }
+    expect(path).toEqual([
+      "link-1",
+      "link-2",
+      "agree-button",
+      "Terms of service text",
+      "Privacy notice text",
+      null,
+    ]);
+    await page.focus(sel("agree-button"));
+    await page.keyboard.press("Enter");
+    expect(
+      await page.evaluate('document.getElementById("status").textContent'),
+    ).toBe("Thanks, you have agreed");
+    await page.close();
+  });
+
+  it("remount-on-keydown: the first keydown re-renders main, and Tab still reaches every control, which still works", async () => {
+    const labels = baseLabels.pages["remount-on-keydown"];
+    const page = await open(
+      `/corpus/${labels.file}`,
+      Object.keys(labels.elements),
+    );
+    await page.evaluate(
+      `window.__benchFirst = document.querySelector('${sel("home-link")}')`,
+    );
+    expect(await tabPath(page, 4)).toEqual([
+      "home-link",
+      "about-link",
+      "buy-button",
+      "cart-button",
+    ]);
+    expect(await page.evaluate("window.__benchFirst.isConnected")).toBe(false);
+    const status = (): Promise<unknown> =>
+      page.evaluate('document.getElementById("status").textContent');
+    await page.keyboard.press("Enter");
+    expect(await status()).toBe("Added to cart");
+    await page.keyboard.press("Shift+Tab");
+    await page.keyboard.press("Enter");
+    expect(await status()).toBe("Bought");
     await page.close();
   });
 });
