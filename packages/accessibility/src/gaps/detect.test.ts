@@ -293,8 +293,9 @@ describe('crawlPageWithGapDetection with a Tab walk on the same load (F3)', () =
 
 // The Stage-A reviewer's edge probes (scratchpad verify-p2a/G1/edge-probes.mts), each with the verdict a careful tester
 // would give, plus the neighbouring cases each fix must not break.
-const probePage = (body: string): string =>
-  `<!doctype html><html lang="en"><head><meta charset="utf-8"><title>Probe</title></head><body><main>${body}</main></body></html>`
+const bodyPage = (body: string): string =>
+  `<!doctype html><html lang="en"><head><meta charset="utf-8"><title>Probe</title></head><body>${body}</body></html>`
+const probePage = (body: string): string => bodyPage(`<main>${body}</main>`)
 
 const DISABLED_HTML = probePage(`<a href="#top" data-bench-id="first">Top</a>
 <label>Email <input data-bench-id="email"></label>
@@ -558,5 +559,101 @@ describe('crawlPageWithGapDetection on the G1b reviewer probes (G1c)', () => {
       'deco-btn-disabled': 'zero-area',
       'inert-zero-link': 'zero-area',
     })
+  })
+})
+
+// Content a page switched off, which Chromium leaves out of the accessibility tree: an inert region, the page behind a
+// <dialog> opened with showModal(), either one also aria-hidden, and CSS interactivity: inert (F2).
+const INERT_HTML = probePage(`<a href="#a" data-bench-id="first">First</a>
+<div inert data-bench-id="slide-2"><h2>Slide 2</h2><button type="button" data-bench-id="inert-btn" onclick="void 0">Buy</button>
+<a href="#s2" data-bench-id="inert-link">Read more</a></div>
+<button type="button" inert data-bench-id="inert-self" onclick="void 0">Self</button>
+<a href="#end" data-bench-id="last">End</a>`)
+
+const MODAL_HTML = bodyPage(`<main><a href="#a" data-bench-id="bg-link">Background link</a>
+<button type="button" data-bench-id="bg-btn" onclick="void 0">Background</button></main>
+<dialog data-bench-id="dlg" aria-label="Age gate"><form method="dialog"><button data-bench-id="dlg-close">I am 18</button></form></dialog>
+<script>document.querySelector('dialog').showModal()</script>`)
+
+const MODAL_ARIA_HIDDEN_HTML = bodyPage(`<main aria-hidden="true"><a href="#a" data-bench-id="bg-link">Shop</a>
+<button type="button" data-bench-id="bg-btn" onclick="void 0">Join</button></main>
+<dialog aria-label="Cookies"><form method="dialog"><button data-bench-id="accept">Accept</button></form></dialog>
+<script>document.querySelector('dialog').showModal()</script>`)
+
+const INERT_ARIA_HIDDEN_HTML = bodyPage(`<a href="#a" data-bench-id="first">First</a>
+<div inert aria-hidden="true" data-bench-id="slide-2"><button type="button" data-bench-id="slide-btn" onclick="void 0">Buy</button></div>
+<a href="#z" data-bench-id="last">Last</a>`)
+
+const CSS_INERT_HTML = bodyPage(`<a href="#a" data-bench-id="first">First</a>
+<div style="interactivity: inert" data-bench-id="css-inert"><button type="button" onclick="void 0" data-bench-id="ci-btn">Buy</button>
+<a href="#x" data-bench-id="ci-link">More</a></div>
+<a href="#z" data-bench-id="last">Last</a>`)
+
+// Chromium prunes every aria-hidden element that cannot take focus, switched off or not: these mouse-only controls
+// are hidden from assistive technology and stay critical.
+const ARIA_HIDDEN_ONLY_HTML = bodyPage(`<a href="#a" data-bench-id="first">First</a>
+<div aria-hidden="true" onclick="void 0" data-bench-id="self-div">Close</div>
+<div aria-hidden="true"><span onclick="void 0" data-bench-id="sub-span">More</span></div>
+<a href="#z" data-bench-id="last">Last</a>`)
+
+// A modal <dialog> inside a shadow root: document.querySelector does not see it, so the page behind it stays flagged.
+const SHADOW_MODAL_HTML = bodyPage(`<a href="#a" data-bench-id="bg-link">Background</a><button type="button" onclick="void 0" data-bench-id="bg-btn">Join</button><x-host></x-host>
+<script>
+var root = document.querySelector('x-host').attachShadow({ mode: 'open' })
+root.innerHTML = '<dialog aria-label="Web component"><button>OK</button></dialog>'
+root.querySelector('dialog').showModal()
+</script>`)
+
+describe('crawlPageWithGapDetection on content the page switched off (F2)', () => {
+  let client: BrowserClient
+  let page: BrowserPage
+
+  beforeAll(async () => {
+    client = new BrowserClient()
+    await client.launch()
+    page = await client.newPage()
+  })
+
+  afterAll(async () => {
+    await page.close()
+    await client.close()
+  })
+
+  async function detectProbe(html: string, tabWalk: GapDetectionOptions['tabWalk']): Promise<DualCrawlResult> {
+    await page.playwrightPage.unrouteAll()
+    await page.playwrightPage.route(URL_, (route) => route.fulfill({ contentType: 'text/html', body: html }))
+    return crawlPageWithGapDetection(page.playwrightPage, URL_, { tabWalk })
+  }
+
+  const byId = (r: DualCrawlResult): Record<string, string> =>
+    Object.fromEntries(r.gaps.map((g) => [benchId(g), g.gapType]))
+
+  const SWITCHED_OFF: Record<string, string> = {
+    'an inert region and an inert button': INERT_HTML,
+    'the page behind a <dialog> opened with showModal()': MODAL_HTML,
+    'an aria-hidden page behind a modal <dialog>': MODAL_ARIA_HIDDEN_HTML,
+    'an inert, aria-hidden slide': INERT_ARIA_HIDDEN_HTML,
+    'content under CSS interactivity: inert': CSS_INERT_HTML,
+  }
+  for (const [name, html] of Object.entries(SWITCHED_OFF)) {
+    it(`flags nothing in ${name}, with a walk and without`, async () => {
+      for (const tabWalk of [{ settleMs: 50 }, false]) {
+        const result = await detectProbe(html, tabWalk)
+        expect(result.errors).toEqual([])
+        expect(byId(result), `walk ${tabWalk !== false}`).toEqual({})
+      }
+    })
+  }
+
+  it('keeps an aria-hidden mouse-only control missing_from_a11y_tree: the page did not switch it off', async () => {
+    const result = await detectProbe(ARIA_HIDDEN_ONLY_HTML, { settleMs: 50 })
+    expect(result.keyboard.notFocusableAssessed).toBe(true)
+    expect(byId(result)).toEqual({ 'self-div': 'missing_from_a11y_tree', 'sub-span': 'missing_from_a11y_tree' })
+  })
+
+  it('still flags the page behind a modal <dialog> in a shadow root (a known miss, pinned both ways)', async () => {
+    const result = await detectProbe(SHADOW_MODAL_HTML, { settleMs: 50 })
+    expect(result.errors).toEqual([])
+    expect(byId(result)).toEqual({ 'bg-link': 'missing_from_a11y_tree', 'bg-btn': 'missing_from_a11y_tree' })
   })
 })

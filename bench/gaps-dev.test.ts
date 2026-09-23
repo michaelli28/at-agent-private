@@ -242,9 +242,6 @@ describe("dev bases (F1 navbar hidden elements, F2/F9 React div, F3 walk, 0 gaps
         // those listeners as the host's own.
         "react-div-button: portal-host: want [] got [wrong_role]",
         ...alarmsOn("disclosure-tabs", DISCLOSURE_ALARMS),
-        // Content an open modal <dialog> blocks is left out of the accessibility tree.
-        "native-dialog: shop-link: want [] got [missing_from_a11y_tree]",
-        "native-dialog: join-button: want [] got [missing_from_a11y_tree]",
         // <main> is re-rendered on the first keydown, so the walk reaches only new nodes, none the crawl listed. Only
         // the links are flagged: the buttons' click handling is delegated to the document, and the not_focusable
         // branch needs an own click handler or cursor:pointer.
@@ -297,18 +294,6 @@ describe("dev variants (every seeded target and every other labelled element)", 
         "disclosure-tabs__M8__a-skip-link: target a-skip-link: want [not_focusable] got []",
         "one-button__M8__only-button: target only-button: want [not_focusable] got []",
         "scroll-panel__M8__agree-button: target agree-button: want [not_focusable] got []",
-        // False alarms on the M13 decoy: Chromium leaves inert content out of the accessibility tree, and the
-        // detector reports every candidate missing from it as missing_from_a11y_tree.
-        "form__M13__email-input: target email-input: want [] got [missing_from_a11y_tree]",
-        "good-operable__M13__nav-about: target nav-about: want [] got [missing_from_a11y_tree]",
-        "identical-links__M13__read-more-01: target read-more-01: want [] got [missing_from_a11y_tree]",
-        "js-handlers__M13__custom-button: target custom-button: want [] got [missing_from_a11y_tree]",
-        "modal__M13__close-button: target close-button: want [] got [missing_from_a11y_tree]",
-        "navbar__M13__brand: target brand: want [] got [missing_from_a11y_tree]",
-        "three-links__M13__link-1: target link-1: want [] got [missing_from_a11y_tree]",
-        "disclosure-tabs__M13__a-skip-link: target a-skip-link: want [] got [missing_from_a11y_tree]",
-        "one-button__M13__only-button: target only-button: want [] got [missing_from_a11y_tree]",
-        "scroll-panel__M13__agree-button: target agree-button: want [] got [missing_from_a11y_tree]",
         // The disclosure-tabs base's own alarms, carried into its variants.
         ...[
           "disclosure-tabs__M3__a-skip-link",

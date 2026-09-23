@@ -214,11 +214,40 @@ const ELEMENTS_BY_ID_FN = `function () {
   return out
 }`
 
+async function elementsById(page: Page): Promise<Map<string, DOMElement>> {
+  const byId = new Map<string, DOMElement>()
+  const cdp = await page.context().newCDPSession(page)
+  await cdp.send('DOM.getDocument', { depth: 0 })
+  const { result } = await cdp.send('Runtime.evaluate', { expression: `(${ELEMENTS_BY_ID_FN})()` })
+  const { result: entries } = await cdp.send('Runtime.getProperties', {
+    objectId: result.objectId ?? '',
+    ownProperties: true,
+  })
+  for (const entry of entries) {
+    if (!/^\d+$/.test(entry.name) || !entry.value?.objectId) continue
+    const { node } = await cdp.send('DOM.describeNode', { objectId: entry.value.objectId })
+    const attributes: Record<string, string> = {}
+    for (let i = 0; i < (node.attributes ?? []).length; i += 2)
+      attributes[node.attributes![i]] = node.attributes![i + 1]
+    byId.set(attributes['id'], {
+      nodeId: 0,
+      backendNodeId: node.backendNodeId,
+      nodeName: node.nodeName,
+      localName: node.localName,
+      attributes,
+      boundingBox: null,
+      pageUrl: 'http://fixture.test/',
+    })
+  }
+  await cdp.detach()
+  return byId
+}
+
 describe('collectFocusFacts (G1b)', () => {
   let client: BrowserClient
   let browserPage: BrowserPage
   let page: Page
-  const byId = new Map<string, DOMElement>()
+  let byId: Map<string, DOMElement>
   let facts: Map<number, FocusFacts>
 
   beforeAll(async () => {
@@ -227,30 +256,7 @@ describe('collectFocusFacts (G1b)', () => {
     browserPage = await client.newPage()
     page = browserPage.playwrightPage
     await page.setContent(FOCUS_FACTS_HTML)
-    const cdp = await page.context().newCDPSession(page)
-    await cdp.send('DOM.getDocument', { depth: 0 })
-    const { result } = await cdp.send('Runtime.evaluate', { expression: `(${ELEMENTS_BY_ID_FN})()` })
-    const { result: entries } = await cdp.send('Runtime.getProperties', {
-      objectId: result.objectId ?? '',
-      ownProperties: true,
-    })
-    for (const entry of entries) {
-      if (!/^\d+$/.test(entry.name) || !entry.value?.objectId) continue
-      const { node } = await cdp.send('DOM.describeNode', { objectId: entry.value.objectId })
-      const attributes: Record<string, string> = {}
-      for (let i = 0; i < (node.attributes ?? []).length; i += 2)
-        attributes[node.attributes![i]] = node.attributes![i + 1]
-      byId.set(attributes['id'], {
-        nodeId: 0,
-        backendNodeId: node.backendNodeId,
-        nodeName: node.nodeName,
-        localName: node.localName,
-        attributes,
-        boundingBox: null,
-        pageUrl: 'http://fixture.test/',
-      })
-    }
-    await cdp.detach()
+    byId = await elementsById(page)
     const collected = await collectFocusFacts(page, [...byId.values()])
     expect(collected.errors).toEqual([])
     facts = collected.facts
@@ -345,6 +351,56 @@ describe('collectFocusFacts (G1b)', () => {
 
   it('N4: follows the flat tree, so a tab slotted into a shadow tablist belongs to it', () => {
     expect(factsOf('slotted-tab')?.compositeWidget).toBe(byId.get('shadow-tablist')?.backendNodeId)
+  })
+})
+
+// Content the page switched off: a <dialog> opened with showModal() makes everything outside it inert (aria-hidden or
+// not), and CSS interactivity: inert does what the inert attribute does (F2).
+const SWITCHED_OFF_HTML = `<!doctype html><html lang="en"><head><title>switched off</title></head><body>
+<main aria-hidden="true"><a id="bg-hidden" href="#a">Shop</a></main>
+<button id="bg">Join</button>
+<dialog id="dlg" aria-label="Age gate"><button id="in-dialog">Confirm</button>
+<div inert><button id="in-dialog-inert">Later</button></div>
+<div style="interactivity: inert"><button id="in-dialog-css-inert">Skip</button></div></dialog>
+<script>document.getElementById('dlg').showModal()</script>
+</body></html>`
+
+describe('collectFocusFacts on content the page switched off (F2)', () => {
+  let client: BrowserClient
+  let browserPage: BrowserPage
+  let page: Page
+  let byId: Map<string, DOMElement>
+  let facts: Map<number, FocusFacts>
+
+  beforeAll(async () => {
+    client = new BrowserClient()
+    await client.launch()
+    browserPage = await client.newPage()
+    page = browserPage.playwrightPage
+    await page.setContent(SWITCHED_OFF_HTML)
+    byId = await elementsById(page)
+    const collected = await collectFocusFacts(page, [...byId.values()])
+    expect(collected.errors).toEqual([])
+    facts = collected.facts
+  })
+
+  afterAll(async () => {
+    await browserPage.close()
+    await client.close()
+  })
+
+  const factsOf = (id: string): FocusFacts | undefined => facts.get(byId.get(id)?.backendNodeId ?? -1)
+
+  it('marks everything outside an open modal <dialog>, and CSS interactivity: inert, as disabled', () => {
+    const ids = ['in-dialog', 'in-dialog-inert', 'in-dialog-css-inert', 'bg', 'bg-hidden']
+    expect(Object.fromEntries(ids.map((id) => [id, factsOf(id)?.disabled]))).toEqual({
+      'in-dialog': false,
+      'in-dialog-inert': true,
+      'in-dialog-css-inert': true,
+      bg: true,
+      'bg-hidden': true,
+    })
+    expect([factsOf('in-dialog')?.focusable, factsOf('bg')?.focusable]).toEqual([true, false])
   })
 })
 

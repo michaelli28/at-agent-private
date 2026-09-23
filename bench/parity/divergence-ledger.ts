@@ -149,7 +149,7 @@ export const DIVERGENCE_LEDGER: Record<string, LedgerEntry[]> =
         diff: "gap- SPAN[role-button-listener] not_focusable/critical: SPAN element has click handlers but has no tabindex and is not a native interactive element",
       },
     ],
-    // Unnamed generics get wrong_role instead of missing_from_a11y_tree, the unnamed group and the focused aria-hidden group get wrong_role before the name check (F2); visibility:hidden candidates dropped (F1), while the zero-area img-link takes focus and is kept (F1, G1b); shadow-root elements discovered (F9); cursor:pointer now read, img-link's included (F9); not_focusable from the walk (F3), gc-onclick included: its grid handles no arrow keys (F3, G1c).
+    // Unnamed generics get wrong_role instead of missing_from_a11y_tree, the unnamed group and the focused aria-hidden group get wrong_role before the name check (F2); visibility:hidden candidates dropped (F1), while the zero-area img-link takes focus and is kept (F1, G1b); shadow-root elements discovered (F9); cursor:pointer now read, img-link's included (F9); not_focusable from the walk (F3), gc-onclick included: its grid handles no arrow keys (F3, G1c); the inert button, which Chromium leaves out of the tree, is no candidate (F2).
     stress: [
       { fix: "F2", diff: 'ax+ generic ""', count: 24 },
       { fix: "F2", diff: 'ax+ none "" ignored:presentationalRole', count: 6 },
@@ -251,6 +251,10 @@ export const DIVERGENCE_LEDGER: Record<string, LedgerEntry[]> =
       {
         fix: "F2",
         diff: 'gap+ SPAN[span-onmouseup] wrong_role/serious: SPAN element has click handlers but generic role "generic"',
+      },
+      {
+        fix: "F2",
+        diff: "gap- BUTTON[inert-button] missing_from_a11y_tree/critical: BUTTON element with interactivity signals is not exposed in the accessibility tree",
       },
       {
         fix: "F1",

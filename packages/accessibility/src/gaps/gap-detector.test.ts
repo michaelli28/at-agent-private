@@ -1,5 +1,6 @@
 import { describe, it, expect } from 'vitest'
 import { buildBridgeMap, detectGaps, getElementDescription, isLikelyInteractive } from './gap-detector.js'
+import { NO_WALK } from './keyboard.js'
 import type {
   DOMElement,
   ElementNode,
@@ -484,10 +485,41 @@ describe('F2: generic roles and aria-hidden', () => {
 
   it('flags a node ignored for any other reason as missing from the tree', () => {
     const [gap] = classifyOne(el(33, 'DIV'), clickable, [
-      { backend: 33, role: 'none', name: '', ignoredReasons: ['inertElement'] },
+      { backend: 33, role: 'none', name: '', ignoredReasons: ['uninteresting'] },
     ])
     expect(gap?.gapType).toBe('missing_from_a11y_tree')
     expect(gap?.evidence).toBe('DIV element with interactivity signals is not exposed in the accessibility tree')
+  })
+})
+
+describe('F2: an unexposed candidate the page switched off is not a candidate', () => {
+  const clickable = { ...noSignals, hasClickHandler: true, isSemanticInteractive: true }
+  const off = fact({ disabled: true })
+  const button = { element: el(60, 'BUTTON'), signals: clickable, facts: off }
+
+  it('drops a disabled or inert candidate Chromium left out of the tree', () => {
+    expect(detectPage([button], [], NO_WALK)).toEqual({})
+  })
+
+  it('drops a disabled or inert candidate Chromium ignores as aria-hidden', () => {
+    const ariaHidden = [{ backend: 60, role: 'none', name: '', ignoredReasons: ['ariaHiddenSubtree'] }]
+    expect(detectPage([button], ariaHidden, NO_WALK)).toEqual({})
+  })
+
+  it('still flags an unexposed candidate the page did not switch off (the mouse-only hidden control)', () => {
+    const div = { element: el(61, 'DIV', { 'aria-hidden': 'true' }), signals: { ...noSignals, hasClickHandler: true } }
+    expect(detectPage([{ ...div, facts: fact() }], [], NO_WALK)).toEqual({ 61: 'missing_from_a11y_tree' })
+  })
+
+  it('still judges a disabled control Chromium exposes', () => {
+    const icon = { element: el(62, 'BUTTON', { disabled: '' }), signals: clickable, facts: off }
+    const ax = [{ backend: 62, role: 'button', name: '' }]
+    expect(detectPage([icon], ax, NO_WALK)).toEqual({ 62: 'no_accessible_name' })
+  })
+
+  it('drops a disabled aria-hidden button too: disabled, it works for no one, so it is not a mouse-only control', () => {
+    const hidden = el(63, 'BUTTON', { disabled: '', 'aria-hidden': 'true' })
+    expect(detectPage([{ element: hidden, signals: clickable, facts: off }], [], NO_WALK)).toEqual({})
   })
 })
 

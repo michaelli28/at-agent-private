@@ -163,7 +163,8 @@ export type KeyboardEvidence = z.infer<typeof KeyboardEvidenceSchema>
 // Read with the crawl, before the walk (G1b): whether a candidate is meant to be unfocusable, and the arrow-key group
 // it belongs to. WCAG 2.1.1 lets one Tab stop serve a radio group or a composite widget; arrows reach the rest.
 export const FocusFactsSchema = z.object({
-  // Natively disabled (:disabled, so also inside a disabled fieldset) or inside an inert subtree.
+  // Natively disabled (:disabled, so also inside a disabled fieldset), inert (an inert subtree or CSS
+  // interactivity: inert), or outside an open modal <dialog>.
   disabled: z.boolean(),
   // A Tab stop by the DOM's own rules: tabIndex >= 0, enabled, not inert, visible, and not an a/area without href
   // or tabindex. Decides zero-area candidates when no complete walk does (G1c).

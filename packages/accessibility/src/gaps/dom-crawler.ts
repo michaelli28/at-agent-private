@@ -155,8 +155,16 @@ const WIDGET_OF_JS = `
 // By value; the group anchors are then read as nodes only for the few candidates that have one. Chromium reports
 // tabIndex 0 for an a without href and inside inert, neither of which takes focus (G1c).
 const FOCUS_FLAGS_FN = `function () {${WIDGET_OF_JS}
-  var inert = false
-  for (var a = this; a; a = up(a)) if (a.hasAttribute('inert')) { inert = true; break }
+  // An open modal <dialog> makes everything outside it inert (HTML "blocked by a modal dialog"); Chromium names that
+  // reason only when aria-hidden does not mask it, so it is read here. A modal in a shadow root is not seen (F2).
+  // CSS interactivity: inert is the attribute's CSS form, and inherited, so it is read on the element itself.
+  var inert = getComputedStyle(this).interactivity === 'inert'
+  var inModal = false
+  for (var a = this; a; a = up(a)) {
+    if (a.hasAttribute('inert')) { inert = true; break }
+    if (a.localName === 'dialog' && a.matches(':modal')) { inModal = true; break }
+  }
+  if (!inModal && document.querySelector('dialog:modal') !== null) inert = true
   var disabled = this.matches(':disabled') || inert
   var hrefless = (this.localName === 'a' || this.localName === 'area') &&
     !this.hasAttribute('href') && !this.hasAttribute('tabindex')
