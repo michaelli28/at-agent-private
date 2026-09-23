@@ -20,18 +20,12 @@ export class BrowserPage {
     return this.page.title()
   }
 
-  async getByRole(
-    role: string,
-    options?: { name?: string | RegExp }
-  ): Promise<ElementData[]> {
+  async getByRole(role: string, options?: { name?: string | RegExp }): Promise<ElementData[]> {
     const locator = this.page.getByRole(role as Parameters<Page['getByRole']>[0], options)
     return this.locatorToElementData(locator, role)
   }
 
-  async getByText(
-    text: string | RegExp,
-    options?: { exact?: boolean }
-  ): Promise<ElementData[]> {
+  async getByText(text: string | RegExp, options?: { exact?: boolean }): Promise<ElementData[]> {
     const locator = this.page.getByText(text, options)
     return this.locatorToElementData(locator)
   }
@@ -46,7 +40,7 @@ export class BrowserPage {
 
       elements.push({
         tagName: await el.evaluate((node) => (node as Element).tagName.toLowerCase()),
-        role: await el.getAttribute('role') ?? role ?? null,
+        role: (await el.getAttribute('role')) ?? role ?? null,
         name: await el.evaluate((node) => {
           return (node as Element).getAttribute('aria-label') ?? (node as Element).textContent?.trim() ?? null
         }),
@@ -133,19 +127,20 @@ export class BrowserPage {
       }
     }
 
+    const levelMatch = content.match(/\[level=(\d+)\]/)
+    const level = levelMatch ? Number(levelMatch[1]) : undefined
+
     return {
       role,
       name,
       value: null,
       description: null,
+      ...(level === undefined ? {} : { level }),
       children: [],
     }
   }
 
-  async clickByRole(
-    role: string,
-    options?: { name?: string | RegExp; timeout?: number }
-  ): Promise<void> {
+  async clickByRole(role: string, options?: { name?: string | RegExp; timeout?: number }): Promise<void> {
     const { timeout, ...locatorOptions } = options ?? {}
     const locator = this.page.getByRole(role as Parameters<Page['getByRole']>[0], locatorOptions)
     await locator.click({ timeout })
@@ -160,11 +155,7 @@ export class BrowserPage {
     await this.page.fill(selector, value)
   }
 
-  async fillByRole(
-    role: string,
-    value: string,
-    options?: { name?: string | RegExp }
-  ): Promise<void> {
+  async fillByRole(role: string, value: string, options?: { name?: string | RegExp }): Promise<void> {
     const locator = this.page.getByRole(role as Parameters<Page['getByRole']>[0], options)
     await locator.fill(value)
   }
@@ -177,16 +168,17 @@ export class BrowserPage {
     role: string,
     options: { name?: string | RegExp },
     label: string,
-    duration: number = 500
+    duration: number = 500,
   ): Promise<void> {
     const locator = this.page.getByRole(role as Parameters<Page['getByRole']>[0], options)
     const box = await locator.boundingBox()
     if (!box) return
 
-    await this.page.evaluate(({ box, label, duration }) => {
-      const overlay = document.createElement('div')
-      overlay.id = '__agent_highlight__'
-      overlay.style.cssText = `
+    await this.page.evaluate(
+      ({ box, label, duration }) => {
+        const overlay = document.createElement('div')
+        overlay.id = '__agent_highlight__'
+        overlay.style.cssText = `
         position: fixed;
         left: ${box.x}px;
         top: ${box.y}px;
@@ -198,9 +190,9 @@ export class BrowserPage {
         z-index: 999999;
         box-sizing: border-box;
       `
-      const labelEl = document.createElement('div')
-      labelEl.textContent = label
-      labelEl.style.cssText = `
+        const labelEl = document.createElement('div')
+        labelEl.textContent = label
+        labelEl.style.cssText = `
         position: absolute;
         top: -24px;
         left: -3px;
@@ -209,11 +201,13 @@ export class BrowserPage {
         font: bold 12px system-ui;
         padding: 2px 6px;
       `
-      overlay.appendChild(labelEl)
-      document.body.appendChild(overlay)
+        overlay.appendChild(labelEl)
+        document.body.appendChild(overlay)
 
-      setTimeout(() => overlay.remove(), duration)
-    }, { box, label, duration })
+        setTimeout(() => overlay.remove(), duration)
+      },
+      { box, label, duration },
+    )
 
     await this.page.waitForTimeout(duration)
   }

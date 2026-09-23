@@ -1,8 +1,18 @@
 import type { BrowserPage } from '@at-agent/browser'
-import { Auditor, ScreenReaderSimulator, KeyboardTrapDetector } from '@at-agent/accessibility'
+import {
+  Auditor,
+  ScreenReaderSimulator,
+  runTabWalk,
+  judgeKeyboardTrap,
+  judgeContextChange,
+  type TabKey,
+  type KeyboardTrapResult,
+  type ContextChangeResult,
+} from '@at-agent/accessibility'
 import {
   type Action,
   type ActionResult,
+  type TabPress,
   ExecuteActionOptionsSchema,
   type ExecuteActionOptions,
 } from './types.js'
@@ -10,7 +20,7 @@ import {
 export async function executeAction(
   action: Action,
   page: BrowserPage,
-  options: Partial<ExecuteActionOptions> = {}
+  options: Partial<ExecuteActionOptions> = {},
 ): Promise<ActionResult> {
   const opts = ExecuteActionOptionsSchema.parse(options)
   switch (action.type) {
@@ -26,8 +36,8 @@ export async function executeAction(
       return executeObserve(page)
     case 'tab':
       return executeTab(action, page)
-    case 'checkTrap':
-      return executeCheckTrap(opts)
+    case 'checkKeyboard':
+      return executeCheckKeyboard(page)
     case 'done':
       return executeDone(action)
     default:
@@ -38,10 +48,7 @@ export async function executeAction(
   }
 }
 
-async function executeNavigate(
-  action: Action,
-  page: BrowserPage
-): Promise<ActionResult> {
+async function executeNavigate(action: Action, page: BrowserPage): Promise<ActionResult> {
   try {
     if (!action.target) {
       return { success: false, observation: 'No URL provided' }
@@ -62,11 +69,7 @@ async function executeNavigate(
 
 const DEFAULT_CLICK_TIMEOUT = 5000
 
-async function executeClick(
-  action: Action,
-  page: BrowserPage,
-  opts: ExecuteActionOptions
-): Promise<ActionResult> {
+async function executeClick(action: Action, page: BrowserPage, opts: ExecuteActionOptions): Promise<ActionResult> {
   try {
     if (!action.target) {
       return { success: false, observation: 'No target provided' }
@@ -100,11 +103,7 @@ async function executeClick(
   }
 }
 
-async function executeFill(
-  action: Action,
-  page: BrowserPage,
-  opts: ExecuteActionOptions
-): Promise<ActionResult> {
+async function executeFill(action: Action, page: BrowserPage, opts: ExecuteActionOptions): Promise<ActionResult> {
   try {
     if (!action.target || !action.value) {
       return { success: false, observation: 'No target or value provided' }
@@ -203,22 +202,29 @@ function executeDone(action: Action): ActionResult {
   }
 }
 
-async function executeTab(
-  action: Action,
-  page: BrowserPage
-): Promise<ActionResult> {
-  try {
-    const isReverse = action.target === 'previous'
-    const count = action.value ? parseInt(action.value, 10) : 1
-    const key = isReverse ? 'Shift+Tab' : 'Tab'
+async function executeTab(action: Action, page: BrowserPage): Promise<ActionResult> {
+  const raw = action.value?.trim() || '1'
+  const count = /^\d+$/.test(raw) ? Number(raw) : 0
+  if (count < 1) {
+    return {
+      success: false,
+      observation: `Tab failed: the press count must be a whole number of at least 1, in digits; got "${action.value}"`,
+    }
+  }
+  const key: TabKey = action.target === 'previous' ? 'Shift+Tab' : 'Tab'
 
+  // One read per PRESS, not one after the run: reading only at the end reports an N-press run as
+  // a single element, which the pre-fix detector scored as a one-element cycle.
+  const presses: TabPress[] = []
+  try {
     for (let i = 0; i < count; i++) {
       await page.playwrightPage.keyboard.press(key)
-    }
 
-    // Get the currently focused element's description
-    // Note: This callback runs in browser context via Playwright
-    const focusedElement = await page.playwrightPage.evaluate<string>(`
+      // WHY the expression below must not change: bench/legacy.test.ts toolsIdentityExpression()
+      // regex-extracts the first playwrightPage.evaluate<string> template literal out of this file and
+      // checks in Chromium that bench/legacy.ts rebuilds the frozen BEFORE column's focus strings
+      // exactly as it does. Keep it a plain template, no interpolation.
+      const element = await page.playwrightPage.evaluate<string>(`
       (() => {
         const el = document.activeElement;
         if (!el || el === document.body) {
@@ -239,49 +245,64 @@ async function executeTab(
       })()
     `)
 
-    return {
-      success: true,
-      observation: `Focused on: ${focusedElement}`,
-      focusedElement,
+      presses.push({ index: i + 1, key, element, timestamp: Date.now() })
     }
+
+    const elements = presses.map((p) => p.element)
+    const observation =
+      presses.length === 1 ? `Focused on: ${elements[0]}` : `Tab \u00d7${presses.length}: ${elements.join(' \u2192 ')}`
+
+    return { success: true, observation, presses }
   } catch (error) {
+    // The presses read before the failure happened; the run's tabPresses keeps them.
     return {
       success: false,
       observation: `Tab failed: ${error instanceof Error ? error.message : 'Unknown error'}`,
+      presses,
     }
   }
 }
 
-function executeCheckTrap(opts: ExecuteActionOptions): ActionResult {
-  const trapContext = opts.trapContext
-  if (!trapContext || !trapContext.focusHistory) {
+// WCAG 2.1.2 and 3.2.1, answered by driving the page rather than replaying a list of strings.
+// runTabWalk takes a raw Playwright Page, so page.playwrightPage is the whole seam.
+async function executeCheckKeyboard(page: BrowserPage): Promise<ActionResult> {
+  try {
+    const walk = await runTabWalk(page.playwrightPage)
+    const keyboard = judgeKeyboardTrap([walk])
+    const contextChange = judgeContextChange(walk)
     return {
       success: true,
-      observation: 'No focus history available for trap detection',
-      trapDetected: false,
+      observation: describeKeyboardCheck(keyboard, contextChange),
+      keyboard,
+      contextChange,
     }
-  }
-
-  // Create a detector and replay the focus history
-  const detector = new KeyboardTrapDetector({ minCycleCount: 5, maxHistorySize: 50 })
-
-  for (const event of trapContext.focusHistory) {
-    detector.recordFocus(event.element)
-  }
-
-  const result = detector.detectTrap()
-
-  if (result.trapped) {
+  } catch (error) {
     return {
-      success: true,
-      observation: `Keyboard trap detected (WCAG 2.1.2 violation): Focus is cycling through ${result.cycleLength} element(s) starting at "${result.element}"`,
-      trapDetected: true,
+      success: false,
+      observation: `Keyboard check failed: ${error instanceof Error ? error.message : 'Unknown error'}`,
     }
   }
+}
 
-  return {
-    success: true,
-    observation: 'No keyboard trap detected',
-    trapDetected: false,
-  }
+function describeKeyboardCheck(keyboard: KeyboardTrapResult, contextChange: ContextChangeResult): string {
+  const trapDetail =
+    keyboard.reason !== null
+      ? ` (undetermined: ${keyboard.reason})`
+      : keyboard.keyboardTrap
+        ? ` (focus is confined; escapable: ${keyboard.trapEscapable === true ? 'yes' : 'no'})`
+        : ''
+  const contextDetail =
+    contextChange.reason !== null
+      ? ` (undetermined: ${contextChange.reason})`
+      : contextChange.findings.length > 0
+        ? ` (${contextChange.findings.length} finding(s))`
+        : ''
+
+  return [
+    'Keyboard check complete. It walked focus through the whole page and pressed Escape and',
+    'Shift+Tab, so a dialog may have been dismissed and focus has moved: do not assume the page is',
+    'still in the state it was in before this check.',
+    `- Keyboard trap (WCAG 2.1.2): ${keyboard.verdict}${trapDetail}`,
+    `- Change of context on focus (WCAG 3.2.1): ${contextChange.verdict}${contextDetail}`,
+  ].join('\n')
 }

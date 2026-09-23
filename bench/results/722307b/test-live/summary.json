@@ -1,0 +1,5250 @@
+{
+  "schemaVersion": 3,
+  "set": "test-live",
+  "complete": true,
+  "createdAt": "2026-09-21T05:02:23.042Z",
+  "git": {
+    "sha": "722307bbc7c767eb44dc7758cfcd339517dc4a2b",
+    "shortSha": "722307b",
+    "dirty": false,
+    "dirtyPaths": []
+  },
+  "launch": {
+    "mode": "headless-shell",
+    "browserVersion": "143.0.7499.4",
+    "executablePath": "/Users/possible/Library/Caches/ms-playwright/chromium-1200/chrome-mac-arm64/Google Chrome for Testing.app/Contents/MacOS/Google Chrome for Testing",
+    "executablePathNote": "chromium.executablePath() names the full Chromium build even when chromium.launch() runs chrome-headless-shell; browserProcessPath is the launched binary.",
+    "browserProcessPath": "/Users/possible/Library/Caches/ms-playwright/chromium_headless_shell-1200/chrome-headless-shell-mac-arm64/chrome-headless-shell",
+    "userAgent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) HeadlessChrome/143.0.7499.4 Safari/537.36",
+    "playwrightVersion": "1.57.0"
+  },
+  "axeCoreVersion": "4.11.0",
+  "nodeVersion": "v24.10.0",
+  "config": {
+    "budgetMs": 1200000,
+    "waitUntil": "domcontentloaded",
+    "settleMs": 3000,
+    "loadTimeoutMs": 60000,
+    "walkOptions": "runTabWalk defaults",
+    "localOnly": false,
+    "pageFilter": null
+  },
+  "inputs": [
+    {
+      "path": "bench/test-sites/candidates.json",
+      "sha256": "bc79e5a0ee75f06b667c5140d3aa6402bada78984c7ed621a0640e0c982190df"
+    },
+    {
+      "path": "bench/test-sites/accepted.json",
+      "sha256": "3df0ea36140a3cebb2e18cbddcca947158d2dbff5a0b8fb9b08111d51bb08376"
+    }
+  ],
+  "notes": [
+    "3.2.1 in the old DynamicEvaluator fires only when an agent 'navigate' action follows a focus event; a scripted Tab walk never produces one, so the legacy baseline cannot report 3.2.1 on any page.",
+    "Per page the tools run in the order gaps, axe, walk (the legacy replay reuses that walk), each in its own fresh context and load: goto domcontentloaded + 3000 ms settle, the gap detector's own load.",
+    "Legacy trap: detectTrap() is replayed after every walk press; trapped is its verdict after the last press, and firstTrappedPress is the first press where it said trapped (report.ts scores a page flagged if it ever did, as the agent latches trapDetected).",
+    "Legacy trap trigger: detectTrap() says trapped once the last 5·L identity strings are one block of L strings repeated 5 times, for any L ≤ 10 (maxHistorySize 50 / minCycleCount 5). It is a property of the string sequence, not of F: a clean page whose headless-shell Tab cycle (every stop, then body on the wrap) is at most 10 strings long fires at press 5·L, and identity collisions shorten the cycle, so identical id-less links fire as a 1-string cycle after five in a row and a repeating group of strings fires on pages with many more stops.",
+    "The legacy identity is rebuilt from each press's immediate read (the walk's step.immediate: top-level document.activeElement as soon as keyboard.press resolves, with no settle), which is when executeTab reads it; focus a page script moves later is not seen, and focus inside frames or shadow roots shows as the container.",
+    "Walk trap (the new checker): judgeKeyboardTrap over this walk. pass = focus reached the end of the page, or it was confined but Escape or the opposite Tab key got out (a correct modal). fail = confined with neither key escaping. undetermined = the walk errored, F is only a lower bound, the focusable count changed mid-walk, or no release probe ran; an undetermined verdict is scored as a miss, never as a pass. contextChange is judgeContextChange (3.2.1 incl. F55) over the same walk. The legacy detector's verdicts are reported as-is, unchanged, from the frozen copy in bench/legacy-detectors.ts.",
+    "Gaps run their own Tab walk on their own load (tabWalk: true). F3 needs it: without a walk the detector never emits not_focusable at all, so a run without it reports 0 not_focusable whatever the page does. That is a SECOND walk per page, separate from the one the judges read, and it roughly doubles the per-page keyboard cost.",
+    "Each page's gaps run records the detector's own keyboard evidence (tools.gaps.findings.keyboard): whether the walk ran, whether not_focusable was assessed, and the reasons if it was not. A page where it was NOT assessed is scored undetermined for 2.1.1 and 2.4.7 in BOTH columns -- a miss, never a pass -- and drops the rule-of-three bound there, because the only gap type carrying those criteria could not be emitted at all. Without this record a check that could not run is indistinguishable in the report from a check that ran and found nothing.",
+    "Gaps come from the CURRENT post-fix detector (F1/F2/F3/F9 landed at 6b7abff and c1f94b2: hidden elements are filtered, reachability comes from the Tab walk). The same gap findings feed both the before and the after column, so the before/after delta isolates the keyboard rules and takes no credit for the gap fixes; those were measured separately against cd3b122."
+  ],
+  "pages": [
+    {
+      "pageId": "afad.gov.tr",
+      "url": "https://afad.gov.tr/",
+      "cluster": "afad.gov.tr",
+      "budgetMs": 1200000,
+      "budgetExceeded": false,
+      "durationMs": 310541,
+      "rawFile": "raw/afad.gov.tr.json.gz",
+      "tools": {
+        "gaps": {
+          "status": "ok",
+          "error": null,
+          "budgetExceeded": false,
+          "durationMs": 152699,
+          "load": {
+            "requestedUrl": "https://afad.gov.tr/",
+            "finalUrl": "https://afad.gov.tr/",
+            "status": 200,
+            "title": "T.C. İçişleri Bakanlığı Afet ve Acil Durum Yönetimi Başkanlığı",
+            "mainFrameNavigations": 1,
+            "secondNavigation": "not-expected",
+            "blockedRequests": 0
+          },
+          "findings": {
+            "gaps": [
+              {
+                "nodeName": "A",
+                "id": null,
+                "class": "desktop-link",
+                "dataBenchId": null,
+                "gapType": "no_accessible_name",
+                "severity": "serious",
+                "wcag": [
+                  "4.1.2",
+                  "1.1.1"
+                ]
+              },
+              {
+                "nodeName": "A",
+                "id": null,
+                "class": "desktop-link",
+                "dataBenchId": null,
+                "gapType": "no_accessible_name",
+                "severity": "serious",
+                "wcag": [
+                  "4.1.2",
+                  "1.1.1"
+                ]
+              },
+              {
+                "nodeName": "A",
+                "id": null,
+                "class": "desktop-link",
+                "dataBenchId": null,
+                "gapType": "no_accessible_name",
+                "severity": "serious",
+                "wcag": [
+                  "4.1.2",
+                  "1.1.1"
+                ]
+              },
+              {
+                "nodeName": "A",
+                "id": null,
+                "class": "desktop-link",
+                "dataBenchId": null,
+                "gapType": "no_accessible_name",
+                "severity": "serious",
+                "wcag": [
+                  "4.1.2",
+                  "1.1.1"
+                ]
+              },
+              {
+                "nodeName": "A",
+                "id": null,
+                "class": "desktop-link",
+                "dataBenchId": null,
+                "gapType": "no_accessible_name",
+                "severity": "serious",
+                "wcag": [
+                  "4.1.2",
+                  "1.1.1"
+                ]
+              },
+              {
+                "nodeName": "A",
+                "id": null,
+                "class": null,
+                "dataBenchId": null,
+                "gapType": "no_accessible_name",
+                "severity": "serious",
+                "wcag": [
+                  "4.1.2",
+                  "1.1.1"
+                ]
+              },
+              {
+                "nodeName": "A",
+                "id": null,
+                "class": null,
+                "dataBenchId": null,
+                "gapType": "no_accessible_name",
+                "severity": "serious",
+                "wcag": [
+                  "4.1.2",
+                  "1.1.1"
+                ]
+              },
+              {
+                "nodeName": "A",
+                "id": null,
+                "class": null,
+                "dataBenchId": null,
+                "gapType": "no_accessible_name",
+                "severity": "serious",
+                "wcag": [
+                  "4.1.2",
+                  "1.1.1"
+                ]
+              },
+              {
+                "nodeName": "DIV",
+                "id": "earthquakes-map",
+                "class": "leaflet-container leaflet-touch leaflet-fade-anim leaflet-grab leaflet-touch-drag leaflet-touch-zoom",
+                "dataBenchId": null,
+                "gapType": "wrong_role",
+                "severity": "serious",
+                "wcag": [
+                  "4.1.2"
+                ]
+              },
+              {
+                "nodeName": "DIV",
+                "id": null,
+                "class": "video-list",
+                "dataBenchId": null,
+                "gapType": "wrong_role",
+                "severity": "serious",
+                "wcag": [
+                  "4.1.2"
+                ]
+              },
+              {
+                "nodeName": "DIV",
+                "id": null,
+                "class": "swiper-pagination slider-news-pagination swiper-pagination-clickable swiper-pagination-bullets",
+                "dataBenchId": null,
+                "gapType": "wrong_role",
+                "severity": "serious",
+                "wcag": [
+                  "4.1.2"
+                ]
+              },
+              {
+                "nodeName": "DIV",
+                "id": null,
+                "class": "swiper-container main-slider swiper-container-initialized swiper-container-horizontal",
+                "dataBenchId": null,
+                "gapType": "wrong_role",
+                "severity": "serious",
+                "wcag": [
+                  "4.1.2"
+                ]
+              },
+              {
+                "nodeName": "DIV",
+                "id": "sw22993f07a83649a1ab82608f6072cd61slider-news",
+                "class": "swiper-container slider-news swiper-container-initialized swiper-container-horizontal",
+                "dataBenchId": null,
+                "gapType": "wrong_role",
+                "severity": "serious",
+                "wcag": [
+                  "4.1.2"
+                ]
+              },
+              {
+                "nodeName": "DIV",
+                "id": null,
+                "class": "swiper-container police-teams swiper-container-initialized swiper-container-horizontal",
+                "dataBenchId": null,
+                "gapType": "wrong_role",
+                "severity": "serious",
+                "wcag": [
+                  "4.1.2"
+                ]
+              },
+              {
+                "nodeName": "DIV",
+                "id": null,
+                "class": "swiper-container police-teams-content swiper-container-fade swiper-container-initialized swiper-container-horizontal",
+                "dataBenchId": null,
+                "gapType": "wrong_role",
+                "severity": "serious",
+                "wcag": [
+                  "4.1.2"
+                ]
+              },
+              {
+                "nodeName": "DIV",
+                "id": null,
+                "class": "leaflet-control-attribution leaflet-control",
+                "dataBenchId": null,
+                "gapType": "wrong_role",
+                "severity": "serious",
+                "wcag": [
+                  "4.1.2"
+                ]
+              },
+              {
+                "nodeName": "DIV",
+                "id": "ascrail2000",
+                "class": "nicescroll-rails nicescroll-rails-vr",
+                "dataBenchId": null,
+                "gapType": "wrong_role",
+                "severity": "serious",
+                "wcag": [
+                  "4.1.2"
+                ]
+              },
+              {
+                "nodeName": "DIV",
+                "id": null,
+                "class": "nicescroll-cursors",
+                "dataBenchId": null,
+                "gapType": "wrong_role",
+                "severity": "serious",
+                "wcag": [
+                  "4.1.2"
+                ]
+              }
+            ],
+            "keyboard": {
+              "walkRan": true,
+              "notFocusableAssessed": false,
+              "unassessedReasons": [
+                "focusables-incomplete"
+              ],
+              "walkError": null,
+              "reachedCount": 237
+            }
+          }
+        },
+        "walk": {
+          "status": "ok",
+          "error": null,
+          "budgetExceeded": false,
+          "durationMs": 150716,
+          "load": {
+            "requestedUrl": "https://afad.gov.tr/",
+            "finalUrl": "https://afad.gov.tr/",
+            "status": 200,
+            "title": "T.C. İçişleri Bakanlığı Afet ve Acil Durum Yönetimi Başkanlığı",
+            "mainFrameNavigations": 1,
+            "secondNavigation": "not-expected",
+            "blockedRequests": 0
+          },
+          "findings": {
+            "F": 177,
+            "fIncomplete": true,
+            "fIncompleteCauses": {
+              "crossOriginFrames": 1,
+              "closedShadowRoots": 0
+            },
+            "plannedPresses": 895,
+            "presses": 895,
+            "wraps": 3,
+            "focusLost": 0,
+            "deep": {
+              "inside": 0,
+              "crossOrigin": 28,
+              "closedShadowRoot": 0
+            },
+            "launch": {
+              "browserVersion": "143.0.7499.4",
+              "executableBasename": "chrome-headless-shell"
+            },
+            "suspectedTrap": false,
+            "trap": {
+              "wcagCriterion": "2.1.2",
+              "verdict": "pass",
+              "reason": null,
+              "keyboardTrap": false,
+              "trapEscapable": null,
+              "singleDirection": true,
+              "directionsWalked": [
+                "forward"
+              ],
+              "launch": {
+                "browserVersion": "143.0.7499.4",
+                "executableBasename": "chrome-headless-shell"
+              },
+              "directions": [
+                {
+                  "direction": "forward",
+                  "verdict": "pass",
+                  "reason": null,
+                  "confined": false,
+                  "endOfPage": {
+                    "signal": "body-unfocused",
+                    "atPress": 258
+                  },
+                  "release": "not-probed",
+                  "region": [
+                    3734,
+                    3747,
+                    3754,
+                    3761,
+                    3768,
+                    3775,
+                    3782,
+                    3789,
+                    3796,
+                    3803,
+                    3810,
+                    3817,
+                    3824,
+                    3831,
+                    3838,
+                    3845,
+                    2494,
+                    7,
+                    9,
+                    11,
+                    972,
+                    975,
+                    994,
+                    1002,
+                    1020,
+                    1023,
+                    1026,
+                    1029,
+                    1032,
+                    1035,
+                    1038,
+                    1041,
+                    1043,
+                    1044,
+                    1053,
+                    1054,
+                    1064,
+                    1065,
+                    1072,
+                    1075,
+                    1093,
+                    1096,
+                    1099,
+                    1102,
+                    1105,
+                    1108,
+                    1125,
+                    1126,
+                    1156,
+                    1157,
+                    1170,
+                    1173,
+                    1176,
+                    1178,
+                    1179,
+                    1188,
+                    1189,
+                    1202,
+                    1204,
+                    1205,
+                    1227,
+                    1231,
+                    1233,
+                    1234,
+                    1250,
+                    1268,
+                    1271,
+                    1274,
+                    1277,
+                    1280,
+                    1282,
+                    1283,
+                    1293,
+                    1296,
+                    1299,
+                    1317,
+                    1320,
+                    1323,
+                    1326,
+                    1329,
+                    1332,
+                    1335,
+                    1338,
+                    1341,
+                    1350,
+                    1356,
+                    1382,
+                    1396,
+                    1480,
+                    1491,
+                    19,
+                    20,
+                    1516,
+                    1518,
+                    1520,
+                    1522,
+                    1524,
+                    1526,
+                    1528,
+                    1530,
+                    1532,
+                    1534,
+                    1536,
+                    1550,
+                    1563,
+                    1573,
+                    1583,
+                    1593,
+                    1603,
+                    1613,
+                    1623,
+                    1627,
+                    1628,
+                    1629,
+                    1630,
+                    1631,
+                    1632,
+                    1647,
+                    1666,
+                    1678,
+                    1690,
+                    1702,
+                    1714,
+                    1794,
+                    1803,
+                    1824,
+                    1838,
+                    1842,
+                    1846,
+                    1850,
+                    1854,
+                    1858,
+                    47,
+                    1869,
+                    1875,
+                    1880,
+                    1904,
+                    1924,
+                    1944,
+                    1964,
+                    1985,
+                    2017,
+                    2036,
+                    2058,
+                    2087,
+                    2096,
+                    5,
+                    2113,
+                    2122,
+                    2131,
+                    2140,
+                    2151,
+                    2153,
+                    2179,
+                    2199,
+                    2218,
+                    2496,
+                    2504,
+                    2512,
+                    2520,
+                    2528,
+                    2536,
+                    2544,
+                    2552,
+                    2560,
+                    2655,
+                    2664,
+                    2673,
+                    2682,
+                    2691,
+                    2700
+                  ],
+                  "focusableCount": 177,
+                  "stuckOn": null,
+                  "escapeUrlChanged": false,
+                  "documentReplacements": []
+                }
+              ]
+            },
+            "contextChange": {
+              "wcagCriterion": "3.2.1",
+              "verdict": "pass",
+              "reason": null,
+              "fIncomplete": true,
+              "findings": [],
+              "unattributed": []
+            },
+            "escapeReachedAt": null,
+            "error": null
+          }
+        },
+        "legacy": {
+          "status": "ok",
+          "error": null,
+          "budgetExceeded": false,
+          "durationMs": 3,
+          "load": null,
+          "findings": {
+            "presses": 895,
+            "trap": {
+              "trapped": false,
+              "firstTrappedPress": 75,
+              "cycleLength": 0,
+              "element": null
+            },
+            "dynamicViolations": [
+              {
+                "criterion": "2.4.3",
+                "severity": "moderate",
+                "description": "Focus cycling detected - focus returned to previously visited element within short sequence",
+                "evidence": [
+                  "li.hover",
+                  "li.hover"
+                ]
+              }
+            ]
+          }
+        },
+        "axe": {
+          "status": "ok",
+          "error": null,
+          "budgetExceeded": false,
+          "durationMs": 7111,
+          "load": {
+            "requestedUrl": "https://afad.gov.tr/",
+            "finalUrl": "https://afad.gov.tr/",
+            "status": 200,
+            "title": "T.C. İçişleri Bakanlığı Afet ve Acil Durum Yönetimi Başkanlığı",
+            "mainFrameNavigations": 1,
+            "secondNavigation": "not-expected",
+            "blockedRequests": 0
+          },
+          "findings": [
+            {
+              "id": "aria-allowed-attr",
+              "impact": "critical",
+              "wcagTags": [
+                "wcag2a",
+                "wcag412"
+              ],
+              "targets": [
+                "#screenReaderToggleButton",
+                "#lineHeightToggleButton",
+                "#highlightLinksToggleButton",
+                "#makeTextBiggerToggleButton",
+                "#alighTextLeftToggleButton",
+                "#makeCursorBiggerToggleButton",
+                "#readingGuideToggleButton",
+                "#readingMaskToggleButton",
+                "#setDyslexicFriendlyFontToggleButton",
+                "#highContrastToggleButton",
+                "#desaturateColorsToggleButton",
+                "#reduceSaturationToggleButton",
+                "#increaseSaturationToggleButton",
+                "#removeImagesToggleButton"
+              ],
+              "components": [
+                "BUTTON.btn.btn-passive",
+                "BUTTON.btn.btn-passive",
+                "BUTTON.btn.btn-passive",
+                "BUTTON.btn.btn-passive",
+                "BUTTON.btn.btn-passive",
+                "BUTTON.btn.btn-passive",
+                "BUTTON.btn.btn-passive",
+                "BUTTON.btn.btn-passive",
+                "BUTTON.btn.btn-passive",
+                "BUTTON.btn.btn-passive",
+                "BUTTON.btn.btn-passive",
+                "BUTTON.btn.btn-passive",
+                "BUTTON.btn.btn-passive",
+                "BUTTON.btn.btn-passive"
+              ]
+            },
+            {
+              "id": "aria-allowed-role",
+              "impact": "minor",
+              "wcagTags": [],
+              "targets": [
+                ".acc-menu-header"
+              ],
+              "components": [
+                "LI.acc-menu-header"
+              ]
+            },
+            {
+              "id": "aria-required-children",
+              "impact": "critical",
+              "wcagTags": [
+                "wcag2a",
+                "wcag131"
+              ],
+              "targets": [
+                "#accessibility-menu"
+              ],
+              "components": [
+                "UL.acc-menu"
+              ]
+            },
+            {
+              "id": "color-contrast",
+              "impact": "serious",
+              "wcagTags": [
+                "wcag2aa",
+                "wcag143"
+              ],
+              "targets": [
+                ".row:nth-child(1) > .col > .ministry-announcements > .announce-date > .day",
+                ".row:nth-child(1) > .col > .ministry-announcements > .announce-date > .month",
+                ".row:nth-child(2) > .col > .ministry-announcements > .announce-date > .day",
+                ".row:nth-child(2) > .col > .ministry-announcements > .announce-date > .month",
+                ".row:nth-child(3) > .col > .ministry-announcements > .announce-date > .day",
+                ".row:nth-child(3) > .col > .ministry-announcements > .announce-date > .month",
+                ".row:nth-child(4) > .col > .ministry-announcements > .announce-date > .day",
+                ".row:nth-child(4) > .col > .ministry-announcements > .announce-date > .month",
+                ".row:nth-child(5) > .col > .ministry-announcements > .announce-date > .day",
+                ".row:nth-child(5) > .col > .ministry-announcements > .announce-date > .month",
+                ".recent-earthquakes-note > p",
+                "p > a",
+                "a[onclick=\"Cagir();\"]",
+                ".btn-primary"
+              ],
+              "components": [
+                "DIV.day",
+                "DIV.month",
+                "DIV.day",
+                "DIV.month",
+                "DIV.day",
+                "DIV.month",
+                "DIV.day",
+                "DIV.month",
+                "DIV.day",
+                "DIV.month",
+                "P",
+                "A",
+                "A",
+                "BUTTON.acceptcookies.btn.btn-primary.btn-sm"
+              ]
+            },
+            {
+              "id": "frame-title",
+              "impact": "serious",
+              "wcagTags": [
+                "wcag2a",
+                "wcag412"
+              ],
+              "targets": [
+                "iframe"
+              ],
+              "components": [
+                "IFRAME.embed-responsive-item"
+              ]
+            },
+            {
+              "id": "heading-order",
+              "impact": "moderate",
+              "wcagTags": [],
+              "targets": [
+                ".swiper-slide-active.swiper-slide > .news-card-withDate.card > .card-body > h6"
+              ],
+              "components": [
+                "H6.card-title"
+              ]
+            },
+            {
+              "id": "html-lang-valid",
+              "impact": "serious",
+              "wcagTags": [
+                "wcag2a",
+                "wcag311"
+              ],
+              "targets": [
+                "html"
+              ],
+              "components": [
+                "HTML"
+              ]
+            },
+            {
+              "id": "image-alt",
+              "impact": "critical",
+              "wcagTags": [
+                "wcag2a",
+                "wcag111"
+              ],
+              "targets": [
+                ".topbar-img > .img-fluid",
+                ".logo-img > .img-fluid",
+                ".swiper-slide-prev.swiper-slide-duplicate[data-swiper-slide-index=\"6\"] > .img-fluid[alt=\"     \"][title=\"     \"]",
+                ".swiper-slide-next[data-swiper-slide-index=\"1\"][data-swiper-autoplay=\"7000\"] > .img-fluid[alt=\"    \"][title=\"    \"]",
+                ".swiper-slide[data-swiper-slide-index=\"3\"][data-swiper-autoplay=\"7000\"] > .img-fluid[alt=\"     \"][title=\"     \"]",
+                ".swiper-slide[data-swiper-slide-index=\"4\"][data-swiper-autoplay=\"7000\"] > .img-fluid[alt=\"     \"][title=\"     \"]",
+                "div[data-swiper-slide-index=\"5\"] > .img-fluid[alt=\"    \"][title=\"    \"]",
+                ".swiper-slide-duplicate-prev[data-swiper-slide-index=\"6\"][data-swiper-autoplay=\"7000\"] > .img-fluid[alt=\"     \"][title=\"     \"]",
+                ".copyright-text > a:nth-child(1) > img"
+              ],
+              "components": [
+                "IMG.img-fluid",
+                "IMG.img-fluid",
+                "IMG.img-fluid",
+                "IMG.img-fluid",
+                "IMG.img-fluid",
+                "IMG.img-fluid",
+                "IMG.img-fluid",
+                "IMG.img-fluid",
+                "IMG"
+              ]
+            },
+            {
+              "id": "landmark-one-main",
+              "impact": "moderate",
+              "wcagTags": [],
+              "targets": [
+                "html"
+              ],
+              "components": [
+                "HTML"
+              ]
+            },
+            {
+              "id": "link-name",
+              "impact": "serious",
+              "wcagTags": [
+                "wcag2a",
+                "wcag244",
+                "wcag412"
+              ],
+              "targets": [
+                "#headerSearch",
+                "a[data-lat=\"37.8307\"]",
+                "a[data-lat=\"38.6385\"]",
+                "a[data-lat=\"37.9052\"]",
+                "a[data-lat=\"38.9698\"]",
+                "a[data-lat=\"38.6075\"]",
+                ".footerSocialMediaIcons > a[target=\"_blank\"]:nth-child(1)",
+                ".footerSocialMediaIcons > a[target=\"_blank\"]:nth-child(2)",
+                ".footerSocialMediaIcons > a[target=\"_blank\"]:nth-child(3)",
+                ".footerSocialMediaIcons > a:nth-child(4)",
+                ".copyright-text > a:nth-child(1)",
+                ".copyright-text > a:nth-child(3)"
+              ],
+              "components": [
+                "A.dropdown-toggle.search-button",
+                "A.desktop-link",
+                "A.desktop-link",
+                "A.desktop-link",
+                "A.desktop-link",
+                "A.desktop-link",
+                "A",
+                "A",
+                "A",
+                "A",
+                "A",
+                "A"
+              ]
+            },
+            {
+              "id": "page-has-heading-one",
+              "impact": "moderate",
+              "wcagTags": [],
+              "targets": [
+                "html"
+              ],
+              "components": [
+                "HTML"
+              ]
+            },
+            {
+              "id": "region",
+              "impact": "moderate",
+              "wcagTags": [],
+              "targets": [
+                ".justify-content-end > .nav-item:nth-child(1)",
+                ".justify-content-end > .nav-item:nth-child(2)",
+                "#langDropdown",
+                ".col-auto",
+                ".main-slider > .swiper-wrapper",
+                ".ms-pagination",
+                "#w657c619158fd4dca946eaeedda063d06",
+                "#w07088a8e5e8d4f29828559d913b34425",
+                "#sw61ee64133c29425fbc09a9f6c326ff6cslider-news > .swiper-wrapper",
+                "#wd1176e71cdda4bc18a3a774f036ab328",
+                ".card-content",
+                ".afadortaalan > div:nth-child(6)",
+                ".yardim_noktalari",
+                "#wabf25e9bc2634126a530dd93fc508414",
+                ".recent-earthquakes-note",
+                ".leaflet-bottom.leaflet-right",
+                "#projectcontent729160 > .earthquake-data > .earthquake-date[data-title=\"Tarih\"]",
+                "#projectcontent729160 > .earthquake-data > .earthquake-time[data-title=\"Saat\"]",
+                "#projectcontent729160 > .earthquake-data > .earthquake-location[data-title=\"Konum\"]",
+                "#projectcontent729160 > .earthquake-data > .earthquake-magnitude[data-title=\"Büyüklük\"]",
+                "#projectcontent729055 > .earthquake-data > .earthquake-date[data-title=\"Tarih\"]",
+                "#projectcontent729055 > .earthquake-data > .earthquake-time[data-title=\"Saat\"]",
+                "#projectcontent729055 > .earthquake-data > .earthquake-location[data-title=\"Konum\"]",
+                "#projectcontent729055 > .earthquake-data > .earthquake-magnitude[data-title=\"Büyüklük\"]",
+                "#projectcontent728990 > .earthquake-data > .earthquake-date[data-title=\"Tarih\"]",
+                "#projectcontent728990 > .earthquake-data > .earthquake-time[data-title=\"Saat\"]",
+                "#projectcontent728990 > .earthquake-data > .earthquake-location[data-title=\"Konum\"]",
+                "#projectcontent728990 > .earthquake-data > .earthquake-magnitude[data-title=\"Büyüklük\"]",
+                "#projectcontent728948 > .earthquake-data > .earthquake-date[data-title=\"Tarih\"]",
+                "#projectcontent728948 > .earthquake-data > .earthquake-time[data-title=\"Saat\"]",
+                "#projectcontent728948 > .earthquake-data > .earthquake-location[data-title=\"Konum\"]",
+                "#projectcontent728948 > .earthquake-data > .earthquake-magnitude[data-title=\"Büyüklük\"]",
+                "#projectcontent728486 > .earthquake-data > .earthquake-date[data-title=\"Tarih\"]",
+                "#projectcontent728486 > .earthquake-data > .earthquake-time[data-title=\"Saat\"]",
+                "#projectcontent728486 > .earthquake-data > .earthquake-location[data-title=\"Konum\"]",
+                "#projectcontent728486 > .earthquake-data > .earthquake-magnitude[data-title=\"Büyüklük\"]",
+                ".recent-earthquakes-link",
+                "#wf67a3355bc08491e8acdf774c2d7a91d",
+                "#wf97d7c53d18743db9e46323c089dde72",
+                "#wb36152273e1f4ecb804ee4074e98788a",
+                ".police-teams-content > .swiper-wrapper",
+                ".pt-pagination",
+                "#wb77d6439bf704a7c81344095e01064dc",
+                "#w1c57c02d5ac243edbe0d621e79dd2b9a",
+                "#w11847b10dc5c4911bb169ffbe2c9fde0",
+                ".main-video > .video-card-withDate.card > .card-body",
+                ".video-list",
+                "#wc2672ce883f04385a0638122d8debe65",
+                ".card-item[href$=\"cimer.gov.tr/\"] > .title",
+                ".card-item[href$=\"egm.gov.tr/\"] > .title",
+                ".card-item[href$=\"jandarma.gov.tr/\"] > .title",
+                ".card-item[href$=\"sg.gov.tr/\"] > .title",
+                ".card-item[href$=\"goc.gov.tr\"] > .title",
+                ".card-item[href$=\"gonullu.afad.gov.tr/\"] > .title",
+                ".card-item[href$=\"deprem.afad.gov.tr/\"] > .title",
+                ".card-item:nth-child(8) > .title",
+                ".card-item:nth-child(9) > .title",
+                ".card-item:nth-child(10) > .title",
+                ".col-md-3:nth-child(1) > .footer-menu > .menu-header",
+                ".col-md-3:nth-child(1) > .footer-menu > .menu-content > .hizala.nav.flex-column > .nav-item:nth-child(1)",
+                ".col-md-3:nth-child(1) > .footer-menu > .menu-content > .hizala.nav.flex-column > .nav-item:nth-child(2)",
+                ".col-md-3:nth-child(1) > .footer-menu > .menu-content > .hizala.nav.flex-column > .nav-item:nth-child(3)",
+                ".col-md-3:nth-child(1) > .footer-menu > .menu-content > .hizala.nav.flex-column > .nav-item:nth-child(4)",
+                ".col-md-3:nth-child(1) > .footer-menu > .menu-content > .hizala.nav.flex-column > .nav-item:nth-child(5)",
+                ".col-md-3:nth-child(1) > .footer-menu > .menu-content > .hizala.nav.flex-column > .nav-item:nth-child(6)",
+                ".col-md-3:nth-child(1) > .footer-menu > .menu-content > .hizala.nav.flex-column > .nav-item:nth-child(7)",
+                ".col-md-3:nth-child(1) > .footer-menu > .menu-content > .hizala.nav.flex-column > .nav-item:nth-child(8)",
+                ".menu-content > .hizala.nav.flex-column > .nav-item:nth-child(9) > a[href$=\"#menu_246454\"][data-target=\"#menu_246454\"][aria-controls=\"menu_246454\"]",
+                ".menu-content > .hizala.nav.flex-column > .nav-item:nth-child(10) > a[href$=\"#menu_237572\"][data-target=\"#menu_237572\"][aria-controls=\"menu_237572\"]",
+                ".menu-content > .hizala.nav.flex-column > .nav-item:nth-child(11) > a[href$=\"#menu_237575\"][data-target=\"#menu_237575\"][aria-controls=\"menu_237575\"]",
+                ".col-md-3:nth-child(1) > .footer-menu > .menu-content > .hizala.nav.flex-column > .nav-item:nth-child(12)",
+                ".col-md-3:nth-child(2)",
+                ".col-md-3:nth-child(3) > .footer-menu > .menu-header",
+                ".menu-content > .hizala.nav.flex-column > .nav-item:nth-child(1) > a[href$=\"#menu_237579\"][data-target=\"#menu_237579\"][aria-controls=\"menu_237579\"]",
+                ".menu-content > .hizala.nav.flex-column > .nav-item:nth-child(2) > a[href$=\"#menu_237580\"][data-target=\"#menu_237580\"][aria-controls=\"menu_237580\"]",
+                ".col-md-3:nth-child(3) > .footer-menu > .menu-content > .hizala.nav.flex-column > .nav-item:nth-child(3)",
+                ".col-md-3:nth-child(3) > .footer-menu > .menu-content > .hizala.nav.flex-column > .nav-item:nth-child(4)",
+                ".col-md-3:nth-child(3) > .footer-menu > .menu-content > .hizala.nav.flex-column > .nav-item:nth-child(5)",
+                ".menu-content > .hizala.nav.flex-column > .nav-item:nth-child(6) > a[href$=\"#menu_237585\"][data-target=\"#menu_237585\"][aria-controls=\"menu_237585\"]",
+                ".menu-content > .hizala.nav.flex-column > .nav-item:nth-child(7) > a[href$=\"#menu_237586\"][data-target=\"#menu_237586\"][aria-controls=\"menu_237586\"]",
+                ".col-md-3:nth-child(3) > .footer-menu > .menu-content > .hizala.nav.flex-column > .nav-item:nth-child(8)",
+                ".menu-content > .hizala.nav.flex-column > .nav-item:nth-child(9) > a[href$=\"#menu_237589\"][data-target=\"#menu_237589\"][aria-controls=\"menu_237589\"]",
+                ".col-md-3:nth-child(3) > .footer-menu > .menu-content > .hizala.nav.flex-column > .nav-item:nth-child(10)",
+                ".col-md-3:nth-child(3) > .footer-menu > .menu-content > .hizala.nav.flex-column > .nav-item:nth-child(11)",
+                ".menu-content > .hizala.nav.flex-column > .nav-item:nth-child(12) > a[href$=\"#menu_237593\"][data-target=\"#menu_237593\"][aria-controls=\"menu_237593\"]",
+                ".col-md-3:nth-child(4) > .footer-menu > .menu-header",
+                ".col-md-3:nth-child(4) > .footer-menu > .menu-content > .hizala.nav.flex-column > .nav-item:nth-child(1)",
+                ".col-md-3:nth-child(4) > .footer-menu > .menu-content > .hizala.nav.flex-column > .nav-item:nth-child(2)",
+                ".col-md-3:nth-child(4) > .footer-menu > .menu-content > .hizala.nav.flex-column > .nav-item:nth-child(3)",
+                ".col-md-3:nth-child(4) > .footer-menu > .menu-content > .hizala.nav.flex-column > .nav-item:nth-child(4)",
+                ".col-md-3:nth-child(4) > .footer-menu > .menu-content > .hizala.nav.flex-column > .nav-item:nth-child(5)",
+                ".menu-content > .hizala.nav.flex-column > .nav-item:nth-child(6) > a[href$=\"#menu_237600\"][data-target=\"#menu_237600\"][aria-controls=\"menu_237600\"]",
+                ".col-md-3:nth-child(4) > .footer-menu > .menu-content > .hizala.nav.flex-column > .nav-item:nth-child(7)",
+                ".col-md-3:nth-child(4) > .footer-menu > .menu-content > .hizala.nav.flex-column > .nav-item:nth-child(8)",
+                ".col-md-3:nth-child(5)",
+                ".followus > p:nth-child(2)",
+                ".footer-text:nth-child(2)",
+                ".PersonelMail",
+                ".footer-text:nth-child(4)",
+                ".afadfooter > div > div > div > div > div > div > div > div > div > div > .footer-bottom",
+                ".acc-menu-container > div"
+              ],
+              "components": [
+                "LI.nav-item",
+                "LI.nav-item",
+                "A.dropdown-toggle.nav-link",
+                "DIV.col-auto",
+                "DIV.swiper-wrapper",
+                "DIV.ms-pagination.swiper-pagination.swiper-pagination-fraction",
+                "DIV",
+                "DIV",
+                "DIV.swiper-wrapper",
+                "DIV",
+                "DIV.announcementdaha.card-content.d-md-flex.d-none.flex-column",
+                "DIV",
+                "DIV.yardim_noktalari",
+                "DIV",
+                "DIV.recent-earthquakes-note",
+                "DIV.leaflet-bottom.leaflet-right",
+                "DIV.earthquake-date",
+                "DIV.earthquake-time",
+                "DIV.earthquake-location",
+                "DIV.earthquake-magnitude",
+                "DIV.earthquake-date",
+                "DIV.earthquake-time",
+                "DIV.earthquake-location",
+                "DIV.earthquake-magnitude",
+                "DIV.earthquake-date",
+                "DIV.earthquake-time",
+                "DIV.earthquake-location",
+                "DIV.earthquake-magnitude",
+                "DIV.earthquake-date",
+                "DIV.earthquake-time",
+                "DIV.earthquake-location",
+                "DIV.earthquake-magnitude",
+                "DIV.earthquake-date",
+                "DIV.earthquake-time",
+                "DIV.earthquake-location",
+                "DIV.earthquake-magnitude",
+                "DIV.recent-earthquakes-link",
+                "DIV",
+                "DIV.row",
+                "DIV",
+                "DIV.swiper-wrapper",
+                "DIV.pt-pagination.swiper-pagination.swiper-pagination-fraction",
+                "DIV",
+                "DIV",
+                "DIV",
+                "DIV.card-body",
+                "DIV.video-list",
+                "DIV",
+                "SPAN.title",
+                "SPAN.title",
+                "SPAN.title",
+                "SPAN.title",
+                "SPAN.title",
+                "SPAN.title",
+                "SPAN.title",
+                "SPAN.title",
+                "SPAN.title",
+                "SPAN.title",
+                "DIV.menu-header",
+                "LI.nav-item",
+                "LI.nav-item",
+                "LI.nav-item",
+                "LI.nav-item",
+                "LI.nav-item",
+                "LI.nav-item",
+                "LI.nav-item",
+                "LI.nav-item",
+                "A.collapsed.nav-link",
+                "A.collapsed.nav-link",
+                "A.collapsed.nav-link",
+                "LI.nav-item",
+                "DIV.col-md-3",
+                "DIV.menu-header",
+                "A.collapsed.nav-link",
+                "A.collapsed.nav-link",
+                "LI.nav-item",
+                "LI.nav-item",
+                "LI.nav-item",
+                "A.collapsed.nav-link",
+                "A.collapsed.nav-link",
+                "LI.nav-item",
+                "A.collapsed.nav-link",
+                "LI.nav-item",
+                "LI.nav-item",
+                "A.collapsed.nav-link",
+                "DIV.menu-header",
+                "LI.nav-item",
+                "LI.nav-item",
+                "LI.nav-item",
+                "LI.nav-item",
+                "LI.nav-item",
+                "A.collapsed.nav-link",
+                "LI.nav-item",
+                "LI.nav-item",
+                "DIV.col-md-3",
+                "P",
+                "DIV.footer-text",
+                "DIV.PersonelMail",
+                "DIV.footer-text",
+                "DIV.footer-bottom",
+                "DIV"
+              ]
+            },
+            {
+              "id": "tabindex",
+              "impact": "serious",
+              "wcagTags": [],
+              "targets": [
+                ".video-list"
+              ],
+              "components": [
+                "DIV.video-list"
+              ]
+            }
+          ]
+        }
+      }
+    },
+    {
+      "pageId": "anime.nexus",
+      "url": "https://anime.nexus/",
+      "cluster": "anime.nexus",
+      "budgetMs": 1200000,
+      "budgetExceeded": false,
+      "durationMs": 289510,
+      "rawFile": "raw/anime.nexus.json.gz",
+      "tools": {
+        "gaps": {
+          "status": "ok",
+          "error": null,
+          "budgetExceeded": false,
+          "durationMs": 135645,
+          "load": {
+            "requestedUrl": "https://anime.nexus/",
+            "finalUrl": "https://anime.nexus/",
+            "status": 200,
+            "title": "Anime Nexus: Watch Popular & High Quality Anime Online Free",
+            "mainFrameNavigations": 2,
+            "secondNavigation": "not-expected",
+            "blockedRequests": 0
+          },
+          "findings": {
+            "gaps": [
+              {
+                "nodeName": "BUTTON",
+                "id": null,
+                "class": "group/button inline-flex shrink-0 items-center justify-center border border-transparent bg-clip-padding text-sm font-medium whitespace-nowrap transition-all outline-none select-none focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50 active:not-aria-[haspopup]:translate-y-px disabled:pointer-events-none disabled:opacity-50 aria-invalid:border-destructive aria-invalid:ring-3 aria-invalid:ring-destructive/20 dark:aria-invalid:border-destructive/50 dark:aria-invalid:ring-destructive/40 [&_svg]:pointer-events-none [&_svg]:shrink-0 [&_svg:not([class*='size-'])]:size-4 hover:bg-muted hover:text-foreground aria-expanded:bg-muted aria-expanded:text-foreground dark:hover:bg-muted/50 size-9 p-2 rounded-md",
+                "dataBenchId": null,
+                "gapType": "no_accessible_name",
+                "severity": "serious",
+                "wcag": [
+                  "4.1.2",
+                  "1.1.1"
+                ]
+              },
+              {
+                "nodeName": "BUTTON",
+                "id": null,
+                "class": "group/button inline-flex shrink-0 items-center justify-center rounded-md border border-transparent bg-clip-padding text-sm font-medium whitespace-nowrap transition-all outline-none select-none focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50 active:not-aria-[haspopup]:translate-y-px disabled:pointer-events-none disabled:opacity-50 aria-invalid:border-destructive aria-invalid:ring-3 aria-invalid:ring-destructive/20 dark:aria-invalid:border-destructive/50 dark:aria-invalid:ring-destructive/40 [&_svg]:pointer-events-none [&_svg]:shrink-0 [&_svg:not([class*='size-'])]:size-4 hover:bg-muted hover:text-foreground aria-expanded:bg-muted aria-expanded:text-foreground dark:hover:bg-muted/50 gap-1.5 in-data-[slot=button-group]:rounded-md has-data-[icon=inline-end]:pr-2 has-data-[icon=inline-start]:pl-2 h-8 w-8 px-0",
+                "dataBenchId": null,
+                "gapType": "no_accessible_name",
+                "severity": "serious",
+                "wcag": [
+                  "4.1.2",
+                  "1.1.1"
+                ]
+              },
+              {
+                "nodeName": "BUTTON",
+                "id": null,
+                "class": "flex items-center justify-between border py-2 whitespace-nowrap shadow-xs transition-[color,box-shadow] outline-none focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50 disabled:cursor-not-allowed disabled:opacity-50 aria-invalid:border-destructive aria-invalid:ring-3 aria-invalid:ring-destructive/20 data-placeholder:text-muted-foreground data-[size=default]:h-9 data-[size=sm]:h-8 *:data-[slot=select-value]:line-clamp-1 *:data-[slot=select-value]:flex *:data-[slot=select-value]:items-center *:data-[slot=select-value]:gap-1.5 dark:bg-input/30 dark:hover:bg-input/50 dark:aria-invalid:border-destructive/50 dark:aria-invalid:ring-destructive/40 [&_svg]:pointer-events-none [&_svg]:shrink-0 [&_svg:not([class*='size-'])]:size-4 h-9 w-auto gap-2 rounded-md bg-card/95 border-border/50 px-4 text-sm",
+                "dataBenchId": null,
+                "gapType": "no_accessible_name",
+                "severity": "serious",
+                "wcag": [
+                  "4.1.2",
+                  "1.1.1"
+                ]
+              },
+              {
+                "nodeName": "BUTTON",
+                "id": null,
+                "class": "flex items-center justify-between border py-2 whitespace-nowrap shadow-xs transition-[color,box-shadow] outline-none focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50 disabled:cursor-not-allowed disabled:opacity-50 aria-invalid:border-destructive aria-invalid:ring-3 aria-invalid:ring-destructive/20 data-placeholder:text-muted-foreground data-[size=default]:h-9 data-[size=sm]:h-8 *:data-[slot=select-value]:line-clamp-1 *:data-[slot=select-value]:flex *:data-[slot=select-value]:items-center *:data-[slot=select-value]:gap-1.5 dark:bg-input/30 dark:hover:bg-input/50 dark:aria-invalid:border-destructive/50 dark:aria-invalid:ring-destructive/40 [&_svg]:pointer-events-none [&_svg]:shrink-0 [&_svg:not([class*='size-'])]:size-4 h-7 sm:h-9 w-auto gap-1 sm:gap-2 rounded-md bg-card/95 border-border/50 px-3 sm:px-4 text-xs sm:text-sm",
+                "dataBenchId": null,
+                "gapType": "no_accessible_name",
+                "severity": "serious",
+                "wcag": [
+                  "4.1.2",
+                  "1.1.1"
+                ]
+              },
+              {
+                "nodeName": "A",
+                "id": null,
+                "class": "flex items-center gap-2 active",
+                "dataBenchId": null,
+                "gapType": "no_accessible_name",
+                "severity": "serious",
+                "wcag": [
+                  "4.1.2",
+                  "1.1.1"
+                ]
+              },
+              {
+                "nodeName": "DIV",
+                "id": null,
+                "class": "overflow-hidden flex w-full h-[400px] lg:h-[600px] xl:h-[800px] 2xl:h-[1000px]",
+                "dataBenchId": null,
+                "gapType": "not_focusable",
+                "severity": "critical",
+                "wcag": [
+                  "2.1.1",
+                  "2.4.7"
+                ]
+              },
+              {
+                "nodeName": "DIV",
+                "id": null,
+                "class": "overflow-hidden",
+                "dataBenchId": null,
+                "gapType": "wrong_role",
+                "severity": "serious",
+                "wcag": [
+                  "4.1.2"
+                ]
+              },
+              {
+                "nodeName": "DIV",
+                "id": null,
+                "class": "overflow-hidden",
+                "dataBenchId": null,
+                "gapType": "wrong_role",
+                "severity": "serious",
+                "wcag": [
+                  "4.1.2"
+                ]
+              }
+            ],
+            "keyboard": {
+              "walkRan": true,
+              "notFocusableAssessed": true,
+              "unassessedReasons": [],
+              "walkError": null,
+              "reachedCount": 162
+            }
+          }
+        },
+        "walk": {
+          "status": "ok",
+          "error": null,
+          "budgetExceeded": false,
+          "durationMs": 133488,
+          "load": {
+            "requestedUrl": "https://anime.nexus/",
+            "finalUrl": "https://anime.nexus/",
+            "status": 200,
+            "title": "Anime Nexus: Watch Popular & High Quality Anime Online Free",
+            "mainFrameNavigations": 2,
+            "secondNavigation": "not-expected",
+            "blockedRequests": 0
+          },
+          "findings": {
+            "F": 160,
+            "fIncomplete": false,
+            "fIncompleteCauses": {
+              "crossOriginFrames": 0,
+              "closedShadowRoots": 0
+            },
+            "plannedPresses": 810,
+            "presses": 810,
+            "wraps": 5,
+            "focusLost": 0,
+            "deep": {
+              "inside": 0,
+              "crossOrigin": 0,
+              "closedShadowRoot": 0
+            },
+            "launch": {
+              "browserVersion": "143.0.7499.4",
+              "executableBasename": "chrome-headless-shell"
+            },
+            "suspectedTrap": false,
+            "trap": {
+              "wcagCriterion": "2.1.2",
+              "verdict": "pass",
+              "reason": null,
+              "keyboardTrap": false,
+              "trapEscapable": null,
+              "singleDirection": true,
+              "directionsWalked": [
+                "forward"
+              ],
+              "launch": {
+                "browserVersion": "143.0.7499.4",
+                "executableBasename": "chrome-headless-shell"
+              },
+              "directions": [
+                {
+                  "direction": "forward",
+                  "verdict": "pass",
+                  "reason": null,
+                  "confined": false,
+                  "endOfPage": {
+                    "signal": "body-unfocused",
+                    "atPress": 160
+                  },
+                  "release": "not-probed",
+                  "region": [
+                    228,
+                    255,
+                    285,
+                    312,
+                    342,
+                    369,
+                    399,
+                    426,
+                    435,
+                    439,
+                    440,
+                    441,
+                    442,
+                    443,
+                    444,
+                    473,
+                    475,
+                    477,
+                    480,
+                    497,
+                    515,
+                    545,
+                    563,
+                    593,
+                    611,
+                    641,
+                    659,
+                    689,
+                    707,
+                    737,
+                    755,
+                    785,
+                    803,
+                    833,
+                    12,
+                    880,
+                    13,
+                    927,
+                    945,
+                    975,
+                    993,
+                    1023,
+                    1041,
+                    1071,
+                    1089,
+                    1119,
+                    1137,
+                    1167,
+                    1185,
+                    1959,
+                    2241,
+                    2252,
+                    2267,
+                    2278,
+                    2293,
+                    2304,
+                    2319,
+                    2329,
+                    2344,
+                    2354,
+                    2369,
+                    2379,
+                    2394,
+                    2404,
+                    2419,
+                    2429,
+                    2444,
+                    2454,
+                    2469,
+                    2479,
+                    2506,
+                    2514,
+                    2537,
+                    2560,
+                    2583,
+                    2606,
+                    2629,
+                    2652,
+                    2675,
+                    2698,
+                    2721,
+                    2744,
+                    2767,
+                    2790,
+                    2813,
+                    2836,
+                    2865,
+                    2894,
+                    2923,
+                    2946,
+                    2975,
+                    3004,
+                    3033,
+                    3062,
+                    3091,
+                    3120,
+                    3143,
+                    3172,
+                    3201,
+                    3230,
+                    3259,
+                    3282,
+                    3311,
+                    3340,
+                    3369,
+                    3398,
+                    3427,
+                    3456,
+                    3485,
+                    3508,
+                    3537,
+                    3566,
+                    3595,
+                    3624,
+                    3653,
+                    3676,
+                    3705,
+                    3734,
+                    11,
+                    3796,
+                    3804,
+                    3827,
+                    3850,
+                    3873,
+                    3896,
+                    3919,
+                    3942,
+                    3965,
+                    3988,
+                    4011,
+                    4034,
+                    4057,
+                    4080,
+                    4103,
+                    4126,
+                    4155,
+                    4184,
+                    4213,
+                    4242,
+                    4271,
+                    4300,
+                    4329,
+                    4358,
+                    4387,
+                    4416,
+                    4445,
+                    4474,
+                    4503,
+                    4532,
+                    4561,
+                    126,
+                    132,
+                    4,
+                    138,
+                    145,
+                    148,
+                    149,
+                    179,
+                    205
+                  ],
+                  "focusableCount": 160,
+                  "stuckOn": null,
+                  "escapeUrlChanged": false,
+                  "documentReplacements": []
+                }
+              ]
+            },
+            "contextChange": {
+              "wcagCriterion": "3.2.1",
+              "verdict": "pass",
+              "reason": null,
+              "fIncomplete": false,
+              "findings": [],
+              "unattributed": []
+            },
+            "escapeReachedAt": null,
+            "error": null
+          }
+        },
+        "legacy": {
+          "status": "ok",
+          "error": null,
+          "budgetExceeded": false,
+          "durationMs": 2,
+          "load": null,
+          "findings": {
+            "presses": 810,
+            "trap": {
+              "trapped": false,
+              "firstTrappedPress": 17,
+              "cycleLength": 0,
+              "element": null
+            },
+            "dynamicViolations": [
+              {
+                "criterion": "2.4.3",
+                "severity": "moderate",
+                "description": "Focus cycling detected - focus returned to previously visited element within short sequence",
+                "evidence": [
+                  "a.grid.mx-auto.md:mx-0.aspect-[15/8].xl:grid-cols-[minmax(0,_auto)_1fr].grid-rows-[1fr_minmax(0,_auto)].max-w-[15rem].sm:max-w-[20.5rem].xl:max-w-[25.5rem].xl:max-w-[30.5rem].w-full.text-lg.sm:text-xl.xl:text-3xl.xl:text-5xl.mb-4.sm:mb-6.uppercase.font-bold.overflow-hidden.line-clamp-2",
+                  "a.grid.mx-auto.md:mx-0.aspect-[15/8].xl:grid-cols-[minmax(0,_auto)_1fr].grid-rows-[1fr_minmax(0,_auto)].max-w-[15rem].sm:max-w-[20.5rem].xl:max-w-[25.5rem].xl:max-w-[30.5rem].w-full.text-lg.sm:text-xl.xl:text-3xl.xl:text-5xl.mb-4.sm:mb-6.uppercase.font-bold.overflow-hidden.line-clamp-2"
+                ]
+              }
+            ]
+          }
+        },
+        "axe": {
+          "status": "ok",
+          "error": null,
+          "budgetExceeded": false,
+          "durationMs": 20364,
+          "load": {
+            "requestedUrl": "https://anime.nexus/",
+            "finalUrl": "https://anime.nexus/",
+            "status": 200,
+            "title": "Anime Nexus: Watch Popular & High Quality Anime Online Free",
+            "mainFrameNavigations": 2,
+            "secondNavigation": "not-expected",
+            "blockedRequests": 0
+          },
+          "findings": [
+            {
+              "id": "button-name",
+              "impact": "critical",
+              "wcagTags": [
+                "wcag2a",
+                "wcag412"
+              ],
+              "targets": [
+                ".p-2",
+                ".gap-x-4 > .px-0.w-8.dark\\:hover\\:bg-muted\\/50",
+                ".h-9.w-auto.disabled\\:cursor-not-allowed",
+                ".sm\\:h-9"
+              ],
+              "components": [
+                "BUTTON.group/button.inline-...",
+                "BUTTON.group/button.inline-...",
+                "BUTTON.flex.items-center.ju...",
+                "BUTTON.flex.items-center.ju..."
+              ]
+            },
+            {
+              "id": "color-contrast",
+              "impact": "serious",
+              "wcagTags": [
+                "wcag2aa",
+                "wcag143"
+              ],
+              "targets": [
+                ".hover\\:bg-card\\/50.gap-4.p-3:nth-child(10) > .-left-1.top-3.z-10 > .text-muted-foreground\\/40.text-2xl.font-bold"
+              ],
+              "components": [
+                "SPAN.font-bold.text-2xl.text-muted-foreground/40"
+              ]
+            },
+            {
+              "id": "landmark-main-is-top-level",
+              "impact": "moderate",
+              "wcagTags": [],
+              "targets": [
+                ".min-h-screen"
+              ],
+              "components": [
+                "MAIN.2xl:pt-0.grid.min-h-screen.pt-14"
+              ]
+            },
+            {
+              "id": "landmark-no-duplicate-main",
+              "impact": "moderate",
+              "wcagTags": [],
+              "targets": [
+                ".md\\:peer-data-\\[variant\\=inset\\]\\:m-2"
+              ],
+              "components": [
+                "MAIN.flex.relative.w-full..."
+              ]
+            },
+            {
+              "id": "landmark-unique",
+              "impact": "moderate",
+              "wcagTags": [],
+              "targets": [
+                ".md\\:peer-data-\\[variant\\=inset\\]\\:m-2"
+              ],
+              "components": [
+                "MAIN.flex.relative.w-full..."
+              ]
+            },
+            {
+              "id": "link-name",
+              "impact": "serious",
+              "wcagTags": [
+                "wcag2a",
+                "wcag244",
+                "wcag412"
+              ],
+              "targets": [
+                ".active"
+              ],
+              "components": [
+                "A.active.flex.gap-2.items-center"
+              ]
+            },
+            {
+              "id": "page-has-heading-one",
+              "impact": "moderate",
+              "wcagTags": [],
+              "targets": [
+                "html"
+              ],
+              "components": [
+                "HTML.light"
+              ]
+            }
+          ]
+        }
+      }
+    },
+    {
+      "pageId": "apina.biz",
+      "url": "https://apina.biz/",
+      "cluster": "apina.biz",
+      "budgetMs": 1200000,
+      "budgetExceeded": false,
+      "durationMs": 17684,
+      "rawFile": "raw/apina.biz.json.gz",
+      "tools": {
+        "gaps": {
+          "status": "ok",
+          "error": null,
+          "budgetExceeded": false,
+          "durationMs": 7284,
+          "load": {
+            "requestedUrl": "https://apina.biz/",
+            "finalUrl": "https://apina.biz/",
+            "status": 200,
+            "title": "",
+            "mainFrameNavigations": 1,
+            "secondNavigation": "not-expected",
+            "blockedRequests": 0
+          },
+          "findings": {
+            "gaps": [],
+            "keyboard": {
+              "walkRan": true,
+              "notFocusableAssessed": true,
+              "unassessedReasons": [],
+              "walkError": null,
+              "reachedCount": 3
+            }
+          }
+        },
+        "walk": {
+          "status": "ok",
+          "error": null,
+          "budgetExceeded": false,
+          "durationMs": 6821,
+          "load": {
+            "requestedUrl": "https://apina.biz/",
+            "finalUrl": "https://apina.biz/",
+            "status": 200,
+            "title": "",
+            "mainFrameNavigations": 1,
+            "secondNavigation": "not-expected",
+            "blockedRequests": 0
+          },
+          "findings": {
+            "F": 2,
+            "fIncomplete": false,
+            "fIncompleteCauses": {
+              "crossOriginFrames": 0,
+              "closedShadowRoots": 0
+            },
+            "plannedPresses": 20,
+            "presses": 20,
+            "wraps": 6,
+            "focusLost": 0,
+            "deep": {
+              "inside": 0,
+              "crossOrigin": 0,
+              "closedShadowRoot": 0
+            },
+            "launch": {
+              "browserVersion": "143.0.7499.4",
+              "executableBasename": "chrome-headless-shell"
+            },
+            "suspectedTrap": false,
+            "trap": {
+              "wcagCriterion": "2.1.2",
+              "verdict": "pass",
+              "reason": null,
+              "keyboardTrap": false,
+              "trapEscapable": null,
+              "singleDirection": true,
+              "directionsWalked": [
+                "forward"
+              ],
+              "launch": {
+                "browserVersion": "143.0.7499.4",
+                "executableBasename": "chrome-headless-shell"
+              },
+              "directions": [
+                {
+                  "direction": "forward",
+                  "verdict": "pass",
+                  "reason": null,
+                  "confined": false,
+                  "endOfPage": {
+                    "signal": "body-unfocused",
+                    "atPress": 3
+                  },
+                  "release": "not-probed",
+                  "region": [
+                    17,
+                    18
+                  ],
+                  "focusableCount": 2,
+                  "stuckOn": null,
+                  "escapeUrlChanged": false,
+                  "documentReplacements": []
+                }
+              ]
+            },
+            "contextChange": {
+              "wcagCriterion": "3.2.1",
+              "verdict": "pass",
+              "reason": null,
+              "fIncomplete": false,
+              "findings": [],
+              "unattributed": []
+            },
+            "escapeReachedAt": null,
+            "error": null
+          }
+        },
+        "legacy": {
+          "status": "ok",
+          "error": null,
+          "budgetExceeded": false,
+          "durationMs": 0,
+          "load": null,
+          "findings": {
+            "presses": 20,
+            "trap": {
+              "trapped": true,
+              "firstTrappedPress": 15,
+              "cycleLength": 3,
+              "element": "body"
+            },
+            "dynamicViolations": [
+              {
+                "criterion": "2.4.3",
+                "severity": "moderate",
+                "description": "Focus cycling detected - focus returned to previously visited element within short sequence",
+                "evidence": [
+                  "a \"No\"",
+                  "a \"No\""
+                ]
+              }
+            ]
+          }
+        },
+        "axe": {
+          "status": "ok",
+          "error": null,
+          "budgetExceeded": false,
+          "durationMs": 3572,
+          "load": {
+            "requestedUrl": "https://apina.biz/",
+            "finalUrl": "https://apina.biz/",
+            "status": 200,
+            "title": "",
+            "mainFrameNavigations": 1,
+            "secondNavigation": "not-expected",
+            "blockedRequests": 0
+          },
+          "findings": [
+            {
+              "id": "document-title",
+              "impact": "serious",
+              "wcagTags": [
+                "wcag2a",
+                "wcag242"
+              ],
+              "targets": [
+                "html"
+              ],
+              "components": [
+                "HTML"
+              ]
+            },
+            {
+              "id": "html-has-lang",
+              "impact": "serious",
+              "wcagTags": [
+                "wcag2a",
+                "wcag311"
+              ],
+              "targets": [
+                "html"
+              ],
+              "components": [
+                "HTML"
+              ]
+            },
+            {
+              "id": "landmark-one-main",
+              "impact": "moderate",
+              "wcagTags": [],
+              "targets": [
+                "html"
+              ],
+              "components": [
+                "HTML"
+              ]
+            },
+            {
+              "id": "page-has-heading-one",
+              "impact": "moderate",
+              "wcagTags": [],
+              "targets": [
+                "html"
+              ],
+              "components": [
+                "HTML"
+              ]
+            },
+            {
+              "id": "region",
+              "impact": "moderate",
+              "wcagTags": [],
+              "targets": [
+                "img",
+                "a[href=\"\"]",
+                "a:nth-child(7)"
+              ],
+              "components": [
+                "IMG",
+                "A",
+                "A"
+              ]
+            }
+          ]
+        }
+      }
+    },
+    {
+      "pageId": "beardo.in",
+      "url": "https://beardo.in/",
+      "cluster": "beardo.in",
+      "budgetMs": 1200000,
+      "budgetExceeded": false,
+      "durationMs": 450082,
+      "rawFile": "raw/beardo.in.json.gz",
+      "tools": {
+        "gaps": {
+          "status": "ok",
+          "error": null,
+          "budgetExceeded": false,
+          "durationMs": 221686,
+          "load": {
+            "requestedUrl": "https://beardo.in/",
+            "finalUrl": "https://beardo.in/",
+            "status": 200,
+            "title": "Men's Grooming Products - Beard, Hair & Fragrance – Beardo India",
+            "mainFrameNavigations": 1,
+            "secondNavigation": "not-expected",
+            "blockedRequests": 0
+          },
+          "findings": {
+            "gaps": [
+              {
+                "nodeName": "BUTTON",
+                "id": null,
+                "class": "search-modal__back-desktop",
+                "dataBenchId": null,
+                "gapType": "missing_from_a11y_tree",
+                "severity": "critical",
+                "wcag": [
+                  "4.1.2"
+                ]
+              },
+              {
+                "nodeName": "BUTTON",
+                "id": null,
+                "class": "search-modal__search-submit",
+                "dataBenchId": null,
+                "gapType": "missing_from_a11y_tree",
+                "severity": "critical",
+                "wcag": [
+                  "4.1.2"
+                ]
+              },
+              {
+                "nodeName": "A",
+                "id": null,
+                "class": "search-modal__popular-item",
+                "dataBenchId": null,
+                "gapType": "missing_from_a11y_tree",
+                "severity": "critical",
+                "wcag": [
+                  "4.1.2"
+                ]
+              },
+              {
+                "nodeName": "A",
+                "id": null,
+                "class": "search-modal__popular-item",
+                "dataBenchId": null,
+                "gapType": "missing_from_a11y_tree",
+                "severity": "critical",
+                "wcag": [
+                  "4.1.2"
+                ]
+              },
+              {
+                "nodeName": "A",
+                "id": null,
+                "class": "search-modal__popular-item",
+                "dataBenchId": null,
+                "gapType": "missing_from_a11y_tree",
+                "severity": "critical",
+                "wcag": [
+                  "4.1.2"
+                ]
+              },
+              {
+                "nodeName": "A",
+                "id": null,
+                "class": "search-modal__rec-image",
+                "dataBenchId": null,
+                "gapType": "missing_from_a11y_tree",
+                "severity": "critical",
+                "wcag": [
+                  "4.1.2"
+                ]
+              },
+              {
+                "nodeName": "A",
+                "id": null,
+                "class": "search-modal__rec-title-wrap",
+                "dataBenchId": null,
+                "gapType": "missing_from_a11y_tree",
+                "severity": "critical",
+                "wcag": [
+                  "4.1.2"
+                ]
+              },
+              {
+                "nodeName": "A",
+                "id": null,
+                "class": "search-modal__rec-image",
+                "dataBenchId": null,
+                "gapType": "missing_from_a11y_tree",
+                "severity": "critical",
+                "wcag": [
+                  "4.1.2"
+                ]
+              },
+              {
+                "nodeName": "A",
+                "id": null,
+                "class": "search-modal__rec-title-wrap",
+                "dataBenchId": null,
+                "gapType": "missing_from_a11y_tree",
+                "severity": "critical",
+                "wcag": [
+                  "4.1.2"
+                ]
+              },
+              {
+                "nodeName": "A",
+                "id": null,
+                "class": "search-modal__rec-image",
+                "dataBenchId": null,
+                "gapType": "missing_from_a11y_tree",
+                "severity": "critical",
+                "wcag": [
+                  "4.1.2"
+                ]
+              },
+              {
+                "nodeName": "A",
+                "id": null,
+                "class": "search-modal__rec-title-wrap",
+                "dataBenchId": null,
+                "gapType": "missing_from_a11y_tree",
+                "severity": "critical",
+                "wcag": [
+                  "4.1.2"
+                ]
+              },
+              {
+                "nodeName": "A",
+                "id": null,
+                "class": "search-modal__rec-image",
+                "dataBenchId": null,
+                "gapType": "missing_from_a11y_tree",
+                "severity": "critical",
+                "wcag": [
+                  "4.1.2"
+                ]
+              },
+              {
+                "nodeName": "A",
+                "id": null,
+                "class": "search-modal__rec-title-wrap",
+                "dataBenchId": null,
+                "gapType": "missing_from_a11y_tree",
+                "severity": "critical",
+                "wcag": [
+                  "4.1.2"
+                ]
+              },
+              {
+                "nodeName": "A",
+                "id": null,
+                "class": "search-modal__rec-image",
+                "dataBenchId": null,
+                "gapType": "missing_from_a11y_tree",
+                "severity": "critical",
+                "wcag": [
+                  "4.1.2"
+                ]
+              },
+              {
+                "nodeName": "A",
+                "id": null,
+                "class": "search-modal__rec-title-wrap",
+                "dataBenchId": null,
+                "gapType": "missing_from_a11y_tree",
+                "severity": "critical",
+                "wcag": [
+                  "4.1.2"
+                ]
+              },
+              {
+                "nodeName": "A",
+                "id": null,
+                "class": "search-modal__rec-image",
+                "dataBenchId": null,
+                "gapType": "missing_from_a11y_tree",
+                "severity": "critical",
+                "wcag": [
+                  "4.1.2"
+                ]
+              },
+              {
+                "nodeName": "A",
+                "id": null,
+                "class": "search-modal__rec-title-wrap",
+                "dataBenchId": null,
+                "gapType": "missing_from_a11y_tree",
+                "severity": "critical",
+                "wcag": [
+                  "4.1.2"
+                ]
+              },
+              {
+                "nodeName": "A",
+                "id": null,
+                "class": "search-modal__view-all-btn",
+                "dataBenchId": null,
+                "gapType": "missing_from_a11y_tree",
+                "severity": "critical",
+                "wcag": [
+                  "4.1.2"
+                ]
+              },
+              {
+                "nodeName": "A",
+                "id": null,
+                "class": "banner-carousel__slide",
+                "dataBenchId": null,
+                "gapType": "no_accessible_name",
+                "severity": "serious",
+                "wcag": [
+                  "4.1.2",
+                  "1.1.1"
+                ]
+              },
+              {
+                "nodeName": "A",
+                "id": null,
+                "class": "banner-carousel__slide",
+                "dataBenchId": null,
+                "gapType": "hidden_but_interactive",
+                "severity": "moderate",
+                "wcag": [
+                  "4.1.2"
+                ]
+              },
+              {
+                "nodeName": "A",
+                "id": null,
+                "class": "trending-card__image-link",
+                "dataBenchId": null,
+                "gapType": "hidden_but_interactive",
+                "severity": "moderate",
+                "wcag": [
+                  "4.1.2"
+                ]
+              },
+              {
+                "nodeName": "A",
+                "id": null,
+                "class": "trending-card__image-link",
+                "dataBenchId": null,
+                "gapType": "hidden_but_interactive",
+                "severity": "moderate",
+                "wcag": [
+                  "4.1.2"
+                ]
+              },
+              {
+                "nodeName": "A",
+                "id": null,
+                "class": "trending-card__image-link",
+                "dataBenchId": null,
+                "gapType": "hidden_but_interactive",
+                "severity": "moderate",
+                "wcag": [
+                  "4.1.2"
+                ]
+              },
+              {
+                "nodeName": "A",
+                "id": null,
+                "class": "trending-card__image-link",
+                "dataBenchId": null,
+                "gapType": "hidden_but_interactive",
+                "severity": "moderate",
+                "wcag": [
+                  "4.1.2"
+                ]
+              },
+              {
+                "nodeName": "A",
+                "id": null,
+                "class": "trending-card__image-link",
+                "dataBenchId": null,
+                "gapType": "hidden_but_interactive",
+                "severity": "moderate",
+                "wcag": [
+                  "4.1.2"
+                ]
+              },
+              {
+                "nodeName": "A",
+                "id": null,
+                "class": "trending-card__image-link",
+                "dataBenchId": null,
+                "gapType": "hidden_but_interactive",
+                "severity": "moderate",
+                "wcag": [
+                  "4.1.2"
+                ]
+              },
+              {
+                "nodeName": "A",
+                "id": null,
+                "class": "trending-card__image-link",
+                "dataBenchId": null,
+                "gapType": "hidden_but_interactive",
+                "severity": "moderate",
+                "wcag": [
+                  "4.1.2"
+                ]
+              },
+              {
+                "nodeName": "A",
+                "id": null,
+                "class": "trending-card__image-link",
+                "dataBenchId": null,
+                "gapType": "hidden_but_interactive",
+                "severity": "moderate",
+                "wcag": [
+                  "4.1.2"
+                ]
+              },
+              {
+                "nodeName": "A",
+                "id": null,
+                "class": "trending-card__image-link",
+                "dataBenchId": null,
+                "gapType": "hidden_but_interactive",
+                "severity": "moderate",
+                "wcag": [
+                  "4.1.2"
+                ]
+              },
+              {
+                "nodeName": "A",
+                "id": null,
+                "class": "trending-card__image-link",
+                "dataBenchId": null,
+                "gapType": "hidden_but_interactive",
+                "severity": "moderate",
+                "wcag": [
+                  "4.1.2"
+                ]
+              },
+              {
+                "nodeName": "A",
+                "id": null,
+                "class": "trending-card__image-link",
+                "dataBenchId": null,
+                "gapType": "hidden_but_interactive",
+                "severity": "moderate",
+                "wcag": [
+                  "4.1.2"
+                ]
+              },
+              {
+                "nodeName": "A",
+                "id": null,
+                "class": "trending-card__image-link",
+                "dataBenchId": null,
+                "gapType": "hidden_but_interactive",
+                "severity": "moderate",
+                "wcag": [
+                  "4.1.2"
+                ]
+              },
+              {
+                "nodeName": "A",
+                "id": null,
+                "class": "trending-card__image-link",
+                "dataBenchId": null,
+                "gapType": "hidden_but_interactive",
+                "severity": "moderate",
+                "wcag": [
+                  "4.1.2"
+                ]
+              },
+              {
+                "nodeName": "A",
+                "id": null,
+                "class": "trending-card__image-link",
+                "dataBenchId": null,
+                "gapType": "hidden_but_interactive",
+                "severity": "moderate",
+                "wcag": [
+                  "4.1.2"
+                ]
+              },
+              {
+                "nodeName": "A",
+                "id": null,
+                "class": "trending-card__image-link",
+                "dataBenchId": null,
+                "gapType": "hidden_but_interactive",
+                "severity": "moderate",
+                "wcag": [
+                  "4.1.2"
+                ]
+              },
+              {
+                "nodeName": "A",
+                "id": null,
+                "class": "trending-card__image-link",
+                "dataBenchId": null,
+                "gapType": "hidden_but_interactive",
+                "severity": "moderate",
+                "wcag": [
+                  "4.1.2"
+                ]
+              },
+              {
+                "nodeName": "A",
+                "id": null,
+                "class": "trending-card__image-link",
+                "dataBenchId": null,
+                "gapType": "hidden_but_interactive",
+                "severity": "moderate",
+                "wcag": [
+                  "4.1.2"
+                ]
+              },
+              {
+                "nodeName": "A",
+                "id": null,
+                "class": "trending-card__image-link",
+                "dataBenchId": null,
+                "gapType": "hidden_but_interactive",
+                "severity": "moderate",
+                "wcag": [
+                  "4.1.2"
+                ]
+              },
+              {
+                "nodeName": "A",
+                "id": null,
+                "class": "trending-card__image-link",
+                "dataBenchId": null,
+                "gapType": "hidden_but_interactive",
+                "severity": "moderate",
+                "wcag": [
+                  "4.1.2"
+                ]
+              },
+              {
+                "nodeName": "A",
+                "id": null,
+                "class": "trending-card__image-link",
+                "dataBenchId": null,
+                "gapType": "hidden_but_interactive",
+                "severity": "moderate",
+                "wcag": [
+                  "4.1.2"
+                ]
+              },
+              {
+                "nodeName": "A",
+                "id": null,
+                "class": "promo-banner-carousel__slide",
+                "dataBenchId": null,
+                "gapType": "no_accessible_name",
+                "severity": "serious",
+                "wcag": [
+                  "4.1.2",
+                  "1.1.1"
+                ]
+              },
+              {
+                "nodeName": "A",
+                "id": null,
+                "class": "trending-card__image-link",
+                "dataBenchId": null,
+                "gapType": "hidden_but_interactive",
+                "severity": "moderate",
+                "wcag": [
+                  "4.1.2"
+                ]
+              },
+              {
+                "nodeName": "A",
+                "id": null,
+                "class": "trending-card__image-link",
+                "dataBenchId": null,
+                "gapType": "hidden_but_interactive",
+                "severity": "moderate",
+                "wcag": [
+                  "4.1.2"
+                ]
+              },
+              {
+                "nodeName": "A",
+                "id": null,
+                "class": "trending-card__image-link",
+                "dataBenchId": null,
+                "gapType": "hidden_but_interactive",
+                "severity": "moderate",
+                "wcag": [
+                  "4.1.2"
+                ]
+              },
+              {
+                "nodeName": "A",
+                "id": null,
+                "class": "trending-card__image-link",
+                "dataBenchId": null,
+                "gapType": "hidden_but_interactive",
+                "severity": "moderate",
+                "wcag": [
+                  "4.1.2"
+                ]
+              },
+              {
+                "nodeName": "A",
+                "id": null,
+                "class": "trending-card__image-link",
+                "dataBenchId": null,
+                "gapType": "hidden_but_interactive",
+                "severity": "moderate",
+                "wcag": [
+                  "4.1.2"
+                ]
+              },
+              {
+                "nodeName": "A",
+                "id": null,
+                "class": "trending-card__image-link",
+                "dataBenchId": null,
+                "gapType": "hidden_but_interactive",
+                "severity": "moderate",
+                "wcag": [
+                  "4.1.2"
+                ]
+              },
+              {
+                "nodeName": "A",
+                "id": null,
+                "class": "trending-card__image-link",
+                "dataBenchId": null,
+                "gapType": "hidden_but_interactive",
+                "severity": "moderate",
+                "wcag": [
+                  "4.1.2"
+                ]
+              },
+              {
+                "nodeName": "A",
+                "id": null,
+                "class": "trending-card__image-link",
+                "dataBenchId": null,
+                "gapType": "hidden_but_interactive",
+                "severity": "moderate",
+                "wcag": [
+                  "4.1.2"
+                ]
+              },
+              {
+                "nodeName": "A",
+                "id": null,
+                "class": "trending-card__image-link",
+                "dataBenchId": null,
+                "gapType": "hidden_but_interactive",
+                "severity": "moderate",
+                "wcag": [
+                  "4.1.2"
+                ]
+              },
+              {
+                "nodeName": "A",
+                "id": null,
+                "class": "trending-card__image-link",
+                "dataBenchId": null,
+                "gapType": "hidden_but_interactive",
+                "severity": "moderate",
+                "wcag": [
+                  "4.1.2"
+                ]
+              },
+              {
+                "nodeName": "A",
+                "id": null,
+                "class": "trending-card__image-link",
+                "dataBenchId": null,
+                "gapType": "hidden_but_interactive",
+                "severity": "moderate",
+                "wcag": [
+                  "4.1.2"
+                ]
+              },
+              {
+                "nodeName": "A",
+                "id": null,
+                "class": "trending-card__image-link",
+                "dataBenchId": null,
+                "gapType": "hidden_but_interactive",
+                "severity": "moderate",
+                "wcag": [
+                  "4.1.2"
+                ]
+              },
+              {
+                "nodeName": "A",
+                "id": null,
+                "class": "trending-card__image-link",
+                "dataBenchId": null,
+                "gapType": "hidden_but_interactive",
+                "severity": "moderate",
+                "wcag": [
+                  "4.1.2"
+                ]
+              },
+              {
+                "nodeName": "A",
+                "id": null,
+                "class": "trending-card__image-link",
+                "dataBenchId": null,
+                "gapType": "hidden_but_interactive",
+                "severity": "moderate",
+                "wcag": [
+                  "4.1.2"
+                ]
+              },
+              {
+                "nodeName": "A",
+                "id": null,
+                "class": "trending-card__image-link",
+                "dataBenchId": null,
+                "gapType": "hidden_but_interactive",
+                "severity": "moderate",
+                "wcag": [
+                  "4.1.2"
+                ]
+              },
+              {
+                "nodeName": "A",
+                "id": null,
+                "class": "trending-card__image-link",
+                "dataBenchId": null,
+                "gapType": "hidden_but_interactive",
+                "severity": "moderate",
+                "wcag": [
+                  "4.1.2"
+                ]
+              },
+              {
+                "nodeName": "A",
+                "id": null,
+                "class": "trending-card__image-link",
+                "dataBenchId": null,
+                "gapType": "hidden_but_interactive",
+                "severity": "moderate",
+                "wcag": [
+                  "4.1.2"
+                ]
+              },
+              {
+                "nodeName": "A",
+                "id": null,
+                "class": "trending-card__image-link",
+                "dataBenchId": null,
+                "gapType": "hidden_but_interactive",
+                "severity": "moderate",
+                "wcag": [
+                  "4.1.2"
+                ]
+              },
+              {
+                "nodeName": "A",
+                "id": null,
+                "class": "trending-card__image-link",
+                "dataBenchId": null,
+                "gapType": "hidden_but_interactive",
+                "severity": "moderate",
+                "wcag": [
+                  "4.1.2"
+                ]
+              },
+              {
+                "nodeName": "A",
+                "id": null,
+                "class": "trending-card__image-link",
+                "dataBenchId": null,
+                "gapType": "hidden_but_interactive",
+                "severity": "moderate",
+                "wcag": [
+                  "4.1.2"
+                ]
+              },
+              {
+                "nodeName": "A",
+                "id": null,
+                "class": "trending-card__image-link",
+                "dataBenchId": null,
+                "gapType": "hidden_but_interactive",
+                "severity": "moderate",
+                "wcag": [
+                  "4.1.2"
+                ]
+              },
+              {
+                "nodeName": "A",
+                "id": null,
+                "class": "trending-card__image-link",
+                "dataBenchId": null,
+                "gapType": "hidden_but_interactive",
+                "severity": "moderate",
+                "wcag": [
+                  "4.1.2"
+                ]
+              },
+              {
+                "nodeName": "A",
+                "id": null,
+                "class": "trending-card__image-link",
+                "dataBenchId": null,
+                "gapType": "hidden_but_interactive",
+                "severity": "moderate",
+                "wcag": [
+                  "4.1.2"
+                ]
+              },
+              {
+                "nodeName": "A",
+                "id": null,
+                "class": "trending-card__image-link",
+                "dataBenchId": null,
+                "gapType": "hidden_but_interactive",
+                "severity": "moderate",
+                "wcag": [
+                  "4.1.2"
+                ]
+              },
+              {
+                "nodeName": "INPUT",
+                "id": "predictive-search-input",
+                "class": "search-modal__input",
+                "dataBenchId": null,
+                "gapType": "missing_from_a11y_tree",
+                "severity": "critical",
+                "wcag": [
+                  "4.1.2"
+                ]
+              },
+              {
+                "nodeName": "DIV",
+                "id": "search-modal",
+                "class": "search-modal",
+                "dataBenchId": null,
+                "gapType": "missing_from_a11y_tree",
+                "severity": "critical",
+                "wcag": [
+                  "4.1.2"
+                ]
+              },
+              {
+                "nodeName": "DIV",
+                "id": null,
+                "class": "search-modal__backdrop",
+                "dataBenchId": null,
+                "gapType": "missing_from_a11y_tree",
+                "severity": "critical",
+                "wcag": [
+                  "4.1.2"
+                ]
+              },
+              {
+                "nodeName": "DIV",
+                "id": null,
+                "class": "cartx-add-to-cart",
+                "dataBenchId": null,
+                "gapType": "missing_from_a11y_tree",
+                "severity": "critical",
+                "wcag": [
+                  "4.1.2"
+                ]
+              },
+              {
+                "nodeName": "DIV",
+                "id": null,
+                "class": "cartx-add-to-cart",
+                "dataBenchId": null,
+                "gapType": "missing_from_a11y_tree",
+                "severity": "critical",
+                "wcag": [
+                  "4.1.2"
+                ]
+              },
+              {
+                "nodeName": "DIV",
+                "id": null,
+                "class": "cartx-add-to-cart",
+                "dataBenchId": null,
+                "gapType": "missing_from_a11y_tree",
+                "severity": "critical",
+                "wcag": [
+                  "4.1.2"
+                ]
+              },
+              {
+                "nodeName": "DIV",
+                "id": null,
+                "class": "cartx-add-to-cart",
+                "dataBenchId": null,
+                "gapType": "missing_from_a11y_tree",
+                "severity": "critical",
+                "wcag": [
+                  "4.1.2"
+                ]
+              },
+              {
+                "nodeName": "DIV",
+                "id": null,
+                "class": "cartx-add-to-cart",
+                "dataBenchId": null,
+                "gapType": "missing_from_a11y_tree",
+                "severity": "critical",
+                "wcag": [
+                  "4.1.2"
+                ]
+              },
+              {
+                "nodeName": "DIV",
+                "id": null,
+                "class": "cartx-add-to-cart",
+                "dataBenchId": null,
+                "gapType": "missing_from_a11y_tree",
+                "severity": "critical",
+                "wcag": [
+                  "4.1.2"
+                ]
+              },
+              {
+                "nodeName": "DIV",
+                "id": null,
+                "class": "cartx-add-to-cart",
+                "dataBenchId": null,
+                "gapType": "wrong_role",
+                "severity": "serious",
+                "wcag": [
+                  "4.1.2"
+                ]
+              },
+              {
+                "nodeName": "DIV",
+                "id": null,
+                "class": "cartx-add-to-cart",
+                "dataBenchId": null,
+                "gapType": "wrong_role",
+                "severity": "serious",
+                "wcag": [
+                  "4.1.2"
+                ]
+              },
+              {
+                "nodeName": "DIV",
+                "id": null,
+                "class": "cartx-add-to-cart",
+                "dataBenchId": null,
+                "gapType": "wrong_role",
+                "severity": "serious",
+                "wcag": [
+                  "4.1.2"
+                ]
+              },
+              {
+                "nodeName": "DIV",
+                "id": null,
+                "class": "cartx-add-to-cart",
+                "dataBenchId": null,
+                "gapType": "wrong_role",
+                "severity": "serious",
+                "wcag": [
+                  "4.1.2"
+                ]
+              },
+              {
+                "nodeName": "DIV",
+                "id": null,
+                "class": "cartx-add-to-cart",
+                "dataBenchId": null,
+                "gapType": "wrong_role",
+                "severity": "serious",
+                "wcag": [
+                  "4.1.2"
+                ]
+              },
+              {
+                "nodeName": "DIV",
+                "id": null,
+                "class": "cartx-add-to-cart",
+                "dataBenchId": null,
+                "gapType": "wrong_role",
+                "severity": "serious",
+                "wcag": [
+                  "4.1.2"
+                ]
+              },
+              {
+                "nodeName": "DIV",
+                "id": null,
+                "class": "cartx-add-to-cart",
+                "dataBenchId": null,
+                "gapType": "wrong_role",
+                "severity": "serious",
+                "wcag": [
+                  "4.1.2"
+                ]
+              },
+              {
+                "nodeName": "DIV",
+                "id": null,
+                "class": "cartx-add-to-cart",
+                "dataBenchId": null,
+                "gapType": "wrong_role",
+                "severity": "serious",
+                "wcag": [
+                  "4.1.2"
+                ]
+              },
+              {
+                "nodeName": "DIV",
+                "id": null,
+                "class": "cartx-add-to-cart",
+                "dataBenchId": null,
+                "gapType": "wrong_role",
+                "severity": "serious",
+                "wcag": [
+                  "4.1.2"
+                ]
+              },
+              {
+                "nodeName": "DIV",
+                "id": null,
+                "class": "cartx-add-to-cart",
+                "dataBenchId": null,
+                "gapType": "wrong_role",
+                "severity": "serious",
+                "wcag": [
+                  "4.1.2"
+                ]
+              },
+              {
+                "nodeName": "DIV",
+                "id": null,
+                "class": "cartx-add-to-cart",
+                "dataBenchId": null,
+                "gapType": "wrong_role",
+                "severity": "serious",
+                "wcag": [
+                  "4.1.2"
+                ]
+              },
+              {
+                "nodeName": "DIV",
+                "id": null,
+                "class": "cartx-add-to-cart",
+                "dataBenchId": null,
+                "gapType": "wrong_role",
+                "severity": "serious",
+                "wcag": [
+                  "4.1.2"
+                ]
+              },
+              {
+                "nodeName": "DIV",
+                "id": null,
+                "class": "cartx-add-to-cart",
+                "dataBenchId": null,
+                "gapType": "wrong_role",
+                "severity": "serious",
+                "wcag": [
+                  "4.1.2"
+                ]
+              },
+              {
+                "nodeName": "DIV",
+                "id": null,
+                "class": "cartx-add-to-cart",
+                "dataBenchId": null,
+                "gapType": "wrong_role",
+                "severity": "serious",
+                "wcag": [
+                  "4.1.2"
+                ]
+              },
+              {
+                "nodeName": "DIV",
+                "id": null,
+                "class": "cartx-add-to-cart",
+                "dataBenchId": null,
+                "gapType": "wrong_role",
+                "severity": "serious",
+                "wcag": [
+                  "4.1.2"
+                ]
+              },
+              {
+                "nodeName": "DIV",
+                "id": null,
+                "class": "cartx-add-to-cart",
+                "dataBenchId": null,
+                "gapType": "wrong_role",
+                "severity": "serious",
+                "wcag": [
+                  "4.1.2"
+                ]
+              },
+              {
+                "nodeName": "DIV",
+                "id": null,
+                "class": "cartx-add-to-cart",
+                "dataBenchId": null,
+                "gapType": "wrong_role",
+                "severity": "serious",
+                "wcag": [
+                  "4.1.2"
+                ]
+              },
+              {
+                "nodeName": "DIV",
+                "id": null,
+                "class": "cartx-add-to-cart",
+                "dataBenchId": null,
+                "gapType": "wrong_role",
+                "severity": "serious",
+                "wcag": [
+                  "4.1.2"
+                ]
+              },
+              {
+                "nodeName": "DIV",
+                "id": null,
+                "class": "cartx-add-to-cart",
+                "dataBenchId": null,
+                "gapType": "wrong_role",
+                "severity": "serious",
+                "wcag": [
+                  "4.1.2"
+                ]
+              },
+              {
+                "nodeName": "DIV",
+                "id": null,
+                "class": "cartx-add-to-cart",
+                "dataBenchId": null,
+                "gapType": "wrong_role",
+                "severity": "serious",
+                "wcag": [
+                  "4.1.2"
+                ]
+              },
+              {
+                "nodeName": "DIV",
+                "id": null,
+                "class": "cartx-add-to-cart",
+                "dataBenchId": null,
+                "gapType": "wrong_role",
+                "severity": "serious",
+                "wcag": [
+                  "4.1.2"
+                ]
+              },
+              {
+                "nodeName": "DIV",
+                "id": null,
+                "class": "cartx-add-to-cart",
+                "dataBenchId": null,
+                "gapType": "wrong_role",
+                "severity": "serious",
+                "wcag": [
+                  "4.1.2"
+                ]
+              },
+              {
+                "nodeName": "DIV",
+                "id": null,
+                "class": "cartx-add-to-cart",
+                "dataBenchId": null,
+                "gapType": "wrong_role",
+                "severity": "serious",
+                "wcag": [
+                  "4.1.2"
+                ]
+              },
+              {
+                "nodeName": "DIV",
+                "id": null,
+                "class": "cartx-add-to-cart",
+                "dataBenchId": null,
+                "gapType": "wrong_role",
+                "severity": "serious",
+                "wcag": [
+                  "4.1.2"
+                ]
+              },
+              {
+                "nodeName": "DIV",
+                "id": null,
+                "class": "cartx-add-to-cart",
+                "dataBenchId": null,
+                "gapType": "wrong_role",
+                "severity": "serious",
+                "wcag": [
+                  "4.1.2"
+                ]
+              },
+              {
+                "nodeName": "DIV",
+                "id": null,
+                "class": "cartx-add-to-cart",
+                "dataBenchId": null,
+                "gapType": "wrong_role",
+                "severity": "serious",
+                "wcag": [
+                  "4.1.2"
+                ]
+              },
+              {
+                "nodeName": "DIV",
+                "id": null,
+                "class": "cartx-add-to-cart",
+                "dataBenchId": null,
+                "gapType": "wrong_role",
+                "severity": "serious",
+                "wcag": [
+                  "4.1.2"
+                ]
+              },
+              {
+                "nodeName": "DIV",
+                "id": null,
+                "class": "cartx-add-to-cart",
+                "dataBenchId": null,
+                "gapType": "wrong_role",
+                "severity": "serious",
+                "wcag": [
+                  "4.1.2"
+                ]
+              },
+              {
+                "nodeName": "DIV",
+                "id": null,
+                "class": "cartx-add-to-cart",
+                "dataBenchId": null,
+                "gapType": "wrong_role",
+                "severity": "serious",
+                "wcag": [
+                  "4.1.2"
+                ]
+              },
+              {
+                "nodeName": "DIV",
+                "id": null,
+                "class": "cartx-add-to-cart",
+                "dataBenchId": null,
+                "gapType": "wrong_role",
+                "severity": "serious",
+                "wcag": [
+                  "4.1.2"
+                ]
+              },
+              {
+                "nodeName": "DIV",
+                "id": null,
+                "class": "cartx-add-to-cart",
+                "dataBenchId": null,
+                "gapType": "wrong_role",
+                "severity": "serious",
+                "wcag": [
+                  "4.1.2"
+                ]
+              },
+              {
+                "nodeName": "DIV",
+                "id": null,
+                "class": "reel-plugin-video-scroll",
+                "dataBenchId": null,
+                "gapType": "wrong_role",
+                "severity": "serious",
+                "wcag": [
+                  "4.1.2"
+                ]
+              },
+              {
+                "nodeName": "DIV",
+                "id": null,
+                "class": "reel-plugin-video-wrapper",
+                "dataBenchId": null,
+                "gapType": "wrong_role",
+                "severity": "serious",
+                "wcag": [
+                  "4.1.2"
+                ]
+              },
+              {
+                "nodeName": "DIV",
+                "id": null,
+                "class": "reel-plugin-video-wrapper",
+                "dataBenchId": null,
+                "gapType": "wrong_role",
+                "severity": "serious",
+                "wcag": [
+                  "4.1.2"
+                ]
+              },
+              {
+                "nodeName": "DIV",
+                "id": null,
+                "class": "reel-plugin-video-wrapper",
+                "dataBenchId": null,
+                "gapType": "wrong_role",
+                "severity": "serious",
+                "wcag": [
+                  "4.1.2"
+                ]
+              },
+              {
+                "nodeName": "DIV",
+                "id": null,
+                "class": "reel-plugin-video-wrapper",
+                "dataBenchId": null,
+                "gapType": "wrong_role",
+                "severity": "serious",
+                "wcag": [
+                  "4.1.2"
+                ]
+              },
+              {
+                "nodeName": "DIV",
+                "id": null,
+                "class": "reel-plugin-video-wrapper",
+                "dataBenchId": null,
+                "gapType": "wrong_role",
+                "severity": "serious",
+                "wcag": [
+                  "4.1.2"
+                ]
+              },
+              {
+                "nodeName": "DIV",
+                "id": null,
+                "class": "reel-plugin-video-wrapper",
+                "dataBenchId": null,
+                "gapType": "wrong_role",
+                "severity": "serious",
+                "wcag": [
+                  "4.1.2"
+                ]
+              },
+              {
+                "nodeName": "DIV",
+                "id": null,
+                "class": "reel-plugin-video-wrapper",
+                "dataBenchId": null,
+                "gapType": "wrong_role",
+                "severity": "serious",
+                "wcag": [
+                  "4.1.2"
+                ]
+              },
+              {
+                "nodeName": "DIV",
+                "id": null,
+                "class": "reel-plugin-video-wrapper",
+                "dataBenchId": null,
+                "gapType": "wrong_role",
+                "severity": "serious",
+                "wcag": [
+                  "4.1.2"
+                ]
+              },
+              {
+                "nodeName": "DIV",
+                "id": null,
+                "class": "reel-plugin-video-wrapper",
+                "dataBenchId": null,
+                "gapType": "wrong_role",
+                "severity": "serious",
+                "wcag": [
+                  "4.1.2"
+                ]
+              },
+              {
+                "nodeName": "DIV",
+                "id": null,
+                "class": "reel-plugin-video-wrapper",
+                "dataBenchId": null,
+                "gapType": "wrong_role",
+                "severity": "serious",
+                "wcag": [
+                  "4.1.2"
+                ]
+              },
+              {
+                "nodeName": "DIV",
+                "id": null,
+                "class": "reel-plugin-video-wrapper",
+                "dataBenchId": null,
+                "gapType": "wrong_role",
+                "severity": "serious",
+                "wcag": [
+                  "4.1.2"
+                ]
+              },
+              {
+                "nodeName": "DIV",
+                "id": null,
+                "class": "reel-plugin-video-wrapper",
+                "dataBenchId": null,
+                "gapType": "wrong_role",
+                "severity": "serious",
+                "wcag": [
+                  "4.1.2"
+                ]
+              },
+              {
+                "nodeName": "DIV",
+                "id": null,
+                "class": "reel-plugin-video-wrapper",
+                "dataBenchId": null,
+                "gapType": "wrong_role",
+                "severity": "serious",
+                "wcag": [
+                  "4.1.2"
+                ]
+              },
+              {
+                "nodeName": "DIV",
+                "id": null,
+                "class": "reel-plugin-video-wrapper",
+                "dataBenchId": null,
+                "gapType": "wrong_role",
+                "severity": "serious",
+                "wcag": [
+                  "4.1.2"
+                ]
+              },
+              {
+                "nodeName": "DIV",
+                "id": null,
+                "class": "reel-plugin-video-wrapper",
+                "dataBenchId": null,
+                "gapType": "wrong_role",
+                "severity": "serious",
+                "wcag": [
+                  "4.1.2"
+                ]
+              },
+              {
+                "nodeName": "DIV",
+                "id": null,
+                "class": "reel-plugin-video-wrapper",
+                "dataBenchId": null,
+                "gapType": "wrong_role",
+                "severity": "serious",
+                "wcag": [
+                  "4.1.2"
+                ]
+              },
+              {
+                "nodeName": "DIV",
+                "id": null,
+                "class": "reel-plugin-video-wrapper",
+                "dataBenchId": null,
+                "gapType": "wrong_role",
+                "severity": "serious",
+                "wcag": [
+                  "4.1.2"
+                ]
+              },
+              {
+                "nodeName": "DIV",
+                "id": null,
+                "class": "reel-plugin-video-wrapper",
+                "dataBenchId": null,
+                "gapType": "wrong_role",
+                "severity": "serious",
+                "wcag": [
+                  "4.1.2"
+                ]
+              },
+              {
+                "nodeName": "DIV",
+                "id": null,
+                "class": "reel-plugin-video-wrapper",
+                "dataBenchId": null,
+                "gapType": "wrong_role",
+                "severity": "serious",
+                "wcag": [
+                  "4.1.2"
+                ]
+              },
+              {
+                "nodeName": "DIV",
+                "id": null,
+                "class": "cartx-add-to-cart",
+                "dataBenchId": null,
+                "gapType": "wrong_role",
+                "severity": "serious",
+                "wcag": [
+                  "4.1.2"
+                ]
+              },
+              {
+                "nodeName": "DIV",
+                "id": null,
+                "class": "cartx-add-to-cart",
+                "dataBenchId": null,
+                "gapType": "wrong_role",
+                "severity": "serious",
+                "wcag": [
+                  "4.1.2"
+                ]
+              },
+              {
+                "nodeName": "DIV",
+                "id": null,
+                "class": "cartx-add-to-cart",
+                "dataBenchId": null,
+                "gapType": "wrong_role",
+                "severity": "serious",
+                "wcag": [
+                  "4.1.2"
+                ]
+              },
+              {
+                "nodeName": "DIV",
+                "id": null,
+                "class": "cartx-add-to-cart",
+                "dataBenchId": null,
+                "gapType": "wrong_role",
+                "severity": "serious",
+                "wcag": [
+                  "4.1.2"
+                ]
+              },
+              {
+                "nodeName": "DIV",
+                "id": null,
+                "class": "cartx-add-to-cart",
+                "dataBenchId": null,
+                "gapType": "wrong_role",
+                "severity": "serious",
+                "wcag": [
+                  "4.1.2"
+                ]
+              },
+              {
+                "nodeName": "DIV",
+                "id": null,
+                "class": "cartx-add-to-cart",
+                "dataBenchId": null,
+                "gapType": "wrong_role",
+                "severity": "serious",
+                "wcag": [
+                  "4.1.2"
+                ]
+              },
+              {
+                "nodeName": "DIV",
+                "id": null,
+                "class": "cartx-add-to-cart",
+                "dataBenchId": null,
+                "gapType": "wrong_role",
+                "severity": "serious",
+                "wcag": [
+                  "4.1.2"
+                ]
+              },
+              {
+                "nodeName": "DIV",
+                "id": null,
+                "class": "cartx-add-to-cart",
+                "dataBenchId": null,
+                "gapType": "wrong_role",
+                "severity": "serious",
+                "wcag": [
+                  "4.1.2"
+                ]
+              },
+              {
+                "nodeName": "DIV",
+                "id": null,
+                "class": "cartx-add-to-cart",
+                "dataBenchId": null,
+                "gapType": "wrong_role",
+                "severity": "serious",
+                "wcag": [
+                  "4.1.2"
+                ]
+              },
+              {
+                "nodeName": "DIV",
+                "id": null,
+                "class": "cartx-add-to-cart",
+                "dataBenchId": null,
+                "gapType": "wrong_role",
+                "severity": "serious",
+                "wcag": [
+                  "4.1.2"
+                ]
+              },
+              {
+                "nodeName": "DIV",
+                "id": null,
+                "class": "cartx-add-to-cart",
+                "dataBenchId": null,
+                "gapType": "wrong_role",
+                "severity": "serious",
+                "wcag": [
+                  "4.1.2"
+                ]
+              },
+              {
+                "nodeName": "DIV",
+                "id": null,
+                "class": "cartx-add-to-cart",
+                "dataBenchId": null,
+                "gapType": "wrong_role",
+                "severity": "serious",
+                "wcag": [
+                  "4.1.2"
+                ]
+              }
+            ],
+            "keyboard": {
+              "walkRan": true,
+              "notFocusableAssessed": false,
+              "unassessedReasons": [
+                "focusables-incomplete"
+              ],
+              "walkError": null,
+              "reachedCount": 148
+            }
+          }
+        },
+        "walk": {
+          "status": "ok",
+          "error": null,
+          "budgetExceeded": false,
+          "durationMs": 223620,
+          "load": {
+            "requestedUrl": "https://beardo.in/",
+            "finalUrl": "https://beardo.in/",
+            "status": 200,
+            "title": "Men's Grooming Products - Beard, Hair & Fragrance – Beardo India",
+            "mainFrameNavigations": 1,
+            "secondNavigation": "not-expected",
+            "blockedRequests": 0
+          },
+          "findings": {
+            "F": 250,
+            "fIncomplete": false,
+            "fIncompleteCauses": {
+              "crossOriginFrames": 0,
+              "closedShadowRoots": 0
+            },
+            "plannedPresses": 1260,
+            "presses": 1260,
+            "wraps": 8,
+            "focusLost": 0,
+            "deep": {
+              "inside": 0,
+              "crossOrigin": 0,
+              "closedShadowRoot": 0
+            },
+            "launch": {
+              "browserVersion": "143.0.7499.4",
+              "executableBasename": "chrome-headless-shell"
+            },
+            "suspectedTrap": false,
+            "trap": {
+              "wcagCriterion": "2.1.2",
+              "verdict": "pass",
+              "reason": null,
+              "keyboardTrap": false,
+              "trapEscapable": null,
+              "singleDirection": true,
+              "directionsWalked": [
+                "forward"
+              ],
+              "launch": {
+                "browserVersion": "143.0.7499.4",
+                "executableBasename": "chrome-headless-shell"
+              },
+              "directions": [
+                {
+                  "direction": "forward",
+                  "verdict": "pass",
+                  "reason": null,
+                  "confined": false,
+                  "endOfPage": {
+                    "signal": "body-unfocused",
+                    "atPress": 148
+                  },
+                  "release": "not-probed",
+                  "region": [
+                    10577,
+                    10580,
+                    10583,
+                    10586,
+                    10589,
+                    10592,
+                    10596,
+                    10599,
+                    10603,
+                    10606,
+                    10609,
+                    10612,
+                    10615,
+                    10618,
+                    10621,
+                    10624,
+                    10627,
+                    10630,
+                    10636,
+                    10641,
+                    10651,
+                    10655,
+                    10658,
+                    10660,
+                    10662,
+                    10664,
+                    372,
+                    383,
+                    389,
+                    393,
+                    397,
+                    401,
+                    405,
+                    409,
+                    413,
+                    689,
+                    693,
+                    697,
+                    3,
+                    4,
+                    5,
+                    6,
+                    7,
+                    8,
+                    57,
+                    1868,
+                    1869,
+                    1870,
+                    1871,
+                    1872,
+                    1873,
+                    1879,
+                    1890,
+                    1901,
+                    1912,
+                    1923,
+                    1934,
+                    1946,
+                    1958,
+                    1960,
+                    1962,
+                    1992,
+                    2043,
+                    2094,
+                    2145,
+                    2196,
+                    2247,
+                    2301,
+                    2352,
+                    2403,
+                    2454,
+                    2505,
+                    2559,
+                    3873,
+                    3927,
+                    3981,
+                    4032,
+                    4083,
+                    4128,
+                    4173,
+                    4214,
+                    4252,
+                    4262,
+                    4265,
+                    4270,
+                    4271,
+                    4313,
+                    4364,
+                    4415,
+                    4466,
+                    4517,
+                    4568,
+                    4619,
+                    4670,
+                    4721,
+                    4754,
+                    4805,
+                    4856,
+                    4898,
+                    4910,
+                    4922,
+                    5078,
+                    5223,
+                    5368,
+                    5506,
+                    5651,
+                    5789,
+                    5934,
+                    6079,
+                    6224,
+                    6369,
+                    6507,
+                    6652,
+                    6790,
+                    6935,
+                    7080,
+                    7225,
+                    7370,
+                    7508,
+                    7653,
+                    7845,
+                    7859,
+                    7861,
+                    7863,
+                    7865,
+                    7867,
+                    7897,
+                    7948,
+                    7999,
+                    8050,
+                    8101,
+                    8152,
+                    8203,
+                    8254,
+                    8305,
+                    8356,
+                    8397,
+                    8438,
+                    10459,
+                    10469,
+                    10479,
+                    10489,
+                    10499,
+                    10532,
+                    10537,
+                    10569,
+                    10574
+                  ],
+                  "focusableCount": 250,
+                  "stuckOn": null,
+                  "escapeUrlChanged": false,
+                  "documentReplacements": []
+                }
+              ]
+            },
+            "contextChange": {
+              "wcagCriterion": "3.2.1",
+              "verdict": "pass",
+              "reason": null,
+              "fIncomplete": false,
+              "findings": [],
+              "unattributed": []
+            },
+            "escapeReachedAt": null,
+            "error": null
+          }
+        },
+        "legacy": {
+          "status": "ok",
+          "error": null,
+          "budgetExceeded": false,
+          "durationMs": 8,
+          "load": null,
+          "findings": {
+            "presses": 1260,
+            "trap": {
+              "trapped": false,
+              "firstTrappedPress": 17,
+              "cycleLength": 0,
+              "element": null
+            },
+            "dynamicViolations": [
+              {
+                "criterion": "2.4.3",
+                "severity": "moderate",
+                "description": "Focus cycling detected - focus returned to previously visited element within short sequence",
+                "evidence": [
+                  "a.banner-carousel__slide",
+                  "a.banner-carousel__slide"
+                ]
+              }
+            ]
+          }
+        },
+        "axe": {
+          "status": "ok",
+          "error": null,
+          "budgetExceeded": false,
+          "durationMs": 4745,
+          "load": {
+            "requestedUrl": "https://beardo.in/",
+            "finalUrl": "https://beardo.in/",
+            "status": 200,
+            "title": "Men's Grooming Products - Beard, Hair & Fragrance – Beardo India",
+            "mainFrameNavigations": 1,
+            "secondNavigation": "not-expected",
+            "blockedRequests": 0
+          },
+          "findings": [
+            {
+              "id": "aria-hidden-focus",
+              "impact": "serious",
+              "wcagTags": [
+                "wcag2a",
+                "wcag412"
+              ],
+              "targets": [
+                ".banner-carousel__slide[draggable=\"false\"]:nth-child(7)"
+              ],
+              "components": [
+                "A.banner-carousel__sli..."
+              ]
+            },
+            {
+              "id": "color-contrast",
+              "impact": "serious",
+              "wcagTags": [
+                "wcag2aa",
+                "wcag143"
+              ],
+              "targets": [
+                ".information-ticker__set:nth-child(1) > .information-ticker__item:nth-child(3)",
+                ".information-ticker__set:nth-child(1) > .information-ticker__item:nth-child(5)",
+                ".information-ticker__set:nth-child(1) > .information-ticker__item:nth-child(7)",
+                ".information-ticker__set[aria-hidden=\"true\"]:nth-child(2) > .information-ticker__item:nth-child(1)",
+                ".information-ticker__set[aria-hidden=\"true\"]:nth-child(2) > .information-ticker__item:nth-child(3)"
+              ],
+              "components": [
+                "SPAN.information-ticker__item",
+                "SPAN.information-ticker__item",
+                "SPAN.information-ticker__item",
+                "SPAN.information-ticker__item",
+                "SPAN.information-ticker__item"
+              ]
+            },
+            {
+              "id": "link-name",
+              "impact": "serious",
+              "wcagTags": [
+                "wcag2a",
+                "wcag244",
+                "wcag412"
+              ],
+              "targets": [
+                ".banner-carousel__slide[draggable=\"false\"][data-slide=\"\"]:nth-child(1)",
+                ".promo-banner-carousel__slide[data-slide=\"\"]:nth-child(1)"
+              ],
+              "components": [
+                "A.banner-carousel__sli...",
+                "A.promo-banner-carousel__slide"
+              ]
+            },
+            {
+              "id": "region",
+              "impact": "moderate",
+              "wcagTags": [],
+              "targets": [
+                "#announcement-bar"
+              ],
+              "components": [
+                "ANNOUNCEMENT-BAR-CAROUSEL"
+              ]
+            }
+          ]
+        }
+      }
+    },
+    {
+      "pageId": "dfbocai.net",
+      "url": "https://www.dfbocai.net/en",
+      "cluster": "dfbocai.net",
+      "budgetMs": 1200000,
+      "budgetExceeded": false,
+      "durationMs": 117163,
+      "rawFile": "raw/dfbocai.net.json.gz",
+      "tools": {
+        "gaps": {
+          "status": "ok",
+          "error": null,
+          "budgetExceeded": false,
+          "durationMs": 53674,
+          "load": {
+            "requestedUrl": "https://www.dfbocai.net/en",
+            "finalUrl": "https://www.dfbocai.net/en",
+            "status": 200,
+            "title": "Dafabet is The Most Secure Online Betting Company in Asia",
+            "mainFrameNavigations": 1,
+            "secondNavigation": "not-expected",
+            "blockedRequests": 0
+          },
+          "findings": {
+            "gaps": [
+              {
+                "nodeName": "BUTTON",
+                "id": null,
+                "class": "pager-item active",
+                "dataBenchId": null,
+                "gapType": "no_accessible_name",
+                "severity": "serious",
+                "wcag": [
+                  "4.1.2",
+                  "1.1.1"
+                ]
+              },
+              {
+                "nodeName": "BUTTON",
+                "id": null,
+                "class": "pager-item",
+                "dataBenchId": null,
+                "gapType": "no_accessible_name",
+                "severity": "serious",
+                "wcag": [
+                  "4.1.2",
+                  "1.1.1"
+                ]
+              },
+              {
+                "nodeName": "A",
+                "id": null,
+                "class": "en lang-btn",
+                "dataBenchId": null,
+                "gapType": "no_accessible_name",
+                "severity": "serious",
+                "wcag": [
+                  "4.1.2",
+                  "1.1.1"
+                ]
+              },
+              {
+                "nodeName": "A",
+                "id": null,
+                "class": null,
+                "dataBenchId": null,
+                "gapType": "no_accessible_name",
+                "severity": "serious",
+                "wcag": [
+                  "4.1.2",
+                  "1.1.1"
+                ]
+              },
+              {
+                "nodeName": "A",
+                "id": null,
+                "class": "language-link",
+                "dataBenchId": null,
+                "gapType": "missing_from_a11y_tree",
+                "severity": "critical",
+                "wcag": [
+                  "4.1.2"
+                ]
+              },
+              {
+                "nodeName": "A",
+                "id": null,
+                "class": "language-link",
+                "dataBenchId": null,
+                "gapType": "missing_from_a11y_tree",
+                "severity": "critical",
+                "wcag": [
+                  "4.1.2"
+                ]
+              },
+              {
+                "nodeName": "A",
+                "id": null,
+                "class": "language-link",
+                "dataBenchId": null,
+                "gapType": "missing_from_a11y_tree",
+                "severity": "critical",
+                "wcag": [
+                  "4.1.2"
+                ]
+              },
+              {
+                "nodeName": "A",
+                "id": null,
+                "class": "language-link",
+                "dataBenchId": null,
+                "gapType": "missing_from_a11y_tree",
+                "severity": "critical",
+                "wcag": [
+                  "4.1.2"
+                ]
+              },
+              {
+                "nodeName": "A",
+                "id": null,
+                "class": "language-link",
+                "dataBenchId": null,
+                "gapType": "missing_from_a11y_tree",
+                "severity": "critical",
+                "wcag": [
+                  "4.1.2"
+                ]
+              },
+              {
+                "nodeName": "A",
+                "id": null,
+                "class": "language-link",
+                "dataBenchId": null,
+                "gapType": "missing_from_a11y_tree",
+                "severity": "critical",
+                "wcag": [
+                  "4.1.2"
+                ]
+              },
+              {
+                "nodeName": "A",
+                "id": null,
+                "class": "language-link",
+                "dataBenchId": null,
+                "gapType": "missing_from_a11y_tree",
+                "severity": "critical",
+                "wcag": [
+                  "4.1.2"
+                ]
+              },
+              {
+                "nodeName": "A",
+                "id": null,
+                "class": "language-link",
+                "dataBenchId": null,
+                "gapType": "missing_from_a11y_tree",
+                "severity": "critical",
+                "wcag": [
+                  "4.1.2"
+                ]
+              },
+              {
+                "nodeName": "A",
+                "id": null,
+                "class": "language-link",
+                "dataBenchId": null,
+                "gapType": "missing_from_a11y_tree",
+                "severity": "critical",
+                "wcag": [
+                  "4.1.2"
+                ]
+              },
+              {
+                "nodeName": "A",
+                "id": null,
+                "class": "language-link",
+                "dataBenchId": null,
+                "gapType": "missing_from_a11y_tree",
+                "severity": "critical",
+                "wcag": [
+                  "4.1.2"
+                ]
+              },
+              {
+                "nodeName": "A",
+                "id": null,
+                "class": "language-link",
+                "dataBenchId": null,
+                "gapType": "missing_from_a11y_tree",
+                "severity": "critical",
+                "wcag": [
+                  "4.1.2"
+                ]
+              },
+              {
+                "nodeName": "A",
+                "id": null,
+                "class": "language-link",
+                "dataBenchId": null,
+                "gapType": "missing_from_a11y_tree",
+                "severity": "critical",
+                "wcag": [
+                  "4.1.2"
+                ]
+              },
+              {
+                "nodeName": "A",
+                "id": null,
+                "class": "language-link",
+                "dataBenchId": null,
+                "gapType": "missing_from_a11y_tree",
+                "severity": "critical",
+                "wcag": [
+                  "4.1.2"
+                ]
+              },
+              {
+                "nodeName": "A",
+                "id": null,
+                "class": "language-link",
+                "dataBenchId": null,
+                "gapType": "missing_from_a11y_tree",
+                "severity": "critical",
+                "wcag": [
+                  "4.1.2"
+                ]
+              },
+              {
+                "nodeName": "A",
+                "id": null,
+                "class": "language-link",
+                "dataBenchId": null,
+                "gapType": "missing_from_a11y_tree",
+                "severity": "critical",
+                "wcag": [
+                  "4.1.2"
+                ]
+              },
+              {
+                "nodeName": "A",
+                "id": null,
+                "class": "language-link",
+                "dataBenchId": null,
+                "gapType": "missing_from_a11y_tree",
+                "severity": "critical",
+                "wcag": [
+                  "4.1.2"
+                ]
+              },
+              {
+                "nodeName": "SPAN",
+                "id": null,
+                "class": "password-mask-icon",
+                "dataBenchId": null,
+                "gapType": "wrong_role",
+                "severity": "serious",
+                "wcag": [
+                  "4.1.2"
+                ]
+              },
+              {
+                "nodeName": "LI",
+                "id": null,
+                "class": "eu  ",
+                "dataBenchId": null,
+                "gapType": "no_accessible_name",
+                "severity": "serious",
+                "wcag": [
+                  "4.1.2",
+                  "1.1.1"
+                ]
+              },
+              {
+                "nodeName": "LI",
+                "id": null,
+                "class": "zh-hans  ",
+                "dataBenchId": null,
+                "gapType": "no_accessible_name",
+                "severity": "serious",
+                "wcag": [
+                  "4.1.2",
+                  "1.1.1"
+                ]
+              },
+              {
+                "nodeName": "LI",
+                "id": null,
+                "class": "th  ",
+                "dataBenchId": null,
+                "gapType": "no_accessible_name",
+                "severity": "serious",
+                "wcag": [
+                  "4.1.2",
+                  "1.1.1"
+                ]
+              },
+              {
+                "nodeName": "LI",
+                "id": null,
+                "class": "vi  ",
+                "dataBenchId": null,
+                "gapType": "no_accessible_name",
+                "severity": "serious",
+                "wcag": [
+                  "4.1.2",
+                  "1.1.1"
+                ]
+              },
+              {
+                "nodeName": "LI",
+                "id": null,
+                "class": "id  ",
+                "dataBenchId": null,
+                "gapType": "no_accessible_name",
+                "severity": "serious",
+                "wcag": [
+                  "4.1.2",
+                  "1.1.1"
+                ]
+              },
+              {
+                "nodeName": "LI",
+                "id": null,
+                "class": "ja  ",
+                "dataBenchId": null,
+                "gapType": "no_accessible_name",
+                "severity": "serious",
+                "wcag": [
+                  "4.1.2",
+                  "1.1.1"
+                ]
+              },
+              {
+                "nodeName": "LI",
+                "id": null,
+                "class": "ko  ",
+                "dataBenchId": null,
+                "gapType": "no_accessible_name",
+                "severity": "serious",
+                "wcag": [
+                  "4.1.2",
+                  "1.1.1"
+                ]
+              },
+              {
+                "nodeName": "LI",
+                "id": null,
+                "class": "hi  ",
+                "dataBenchId": null,
+                "gapType": "no_accessible_name",
+                "severity": "serious",
+                "wcag": [
+                  "4.1.2",
+                  "1.1.1"
+                ]
+              },
+              {
+                "nodeName": "LI",
+                "id": null,
+                "class": "in  ",
+                "dataBenchId": null,
+                "gapType": "no_accessible_name",
+                "severity": "serious",
+                "wcag": [
+                  "4.1.2",
+                  "1.1.1"
+                ]
+              },
+              {
+                "nodeName": "LI",
+                "id": null,
+                "class": "te  ",
+                "dataBenchId": null,
+                "gapType": "no_accessible_name",
+                "severity": "serious",
+                "wcag": [
+                  "4.1.2",
+                  "1.1.1"
+                ]
+              },
+              {
+                "nodeName": "LI",
+                "id": null,
+                "class": "bg  ",
+                "dataBenchId": null,
+                "gapType": "no_accessible_name",
+                "severity": "serious",
+                "wcag": [
+                  "4.1.2",
+                  "1.1.1"
+                ]
+              },
+              {
+                "nodeName": "LI",
+                "id": null,
+                "class": "pk  ",
+                "dataBenchId": null,
+                "gapType": "no_accessible_name",
+                "severity": "serious",
+                "wcag": [
+                  "4.1.2",
+                  "1.1.1"
+                ]
+              },
+              {
+                "nodeName": "LI",
+                "id": null,
+                "class": "bn  ",
+                "dataBenchId": null,
+                "gapType": "no_accessible_name",
+                "severity": "serious",
+                "wcag": [
+                  "4.1.2",
+                  "1.1.1"
+                ]
+              },
+              {
+                "nodeName": "LI",
+                "id": null,
+                "class": "bd  ",
+                "dataBenchId": null,
+                "gapType": "no_accessible_name",
+                "severity": "serious",
+                "wcag": [
+                  "4.1.2",
+                  "1.1.1"
+                ]
+              },
+              {
+                "nodeName": "LI",
+                "id": null,
+                "class": "pl  ",
+                "dataBenchId": null,
+                "gapType": "no_accessible_name",
+                "severity": "serious",
+                "wcag": [
+                  "4.1.2",
+                  "1.1.1"
+                ]
+              },
+              {
+                "nodeName": "LI",
+                "id": null,
+                "class": "es hide ",
+                "dataBenchId": null,
+                "gapType": "no_accessible_name",
+                "severity": "serious",
+                "wcag": [
+                  "4.1.2",
+                  "1.1.1"
+                ]
+              },
+              {
+                "nodeName": "A",
+                "id": null,
+                "class": "back-to-top hide",
+                "dataBenchId": null,
+                "gapType": "no_accessible_name",
+                "severity": "serious",
+                "wcag": [
+                  "4.1.2",
+                  "1.1.1"
+                ]
+              }
+            ],
+            "keyboard": {
+              "walkRan": true,
+              "notFocusableAssessed": true,
+              "unassessedReasons": [],
+              "walkError": null,
+              "reachedCount": 55
+            }
+          }
+        },
+        "walk": {
+          "status": "ok",
+          "error": null,
+          "budgetExceeded": false,
+          "durationMs": 59387,
+          "load": {
+            "requestedUrl": "https://www.dfbocai.net/en",
+            "finalUrl": "https://www.dfbocai.net/en",
+            "status": 200,
+            "title": "Dafabet is The Most Secure Online Betting Company in Asia",
+            "mainFrameNavigations": 1,
+            "secondNavigation": "not-expected",
+            "blockedRequests": 0
+          },
+          "findings": {
+            "F": 68,
+            "fIncomplete": false,
+            "fIncompleteCauses": {
+              "crossOriginFrames": 0,
+              "closedShadowRoots": 0
+            },
+            "plannedPresses": 350,
+            "presses": 350,
+            "wraps": 6,
+            "focusLost": 0,
+            "deep": {
+              "inside": 0,
+              "crossOrigin": 0,
+              "closedShadowRoot": 0
+            },
+            "launch": {
+              "browserVersion": "143.0.7499.4",
+              "executableBasename": "chrome-headless-shell"
+            },
+            "suspectedTrap": false,
+            "trap": {
+              "wcagCriterion": "2.1.2",
+              "verdict": "pass",
+              "reason": null,
+              "keyboardTrap": false,
+              "trapEscapable": null,
+              "singleDirection": true,
+              "directionsWalked": [
+                "forward"
+              ],
+              "launch": {
+                "browserVersion": "143.0.7499.4",
+                "executableBasename": "chrome-headless-shell"
+              },
+              "directions": [
+                {
+                  "direction": "forward",
+                  "verdict": "pass",
+                  "reason": null,
+                  "confined": false,
+                  "endOfPage": {
+                    "signal": "body-unfocused",
+                    "atPress": 55
+                  },
+                  "release": "not-probed",
+                  "region": [
+                    152,
+                    246,
+                    249,
+                    252,
+                    255,
+                    258,
+                    261,
+                    264,
+                    278,
+                    282,
+                    286,
+                    385,
+                    387,
+                    418,
+                    420,
+                    422,
+                    423,
+                    751,
+                    760,
+                    769,
+                    778,
+                    787,
+                    796,
+                    805,
+                    814,
+                    823,
+                    832,
+                    841,
+                    850,
+                    859,
+                    868,
+                    877,
+                    897,
+                    906,
+                    909,
+                    912,
+                    915,
+                    918,
+                    921,
+                    924,
+                    927,
+                    930,
+                    3,
+                    935,
+                    938,
+                    945,
+                    947,
+                    949,
+                    105,
+                    117,
+                    126,
+                    133,
+                    136,
+                    140
+                  ],
+                  "focusableCount": 68,
+                  "stuckOn": null,
+                  "escapeUrlChanged": false,
+                  "documentReplacements": []
+                }
+              ]
+            },
+            "contextChange": {
+              "wcagCriterion": "3.2.1",
+              "verdict": "pass",
+              "reason": null,
+              "fIncomplete": false,
+              "findings": [],
+              "unattributed": []
+            },
+            "escapeReachedAt": null,
+            "error": null
+          }
+        },
+        "legacy": {
+          "status": "ok",
+          "error": null,
+          "budgetExceeded": false,
+          "durationMs": 0,
+          "load": null,
+          "findings": {
+            "presses": 350,
+            "trap": {
+              "trapped": false,
+              "firstTrappedPress": 28,
+              "cycleLength": 0,
+              "element": null
+            },
+            "dynamicViolations": [
+              {
+                "criterion": "2.4.3",
+                "severity": "moderate",
+                "description": "Focus cycling detected - focus returned to previously visited element within short sequence",
+                "evidence": [
+                  "a.btn.btn-yellow.btn-medium \"JOIN NOW\"",
+                  "a.btn.btn-yellow.btn-medium \"JOIN NOW\""
+                ]
+              }
+            ]
+          }
+        },
+        "axe": {
+          "status": "ok",
+          "error": null,
+          "budgetExceeded": false,
+          "durationMs": 4087,
+          "load": {
+            "requestedUrl": "https://www.dfbocai.net/en",
+            "finalUrl": "https://www.dfbocai.net/en",
+            "status": 200,
+            "title": "Dafabet is The Most Secure Online Betting Company in Asia",
+            "mainFrameNavigations": 1,
+            "secondNavigation": "not-expected",
+            "blockedRequests": 0
+          },
+          "findings": [
+            {
+              "id": "aria-valid-attr-value",
+              "impact": "critical",
+              "wcagTags": [
+                "wcag2a",
+                "wcag412"
+              ],
+              "targets": [
+                ".nav__dropdown-toggle"
+              ],
+              "components": [
+                "BUTTON.nav__dropdown-toggle.priority-nav-is-visible.priority-nav__dropdown-toggle"
+              ]
+            },
+            {
+              "id": "button-name",
+              "impact": "critical",
+              "wcagTags": [
+                "wcag2a",
+                "wcag412"
+              ],
+              "targets": [
+                ".active",
+                "button[data-index=\"1\"]"
+              ],
+              "components": [
+                "BUTTON.active.pager-item",
+                "BUTTON.pager-item"
+              ]
+            },
+            {
+              "id": "color-contrast",
+              "impact": "serious",
+              "wcagTags": [
+                "wcag2aa",
+                "wcag143"
+              ],
+              "targets": [
+                "p:nth-child(1) > strong",
+                "p:nth-child(3)",
+                "p:nth-child(5)",
+                "p:nth-child(7)",
+                ".container > .text-center"
+              ],
+              "components": [
+                "STRONG",
+                "P",
+                "P",
+                "P",
+                "P.text-center"
+              ]
+            },
+            {
+              "id": "heading-order",
+              "impact": "moderate",
+              "wcagTags": [],
+              "targets": [
+                ".site-keyword > h4"
+              ],
+              "components": [
+                "H4.mb-10"
+              ]
+            },
+            {
+              "id": "link-name",
+              "impact": "serious",
+              "wcagTags": [
+                "wcag2a",
+                "wcag244",
+                "wcag412"
+              ],
+              "targets": [
+                ".lang-btn",
+                ".slides-item--hidePrevious > a[target=\"_top\"]"
+              ],
+              "components": [
+                "A.en.lang-btn",
+                "A"
+              ]
+            },
+            {
+              "id": "region",
+              "impact": "moderate",
+              "wcagTags": [],
+              "targets": [
+                "#main-menu-item"
+              ],
+              "components": [
+                "UL.main-menu.pull-right"
+              ]
+            }
+          ]
+        }
+      }
+    },
+    {
+      "pageId": "ekdromi.gr",
+      "url": "https://www.ekdromi.gr/",
+      "cluster": "ekdromi.gr",
+      "budgetMs": 1200000,
+      "budgetExceeded": false,
+      "durationMs": 451964,
+      "rawFile": "raw/ekdromi.gr.json.gz",
+      "tools": {
+        "gaps": {
+          "status": "ok",
+          "error": null,
+          "budgetExceeded": false,
+          "durationMs": 451964,
+          "load": {
+            "requestedUrl": "https://www.ekdromi.gr/",
+            "finalUrl": "https://www.ekdromi.gr/",
+            "status": 200,
+            "title": "",
+            "mainFrameNavigations": 1,
+            "secondNavigation": "not-expected",
+            "blockedRequests": 0
+          },
+          "findings": {
+            "gaps": [
+              {
+                "nodeName": "A",
+                "id": null,
+                "class": "sp-slider",
+                "dataBenchId": null,
+                "gapType": "hidden_but_interactive",
+                "severity": "moderate",
+                "wcag": [
+                  "4.1.2"
+                ]
+              },
+              {
+                "nodeName": "A",
+                "id": null,
+                "class": null,
+                "dataBenchId": null,
+                "gapType": "hidden_but_interactive",
+                "severity": "moderate",
+                "wcag": [
+                  "4.1.2"
+                ]
+              },
+              {
+                "nodeName": "A",
+                "id": null,
+                "class": null,
+                "dataBenchId": null,
+                "gapType": "hidden_but_interactive",
+                "severity": "moderate",
+                "wcag": [
+                  "4.1.2"
+                ]
+              },
+              {
+                "nodeName": "A",
+                "id": null,
+                "class": null,
+                "dataBenchId": null,
+                "gapType": "hidden_but_interactive",
+                "severity": "moderate",
+                "wcag": [
+                  "4.1.2"
+                ]
+              },
+              {
+                "nodeName": "A",
+                "id": null,
+                "class": "buy-link btn btn-success shadow",
+                "dataBenchId": null,
+                "gapType": "hidden_but_interactive",
+                "severity": "moderate",
+                "wcag": [
+                  "4.1.2"
+                ]
+              },
+              {
+                "nodeName": "A",
+                "id": null,
+                "class": "sp-slider",
+                "dataBenchId": null,
+                "gapType": "hidden_but_interactive",
+                "severity": "moderate",
+                "wcag": [
+                  "4.1.2"
+                ]
+              },
+              {
+                "nodeName": "A",
+                "id": null,
+                "class": null,
+                "dataBenchId": null,
+                "gapType": "hidden_but_interactive",
+                "severity": "moderate",
+                "wcag": [
+                  "4.1.2"
+                ]
+              },
+              {
+                "nodeName": "A",
+                "id": null,
+                "class": null,
+                "dataBenchId": null,
+                "gapType": "hidden_but_interactive",
+                "severity": "moderate",
+                "wcag": [
+                  "4.1.2"
+                ]
+              },
+              {
+                "nodeName": "A",
+                "id": null,
+                "class": null,
+                "dataBenchId": null,
+                "gapType": "hidden_but_interactive",
+                "severity": "moderate",
+                "wcag": [
+                  "4.1.2"
+                ]
+              },
+              {
+                "nodeName": "A",
+                "id": null,
+                "class": "buy-link btn btn-success shadow",
+                "dataBenchId": null,
+                "gapType": "hidden_but_interactive",
+                "severity": "moderate",
+                "wcag": [
+                  "4.1.2"
+                ]
+              },
+              {
+                "nodeName": "INPUT",
+                "id": "essential",
+                "class": null,
+                "dataBenchId": null,
+                "gapType": "missing_from_a11y_tree",
+                "severity": "critical",
+                "wcag": [
+                  "4.1.2"
+                ]
+              },
+              {
+                "nodeName": "INPUT",
+                "id": "statistics",
+                "class": null,
+                "dataBenchId": null,
+                "gapType": "hidden_but_interactive",
+                "severity": "moderate",
+                "wcag": [
+                  "4.1.2"
+                ]
+              },
+              {
+                "nodeName": "INPUT",
+                "id": "promotional",
+                "class": null,
+                "dataBenchId": null,
+                "gapType": "hidden_but_interactive",
+                "severity": "moderate",
+                "wcag": [
+                  "4.1.2"
+                ]
+              },
+              {
+                "nodeName": "NAV",
+                "id": "nav",
+                "class": "navbar navbar-expand-lg navbar-offcanvas",
+                "dataBenchId": null,
+                "gapType": "no_accessible_name",
+                "severity": "serious",
+                "wcag": [
+                  "4.1.2",
+                  "1.1.1"
+                ]
+              },
+              {
+                "nodeName": "OL",
+                "id": null,
+                "class": "flex-control-nav flex-control-paging",
+                "dataBenchId": null,
+                "gapType": "no_accessible_name",
+                "severity": "serious",
+                "wcag": [
+                  "4.1.2",
+                  "1.1.1"
+                ]
+              }
+            ],
+            "keyboard": {
+              "walkRan": true,
+              "notFocusableAssessed": false,
+              "unassessedReasons": [
+                "walk-error",
+                "focusables-incomplete"
+              ],
+              "walkError": "cdpSession.send: Target page, context or browser has been closed",
+              "reachedCount": 1161
+            }
+          }
+        },
+        "walk": {
+          "status": "error",
+          "error": "could not open a browser context: browser.newContext: Target page, context or browser has been closed",
+          "budgetExceeded": false,
+          "durationMs": 0,
+          "load": null,
+          "findings": null
+        },
+        "legacy": {
+          "status": "skipped",
+          "error": "no walk to replay: could not open a browser context: browser.newContext: Target page, context or browser has been closed",
+          "budgetExceeded": false,
+          "durationMs": 0,
+          "load": null,
+          "findings": null
+        },
+        "axe": {
+          "status": "error",
+          "error": "could not open a browser context: browser.newContext: Target page, context or browser has been closed",
+          "budgetExceeded": false,
+          "durationMs": 0,
+          "load": null,
+          "findings": null
+        }
+      }
+    },
+    {
+      "pageId": "fashionbeans.com",
+      "url": "https://www.fashionbeans.com/",
+      "cluster": "fashionbeans.com",
+      "budgetMs": 1200000,
+      "budgetExceeded": false,
+      "durationMs": 4,
+      "rawFile": "raw/fashionbeans.com.json.gz",
+      "tools": {
+        "gaps": {
+          "status": "error",
+          "error": "could not open a browser context: browser.newContext: Target page, context or browser has been closed",
+          "budgetExceeded": false,
+          "durationMs": 4,
+          "load": null,
+          "findings": null
+        },
+        "walk": {
+          "status": "error",
+          "error": "could not open a browser context: browser.newContext: Target page, context or browser has been closed",
+          "budgetExceeded": false,
+          "durationMs": 0,
+          "load": null,
+          "findings": null
+        },
+        "legacy": {
+          "status": "skipped",
+          "error": "no walk to replay: could not open a browser context: browser.newContext: Target page, context or browser has been closed",
+          "budgetExceeded": false,
+          "durationMs": 0,
+          "load": null,
+          "findings": null
+        },
+        "axe": {
+          "status": "error",
+          "error": "could not open a browser context: browser.newContext: Target page, context or browser has been closed",
+          "budgetExceeded": false,
+          "durationMs": 0,
+          "load": null,
+          "findings": null
+        }
+      }
+    },
+    {
+      "pageId": "financesonline.com",
+      "url": "https://financesonline.com/",
+      "cluster": "financesonline.com",
+      "budgetMs": 1200000,
+      "budgetExceeded": false,
+      "durationMs": 1,
+      "rawFile": "raw/financesonline.com.json.gz",
+      "tools": {
+        "gaps": {
+          "status": "error",
+          "error": "could not open a browser context: browser.newContext: Target page, context or browser has been closed",
+          "budgetExceeded": false,
+          "durationMs": 1,
+          "load": null,
+          "findings": null
+        },
+        "walk": {
+          "status": "error",
+          "error": "could not open a browser context: browser.newContext: Target page, context or browser has been closed",
+          "budgetExceeded": false,
+          "durationMs": 0,
+          "load": null,
+          "findings": null
+        },
+        "legacy": {
+          "status": "skipped",
+          "error": "no walk to replay: could not open a browser context: browser.newContext: Target page, context or browser has been closed",
+          "budgetExceeded": false,
+          "durationMs": 0,
+          "load": null,
+          "findings": null
+        },
+        "axe": {
+          "status": "error",
+          "error": "could not open a browser context: browser.newContext: Target page, context or browser has been closed",
+          "budgetExceeded": false,
+          "durationMs": 0,
+          "load": null,
+          "findings": null
+        }
+      }
+    },
+    {
+      "pageId": "hoolai.com",
+      "url": "https://www.hoolai.com/",
+      "cluster": "hoolai.com",
+      "budgetMs": 1200000,
+      "budgetExceeded": false,
+      "durationMs": 0,
+      "rawFile": "raw/hoolai.com.json.gz",
+      "tools": {
+        "gaps": {
+          "status": "error",
+          "error": "could not open a browser context: browser.newContext: Target page, context or browser has been closed",
+          "budgetExceeded": false,
+          "durationMs": 0,
+          "load": null,
+          "findings": null
+        },
+        "walk": {
+          "status": "error",
+          "error": "could not open a browser context: browser.newContext: Target page, context or browser has been closed",
+          "budgetExceeded": false,
+          "durationMs": 0,
+          "load": null,
+          "findings": null
+        },
+        "legacy": {
+          "status": "skipped",
+          "error": "no walk to replay: could not open a browser context: browser.newContext: Target page, context or browser has been closed",
+          "budgetExceeded": false,
+          "durationMs": 0,
+          "load": null,
+          "findings": null
+        },
+        "axe": {
+          "status": "error",
+          "error": "could not open a browser context: browser.newContext: Target page, context or browser has been closed",
+          "budgetExceeded": false,
+          "durationMs": 0,
+          "load": null,
+          "findings": null
+        }
+      }
+    },
+    {
+      "pageId": "hostway.com",
+      "url": "https://hostway.com/",
+      "cluster": "hostway.com",
+      "budgetMs": 1200000,
+      "budgetExceeded": false,
+      "durationMs": 0,
+      "rawFile": "raw/hostway.com.json.gz",
+      "tools": {
+        "gaps": {
+          "status": "error",
+          "error": "could not open a browser context: browser.newContext: Target page, context or browser has been closed",
+          "budgetExceeded": false,
+          "durationMs": 0,
+          "load": null,
+          "findings": null
+        },
+        "walk": {
+          "status": "error",
+          "error": "could not open a browser context: browser.newContext: Target page, context or browser has been closed",
+          "budgetExceeded": false,
+          "durationMs": 0,
+          "load": null,
+          "findings": null
+        },
+        "legacy": {
+          "status": "skipped",
+          "error": "no walk to replay: could not open a browser context: browser.newContext: Target page, context or browser has been closed",
+          "budgetExceeded": false,
+          "durationMs": 0,
+          "load": null,
+          "findings": null
+        },
+        "axe": {
+          "status": "error",
+          "error": "could not open a browser context: browser.newContext: Target page, context or browser has been closed",
+          "budgetExceeded": false,
+          "durationMs": 0,
+          "load": null,
+          "findings": null
+        }
+      }
+    },
+    {
+      "pageId": "hyros.com",
+      "url": "https://hyros.com/",
+      "cluster": "hyros.com",
+      "budgetMs": 1200000,
+      "budgetExceeded": false,
+      "durationMs": 0,
+      "rawFile": "raw/hyros.com.json.gz",
+      "tools": {
+        "gaps": {
+          "status": "error",
+          "error": "could not open a browser context: browser.newContext: Target page, context or browser has been closed",
+          "budgetExceeded": false,
+          "durationMs": 0,
+          "load": null,
+          "findings": null
+        },
+        "walk": {
+          "status": "error",
+          "error": "could not open a browser context: browser.newContext: Target page, context or browser has been closed",
+          "budgetExceeded": false,
+          "durationMs": 0,
+          "load": null,
+          "findings": null
+        },
+        "legacy": {
+          "status": "skipped",
+          "error": "no walk to replay: could not open a browser context: browser.newContext: Target page, context or browser has been closed",
+          "budgetExceeded": false,
+          "durationMs": 0,
+          "load": null,
+          "findings": null
+        },
+        "axe": {
+          "status": "error",
+          "error": "could not open a browser context: browser.newContext: Target page, context or browser has been closed",
+          "budgetExceeded": false,
+          "durationMs": 0,
+          "load": null,
+          "findings": null
+        }
+      }
+    },
+    {
+      "pageId": "infinity-tracking.com",
+      "url": "https://www.infinity.co/us/",
+      "cluster": "infinity-tracking.com",
+      "budgetMs": 1200000,
+      "budgetExceeded": false,
+      "durationMs": 0,
+      "rawFile": "raw/infinity-tracking.com.json.gz",
+      "tools": {
+        "gaps": {
+          "status": "error",
+          "error": "could not open a browser context: browser.newContext: Target page, context or browser has been closed",
+          "budgetExceeded": false,
+          "durationMs": 0,
+          "load": null,
+          "findings": null
+        },
+        "walk": {
+          "status": "error",
+          "error": "could not open a browser context: browser.newContext: Target page, context or browser has been closed",
+          "budgetExceeded": false,
+          "durationMs": 0,
+          "load": null,
+          "findings": null
+        },
+        "legacy": {
+          "status": "skipped",
+          "error": "no walk to replay: could not open a browser context: browser.newContext: Target page, context or browser has been closed",
+          "budgetExceeded": false,
+          "durationMs": 0,
+          "load": null,
+          "findings": null
+        },
+        "axe": {
+          "status": "error",
+          "error": "could not open a browser context: browser.newContext: Target page, context or browser has been closed",
+          "budgetExceeded": false,
+          "durationMs": 0,
+          "load": null,
+          "findings": null
+        }
+      }
+    },
+    {
+      "pageId": "ironplanet.com",
+      "url": "https://www.ironplanet.com/",
+      "cluster": "ironplanet.com",
+      "budgetMs": 1200000,
+      "budgetExceeded": false,
+      "durationMs": 0,
+      "rawFile": "raw/ironplanet.com.json.gz",
+      "tools": {
+        "gaps": {
+          "status": "error",
+          "error": "could not open a browser context: browser.newContext: Target page, context or browser has been closed",
+          "budgetExceeded": false,
+          "durationMs": 0,
+          "load": null,
+          "findings": null
+        },
+        "walk": {
+          "status": "error",
+          "error": "could not open a browser context: browser.newContext: Target page, context or browser has been closed",
+          "budgetExceeded": false,
+          "durationMs": 0,
+          "load": null,
+          "findings": null
+        },
+        "legacy": {
+          "status": "skipped",
+          "error": "no walk to replay: could not open a browser context: browser.newContext: Target page, context or browser has been closed",
+          "budgetExceeded": false,
+          "durationMs": 0,
+          "load": null,
+          "findings": null
+        },
+        "axe": {
+          "status": "error",
+          "error": "could not open a browser context: browser.newContext: Target page, context or browser has been closed",
+          "budgetExceeded": false,
+          "durationMs": 0,
+          "load": null,
+          "findings": null
+        }
+      }
+    },
+    {
+      "pageId": "ixi.ru",
+      "url": "https://ixi.ru/",
+      "cluster": "ixi.ru",
+      "budgetMs": 1200000,
+      "budgetExceeded": false,
+      "durationMs": 1,
+      "rawFile": "raw/ixi.ru.json.gz",
+      "tools": {
+        "gaps": {
+          "status": "error",
+          "error": "could not open a browser context: browser.newContext: Target page, context or browser has been closed",
+          "budgetExceeded": false,
+          "durationMs": 1,
+          "load": null,
+          "findings": null
+        },
+        "walk": {
+          "status": "error",
+          "error": "could not open a browser context: browser.newContext: Target page, context or browser has been closed",
+          "budgetExceeded": false,
+          "durationMs": 0,
+          "load": null,
+          "findings": null
+        },
+        "legacy": {
+          "status": "skipped",
+          "error": "no walk to replay: could not open a browser context: browser.newContext: Target page, context or browser has been closed",
+          "budgetExceeded": false,
+          "durationMs": 0,
+          "load": null,
+          "findings": null
+        },
+        "axe": {
+          "status": "error",
+          "error": "could not open a browser context: browser.newContext: Target page, context or browser has been closed",
+          "budgetExceeded": false,
+          "durationMs": 0,
+          "load": null,
+          "findings": null
+        }
+      }
+    },
+    {
+      "pageId": "lionbridge.com",
+      "url": "https://www.lionbridge.com/",
+      "cluster": "lionbridge.com",
+      "budgetMs": 1200000,
+      "budgetExceeded": false,
+      "durationMs": 1,
+      "rawFile": "raw/lionbridge.com.json.gz",
+      "tools": {
+        "gaps": {
+          "status": "error",
+          "error": "could not open a browser context: browser.newContext: Target page, context or browser has been closed",
+          "budgetExceeded": false,
+          "durationMs": 0,
+          "load": null,
+          "findings": null
+        },
+        "walk": {
+          "status": "error",
+          "error": "could not open a browser context: browser.newContext: Target page, context or browser has been closed",
+          "budgetExceeded": false,
+          "durationMs": 1,
+          "load": null,
+          "findings": null
+        },
+        "legacy": {
+          "status": "skipped",
+          "error": "no walk to replay: could not open a browser context: browser.newContext: Target page, context or browser has been closed",
+          "budgetExceeded": false,
+          "durationMs": 0,
+          "load": null,
+          "findings": null
+        },
+        "axe": {
+          "status": "error",
+          "error": "could not open a browser context: browser.newContext: Target page, context or browser has been closed",
+          "budgetExceeded": false,
+          "durationMs": 0,
+          "load": null,
+          "findings": null
+        }
+      }
+    },
+    {
+      "pageId": "noticiasdealava.eus",
+      "url": "https://www.noticiasdealava.eus/",
+      "cluster": "noticiasdealava.eus",
+      "budgetMs": 1200000,
+      "budgetExceeded": false,
+      "durationMs": 0,
+      "rawFile": "raw/noticiasdealava.eus.json.gz",
+      "tools": {
+        "gaps": {
+          "status": "error",
+          "error": "could not open a browser context: browser.newContext: Target page, context or browser has been closed",
+          "budgetExceeded": false,
+          "durationMs": 0,
+          "load": null,
+          "findings": null
+        },
+        "walk": {
+          "status": "error",
+          "error": "could not open a browser context: browser.newContext: Target page, context or browser has been closed",
+          "budgetExceeded": false,
+          "durationMs": 0,
+          "load": null,
+          "findings": null
+        },
+        "legacy": {
+          "status": "skipped",
+          "error": "no walk to replay: could not open a browser context: browser.newContext: Target page, context or browser has been closed",
+          "budgetExceeded": false,
+          "durationMs": 0,
+          "load": null,
+          "findings": null
+        },
+        "axe": {
+          "status": "error",
+          "error": "could not open a browser context: browser.newContext: Target page, context or browser has been closed",
+          "budgetExceeded": false,
+          "durationMs": 0,
+          "load": null,
+          "findings": null
+        }
+      }
+    },
+    {
+      "pageId": "pasarjaya.co.id",
+      "url": "https://pasarjaya.co.id/",
+      "cluster": "pasarjaya.co.id",
+      "budgetMs": 1200000,
+      "budgetExceeded": false,
+      "durationMs": 1,
+      "rawFile": "raw/pasarjaya.co.id.json.gz",
+      "tools": {
+        "gaps": {
+          "status": "error",
+          "error": "could not open a browser context: browser.newContext: Target page, context or browser has been closed",
+          "budgetExceeded": false,
+          "durationMs": 1,
+          "load": null,
+          "findings": null
+        },
+        "walk": {
+          "status": "error",
+          "error": "could not open a browser context: browser.newContext: Target page, context or browser has been closed",
+          "budgetExceeded": false,
+          "durationMs": 0,
+          "load": null,
+          "findings": null
+        },
+        "legacy": {
+          "status": "skipped",
+          "error": "no walk to replay: could not open a browser context: browser.newContext: Target page, context or browser has been closed",
+          "budgetExceeded": false,
+          "durationMs": 0,
+          "load": null,
+          "findings": null
+        },
+        "axe": {
+          "status": "error",
+          "error": "could not open a browser context: browser.newContext: Target page, context or browser has been closed",
+          "budgetExceeded": false,
+          "durationMs": 0,
+          "load": null,
+          "findings": null
+        }
+      }
+    },
+    {
+      "pageId": "topjobs.lk",
+      "url": "https://topjobs.lk/",
+      "cluster": "topjobs.lk",
+      "budgetMs": 1200000,
+      "budgetExceeded": false,
+      "durationMs": 0,
+      "rawFile": "raw/topjobs.lk.json.gz",
+      "tools": {
+        "gaps": {
+          "status": "error",
+          "error": "could not open a browser context: browser.newContext: Target page, context or browser has been closed",
+          "budgetExceeded": false,
+          "durationMs": 0,
+          "load": null,
+          "findings": null
+        },
+        "walk": {
+          "status": "error",
+          "error": "could not open a browser context: browser.newContext: Target page, context or browser has been closed",
+          "budgetExceeded": false,
+          "durationMs": 0,
+          "load": null,
+          "findings": null
+        },
+        "legacy": {
+          "status": "skipped",
+          "error": "no walk to replay: could not open a browser context: browser.newContext: Target page, context or browser has been closed",
+          "budgetExceeded": false,
+          "durationMs": 0,
+          "load": null,
+          "findings": null
+        },
+        "axe": {
+          "status": "error",
+          "error": "could not open a browser context: browser.newContext: Target page, context or browser has been closed",
+          "budgetExceeded": false,
+          "durationMs": 0,
+          "load": null,
+          "findings": null
+        }
+      }
+    },
+    {
+      "pageId": "vdc.ru",
+      "url": "https://vdc.ru/",
+      "cluster": "vdc.ru",
+      "budgetMs": 1200000,
+      "budgetExceeded": false,
+      "durationMs": 0,
+      "rawFile": "raw/vdc.ru.json.gz",
+      "tools": {
+        "gaps": {
+          "status": "error",
+          "error": "could not open a browser context: browser.newContext: Target page, context or browser has been closed",
+          "budgetExceeded": false,
+          "durationMs": 0,
+          "load": null,
+          "findings": null
+        },
+        "walk": {
+          "status": "error",
+          "error": "could not open a browser context: browser.newContext: Target page, context or browser has been closed",
+          "budgetExceeded": false,
+          "durationMs": 0,
+          "load": null,
+          "findings": null
+        },
+        "legacy": {
+          "status": "skipped",
+          "error": "no walk to replay: could not open a browser context: browser.newContext: Target page, context or browser has been closed",
+          "budgetExceeded": false,
+          "durationMs": 0,
+          "load": null,
+          "findings": null
+        },
+        "axe": {
+          "status": "error",
+          "error": "could not open a browser context: browser.newContext: Target page, context or browser has been closed",
+          "budgetExceeded": false,
+          "durationMs": 0,
+          "load": null,
+          "findings": null
+        }
+      }
+    },
+    {
+      "pageId": "zelesta.nl",
+      "url": "https://zelesta.nl/",
+      "cluster": "zelesta.nl",
+      "budgetMs": 1200000,
+      "budgetExceeded": false,
+      "durationMs": 1,
+      "rawFile": "raw/zelesta.nl.json.gz",
+      "tools": {
+        "gaps": {
+          "status": "error",
+          "error": "could not open a browser context: browser.newContext: Target page, context or browser has been closed",
+          "budgetExceeded": false,
+          "durationMs": 0,
+          "load": null,
+          "findings": null
+        },
+        "walk": {
+          "status": "error",
+          "error": "could not open a browser context: browser.newContext: Target page, context or browser has been closed",
+          "budgetExceeded": false,
+          "durationMs": 1,
+          "load": null,
+          "findings": null
+        },
+        "legacy": {
+          "status": "skipped",
+          "error": "no walk to replay: could not open a browser context: browser.newContext: Target page, context or browser has been closed",
+          "budgetExceeded": false,
+          "durationMs": 0,
+          "load": null,
+          "findings": null
+        },
+        "axe": {
+          "status": "error",
+          "error": "could not open a browser context: browser.newContext: Target page, context or browser has been closed",
+          "budgetExceeded": false,
+          "durationMs": 0,
+          "load": null,
+          "findings": null
+        }
+      }
+    }
+  ]
+}

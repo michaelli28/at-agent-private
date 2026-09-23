@@ -14,8 +14,8 @@ export {
   type AgentResult,
   ExecuteActionOptionsSchema,
   type ExecuteActionOptions,
-  TrapContextSchema,
-  type TrapContext,
+  TabPressSchema,
+  type TabPress,
 } from './types.js'
 
 export { createOpenAIClient, generateAction } from './openai.js'

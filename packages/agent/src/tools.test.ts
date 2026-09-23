@@ -230,7 +230,12 @@ describe('executeAction with mocked page', () => {
     it('calls highlight before fill when headed is true', async () => {
       const mockPage = createMockPage()
 
-      const action: Action = { type: 'fill', target: 'textbox named "Email"', value: 'test@example.com', reason: 'Fill email field' }
+      const action: Action = {
+        type: 'fill',
+        target: 'textbox named "Email"',
+        value: 'test@example.com',
+        reason: 'Fill email field',
+      }
       await executeAction(action, mockPage, { headed: true })
 
       expect(mockPage.highlight).toHaveBeenCalledWith('textbox', { name: 'Email' }, 'FILL', 500)
@@ -240,7 +245,12 @@ describe('executeAction with mocked page', () => {
     it('does not highlight fill when headed is false', async () => {
       const mockPage = createMockPage()
 
-      const action: Action = { type: 'fill', target: 'textbox named "Email"', value: 'test@example.com', reason: 'Fill email field' }
+      const action: Action = {
+        type: 'fill',
+        target: 'textbox named "Email"',
+        value: 'test@example.com',
+        reason: 'Fill email field',
+      }
       await executeAction(action, mockPage, { headed: false })
 
       expect(mockPage.highlight).not.toHaveBeenCalled()

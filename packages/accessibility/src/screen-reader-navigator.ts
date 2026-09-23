@@ -2,16 +2,50 @@ import type { AccessibilityNode } from '@at-agent/browser'
 import type { NavigableNode, NavigatorState, NavigationResult, NavigationMode } from './types.js'
 
 const INTERESTING_ROLES = new Set([
-  'heading', 'button', 'link', 'textbox', 'searchbox', 'checkbox', 'radio',
-  'combobox', 'listbox', 'option', 'switch', 'slider', 'spinbutton',
-  'tab', 'tablist', 'menu', 'menuitem', 'table', 'row', 'cell',
-  'banner', 'main', 'navigation', 'complementary', 'contentinfo',
-  'search', 'form', 'region', 'alert', 'dialog', 'img', 'list', 'listitem',
+  'heading',
+  'button',
+  'link',
+  'textbox',
+  'searchbox',
+  'checkbox',
+  'radio',
+  'combobox',
+  'listbox',
+  'option',
+  'switch',
+  'slider',
+  'spinbutton',
+  'tab',
+  'tablist',
+  'menu',
+  'menuitem',
+  'table',
+  'row',
+  'cell',
+  'banner',
+  'main',
+  'navigation',
+  'complementary',
+  'contentinfo',
+  'search',
+  'form',
+  'region',
+  'alert',
+  'dialog',
+  'img',
+  'list',
+  'listitem',
 ])
 
 const LANDMARK_ROLES = new Set([
-  'banner', 'main', 'navigation', 'complementary', 'contentinfo',
-  'search', 'form', 'region',
+  'banner',
+  'main',
+  'navigation',
+  'complementary',
+  'contentinfo',
+  'search',
+  'form',
+  'region',
 ])
 
 export class ScreenReaderNavigator {
@@ -59,11 +93,10 @@ export class ScreenReaderNavigator {
     return false
   }
 
+  // undefined, not 1, when the snapshot stated no level: a navigator that invents a depth would
+  // make every page look like a flat run of h1s.
   private extractLevel(node: AccessibilityNode): number | undefined {
-    if (node.role === 'heading') {
-      return 1
-    }
-    return undefined
+    return node.role === 'heading' ? node.level : undefined
   }
 
   getCurrentNode(): NavigableNode | null {

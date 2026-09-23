@@ -58,6 +58,8 @@ describe('formatAgentResult', () => {
       ],
       violations: [],
       summary: 'Goal achieved',
+      keyboard: null,
+      contextChange: null,
     }
 
     const output = formatAgentResult(result)
@@ -74,11 +76,45 @@ describe('formatAgentResult', () => {
       steps: [],
       violations: [],
       summary: 'Could not find login form',
+      keyboard: null,
+      contextChange: null,
     }
 
     const output = formatAgentResult(result)
 
     expect(output).toContain('Failed')
     expect(output).toContain('Could not find login form')
+  })
+
+  // The verdicts used to reach --json only: a trap page printed 'Violations: 0' and nothing else.
+  it('prints the keyboard verdicts when the agent ran checkKeyboard', () => {
+    const result: AgentResult = {
+      success: true,
+      goal: 'Check the page',
+      steps: [],
+      violations: [],
+      summary: 'Done',
+      keyboard: { verdict: 'fail', reason: null } as NonNullable<AgentResult['keyboard']>,
+      contextChange: { verdict: 'undetermined', reason: 'walk-error' } as NonNullable<AgentResult['contextChange']>,
+    }
+
+    const output = formatAgentResult(result)
+
+    expect(output).toContain('Keyboard trap (WCAG 2.1.2): fail')
+    expect(output).toContain('Change of context on focus (WCAG 3.2.1): undetermined (walk-error)')
+  })
+
+  it('prints no keyboard lines when checkKeyboard never ran', () => {
+    const result: AgentResult = {
+      success: true,
+      goal: 'Check the page',
+      steps: [],
+      violations: [],
+      summary: 'Done',
+      keyboard: null,
+      contextChange: null,
+    }
+
+    expect(formatAgentResult(result)).not.toContain('WCAG')
   })
 })

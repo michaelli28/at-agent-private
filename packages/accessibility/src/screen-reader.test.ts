@@ -46,6 +46,24 @@ describe("ScreenReaderSimulator", () => {
     })
   })
 
+  describe("heading level", () => {
+    // F8. Both level paths used to return a hardcoded 1, so a real document outline read as a flat
+    // run of h1s: page.ts parsed the snapshot's `heading "x" [level=N]` but threw the level away.
+    it("carries the real level through from the snapshot", async () => {
+      page = await client.newPage()
+      await page.playwrightPage.setContent(
+        "<h1>One</h1><h2>Two</h2><h3>Three</h3>"
+      )
+      simulator = new ScreenReaderSimulator(page)
+
+      const headings = await simulator.getHeadings()
+
+      expect(headings.map(h => h.level)).toEqual([1, 2, 3])
+      expect(headings.map(h => h.text)).toEqual(["One", "Two", "Three"])
+      await page.close()
+    })
+  })
+
   describe("getLandmarks", () => {
     it("returns page landmarks", async () => {
       page = await client.newPage()

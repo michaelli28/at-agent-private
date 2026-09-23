@@ -5,7 +5,9 @@ export function createOpenAIClient(apiKey: string): OpenAI {
   return new OpenAI({ apiKey })
 }
 
-const SYSTEM_PROMPT = `You are an accessibility testing agent that navigates web pages and identifies accessibility barriers.
+// Exported so a test can assert every action the loop can dispatch is offered to the model:
+// an action missing from this table is unreachable, however well it is implemented.
+export const SYSTEM_PROMPT = `You are an accessibility testing agent that navigates web pages and identifies accessibility barriers.
 
 ## Actions
 
@@ -16,6 +18,8 @@ const SYSTEM_PROMPT = `You are an accessibility testing agent that navigates web
 | click | element selector | - | Activating buttons, links, controls |
 | fill | element selector | text | Entering text in form fields |
 | audit | - | - | Ready to scan for WCAG violations |
+| tab | previous (optional) | press count | Walking focus by keyboard |
+| checkKeyboard | - | - | Checking whether focus can be trapped, or moved by focus alone. Moves focus and presses Escape. |
 | done | - | - | Goal achieved or cannot proceed |
 
 ## Element Selectors
@@ -47,11 +51,9 @@ export async function generateAction(
   model: string,
   goal: string,
   observation: string,
-  history: Step[]
+  history: Step[],
 ): Promise<Action> {
-  const historyText = history
-    .map((s) => `Step ${s.stepNumber}: ${s.action.type} - ${s.result.observation}`)
-    .join('\n')
+  const historyText = history.map((s) => `Step ${s.stepNumber}: ${s.action.type} - ${s.result.observation}`).join('\n')
 
   const userPrompt = `Goal: ${goal}
 

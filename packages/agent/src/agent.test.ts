@@ -2,6 +2,7 @@ import { describe, it, expect, vi, beforeEach } from 'vitest'
 import { Agent } from './agent.js'
 import * as openai from './openai.js'
 import * as tools from './tools.js'
+import type { KeyboardTrapResult, ContextChangeResult } from '@at-agent/accessibility'
 
 // Mock OpenAI module
 vi.mock('./openai.js', () => ({
@@ -28,6 +29,33 @@ import { BrowserClient } from '@at-agent/browser'
 vi.mock('./tools.js', () => ({
   executeAction: vi.fn(),
 }))
+
+// Judgement fixtures: the agent stores what the tools layer returns verbatim, so these only have
+// to be well-formed KeyboardTrapResult / ContextChangeResult values.
+function trapResult(verdict: 'pass' | 'fail' | 'undetermined'): KeyboardTrapResult {
+  return {
+    wcagCriterion: '2.1.2',
+    verdict,
+    reason: null,
+    keyboardTrap: verdict === 'fail',
+    trapEscapable: verdict === 'fail' ? false : null,
+    singleDirection: true,
+    directionsWalked: ['forward'],
+    launch: { browserVersion: null, executableBasename: 'chrome-headless-shell' },
+    directions: [],
+  }
+}
+
+function contextChangeResult(verdict: 'pass' | 'fail' | 'undetermined'): ContextChangeResult {
+  return {
+    wcagCriterion: '3.2.1',
+    verdict,
+    reason: null,
+    fIncomplete: false,
+    findings: [],
+    unattributed: [],
+  }
+}
 
 describe('Agent', () => {
   beforeEach(() => {
@@ -169,9 +197,9 @@ describe('Agent', () => {
                   type: 'observe',
                   reason: 'Slow action',
                 }),
-              1000
-            )
-          )
+              1000,
+            ),
+          ),
       )
 
       const agent = new Agent('test-api-key')
@@ -229,374 +257,172 @@ describe('Agent', () => {
       expect(tools.executeAction).toHaveBeenCalledWith(
         expect.any(Object),
         expect.any(Object),
-        expect.objectContaining({ headed: true })
+        expect.objectContaining({ headed: true }),
       )
     })
   })
 
-  describe('keyboard trap detection integration', () => {
-    it('records focus events after tab actions to focus history', async () => {
+  describe('keyboard checks', () => {
+    // Test 40: the judge takes a page, not a replayed string list, so nothing but `headed` may
+    // cross the tools boundary; and one record is kept per PRESS, not per action.
+    it('no trapContext crosses the tools boundary; presses accumulate per press', async () => {
       const mockGenerateAction = vi.mocked(openai.generateAction)
       mockGenerateAction
-        .mockResolvedValueOnce({
-          type: 'navigate',
-          target: 'https://example.com',
-          reason: 'Navigate to page',
-        })
-        .mockResolvedValueOnce({
-          type: 'tab',
-          reason: 'Tab to next element',
-        })
-        .mockResolvedValueOnce({
-          type: 'tab',
-          reason: 'Tab to next element',
-        })
-        .mockResolvedValueOnce({
-          type: 'done',
-          reason: 'Complete',
-        })
+        .mockResolvedValueOnce({ type: 'tab', value: '2', reason: 'Tab twice' })
+        .mockResolvedValueOnce({ type: 'tab', value: '2', reason: 'Tab twice again' })
+        .mockResolvedValueOnce({ type: 'checkKeyboard', reason: 'Check the keyboard' })
+        .mockResolvedValueOnce({ type: 'done', reason: 'Complete' })
 
       const mockExecuteAction = vi.mocked(tools.executeAction)
       mockExecuteAction
         .mockResolvedValueOnce({
           success: true,
-          observation: 'Navigated to page',
+          observation: 'Tab x2: a#one -> a#two',
+          presses: [
+            { index: 1, key: 'Tab', element: 'a#one', timestamp: 1 },
+            { index: 2, key: 'Tab', element: 'a#two', timestamp: 2 },
+          ],
         })
         .mockResolvedValueOnce({
           success: true,
-          observation: 'Focused on: button#submit "Submit"',
-          focusedElement: 'button#submit "Submit"',
+          observation: 'Tab x2: a#three -> a#four',
+          presses: [
+            { index: 1, key: 'Tab', element: 'a#three', timestamp: 3 },
+            { index: 2, key: 'Tab', element: 'a#four', timestamp: 4 },
+          ],
         })
         .mockResolvedValueOnce({
           success: true,
-          observation: 'Focused on: input#email "Email"',
-          focusedElement: 'input#email "Email"',
+          observation: 'Keyboard check complete',
+          keyboard: trapResult('pass'),
+          contextChange: contextChangeResult('pass'),
         })
-        .mockResolvedValueOnce({
-          success: true,
-          observation: 'Done',
-        })
+        .mockResolvedValueOnce({ success: true, observation: 'Done' })
 
       const agent = new Agent('test-api-key')
-      const result = await agent.run('Test keyboard navigation', {
-        startUrl: 'https://example.com',
-      })
+      const result = await agent.run('Walk the page', { startUrl: 'https://example.com' })
 
-      expect(result.success).toBe(true)
-      // The agent should have accumulated focus history internally
-      // We verify this by checking that checkTrap would receive the history
-      expect(result.focusHistory).toBeDefined()
-      expect(result.focusHistory).toHaveLength(2)
-      expect(result.focusHistory![0].element).toBe('button#submit "Submit"')
-      expect(result.focusHistory![1].element).toBe('input#email "Email"')
+      const checkCall = mockExecuteAction.mock.calls.find((call) => call[0].type === 'checkKeyboard')
+      expect(checkCall).toBeDefined()
+      expect(checkCall![2]).toEqual({ headed: false })
+
+      expect(result.tabPresses).toHaveLength(4)
+      expect(result.tabPresses!.map((p) => p.element)).toEqual(['a#one', 'a#two', 'a#three', 'a#four'])
+      expect((result as Record<string, unknown>).focusHistory).toBeUndefined()
+      expect((result as Record<string, unknown>).trapDetected).toBeUndefined()
     }, 60000)
 
-    it('passes accumulated focus history to checkTrap action', async () => {
+    // Rewrite of the old ten-tabs-then-checkTrap latch test. A latch was defensible for a boolean;
+    // on a three-valued verdict it would make one `undetermined` permanently non-pass.
+    it('stores the keyboard verdict with last-wins, no latch', async () => {
       const mockGenerateAction = vi.mocked(openai.generateAction)
       mockGenerateAction
-        .mockResolvedValueOnce({
-          type: 'navigate',
-          target: 'https://example.com',
-          reason: 'Navigate to page',
-        })
-        .mockResolvedValueOnce({
-          type: 'tab',
-          reason: 'Tab to next element',
-        })
-        .mockResolvedValueOnce({
-          type: 'tab',
-          reason: 'Tab again',
-        })
-        .mockResolvedValueOnce({
-          type: 'checkTrap',
-          reason: 'Check for keyboard trap',
-        })
-        .mockResolvedValueOnce({
-          type: 'done',
-          reason: 'Complete',
-        })
+        .mockResolvedValueOnce({ type: 'checkKeyboard', reason: 'First check' })
+        .mockResolvedValueOnce({ type: 'checkKeyboard', reason: 'Second check' })
+        .mockResolvedValueOnce({ type: 'done', reason: 'Complete' })
 
       const mockExecuteAction = vi.mocked(tools.executeAction)
       mockExecuteAction
         .mockResolvedValueOnce({
           success: true,
-          observation: 'Navigated to page',
+          observation: 'Keyboard check complete',
+          keyboard: trapResult('fail'),
+          contextChange: contextChangeResult('fail'),
         })
         .mockResolvedValueOnce({
           success: true,
-          observation: 'Focused on: button#btn1',
-          focusedElement: 'button#btn1',
+          observation: 'Keyboard check complete',
+          keyboard: trapResult('pass'),
+          contextChange: contextChangeResult('pass'),
         })
-        .mockResolvedValueOnce({
-          success: true,
-          observation: 'Focused on: button#btn2',
-          focusedElement: 'button#btn2',
-        })
-        .mockResolvedValueOnce({
-          success: true,
-          observation: 'No keyboard trap detected',
-          trapDetected: false,
-        })
-        .mockResolvedValueOnce({
-          success: true,
-          observation: 'Done',
-        })
+        .mockResolvedValueOnce({ success: true, observation: 'Done' })
 
       const agent = new Agent('test-api-key')
-      await agent.run('Test keyboard trap detection', {
-        startUrl: 'https://example.com',
-      })
+      const result = await agent.run('Check twice', { startUrl: 'https://example.com' })
 
-      // Verify that executeAction was called with trapContext containing focus history
-      const checkTrapCall = mockExecuteAction.mock.calls.find(
-        (call) => call[0].type === 'checkTrap'
-      )
-      expect(checkTrapCall).toBeDefined()
-      expect(checkTrapCall![2]).toEqual(
-        expect.objectContaining({
-          trapContext: expect.objectContaining({
-            focusHistory: expect.arrayContaining([
-              expect.objectContaining({ element: 'button#btn1' }),
-              expect.objectContaining({ element: 'button#btn2' }),
-            ]),
-          }),
-        })
-      )
+      expect(result.keyboard).not.toBeNull()
+      expect(result.keyboard!.verdict).toBe('pass')
+      expect(result.contextChange!.verdict).toBe('pass')
     }, 60000)
 
-    it('detects keyboard trap and reports as violation', async () => {
+    it('leaves both judgements null when no keyboard check ran', async () => {
       const mockGenerateAction = vi.mocked(openai.generateAction)
-      // Simulate multiple tabs that create a cycle
-      const tabActions = Array(10).fill(null).map(() => ({
-        type: 'tab' as const,
-        reason: 'Tab to next',
-      }))
-
-      mockGenerateAction
-        .mockResolvedValueOnce({
-          type: 'navigate',
-          target: 'https://example.com',
-          reason: 'Navigate',
-        })
-      tabActions.forEach(() => {
-        mockGenerateAction.mockResolvedValueOnce({
-          type: 'tab',
-          reason: 'Tab to next',
-        })
-      })
-      mockGenerateAction
-        .mockResolvedValueOnce({
-          type: 'checkTrap',
-          reason: 'Check for trap',
-        })
-        .mockResolvedValueOnce({
-          type: 'done',
-          reason: 'Complete',
-        })
-
-      const mockExecuteAction = vi.mocked(tools.executeAction)
-      mockExecuteAction
-        .mockResolvedValueOnce({
-          success: true,
-          observation: 'Navigated',
-        })
-      // Simulate cycling through 2 elements repeatedly
-      for (let i = 0; i < 10; i++) {
-        const element = i % 2 === 0 ? 'button#a' : 'button#b'
-        mockExecuteAction.mockResolvedValueOnce({
-          success: true,
-          observation: `Focused on: ${element}`,
-          focusedElement: element,
-        })
-      }
-      mockExecuteAction
-        .mockResolvedValueOnce({
-          success: true,
-          observation: 'Keyboard trap detected (WCAG 2.1.2 violation)',
-          trapDetected: true,
-        })
-        .mockResolvedValueOnce({
-          success: true,
-          observation: 'Done',
-        })
+      mockGenerateAction.mockResolvedValue({ type: 'done', reason: 'Goal achieved' })
 
       const agent = new Agent('test-api-key')
-      const result = await agent.run('Test keyboard trap', {
-        startUrl: 'https://example.com',
-      })
+      const result = await agent.run('Do nothing', { startUrl: 'https://example.com' })
 
-      expect(result.success).toBe(true)
-      // Trap detection result should be captured in violations or accessible
-      expect(result.trapDetected).toBe(true)
+      expect(result.keyboard).toBeNull()
+      expect(result.contextChange).toBeNull()
     }, 60000)
 
-    it('resets focus history between runs', async () => {
+    it('resets tab presses between runs', async () => {
       const mockGenerateAction = vi.mocked(openai.generateAction)
       const mockExecuteAction = vi.mocked(tools.executeAction)
 
-      // First run
       mockGenerateAction
-        .mockResolvedValueOnce({
-          type: 'tab',
-          reason: 'Tab',
-        })
-        .mockResolvedValueOnce({
-          type: 'done',
-          reason: 'Done',
-        })
+        .mockResolvedValueOnce({ type: 'tab', reason: 'Tab' })
+        .mockResolvedValueOnce({ type: 'done', reason: 'Done' })
 
       mockExecuteAction
         .mockResolvedValueOnce({
           success: true,
           observation: 'Focused on: button#first-run',
-          focusedElement: 'button#first-run',
+          presses: [{ index: 1, key: 'Tab', element: 'button#first-run', timestamp: 1 }],
         })
-        .mockResolvedValueOnce({
-          success: true,
-          observation: 'Done',
-        })
+        .mockResolvedValueOnce({ success: true, observation: 'Done' })
 
       const agent = new Agent('test-api-key')
-      const result1 = await agent.run('First run', {
-        startUrl: 'https://example.com',
-      })
+      const result1 = await agent.run('First run', { startUrl: 'https://example.com' })
 
-      expect(result1.focusHistory).toHaveLength(1)
-      expect(result1.focusHistory![0].element).toBe('button#first-run')
+      expect(result1.tabPresses).toHaveLength(1)
+      expect(result1.tabPresses![0].element).toBe('button#first-run')
 
-      // Reset mocks for second run
       vi.clearAllMocks()
 
-      // Second run
       mockGenerateAction
-        .mockResolvedValueOnce({
-          type: 'tab',
-          reason: 'Tab',
-        })
-        .mockResolvedValueOnce({
-          type: 'done',
-          reason: 'Done',
-        })
+        .mockResolvedValueOnce({ type: 'tab', reason: 'Tab' })
+        .mockResolvedValueOnce({ type: 'done', reason: 'Done' })
 
       mockExecuteAction
         .mockResolvedValueOnce({
           success: true,
           observation: 'Focused on: button#second-run',
-          focusedElement: 'button#second-run',
+          presses: [{ index: 1, key: 'Tab', element: 'button#second-run', timestamp: 2 }],
         })
-        .mockResolvedValueOnce({
-          success: true,
-          observation: 'Done',
-        })
+        .mockResolvedValueOnce({ success: true, observation: 'Done' })
 
-      const result2 = await agent.run('Second run', {
-        startUrl: 'https://example.com',
-      })
+      const result2 = await agent.run('Second run', { startUrl: 'https://example.com' })
 
-      // Should only have the second run's focus history
-      expect(result2.focusHistory).toHaveLength(1)
-      expect(result2.focusHistory![0].element).toBe('button#second-run')
+      expect(result2.tabPresses).toHaveLength(1)
+      expect(result2.tabPresses![0].element).toBe('button#second-run')
     }, 60000)
   })
 
-  describe('dynamic WCAG evaluation integration', () => {
-    it('records interaction events during actions and includes them in result', async () => {
+  describe('the retired dynamic evaluator', () => {
+    // Test 38. This is the inversion of the test that certified the bug: the old rule recorded the
+    // AGENT's own navigate as an interaction event and then reported it as the page changing
+    // context on focus. Deleting recordInteractionEvent deletes the producer.
+    it("the agent's own navigate is no longer a 3.2.1", async () => {
       const mockGenerateAction = vi.mocked(openai.generateAction)
       mockGenerateAction
-        .mockResolvedValueOnce({
-          type: 'navigate',
-          target: 'https://example.com',
-          reason: 'Navigate to page',
-        })
-        .mockResolvedValueOnce({
-          type: 'click',
-          target: 'button#submit',
-          reason: 'Click submit button',
-        })
-        .mockResolvedValueOnce({
-          type: 'fill',
-          target: 'input#email',
-          value: 'test@example.com',
-          reason: 'Fill email field',
-        })
-        .mockResolvedValueOnce({
-          type: 'tab',
-          reason: 'Tab to next element',
-        })
-        .mockResolvedValueOnce({
-          type: 'done',
-          reason: 'Complete',
-        })
-
-      const mockExecuteAction = vi.mocked(tools.executeAction)
-      mockExecuteAction
-        .mockResolvedValueOnce({
-          success: true,
-          observation: 'Navigated to page',
-        })
-        .mockResolvedValueOnce({
-          success: true,
-          observation: 'Clicked button',
-        })
-        .mockResolvedValueOnce({
-          success: true,
-          observation: 'Filled email',
-        })
-        .mockResolvedValueOnce({
-          success: true,
-          observation: 'Focused on: input#password',
-          focusedElement: 'input#password',
-        })
-        .mockResolvedValueOnce({
-          success: true,
-          observation: 'Done',
-        })
-
-      const agent = new Agent('test-api-key')
-      const result = await agent.run('Test dynamic evaluation', {
-        startUrl: 'https://example.com',
-      })
-
-      expect(result.success).toBe(true)
-      // Should have dynamicViolations field (empty array if no violations detected)
-      expect(result.dynamicViolations).toBeDefined()
-      expect(Array.isArray(result.dynamicViolations)).toBe(true)
-    }, 60000)
-
-    it('detects dynamic WCAG violations during navigation', async () => {
-      const mockGenerateAction = vi.mocked(openai.generateAction)
-      // Simulate a pattern that triggers context change on focus (3.2.1 violation)
-      // This happens when a navigate event immediately follows a focus event
-      mockGenerateAction
-        .mockResolvedValueOnce({
-          type: 'tab',
-          reason: 'Tab to link',
-        })
+        .mockResolvedValueOnce({ type: 'tab', reason: 'Tab to link' })
         .mockResolvedValueOnce({
           type: 'navigate',
           target: 'https://example.com/other',
           reason: 'Navigate away',
         })
-        .mockResolvedValueOnce({
-          type: 'done',
-          reason: 'Complete',
-        })
+        .mockResolvedValueOnce({ type: 'done', reason: 'Complete' })
 
       const mockExecuteAction = vi.mocked(tools.executeAction)
       mockExecuteAction
         .mockResolvedValueOnce({
           success: true,
-          observation: 'Focused on: a#auto-nav "Auto-navigate link"',
-          focusedElement: 'a#auto-nav "Auto-navigate link"',
+          observation: 'Focused on: a#auto-nav',
+          presses: [{ index: 1, key: 'Tab', element: 'a#auto-nav', timestamp: 1 }],
         })
-        .mockResolvedValueOnce({
-          success: true,
-          observation: 'Navigated to other page',
-        })
-        .mockResolvedValueOnce({
-          success: true,
-          observation: 'Done',
-        })
+        .mockResolvedValueOnce({ success: true, observation: 'Navigated to other page' })
+        .mockResolvedValueOnce({ success: true, observation: 'Done' })
 
       const agent = new Agent('test-api-key')
       const result = await agent.run('Test context change detection', {
@@ -604,68 +430,30 @@ describe('Agent', () => {
       })
 
       expect(result.success).toBe(true)
-      expect(result.dynamicViolations).toBeDefined()
-      // Should detect 3.2.1 violation (context change on focus)
-      expect(result.dynamicViolations!.length).toBeGreaterThanOrEqual(1)
-      const contextChangeViolation = result.dynamicViolations!.find(
-        (v) => v.criterion === '3.2.1'
-      )
-      expect(contextChangeViolation).toBeDefined()
-      expect(contextChangeViolation!.description).toContain('Context change')
+      expect('dynamicViolations' in result).toBe(false)
+      expect(result.contextChange).toBeNull()
     }, 60000)
 
-    it('detects focus cycling violations (2.4.3)', async () => {
+    // Test 39. The 2.4.3 focus-order rule is retired, not repaired: on a real page a repeated
+    // focus identity is wrap-around (bench/COVERAGE.md).
+    it('no 2.4.3 survives', async () => {
       const mockGenerateAction = vi.mocked(openai.generateAction)
-      // Simulate focus cycling - focus returns to same element within short sequence
       mockGenerateAction
-        .mockResolvedValueOnce({
-          type: 'tab',
-          reason: 'Tab 1',
-        })
-        .mockResolvedValueOnce({
-          type: 'tab',
-          reason: 'Tab 2',
-        })
-        .mockResolvedValueOnce({
-          type: 'tab',
-          reason: 'Tab 3',
-        })
-        .mockResolvedValueOnce({
-          type: 'tab',
-          reason: 'Tab 4 - back to first',
-        })
-        .mockResolvedValueOnce({
-          type: 'done',
-          reason: 'Complete',
-        })
+        .mockResolvedValueOnce({ type: 'tab', reason: 'Tab 1' })
+        .mockResolvedValueOnce({ type: 'tab', reason: 'Tab 2' })
+        .mockResolvedValueOnce({ type: 'tab', reason: 'Tab 3' })
+        .mockResolvedValueOnce({ type: 'tab', reason: 'Tab 4 - back to first' })
+        .mockResolvedValueOnce({ type: 'done', reason: 'Complete' })
 
       const mockExecuteAction = vi.mocked(tools.executeAction)
-      // Cycle through elements: A -> B -> C -> A (cycling)
-      mockExecuteAction
-        .mockResolvedValueOnce({
+      for (const [i, element] of ['button#A', 'button#B', 'button#C', 'button#A'].entries()) {
+        mockExecuteAction.mockResolvedValueOnce({
           success: true,
-          observation: 'Focused on: button#A',
-          focusedElement: 'button#A',
+          observation: `Focused on: ${element}`,
+          presses: [{ index: 1, key: 'Tab', element, timestamp: i + 1 }],
         })
-        .mockResolvedValueOnce({
-          success: true,
-          observation: 'Focused on: button#B',
-          focusedElement: 'button#B',
-        })
-        .mockResolvedValueOnce({
-          success: true,
-          observation: 'Focused on: button#C',
-          focusedElement: 'button#C',
-        })
-        .mockResolvedValueOnce({
-          success: true,
-          observation: 'Focused on: button#A',
-          focusedElement: 'button#A',
-        })
-        .mockResolvedValueOnce({
-          success: true,
-          observation: 'Done',
-        })
+      }
+      mockExecuteAction.mockResolvedValueOnce({ success: true, observation: 'Done' })
 
       const agent = new Agent('test-api-key')
       const result = await agent.run('Test focus cycling detection', {
@@ -673,89 +461,8 @@ describe('Agent', () => {
       })
 
       expect(result.success).toBe(true)
-      expect(result.dynamicViolations).toBeDefined()
-      // Should detect 2.4.3 violation (focus cycling)
-      const focusCyclingViolation = result.dynamicViolations!.find(
-        (v) => v.criterion === '2.4.3'
-      )
-      expect(focusCyclingViolation).toBeDefined()
-      expect(focusCyclingViolation!.description).toContain('Focus cycling')
-    }, 60000)
-
-    it('resets dynamic evaluator between runs', async () => {
-      const mockGenerateAction = vi.mocked(openai.generateAction)
-      const mockExecuteAction = vi.mocked(tools.executeAction)
-
-      // First run - trigger a violation
-      mockGenerateAction
-        .mockResolvedValueOnce({
-          type: 'tab',
-          reason: 'Tab',
-        })
-        .mockResolvedValueOnce({
-          type: 'navigate',
-          target: 'https://example.com/other',
-          reason: 'Navigate',
-        })
-        .mockResolvedValueOnce({
-          type: 'done',
-          reason: 'Done',
-        })
-
-      mockExecuteAction
-        .mockResolvedValueOnce({
-          success: true,
-          observation: 'Focused on: link#nav',
-          focusedElement: 'link#nav',
-        })
-        .mockResolvedValueOnce({
-          success: true,
-          observation: 'Navigated',
-        })
-        .mockResolvedValueOnce({
-          success: true,
-          observation: 'Done',
-        })
-
-      const agent = new Agent('test-api-key')
-      const result1 = await agent.run('First run with violation', {
-        startUrl: 'https://example.com',
-      })
-
-      expect(result1.dynamicViolations!.length).toBeGreaterThan(0)
-
-      // Reset mocks for second run
-      vi.clearAllMocks()
-
-      // Second run - no violations
-      mockGenerateAction
-        .mockResolvedValueOnce({
-          type: 'click',
-          target: 'button#ok',
-          reason: 'Click',
-        })
-        .mockResolvedValueOnce({
-          type: 'done',
-          reason: 'Done',
-        })
-
-      mockExecuteAction
-        .mockResolvedValueOnce({
-          success: true,
-          observation: 'Clicked',
-        })
-        .mockResolvedValueOnce({
-          success: true,
-          observation: 'Done',
-        })
-
-      const result2 = await agent.run('Second run without violation', {
-        startUrl: 'https://example.com',
-      })
-
-      // Second run should NOT have violations from the first run
-      expect(result2.dynamicViolations).toBeDefined()
-      expect(result2.dynamicViolations!.length).toBe(0)
+      expect('dynamicViolations' in result).toBe(false)
+      expect(result.tabPresses).toHaveLength(4)
     }, 60000)
   })
 })

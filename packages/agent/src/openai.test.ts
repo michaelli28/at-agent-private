@@ -1,5 +1,5 @@
 import { describe, it, expect, vi } from 'vitest'
-import { createOpenAIClient, generateAction } from './openai.js'
+import { createOpenAIClient, generateAction, SYSTEM_PROMPT } from './openai.js'
 import type { Step } from './types.js'
 
 // Mock OpenAI
@@ -49,7 +49,7 @@ describe('generateAction', () => {
       'gpt-4o',
       'Click the submit button',
       'Page has a form with submit button',
-      []
+      [],
     )
 
     expect(action.type).toBe('click')
@@ -78,13 +78,7 @@ describe('generateAction', () => {
       },
     }
 
-    const action = await generateAction(
-      mockClient as any,
-      'gpt-4o',
-      'Test the page',
-      'All tests passed',
-      []
-    )
+    const action = await generateAction(mockClient as any, 'gpt-4o', 'Test the page', 'All tests passed', [])
 
     expect(action.type).toBe('done')
   })
@@ -108,9 +102,9 @@ describe('generateAction', () => {
       },
     }
 
-    await expect(
-      generateAction(mockClient as any, 'gpt-4o', 'Test', 'Observation', [])
-    ).rejects.toThrow('No response from model')
+    await expect(generateAction(mockClient as any, 'gpt-4o', 'Test', 'Observation', [])).rejects.toThrow(
+      'No response from model',
+    )
   })
 
   it('includes history in prompt', async () => {
@@ -145,13 +139,7 @@ describe('generateAction', () => {
       },
     ]
 
-    await generateAction(
-      mockClient as any,
-      'gpt-4o',
-      'Test the page',
-      'Page is ready',
-      history
-    )
+    await generateAction(mockClient as any, 'gpt-4o', 'Test the page', 'Page is ready', history)
 
     // Verify the create call included history in the messages
     expect(createMock).toHaveBeenCalledWith(
@@ -163,7 +151,17 @@ describe('generateAction', () => {
             content: expect.stringContaining('Step 1: navigate'),
           }),
         ]),
-      })
+      }),
     )
+  })
+})
+
+// Test 41. The action table is the only place the model learns an action exists, so without these
+// two rows the whole keyboard path is unreachable from the live loop.
+describe('SYSTEM_PROMPT', () => {
+  it('tells the model the keyboard actions exist', () => {
+    expect(SYSTEM_PROMPT).toContain('| tab |')
+    expect(SYSTEM_PROMPT).toContain('| checkKeyboard |')
+    expect(SYSTEM_PROMPT).not.toContain('checkTrap')
   })
 })

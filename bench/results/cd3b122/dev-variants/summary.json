@@ -1,0 +1,4663 @@
+{
+  "schemaVersion": 1,
+  "set": "dev-variants",
+  "complete": true,
+  "createdAt": "2026-09-19T05:02:20.934Z",
+  "git": {
+    "sha": "cd3b12259dcd779751a4658808e17372e9b86070",
+    "shortSha": "cd3b122",
+    "dirty": false,
+    "dirtyPaths": []
+  },
+  "launch": {
+    "mode": "headless-shell",
+    "browserVersion": "143.0.7499.4",
+    "executablePath": "/Users/possible/Library/Caches/ms-playwright/chromium-1200/chrome-mac-arm64/Google Chrome for Testing.app/Contents/MacOS/Google Chrome for Testing",
+    "executablePathNote": "chromium.executablePath() names the full Chromium build even when chromium.launch() runs chrome-headless-shell; browserProcessPath is the launched binary.",
+    "browserProcessPath": "/Users/possible/Library/Caches/ms-playwright/chromium_headless_shell-1200/chrome-headless-shell-mac-arm64/chrome-headless-shell",
+    "userAgent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) HeadlessChrome/143.0.7499.4 Safari/537.36",
+    "playwrightVersion": "1.57.0"
+  },
+  "axeCoreVersion": "4.11.0",
+  "nodeVersion": "v24.10.0",
+  "config": {
+    "budgetMs": 1200000,
+    "waitUntil": "domcontentloaded",
+    "settleMs": 3000,
+    "loadTimeoutMs": 60000,
+    "walkOptions": "runTabWalk defaults",
+    "localOnly": true,
+    "pageFilter": null
+  },
+  "inputs": [
+    {
+      "path": "bench/corpus/dev/variants/labels.json",
+      "sha256": "b255c33ba55172bb8a27bc4ee6710d2521824048ebbc5a9e60e0c8bf8b8c9b22"
+    },
+    {
+      "path": "bench/corpus/dev/variants/good-operable__M1__search-submit.html",
+      "sha256": "e7df092eaa66fbd6916af01a3618db4d9cbc052e5f5d6ea456c36a32f0875ecb"
+    },
+    {
+      "path": "bench/corpus/dev/variants/good-operable__M3__nav-about.html",
+      "sha256": "a88023a1bfa85bef15ae504159885d91464fdf7a558051154bd38e556bae44eb"
+    },
+    {
+      "path": "bench/corpus/dev/variants/good-operable__M5__nav-about.html",
+      "sha256": "05797da6b1ef165b9721caa090c6c96747a1e81ed7c11d6c57328ea14768fcac"
+    },
+    {
+      "path": "bench/corpus/dev/variants/good-operable__M6__nav-about.html",
+      "sha256": "5814d87f55760d6cb14d434ccc753e1e3cfcc5c024177b9e3afc05707126ea63"
+    },
+    {
+      "path": "bench/corpus/dev/variants/identical-links__M3__read-more-01.html",
+      "sha256": "fbfaf2ff23a1185c67192fb12d6317fb8b3e87f750457bd0e7bd16b25b8fd07e"
+    },
+    {
+      "path": "bench/corpus/dev/variants/identical-links__M5__read-more-01.html",
+      "sha256": "51711af73b012b517d69fa2ccdac8f8e26e93ef54180733e18caf2b1699c58b0"
+    },
+    {
+      "path": "bench/corpus/dev/variants/identical-links__M6__read-more-01.html",
+      "sha256": "45d363726332b9ca7034cf799f9523edba2eecd5ec3a911fab0af31e09d8dfc5"
+    },
+    {
+      "path": "bench/corpus/dev/variants/three-links__M3__link-1.html",
+      "sha256": "c4e778ed7e53b397f2872513bddf616c7696f54c934f577cdbc1653ee3837b04"
+    },
+    {
+      "path": "bench/corpus/dev/variants/three-links__M5__link-1.html",
+      "sha256": "8cd7c829bc65d3185c1c6ab480b379f0e13ded2c91dda748f8b69cc64152afa8"
+    },
+    {
+      "path": "bench/corpus/dev/variants/three-links__M6__link-1.html",
+      "sha256": "11c533afe0f8bb6e540d5d0565c419bc5f1a7191c157aca388c0502fe1fcb523"
+    },
+    {
+      "path": "bench/corpus/dev/variants/navbar__M1__dropdown-toggle.html",
+      "sha256": "6a993e3187fa1ca3e543ca5876fa506306348cc4105ec998a244ec2d6e023242"
+    },
+    {
+      "path": "bench/corpus/dev/variants/navbar__M3__brand.html",
+      "sha256": "3b6fe6b6cee6622569c57ed9e83174740ccfd6a0c7948e5b4fd77e58142ac7b9"
+    },
+    {
+      "path": "bench/corpus/dev/variants/navbar__M4__toggler.html",
+      "sha256": "4f74b5c82088434db3af16bfaef89392d57cad79569cc9b3a6c62d146d512d7d"
+    },
+    {
+      "path": "bench/corpus/dev/variants/navbar__M5__brand.html",
+      "sha256": "50bac978df419c2c12c0792f824183f1660ffd6e9a9b5c4c02d535949eb68be8"
+    },
+    {
+      "path": "bench/corpus/dev/variants/navbar__M6__brand.html",
+      "sha256": "6f8f550d3fb8664f61261e5dd918bba3a11063f44b2cf123252f7cbdd9aaeb2d"
+    },
+    {
+      "path": "bench/corpus/dev/variants/form__M1__submit-button.html",
+      "sha256": "291445250552abe2b69b8b7f7424acd3033d11831535e15db439024722211c1d"
+    },
+    {
+      "path": "bench/corpus/dev/variants/form__M3__submit-button.html",
+      "sha256": "a0e07d3ad888d2ed47a063a7322a7de2af7b39985fc2e5ba0c598bbcc9f40e17"
+    },
+    {
+      "path": "bench/corpus/dev/variants/form__M5__email-input.html",
+      "sha256": "c92c03bf7041d448a2b975e0354f70a53f4b73b15ca3429e0a471438b97deb01"
+    },
+    {
+      "path": "bench/corpus/dev/variants/form__M6__email-input.html",
+      "sha256": "af4b28f49ce5095ff95f96faac5247ee011e91051adbbce860258ae95ca35e8c"
+    },
+    {
+      "path": "bench/corpus/dev/variants/js-handlers__M1__native-button.html",
+      "sha256": "9cb2ddb44d84521361777b9a7a81662d9df8a6b6cfef7c31480729cc1ccbdc57"
+    },
+    {
+      "path": "bench/corpus/dev/variants/js-handlers__M2__custom-button.html",
+      "sha256": "89175510fdb11123fbc6948ed545c8cc5f046bc44a0c17a117b4506dd6f8c482"
+    },
+    {
+      "path": "bench/corpus/dev/variants/js-handlers__M3__custom-button.html",
+      "sha256": "ffaf46584159de0b97c932e60f8b62600f4394fc6a0ffb34e187adb6fd9f7537"
+    },
+    {
+      "path": "bench/corpus/dev/variants/js-handlers__M5__custom-button.html",
+      "sha256": "bc24b5a4965489f337d3d3fa71eb88d9669dd508f809afc3bbbf40879c7c498e"
+    },
+    {
+      "path": "bench/corpus/dev/variants/js-handlers__M6__custom-button.html",
+      "sha256": "39150d9b42db5651a7da4d7f3b117c2cf447aee290ffcb2d98d76edb99be9db0"
+    },
+    {
+      "path": "bench/corpus/dev/variants/modal__M1__save-button.html",
+      "sha256": "47f73577bb4118a58b0211bcf0d2874c46892ff375ba551a573b2485cdaa342c"
+    },
+    {
+      "path": "bench/corpus/dev/variants/modal__M3__close-button.html",
+      "sha256": "3881ffb4f32b2a223a7a885be8a4dfc8c47fc2ca896e01568502e2af8df17ba5"
+    },
+    {
+      "path": "bench/corpus/dev/variants/modal__M4__close-button.html",
+      "sha256": "befa9dcd9245f281a231e8919a82a4faa92f794d873a1b4638ccdb0e657ce9bf"
+    }
+  ],
+  "notes": [
+    "3.2.1 in the old DynamicEvaluator fires only when an agent 'navigate' action follows a focus event; a scripted Tab walk never produces one, so the legacy baseline cannot report 3.2.1 on any page.",
+    "Per page the tools run in the order gaps, axe, walk (the legacy replay reuses that walk), each in its own fresh context and load: goto domcontentloaded + 3000 ms settle, the gap detector's own load.",
+    "Legacy trap = detectTrap() after the last walk press (an executeCheckTrap after the whole walk); firstTrappedPress is the first press where it already said trapped.",
+    "Legacy trap trigger: detectTrap() says trapped once the last 5·L identity strings are one block of L strings repeated 5 times, for any L ≤ 10 (maxHistorySize 50 / minCycleCount 5). It is a property of the string sequence, not of F: a clean page whose headless-shell Tab cycle (every stop, then body on the wrap) is at most 10 strings long fires at press 5·L, and identity collisions shorten the cycle, so identical id-less links fire as a 1-string cycle after five in a row and a repeating group of strings fires on pages with many more stops.",
+    "The legacy identity is rebuilt from each press's immediate read (the walk's step.immediate: top-level document.activeElement as soon as keyboard.press resolves, with no settle), which is when executeTab reads it; focus a page script moves later is not seen, and focus inside frames or shadow roots shows as the container.",
+    "Walk trap (the new walk's facts, not the old checker): no = focus wrapped past the end of the page; suspected = no wrap in 5(F+1)+5 presses with F complete; undetermined = the walk stopped on an error, or F is a lower bound (fIncomplete: a cross-origin frame or closed shadow root may hide stops), where a missing wrap or a null escape reachedAt is not evidence of a trap. The legacy detector's verdicts are reported as-is.",
+    "Gaps come from the committed baseline port with its BASELINE-BUG markers unfixed (hidden elements never filtered, selector-only crawl, cursor signal always false)."
+  ],
+  "pages": [
+    {
+      "pageId": "form__M1__submit-button",
+      "url": "http://127.0.0.1:63711/variants/form__M1__submit-button.html",
+      "cluster": "form",
+      "budgetMs": 1200000,
+      "budgetExceeded": false,
+      "durationMs": 14715,
+      "rawFile": "raw/form__M1__submit-button.json.gz",
+      "tools": {
+        "gaps": {
+          "status": "ok",
+          "error": null,
+          "budgetExceeded": false,
+          "durationMs": 3091,
+          "load": {
+            "requestedUrl": "http://127.0.0.1:63711/variants/form__M1__submit-button.html",
+            "finalUrl": "http://127.0.0.1:63711/variants/form__M1__submit-button.html",
+            "status": 200,
+            "title": "Contact form",
+            "mainFrameNavigations": 1,
+            "secondNavigation": "not-expected",
+            "blockedRequests": 0
+          },
+          "findings": []
+        },
+        "walk": {
+          "status": "ok",
+          "error": null,
+          "budgetExceeded": false,
+          "durationMs": 8472,
+          "load": {
+            "requestedUrl": "http://127.0.0.1:63711/variants/form__M1__submit-button.html",
+            "finalUrl": "http://127.0.0.1:63711/variants/form__M1__submit-button.html",
+            "status": 200,
+            "title": "Contact form",
+            "mainFrameNavigations": 1,
+            "secondNavigation": "not-expected",
+            "blockedRequests": 0
+          },
+          "findings": {
+            "F": 5,
+            "fIncomplete": false,
+            "fIncompleteCauses": {
+              "crossOriginFrames": 0,
+              "closedShadowRoots": 0
+            },
+            "plannedPresses": 35,
+            "presses": 35,
+            "wraps": 5,
+            "focusLost": 0,
+            "deep": {
+              "inside": 0,
+              "crossOrigin": 0,
+              "closedShadowRoot": 0
+            },
+            "launch": {
+              "browserVersion": "143.0.7499.4",
+              "executableBasename": "chrome-headless-shell"
+            },
+            "suspectedTrap": false,
+            "trap": "no",
+            "escapeReachedAt": null,
+            "error": null
+          }
+        },
+        "legacy": {
+          "status": "ok",
+          "error": null,
+          "budgetExceeded": false,
+          "durationMs": 0,
+          "load": null,
+          "findings": {
+            "presses": 35,
+            "trap": {
+              "trapped": true,
+              "firstTrappedPress": 30,
+              "cycleLength": 6,
+              "element": "body"
+            },
+            "dynamicViolations": []
+          }
+        },
+        "axe": {
+          "status": "ok",
+          "error": null,
+          "budgetExceeded": false,
+          "durationMs": 3145,
+          "load": {
+            "requestedUrl": "http://127.0.0.1:63711/variants/form__M1__submit-button.html",
+            "finalUrl": "http://127.0.0.1:63711/variants/form__M1__submit-button.html",
+            "status": 200,
+            "title": "Contact form",
+            "mainFrameNavigations": 1,
+            "secondNavigation": "not-expected",
+            "blockedRequests": 0
+          },
+          "findings": [
+            {
+              "id": "landmark-one-main",
+              "impact": "moderate",
+              "wcagTags": [],
+              "targets": [
+                "html"
+              ],
+              "components": [
+                "HTML"
+              ]
+            },
+            {
+              "id": "region",
+              "impact": "moderate",
+              "wcagTags": [],
+              "targets": [
+                "h1",
+                "#contact-form"
+              ],
+              "components": [
+                "H1",
+                "FORM"
+              ]
+            }
+          ]
+        }
+      }
+    },
+    {
+      "pageId": "form__M3__submit-button",
+      "url": "http://127.0.0.1:63711/variants/form__M3__submit-button.html",
+      "cluster": "form",
+      "budgetMs": 1200000,
+      "budgetExceeded": false,
+      "durationMs": 15599,
+      "rawFile": "raw/form__M3__submit-button.json.gz",
+      "tools": {
+        "gaps": {
+          "status": "ok",
+          "error": null,
+          "budgetExceeded": false,
+          "durationMs": 3079,
+          "load": {
+            "requestedUrl": "http://127.0.0.1:63711/variants/form__M3__submit-button.html",
+            "finalUrl": "http://127.0.0.1:63711/variants/form__M3__submit-button.html",
+            "status": 200,
+            "title": "Contact form",
+            "mainFrameNavigations": 1,
+            "secondNavigation": "not-expected",
+            "blockedRequests": 0
+          },
+          "findings": [
+            {
+              "nodeName": "BUTTON",
+              "id": "send",
+              "class": null,
+              "dataBenchId": "submit-button",
+              "gapType": "missing_from_a11y_tree",
+              "severity": "critical",
+              "wcag": [
+                "4.1.2"
+              ]
+            }
+          ]
+        },
+        "walk": {
+          "status": "ok",
+          "error": null,
+          "budgetExceeded": false,
+          "durationMs": 9361,
+          "load": {
+            "requestedUrl": "http://127.0.0.1:63711/variants/form__M3__submit-button.html",
+            "finalUrl": "http://127.0.0.1:63711/variants/form__M3__submit-button.html",
+            "status": 200,
+            "title": "Contact form",
+            "mainFrameNavigations": 1,
+            "secondNavigation": "not-expected",
+            "blockedRequests": 0
+          },
+          "findings": {
+            "F": 6,
+            "fIncomplete": false,
+            "fIncompleteCauses": {
+              "crossOriginFrames": 0,
+              "closedShadowRoots": 0
+            },
+            "plannedPresses": 40,
+            "presses": 40,
+            "wraps": 5,
+            "focusLost": 0,
+            "deep": {
+              "inside": 0,
+              "crossOrigin": 0,
+              "closedShadowRoot": 0
+            },
+            "launch": {
+              "browserVersion": "143.0.7499.4",
+              "executableBasename": "chrome-headless-shell"
+            },
+            "suspectedTrap": false,
+            "trap": "no",
+            "escapeReachedAt": null,
+            "error": null
+          }
+        },
+        "legacy": {
+          "status": "ok",
+          "error": null,
+          "budgetExceeded": false,
+          "durationMs": 0,
+          "load": null,
+          "findings": {
+            "presses": 40,
+            "trap": {
+              "trapped": true,
+              "firstTrappedPress": 35,
+              "cycleLength": 7,
+              "element": "button#send \"Send message\""
+            },
+            "dynamicViolations": []
+          }
+        },
+        "axe": {
+          "status": "ok",
+          "error": null,
+          "budgetExceeded": false,
+          "durationMs": 3151,
+          "load": {
+            "requestedUrl": "http://127.0.0.1:63711/variants/form__M3__submit-button.html",
+            "finalUrl": "http://127.0.0.1:63711/variants/form__M3__submit-button.html",
+            "status": 200,
+            "title": "Contact form",
+            "mainFrameNavigations": 1,
+            "secondNavigation": "not-expected",
+            "blockedRequests": 0
+          },
+          "findings": [
+            {
+              "id": "aria-hidden-focus",
+              "impact": "serious",
+              "wcagTags": [
+                "wcag2a",
+                "wcag412"
+              ],
+              "targets": [
+                "#send"
+              ],
+              "components": [
+                "BUTTON"
+              ]
+            },
+            {
+              "id": "landmark-one-main",
+              "impact": "moderate",
+              "wcagTags": [],
+              "targets": [
+                "html"
+              ],
+              "components": [
+                "HTML"
+              ]
+            },
+            {
+              "id": "region",
+              "impact": "moderate",
+              "wcagTags": [],
+              "targets": [
+                "h1",
+                "div:nth-child(1)",
+                "div:nth-child(2)",
+                "div:nth-child(3)",
+                "div:nth-child(4)",
+                "div:nth-child(5)"
+              ],
+              "components": [
+                "H1",
+                "DIV",
+                "DIV",
+                "DIV",
+                "DIV",
+                "DIV"
+              ]
+            }
+          ]
+        }
+      }
+    },
+    {
+      "pageId": "form__M5__email-input",
+      "url": "http://127.0.0.1:63711/variants/form__M5__email-input.html",
+      "cluster": "form",
+      "budgetMs": 1200000,
+      "budgetExceeded": false,
+      "durationMs": 17084,
+      "rawFile": "raw/form__M5__email-input.json.gz",
+      "tools": {
+        "gaps": {
+          "status": "ok",
+          "error": null,
+          "budgetExceeded": false,
+          "durationMs": 3086,
+          "load": {
+            "requestedUrl": "http://127.0.0.1:63711/variants/form__M5__email-input.html",
+            "finalUrl": "http://127.0.0.1:63711/variants/form__M5__email-input.html",
+            "status": 200,
+            "title": "Contact form",
+            "mainFrameNavigations": 1,
+            "secondNavigation": "not-expected",
+            "blockedRequests": 0
+          },
+          "findings": []
+        },
+        "walk": {
+          "status": "ok",
+          "error": null,
+          "budgetExceeded": false,
+          "durationMs": 10838,
+          "load": {
+            "requestedUrl": "http://127.0.0.1:63711/variants/form__M5__email-input.html",
+            "finalUrl": "http://127.0.0.1:63711/variants/form__M5__email-input.html",
+            "status": 200,
+            "title": "Contact form",
+            "mainFrameNavigations": 1,
+            "secondNavigation": "not-expected",
+            "blockedRequests": 0
+          },
+          "findings": {
+            "F": 6,
+            "fIncomplete": false,
+            "fIncompleteCauses": {
+              "crossOriginFrames": 0,
+              "closedShadowRoots": 0
+            },
+            "plannedPresses": 40,
+            "presses": 40,
+            "wraps": 0,
+            "focusLost": 0,
+            "deep": {
+              "inside": 0,
+              "crossOrigin": 0,
+              "closedShadowRoot": 0
+            },
+            "launch": {
+              "browserVersion": "143.0.7499.4",
+              "executableBasename": "chrome-headless-shell"
+            },
+            "suspectedTrap": true,
+            "trap": "suspected",
+            "escapeReachedAt": null,
+            "error": null
+          }
+        },
+        "legacy": {
+          "status": "ok",
+          "error": null,
+          "budgetExceeded": false,
+          "durationMs": 1,
+          "load": null,
+          "findings": {
+            "presses": 40,
+            "trap": {
+              "trapped": true,
+              "firstTrappedPress": 6,
+              "cycleLength": 1,
+              "element": "input#email \"email\""
+            },
+            "dynamicViolations": [
+              {
+                "criterion": "2.4.3",
+                "severity": "moderate",
+                "description": "Focus cycling detected - focus returned to previously visited element within short sequence",
+                "evidence": [
+                  "input#email \"email\"",
+                  "input#email \"email\""
+                ]
+              }
+            ]
+          }
+        },
+        "axe": {
+          "status": "ok",
+          "error": null,
+          "budgetExceeded": false,
+          "durationMs": 3152,
+          "load": {
+            "requestedUrl": "http://127.0.0.1:63711/variants/form__M5__email-input.html",
+            "finalUrl": "http://127.0.0.1:63711/variants/form__M5__email-input.html",
+            "status": 200,
+            "title": "Contact form",
+            "mainFrameNavigations": 1,
+            "secondNavigation": "not-expected",
+            "blockedRequests": 0
+          },
+          "findings": [
+            {
+              "id": "landmark-one-main",
+              "impact": "moderate",
+              "wcagTags": [],
+              "targets": [
+                "html"
+              ],
+              "components": [
+                "HTML"
+              ]
+            },
+            {
+              "id": "region",
+              "impact": "moderate",
+              "wcagTags": [],
+              "targets": [
+                "h1",
+                "div:nth-child(1)",
+                "div:nth-child(2)",
+                "div:nth-child(3)",
+                "div:nth-child(4)",
+                "div:nth-child(5)"
+              ],
+              "components": [
+                "H1",
+                "DIV",
+                "DIV",
+                "DIV",
+                "DIV",
+                "DIV"
+              ]
+            }
+          ]
+        }
+      }
+    },
+    {
+      "pageId": "form__M6__email-input",
+      "url": "http://127.0.0.1:63711/variants/form__M6__email-input.html",
+      "cluster": "form",
+      "budgetMs": 1200000,
+      "budgetExceeded": false,
+      "durationMs": 15727,
+      "rawFile": "raw/form__M6__email-input.json.gz",
+      "tools": {
+        "gaps": {
+          "status": "ok",
+          "error": null,
+          "budgetExceeded": false,
+          "durationMs": 3101,
+          "load": {
+            "requestedUrl": "http://127.0.0.1:63711/variants/form__M6__email-input.html",
+            "finalUrl": "http://127.0.0.1:63711/variants/form__M6__email-input.html",
+            "status": 200,
+            "title": "Contact form",
+            "mainFrameNavigations": 1,
+            "secondNavigation": "not-expected",
+            "blockedRequests": 0
+          },
+          "findings": []
+        },
+        "walk": {
+          "status": "ok",
+          "error": null,
+          "budgetExceeded": false,
+          "durationMs": 9461,
+          "load": {
+            "requestedUrl": "http://127.0.0.1:63711/variants/form__M6__email-input.html",
+            "finalUrl": "http://127.0.0.1:63711/variants/form__M6__email-input.html",
+            "status": 200,
+            "title": "Contact form",
+            "mainFrameNavigations": 1,
+            "secondNavigation": "not-expected",
+            "blockedRequests": 0
+          },
+          "findings": {
+            "F": 6,
+            "fIncomplete": false,
+            "fIncompleteCauses": {
+              "crossOriginFrames": 0,
+              "closedShadowRoots": 0
+            },
+            "plannedPresses": 40,
+            "presses": 40,
+            "wraps": 5,
+            "focusLost": 1,
+            "deep": {
+              "inside": 0,
+              "crossOrigin": 0,
+              "closedShadowRoot": 0
+            },
+            "launch": {
+              "browserVersion": "143.0.7499.4",
+              "executableBasename": "chrome-headless-shell"
+            },
+            "suspectedTrap": false,
+            "trap": "no",
+            "escapeReachedAt": null,
+            "error": null
+          }
+        },
+        "legacy": {
+          "status": "ok",
+          "error": null,
+          "budgetExceeded": false,
+          "durationMs": 1,
+          "load": null,
+          "findings": {
+            "presses": 40,
+            "trap": {
+              "trapped": true,
+              "firstTrappedPress": 36,
+              "cycleLength": 7,
+              "element": "textarea#message \"message\""
+            },
+            "dynamicViolations": [
+              {
+                "criterion": "2.4.3",
+                "severity": "moderate",
+                "description": "Focus cycling detected - focus returned to previously visited element within short sequence",
+                "evidence": [
+                  "input#name \"name\"",
+                  "input#name \"name\""
+                ]
+              }
+            ]
+          }
+        },
+        "axe": {
+          "status": "ok",
+          "error": null,
+          "budgetExceeded": false,
+          "durationMs": 3158,
+          "load": {
+            "requestedUrl": "http://127.0.0.1:63711/variants/form__M6__email-input.html",
+            "finalUrl": "http://127.0.0.1:63711/variants/form__M6__email-input.html",
+            "status": 200,
+            "title": "Contact form",
+            "mainFrameNavigations": 1,
+            "secondNavigation": "not-expected",
+            "blockedRequests": 0
+          },
+          "findings": [
+            {
+              "id": "landmark-one-main",
+              "impact": "moderate",
+              "wcagTags": [],
+              "targets": [
+                "html"
+              ],
+              "components": [
+                "HTML"
+              ]
+            },
+            {
+              "id": "region",
+              "impact": "moderate",
+              "wcagTags": [],
+              "targets": [
+                "h1",
+                "div:nth-child(1)",
+                "div:nth-child(2)",
+                "div:nth-child(3)",
+                "div:nth-child(4)",
+                "div:nth-child(5)"
+              ],
+              "components": [
+                "H1",
+                "DIV",
+                "DIV",
+                "DIV",
+                "DIV",
+                "DIV"
+              ]
+            }
+          ]
+        }
+      }
+    },
+    {
+      "pageId": "good-operable__M1__search-submit",
+      "url": "http://127.0.0.1:63711/variants/good-operable__M1__search-submit.html",
+      "cluster": "good-operable",
+      "budgetMs": 1200000,
+      "budgetExceeded": false,
+      "durationMs": 15715,
+      "rawFile": "raw/good-operable__M1__search-submit.json.gz",
+      "tools": {
+        "gaps": {
+          "status": "ok",
+          "error": null,
+          "budgetExceeded": false,
+          "durationMs": 3090,
+          "load": {
+            "requestedUrl": "http://127.0.0.1:63711/variants/good-operable__M1__search-submit.html",
+            "finalUrl": "http://127.0.0.1:63711/variants/good-operable__M1__search-submit.html",
+            "status": 200,
+            "title": "Good Operable Page",
+            "mainFrameNavigations": 1,
+            "secondNavigation": "not-expected",
+            "blockedRequests": 0
+          },
+          "findings": []
+        },
+        "walk": {
+          "status": "ok",
+          "error": null,
+          "budgetExceeded": false,
+          "durationMs": 9457,
+          "load": {
+            "requestedUrl": "http://127.0.0.1:63711/variants/good-operable__M1__search-submit.html",
+            "finalUrl": "http://127.0.0.1:63711/variants/good-operable__M1__search-submit.html",
+            "status": 200,
+            "title": "Good Operable Page",
+            "mainFrameNavigations": 1,
+            "secondNavigation": "not-expected",
+            "blockedRequests": 0
+          },
+          "findings": {
+            "F": 6,
+            "fIncomplete": false,
+            "fIncompleteCauses": {
+              "crossOriginFrames": 0,
+              "closedShadowRoots": 0
+            },
+            "plannedPresses": 40,
+            "presses": 40,
+            "wraps": 5,
+            "focusLost": 0,
+            "deep": {
+              "inside": 0,
+              "crossOrigin": 0,
+              "closedShadowRoot": 0
+            },
+            "launch": {
+              "browserVersion": "143.0.7499.4",
+              "executableBasename": "chrome-headless-shell"
+            },
+            "suspectedTrap": false,
+            "trap": "no",
+            "escapeReachedAt": null,
+            "error": null
+          }
+        },
+        "legacy": {
+          "status": "ok",
+          "error": null,
+          "budgetExceeded": false,
+          "durationMs": 0,
+          "load": null,
+          "findings": {
+            "presses": 40,
+            "trap": {
+              "trapped": true,
+              "firstTrappedPress": 35,
+              "cycleLength": 7,
+              "element": "a \"Sitemap\""
+            },
+            "dynamicViolations": []
+          }
+        },
+        "axe": {
+          "status": "ok",
+          "error": null,
+          "budgetExceeded": false,
+          "durationMs": 3162,
+          "load": {
+            "requestedUrl": "http://127.0.0.1:63711/variants/good-operable__M1__search-submit.html",
+            "finalUrl": "http://127.0.0.1:63711/variants/good-operable__M1__search-submit.html",
+            "status": 200,
+            "title": "Good Operable Page",
+            "mainFrameNavigations": 1,
+            "secondNavigation": "not-expected",
+            "blockedRequests": 0
+          },
+          "findings": []
+        }
+      }
+    },
+    {
+      "pageId": "good-operable__M3__nav-about",
+      "url": "http://127.0.0.1:63711/variants/good-operable__M3__nav-about.html",
+      "cluster": "good-operable",
+      "budgetMs": 1200000,
+      "budgetExceeded": false,
+      "durationMs": 16358,
+      "rawFile": "raw/good-operable__M3__nav-about.json.gz",
+      "tools": {
+        "gaps": {
+          "status": "ok",
+          "error": null,
+          "budgetExceeded": false,
+          "durationMs": 3099,
+          "load": {
+            "requestedUrl": "http://127.0.0.1:63711/variants/good-operable__M3__nav-about.html",
+            "finalUrl": "http://127.0.0.1:63711/variants/good-operable__M3__nav-about.html",
+            "status": 200,
+            "title": "Good Operable Page",
+            "mainFrameNavigations": 1,
+            "secondNavigation": "not-expected",
+            "blockedRequests": 0
+          },
+          "findings": [
+            {
+              "nodeName": "A",
+              "id": null,
+              "class": null,
+              "dataBenchId": "nav-about",
+              "gapType": "missing_from_a11y_tree",
+              "severity": "critical",
+              "wcag": [
+                "4.1.2"
+              ]
+            }
+          ]
+        },
+        "walk": {
+          "status": "ok",
+          "error": null,
+          "budgetExceeded": false,
+          "durationMs": 10107,
+          "load": {
+            "requestedUrl": "http://127.0.0.1:63711/variants/good-operable__M3__nav-about.html",
+            "finalUrl": "http://127.0.0.1:63711/variants/good-operable__M3__nav-about.html",
+            "status": 200,
+            "title": "Good Operable Page",
+            "mainFrameNavigations": 1,
+            "secondNavigation": "not-expected",
+            "blockedRequests": 0
+          },
+          "findings": {
+            "F": 7,
+            "fIncomplete": false,
+            "fIncompleteCauses": {
+              "crossOriginFrames": 0,
+              "closedShadowRoots": 0
+            },
+            "plannedPresses": 45,
+            "presses": 45,
+            "wraps": 5,
+            "focusLost": 0,
+            "deep": {
+              "inside": 0,
+              "crossOrigin": 0,
+              "closedShadowRoot": 0
+            },
+            "launch": {
+              "browserVersion": "143.0.7499.4",
+              "executableBasename": "chrome-headless-shell"
+            },
+            "suspectedTrap": false,
+            "trap": "no",
+            "escapeReachedAt": null,
+            "error": null
+          }
+        },
+        "legacy": {
+          "status": "ok",
+          "error": null,
+          "budgetExceeded": false,
+          "durationMs": 0,
+          "load": null,
+          "findings": {
+            "presses": 45,
+            "trap": {
+              "trapped": true,
+              "firstTrappedPress": 40,
+              "cycleLength": 8,
+              "element": "a \"Contact\""
+            },
+            "dynamicViolations": []
+          }
+        },
+        "axe": {
+          "status": "ok",
+          "error": null,
+          "budgetExceeded": false,
+          "durationMs": 3149,
+          "load": {
+            "requestedUrl": "http://127.0.0.1:63711/variants/good-operable__M3__nav-about.html",
+            "finalUrl": "http://127.0.0.1:63711/variants/good-operable__M3__nav-about.html",
+            "status": 200,
+            "title": "Good Operable Page",
+            "mainFrameNavigations": 1,
+            "secondNavigation": "not-expected",
+            "blockedRequests": 0
+          },
+          "findings": [
+            {
+              "id": "aria-hidden-focus",
+              "impact": "serious",
+              "wcagTags": [
+                "wcag2a",
+                "wcag412"
+              ],
+              "targets": [
+                "a[data-bench-id=\"nav-about\"]"
+              ],
+              "components": [
+                "A"
+              ]
+            }
+          ]
+        }
+      }
+    },
+    {
+      "pageId": "good-operable__M5__nav-about",
+      "url": "http://127.0.0.1:63711/variants/good-operable__M5__nav-about.html",
+      "cluster": "good-operable",
+      "budgetMs": 1200000,
+      "budgetExceeded": false,
+      "durationMs": 17914,
+      "rawFile": "raw/good-operable__M5__nav-about.json.gz",
+      "tools": {
+        "gaps": {
+          "status": "ok",
+          "error": null,
+          "budgetExceeded": false,
+          "durationMs": 3068,
+          "load": {
+            "requestedUrl": "http://127.0.0.1:63711/variants/good-operable__M5__nav-about.html",
+            "finalUrl": "http://127.0.0.1:63711/variants/good-operable__M5__nav-about.html",
+            "status": 200,
+            "title": "Good Operable Page",
+            "mainFrameNavigations": 1,
+            "secondNavigation": "not-expected",
+            "blockedRequests": 0
+          },
+          "findings": []
+        },
+        "walk": {
+          "status": "ok",
+          "error": null,
+          "budgetExceeded": false,
+          "durationMs": 11708,
+          "load": {
+            "requestedUrl": "http://127.0.0.1:63711/variants/good-operable__M5__nav-about.html",
+            "finalUrl": "http://127.0.0.1:63711/variants/good-operable__M5__nav-about.html",
+            "status": 200,
+            "title": "Good Operable Page",
+            "mainFrameNavigations": 1,
+            "secondNavigation": "not-expected",
+            "blockedRequests": 0
+          },
+          "findings": {
+            "F": 7,
+            "fIncomplete": false,
+            "fIncompleteCauses": {
+              "crossOriginFrames": 0,
+              "closedShadowRoots": 0
+            },
+            "plannedPresses": 45,
+            "presses": 45,
+            "wraps": 0,
+            "focusLost": 0,
+            "deep": {
+              "inside": 0,
+              "crossOrigin": 0,
+              "closedShadowRoot": 0
+            },
+            "launch": {
+              "browserVersion": "143.0.7499.4",
+              "executableBasename": "chrome-headless-shell"
+            },
+            "suspectedTrap": true,
+            "trap": "suspected",
+            "escapeReachedAt": null,
+            "error": null
+          }
+        },
+        "legacy": {
+          "status": "ok",
+          "error": null,
+          "budgetExceeded": false,
+          "durationMs": 0,
+          "load": null,
+          "findings": {
+            "presses": 45,
+            "trap": {
+              "trapped": true,
+              "firstTrappedPress": 9,
+              "cycleLength": 1,
+              "element": "a \"About\""
+            },
+            "dynamicViolations": [
+              {
+                "criterion": "2.4.3",
+                "severity": "moderate",
+                "description": "Focus cycling detected - focus returned to previously visited element within short sequence",
+                "evidence": [
+                  "a \"About\"",
+                  "a \"About\""
+                ]
+              }
+            ]
+          }
+        },
+        "axe": {
+          "status": "ok",
+          "error": null,
+          "budgetExceeded": false,
+          "durationMs": 3133,
+          "load": {
+            "requestedUrl": "http://127.0.0.1:63711/variants/good-operable__M5__nav-about.html",
+            "finalUrl": "http://127.0.0.1:63711/variants/good-operable__M5__nav-about.html",
+            "status": 200,
+            "title": "Good Operable Page",
+            "mainFrameNavigations": 1,
+            "secondNavigation": "not-expected",
+            "blockedRequests": 0
+          },
+          "findings": []
+        }
+      }
+    },
+    {
+      "pageId": "good-operable__M6__nav-about",
+      "url": "http://127.0.0.1:63711/variants/good-operable__M6__nav-about.html",
+      "cluster": "good-operable",
+      "budgetMs": 1200000,
+      "budgetExceeded": false,
+      "durationMs": 16466,
+      "rawFile": "raw/good-operable__M6__nav-about.json.gz",
+      "tools": {
+        "gaps": {
+          "status": "ok",
+          "error": null,
+          "budgetExceeded": false,
+          "durationMs": 3084,
+          "load": {
+            "requestedUrl": "http://127.0.0.1:63711/variants/good-operable__M6__nav-about.html",
+            "finalUrl": "http://127.0.0.1:63711/variants/good-operable__M6__nav-about.html",
+            "status": 200,
+            "title": "Good Operable Page",
+            "mainFrameNavigations": 1,
+            "secondNavigation": "not-expected",
+            "blockedRequests": 0
+          },
+          "findings": []
+        },
+        "walk": {
+          "status": "ok",
+          "error": null,
+          "budgetExceeded": false,
+          "durationMs": 10219,
+          "load": {
+            "requestedUrl": "http://127.0.0.1:63711/variants/good-operable__M6__nav-about.html",
+            "finalUrl": "http://127.0.0.1:63711/variants/good-operable__M6__nav-about.html",
+            "status": 200,
+            "title": "Good Operable Page",
+            "mainFrameNavigations": 1,
+            "secondNavigation": "not-expected",
+            "blockedRequests": 0
+          },
+          "findings": {
+            "F": 7,
+            "fIncomplete": false,
+            "fIncompleteCauses": {
+              "crossOriginFrames": 0,
+              "closedShadowRoots": 0
+            },
+            "plannedPresses": 45,
+            "presses": 45,
+            "wraps": 5,
+            "focusLost": 1,
+            "deep": {
+              "inside": 0,
+              "crossOrigin": 0,
+              "closedShadowRoot": 0
+            },
+            "launch": {
+              "browserVersion": "143.0.7499.4",
+              "executableBasename": "chrome-headless-shell"
+            },
+            "suspectedTrap": false,
+            "trap": "no",
+            "escapeReachedAt": null,
+            "error": null
+          }
+        },
+        "legacy": {
+          "status": "ok",
+          "error": null,
+          "budgetExceeded": false,
+          "durationMs": 0,
+          "load": null,
+          "findings": {
+            "presses": 45,
+            "trap": {
+              "trapped": true,
+              "firstTrappedPress": 44,
+              "cycleLength": 8,
+              "element": "a \"Skip to main content\""
+            },
+            "dynamicViolations": []
+          }
+        },
+        "axe": {
+          "status": "ok",
+          "error": null,
+          "budgetExceeded": false,
+          "durationMs": 3155,
+          "load": {
+            "requestedUrl": "http://127.0.0.1:63711/variants/good-operable__M6__nav-about.html",
+            "finalUrl": "http://127.0.0.1:63711/variants/good-operable__M6__nav-about.html",
+            "status": 200,
+            "title": "Good Operable Page",
+            "mainFrameNavigations": 1,
+            "secondNavigation": "not-expected",
+            "blockedRequests": 0
+          },
+          "findings": []
+        }
+      }
+    },
+    {
+      "pageId": "identical-links__M3__read-more-01",
+      "url": "http://127.0.0.1:63711/variants/identical-links__M3__read-more-01.html",
+      "cluster": "identical-links",
+      "budgetMs": 1200000,
+      "budgetExceeded": false,
+      "durationMs": 20503,
+      "rawFile": "raw/identical-links__M3__read-more-01.json.gz",
+      "tools": {
+        "gaps": {
+          "status": "ok",
+          "error": null,
+          "budgetExceeded": false,
+          "durationMs": 3102,
+          "load": {
+            "requestedUrl": "http://127.0.0.1:63711/variants/identical-links__M3__read-more-01.html",
+            "finalUrl": "http://127.0.0.1:63711/variants/identical-links__M3__read-more-01.html",
+            "status": 200,
+            "title": "Identical links",
+            "mainFrameNavigations": 1,
+            "secondNavigation": "not-expected",
+            "blockedRequests": 0
+          },
+          "findings": [
+            {
+              "nodeName": "A",
+              "id": null,
+              "class": null,
+              "dataBenchId": "read-more-01",
+              "gapType": "missing_from_a11y_tree",
+              "severity": "critical",
+              "wcag": [
+                "4.1.2"
+              ]
+            }
+          ]
+        },
+        "walk": {
+          "status": "ok",
+          "error": null,
+          "budgetExceeded": false,
+          "durationMs": 14234,
+          "load": {
+            "requestedUrl": "http://127.0.0.1:63711/variants/identical-links__M3__read-more-01.html",
+            "finalUrl": "http://127.0.0.1:63711/variants/identical-links__M3__read-more-01.html",
+            "status": 200,
+            "title": "Identical links",
+            "mainFrameNavigations": 1,
+            "secondNavigation": "not-expected",
+            "blockedRequests": 0
+          },
+          "findings": {
+            "F": 12,
+            "fIncomplete": false,
+            "fIncompleteCauses": {
+              "crossOriginFrames": 0,
+              "closedShadowRoots": 0
+            },
+            "plannedPresses": 70,
+            "presses": 70,
+            "wraps": 5,
+            "focusLost": 0,
+            "deep": {
+              "inside": 0,
+              "crossOrigin": 0,
+              "closedShadowRoot": 0
+            },
+            "launch": {
+              "browserVersion": "143.0.7499.4",
+              "executableBasename": "chrome-headless-shell"
+            },
+            "suspectedTrap": false,
+            "trap": "no",
+            "escapeReachedAt": null,
+            "error": null
+          }
+        },
+        "legacy": {
+          "status": "ok",
+          "error": null,
+          "budgetExceeded": false,
+          "durationMs": 0,
+          "load": null,
+          "findings": {
+            "presses": 70,
+            "trap": {
+              "trapped": true,
+              "firstTrappedPress": 5,
+              "cycleLength": 1,
+              "element": "a \"Read more\""
+            },
+            "dynamicViolations": [
+              {
+                "criterion": "2.4.3",
+                "severity": "moderate",
+                "description": "Focus cycling detected - focus returned to previously visited element within short sequence",
+                "evidence": [
+                  "a \"Read more\"",
+                  "a \"Read more\""
+                ]
+              }
+            ]
+          }
+        },
+        "axe": {
+          "status": "ok",
+          "error": null,
+          "budgetExceeded": false,
+          "durationMs": 3160,
+          "load": {
+            "requestedUrl": "http://127.0.0.1:63711/variants/identical-links__M3__read-more-01.html",
+            "finalUrl": "http://127.0.0.1:63711/variants/identical-links__M3__read-more-01.html",
+            "status": 200,
+            "title": "Identical links",
+            "mainFrameNavigations": 1,
+            "secondNavigation": "not-expected",
+            "blockedRequests": 0
+          },
+          "findings": [
+            {
+              "id": "aria-hidden-focus",
+              "impact": "serious",
+              "wcagTags": [
+                "wcag2a",
+                "wcag412"
+              ],
+              "targets": [
+                "a[data-bench-id=\"read-more-01\"]"
+              ],
+              "components": [
+                "A"
+              ]
+            },
+            {
+              "id": "landmark-one-main",
+              "impact": "moderate",
+              "wcagTags": [],
+              "targets": [
+                "html"
+              ],
+              "components": [
+                "HTML"
+              ]
+            },
+            {
+              "id": "region",
+              "impact": "moderate",
+              "wcagTags": [],
+              "targets": [
+                "h1",
+                "li:nth-child(1) > p",
+                "li:nth-child(2)",
+                "li:nth-child(3)",
+                "li:nth-child(4)",
+                "li:nth-child(5)",
+                "li:nth-child(6)",
+                "li:nth-child(7)",
+                "li:nth-child(8)",
+                "li:nth-child(9)",
+                "li:nth-child(10)",
+                "li:nth-child(11)",
+                "li:nth-child(12)"
+              ],
+              "components": [
+                "H1",
+                "P",
+                "LI.card",
+                "LI.card",
+                "LI.card",
+                "LI.card",
+                "LI.card",
+                "LI.card",
+                "LI.card",
+                "LI.card",
+                "LI.card",
+                "LI.card",
+                "LI.card"
+              ]
+            }
+          ]
+        }
+      }
+    },
+    {
+      "pageId": "identical-links__M5__read-more-01",
+      "url": "http://127.0.0.1:63711/variants/identical-links__M5__read-more-01.html",
+      "cluster": "identical-links",
+      "budgetMs": 1200000,
+      "budgetExceeded": false,
+      "durationMs": 22870,
+      "rawFile": "raw/identical-links__M5__read-more-01.json.gz",
+      "tools": {
+        "gaps": {
+          "status": "ok",
+          "error": null,
+          "budgetExceeded": false,
+          "durationMs": 3111,
+          "load": {
+            "requestedUrl": "http://127.0.0.1:63711/variants/identical-links__M5__read-more-01.html",
+            "finalUrl": "http://127.0.0.1:63711/variants/identical-links__M5__read-more-01.html",
+            "status": 200,
+            "title": "Identical links",
+            "mainFrameNavigations": 1,
+            "secondNavigation": "not-expected",
+            "blockedRequests": 0
+          },
+          "findings": []
+        },
+        "walk": {
+          "status": "ok",
+          "error": null,
+          "budgetExceeded": false,
+          "durationMs": 16596,
+          "load": {
+            "requestedUrl": "http://127.0.0.1:63711/variants/identical-links__M5__read-more-01.html",
+            "finalUrl": "http://127.0.0.1:63711/variants/identical-links__M5__read-more-01.html",
+            "status": 200,
+            "title": "Identical links",
+            "mainFrameNavigations": 1,
+            "secondNavigation": "not-expected",
+            "blockedRequests": 0
+          },
+          "findings": {
+            "F": 12,
+            "fIncomplete": false,
+            "fIncompleteCauses": {
+              "crossOriginFrames": 0,
+              "closedShadowRoots": 0
+            },
+            "plannedPresses": 70,
+            "presses": 70,
+            "wraps": 0,
+            "focusLost": 0,
+            "deep": {
+              "inside": 0,
+              "crossOrigin": 0,
+              "closedShadowRoot": 0
+            },
+            "launch": {
+              "browserVersion": "143.0.7499.4",
+              "executableBasename": "chrome-headless-shell"
+            },
+            "suspectedTrap": true,
+            "trap": "suspected",
+            "escapeReachedAt": null,
+            "error": null
+          }
+        },
+        "legacy": {
+          "status": "ok",
+          "error": null,
+          "budgetExceeded": false,
+          "durationMs": 0,
+          "load": null,
+          "findings": {
+            "presses": 70,
+            "trap": {
+              "trapped": true,
+              "firstTrappedPress": 5,
+              "cycleLength": 1,
+              "element": "a \"Read more\""
+            },
+            "dynamicViolations": [
+              {
+                "criterion": "2.4.3",
+                "severity": "moderate",
+                "description": "Focus cycling detected - focus returned to previously visited element within short sequence",
+                "evidence": [
+                  "a \"Read more\"",
+                  "a \"Read more\""
+                ]
+              }
+            ]
+          }
+        },
+        "axe": {
+          "status": "ok",
+          "error": null,
+          "budgetExceeded": false,
+          "durationMs": 3156,
+          "load": {
+            "requestedUrl": "http://127.0.0.1:63711/variants/identical-links__M5__read-more-01.html",
+            "finalUrl": "http://127.0.0.1:63711/variants/identical-links__M5__read-more-01.html",
+            "status": 200,
+            "title": "Identical links",
+            "mainFrameNavigations": 1,
+            "secondNavigation": "not-expected",
+            "blockedRequests": 0
+          },
+          "findings": [
+            {
+              "id": "landmark-one-main",
+              "impact": "moderate",
+              "wcagTags": [],
+              "targets": [
+                "html"
+              ],
+              "components": [
+                "HTML"
+              ]
+            },
+            {
+              "id": "region",
+              "impact": "moderate",
+              "wcagTags": [],
+              "targets": [
+                "h1",
+                "ul"
+              ],
+              "components": [
+                "H1",
+                "UL.grid"
+              ]
+            }
+          ]
+        }
+      }
+    },
+    {
+      "pageId": "identical-links__M6__read-more-01",
+      "url": "http://127.0.0.1:63711/variants/identical-links__M6__read-more-01.html",
+      "cluster": "identical-links",
+      "budgetMs": 1200000,
+      "budgetExceeded": false,
+      "durationMs": 20502,
+      "rawFile": "raw/identical-links__M6__read-more-01.json.gz",
+      "tools": {
+        "gaps": {
+          "status": "ok",
+          "error": null,
+          "budgetExceeded": false,
+          "durationMs": 3106,
+          "load": {
+            "requestedUrl": "http://127.0.0.1:63711/variants/identical-links__M6__read-more-01.html",
+            "finalUrl": "http://127.0.0.1:63711/variants/identical-links__M6__read-more-01.html",
+            "status": 200,
+            "title": "Identical links",
+            "mainFrameNavigations": 1,
+            "secondNavigation": "not-expected",
+            "blockedRequests": 0
+          },
+          "findings": []
+        },
+        "walk": {
+          "status": "ok",
+          "error": null,
+          "budgetExceeded": false,
+          "durationMs": 14229,
+          "load": {
+            "requestedUrl": "http://127.0.0.1:63711/variants/identical-links__M6__read-more-01.html",
+            "finalUrl": "http://127.0.0.1:63711/variants/identical-links__M6__read-more-01.html",
+            "status": 200,
+            "title": "Identical links",
+            "mainFrameNavigations": 1,
+            "secondNavigation": "not-expected",
+            "blockedRequests": 0
+          },
+          "findings": {
+            "F": 12,
+            "fIncomplete": false,
+            "fIncompleteCauses": {
+              "crossOriginFrames": 0,
+              "closedShadowRoots": 0
+            },
+            "plannedPresses": 70,
+            "presses": 70,
+            "wraps": 5,
+            "focusLost": 0,
+            "deep": {
+              "inside": 0,
+              "crossOrigin": 0,
+              "closedShadowRoot": 0
+            },
+            "launch": {
+              "browserVersion": "143.0.7499.4",
+              "executableBasename": "chrome-headless-shell"
+            },
+            "suspectedTrap": false,
+            "trap": "no",
+            "escapeReachedAt": null,
+            "error": null
+          }
+        },
+        "legacy": {
+          "status": "ok",
+          "error": null,
+          "budgetExceeded": false,
+          "durationMs": 0,
+          "load": null,
+          "findings": {
+            "presses": 70,
+            "trap": {
+              "trapped": false,
+              "firstTrappedPress": 6,
+              "cycleLength": 0,
+              "element": null
+            },
+            "dynamicViolations": [
+              {
+                "criterion": "2.4.3",
+                "severity": "moderate",
+                "description": "Focus cycling detected - focus returned to previously visited element within short sequence",
+                "evidence": [
+                  "a \"Read more\"",
+                  "a \"Read more\""
+                ]
+              }
+            ]
+          }
+        },
+        "axe": {
+          "status": "ok",
+          "error": null,
+          "budgetExceeded": false,
+          "durationMs": 3159,
+          "load": {
+            "requestedUrl": "http://127.0.0.1:63711/variants/identical-links__M6__read-more-01.html",
+            "finalUrl": "http://127.0.0.1:63711/variants/identical-links__M6__read-more-01.html",
+            "status": 200,
+            "title": "Identical links",
+            "mainFrameNavigations": 1,
+            "secondNavigation": "not-expected",
+            "blockedRequests": 0
+          },
+          "findings": [
+            {
+              "id": "landmark-one-main",
+              "impact": "moderate",
+              "wcagTags": [],
+              "targets": [
+                "html"
+              ],
+              "components": [
+                "HTML"
+              ]
+            },
+            {
+              "id": "region",
+              "impact": "moderate",
+              "wcagTags": [],
+              "targets": [
+                "h1",
+                "ul"
+              ],
+              "components": [
+                "H1",
+                "UL.grid"
+              ]
+            }
+          ]
+        }
+      }
+    },
+    {
+      "pageId": "js-handlers__M1__native-button",
+      "url": "http://127.0.0.1:63711/variants/js-handlers__M1__native-button.html",
+      "cluster": "js-handlers",
+      "budgetMs": 1200000,
+      "budgetExceeded": false,
+      "durationMs": 12489,
+      "rawFile": "raw/js-handlers__M1__native-button.json.gz",
+      "tools": {
+        "gaps": {
+          "status": "ok",
+          "error": null,
+          "budgetExceeded": false,
+          "durationMs": 3092,
+          "load": {
+            "requestedUrl": "http://127.0.0.1:63711/variants/js-handlers__M1__native-button.html",
+            "finalUrl": "http://127.0.0.1:63711/variants/js-handlers__M1__native-button.html",
+            "status": 200,
+            "title": "Custom controls",
+            "mainFrameNavigations": 1,
+            "secondNavigation": "not-expected",
+            "blockedRequests": 0
+          },
+          "findings": []
+        },
+        "walk": {
+          "status": "ok",
+          "error": null,
+          "budgetExceeded": false,
+          "durationMs": 6237,
+          "load": {
+            "requestedUrl": "http://127.0.0.1:63711/variants/js-handlers__M1__native-button.html",
+            "finalUrl": "http://127.0.0.1:63711/variants/js-handlers__M1__native-button.html",
+            "status": 200,
+            "title": "Custom controls",
+            "mainFrameNavigations": 1,
+            "secondNavigation": "not-expected",
+            "blockedRequests": 0
+          },
+          "findings": {
+            "F": 2,
+            "fIncomplete": false,
+            "fIncompleteCauses": {
+              "crossOriginFrames": 0,
+              "closedShadowRoots": 0
+            },
+            "plannedPresses": 20,
+            "presses": 20,
+            "wraps": 6,
+            "focusLost": 0,
+            "deep": {
+              "inside": 0,
+              "crossOrigin": 0,
+              "closedShadowRoot": 0
+            },
+            "launch": {
+              "browserVersion": "143.0.7499.4",
+              "executableBasename": "chrome-headless-shell"
+            },
+            "suspectedTrap": false,
+            "trap": "no",
+            "escapeReachedAt": null,
+            "error": null
+          }
+        },
+        "legacy": {
+          "status": "ok",
+          "error": null,
+          "budgetExceeded": false,
+          "durationMs": 0,
+          "load": null,
+          "findings": {
+            "presses": 20,
+            "trap": {
+              "trapped": true,
+              "firstTrappedPress": 15,
+              "cycleLength": 3,
+              "element": "body"
+            },
+            "dynamicViolations": [
+              {
+                "criterion": "2.4.3",
+                "severity": "moderate",
+                "description": "Focus cycling detected - focus returned to previously visited element within short sequence",
+                "evidence": [
+                  "div#add-to-cart.custom-button \"Add to cart\"",
+                  "div#add-to-cart.custom-button \"Add to cart\""
+                ]
+              }
+            ]
+          }
+        },
+        "axe": {
+          "status": "ok",
+          "error": null,
+          "budgetExceeded": false,
+          "durationMs": 3153,
+          "load": {
+            "requestedUrl": "http://127.0.0.1:63711/variants/js-handlers__M1__native-button.html",
+            "finalUrl": "http://127.0.0.1:63711/variants/js-handlers__M1__native-button.html",
+            "status": 200,
+            "title": "Custom controls",
+            "mainFrameNavigations": 1,
+            "secondNavigation": "not-expected",
+            "blockedRequests": 0
+          },
+          "findings": [
+            {
+              "id": "landmark-one-main",
+              "impact": "moderate",
+              "wcagTags": [],
+              "targets": [
+                "html"
+              ],
+              "components": [
+                "HTML"
+              ]
+            },
+            {
+              "id": "region",
+              "impact": "moderate",
+              "wcagTags": [],
+              "targets": [
+                "h1",
+                "p:nth-child(2)",
+                "#gift-wrap",
+                "#checkout"
+              ],
+              "components": [
+                "H1",
+                "P",
+                "DIV.custom-checkbox",
+                "DIV"
+              ]
+            }
+          ]
+        }
+      }
+    },
+    {
+      "pageId": "js-handlers__M2__custom-button",
+      "url": "http://127.0.0.1:63711/variants/js-handlers__M2__custom-button.html",
+      "cluster": "js-handlers",
+      "budgetMs": 1200000,
+      "budgetExceeded": false,
+      "durationMs": 12482,
+      "rawFile": "raw/js-handlers__M2__custom-button.json.gz",
+      "tools": {
+        "gaps": {
+          "status": "ok",
+          "error": null,
+          "budgetExceeded": false,
+          "durationMs": 3092,
+          "load": {
+            "requestedUrl": "http://127.0.0.1:63711/variants/js-handlers__M2__custom-button.html",
+            "finalUrl": "http://127.0.0.1:63711/variants/js-handlers__M2__custom-button.html",
+            "status": 200,
+            "title": "Custom controls",
+            "mainFrameNavigations": 1,
+            "secondNavigation": "not-expected",
+            "blockedRequests": 0
+          },
+          "findings": [
+            {
+              "nodeName": "DIV",
+              "id": "add-to-cart",
+              "class": "custom-button",
+              "dataBenchId": "custom-button",
+              "gapType": "not_focusable",
+              "severity": "critical",
+              "wcag": [
+                "2.1.1",
+                "2.4.7"
+              ]
+            }
+          ]
+        },
+        "walk": {
+          "status": "ok",
+          "error": null,
+          "budgetExceeded": false,
+          "durationMs": 6235,
+          "load": {
+            "requestedUrl": "http://127.0.0.1:63711/variants/js-handlers__M2__custom-button.html",
+            "finalUrl": "http://127.0.0.1:63711/variants/js-handlers__M2__custom-button.html",
+            "status": 200,
+            "title": "Custom controls",
+            "mainFrameNavigations": 1,
+            "secondNavigation": "not-expected",
+            "blockedRequests": 0
+          },
+          "findings": {
+            "F": 2,
+            "fIncomplete": false,
+            "fIncompleteCauses": {
+              "crossOriginFrames": 0,
+              "closedShadowRoots": 0
+            },
+            "plannedPresses": 20,
+            "presses": 20,
+            "wraps": 6,
+            "focusLost": 0,
+            "deep": {
+              "inside": 0,
+              "crossOrigin": 0,
+              "closedShadowRoot": 0
+            },
+            "launch": {
+              "browserVersion": "143.0.7499.4",
+              "executableBasename": "chrome-headless-shell"
+            },
+            "suspectedTrap": false,
+            "trap": "no",
+            "escapeReachedAt": null,
+            "error": null
+          }
+        },
+        "legacy": {
+          "status": "ok",
+          "error": null,
+          "budgetExceeded": false,
+          "durationMs": 0,
+          "load": null,
+          "findings": {
+            "presses": 20,
+            "trap": {
+              "trapped": true,
+              "firstTrappedPress": 15,
+              "cycleLength": 3,
+              "element": "body"
+            },
+            "dynamicViolations": [
+              {
+                "criterion": "2.4.3",
+                "severity": "moderate",
+                "description": "Focus cycling detected - focus returned to previously visited element within short sequence",
+                "evidence": [
+                  "div#gift-wrap.custom-checkbox \"Gift wrap\"",
+                  "div#gift-wrap.custom-checkbox \"Gift wrap\""
+                ]
+              }
+            ]
+          }
+        },
+        "axe": {
+          "status": "ok",
+          "error": null,
+          "budgetExceeded": false,
+          "durationMs": 3148,
+          "load": {
+            "requestedUrl": "http://127.0.0.1:63711/variants/js-handlers__M2__custom-button.html",
+            "finalUrl": "http://127.0.0.1:63711/variants/js-handlers__M2__custom-button.html",
+            "status": 200,
+            "title": "Custom controls",
+            "mainFrameNavigations": 1,
+            "secondNavigation": "not-expected",
+            "blockedRequests": 0
+          },
+          "findings": [
+            {
+              "id": "landmark-one-main",
+              "impact": "moderate",
+              "wcagTags": [],
+              "targets": [
+                "html"
+              ],
+              "components": [
+                "HTML"
+              ]
+            },
+            {
+              "id": "region",
+              "impact": "moderate",
+              "wcagTags": [],
+              "targets": [
+                "h1",
+                "p:nth-child(2)",
+                "#gift-wrap"
+              ],
+              "components": [
+                "H1",
+                "P",
+                "DIV.custom-checkbox"
+              ]
+            }
+          ]
+        }
+      }
+    },
+    {
+      "pageId": "js-handlers__M3__custom-button",
+      "url": "http://127.0.0.1:63711/variants/js-handlers__M3__custom-button.html",
+      "cluster": "js-handlers",
+      "budgetMs": 1200000,
+      "budgetExceeded": false,
+      "durationMs": 13250,
+      "rawFile": "raw/js-handlers__M3__custom-button.json.gz",
+      "tools": {
+        "gaps": {
+          "status": "ok",
+          "error": null,
+          "budgetExceeded": false,
+          "durationMs": 3089,
+          "load": {
+            "requestedUrl": "http://127.0.0.1:63711/variants/js-handlers__M3__custom-button.html",
+            "finalUrl": "http://127.0.0.1:63711/variants/js-handlers__M3__custom-button.html",
+            "status": 200,
+            "title": "Custom controls",
+            "mainFrameNavigations": 1,
+            "secondNavigation": "not-expected",
+            "blockedRequests": 0
+          },
+          "findings": [
+            {
+              "nodeName": "DIV",
+              "id": "add-to-cart",
+              "class": "custom-button",
+              "dataBenchId": "custom-button",
+              "gapType": "missing_from_a11y_tree",
+              "severity": "critical",
+              "wcag": [
+                "4.1.2"
+              ]
+            }
+          ]
+        },
+        "walk": {
+          "status": "ok",
+          "error": null,
+          "budgetExceeded": false,
+          "durationMs": 7007,
+          "load": {
+            "requestedUrl": "http://127.0.0.1:63711/variants/js-handlers__M3__custom-button.html",
+            "finalUrl": "http://127.0.0.1:63711/variants/js-handlers__M3__custom-button.html",
+            "status": 200,
+            "title": "Custom controls",
+            "mainFrameNavigations": 1,
+            "secondNavigation": "not-expected",
+            "blockedRequests": 0
+          },
+          "findings": {
+            "F": 3,
+            "fIncomplete": false,
+            "fIncompleteCauses": {
+              "crossOriginFrames": 0,
+              "closedShadowRoots": 0
+            },
+            "plannedPresses": 25,
+            "presses": 25,
+            "wraps": 6,
+            "focusLost": 0,
+            "deep": {
+              "inside": 0,
+              "crossOrigin": 0,
+              "closedShadowRoot": 0
+            },
+            "launch": {
+              "browserVersion": "143.0.7499.4",
+              "executableBasename": "chrome-headless-shell"
+            },
+            "suspectedTrap": false,
+            "trap": "no",
+            "escapeReachedAt": null,
+            "error": null
+          }
+        },
+        "legacy": {
+          "status": "ok",
+          "error": null,
+          "budgetExceeded": false,
+          "durationMs": 0,
+          "load": null,
+          "findings": {
+            "presses": 25,
+            "trap": {
+              "trapped": true,
+              "firstTrappedPress": 20,
+              "cycleLength": 4,
+              "element": "div#gift-wrap.custom-checkbox \"Gift wrap\""
+            },
+            "dynamicViolations": [
+              {
+                "criterion": "2.4.3",
+                "severity": "moderate",
+                "description": "Focus cycling detected - focus returned to previously visited element within short sequence",
+                "evidence": [
+                  "div#add-to-cart.custom-button \"Add to cart\"",
+                  "div#add-to-cart.custom-button \"Add to cart\""
+                ]
+              }
+            ]
+          }
+        },
+        "axe": {
+          "status": "ok",
+          "error": null,
+          "budgetExceeded": false,
+          "durationMs": 3149,
+          "load": {
+            "requestedUrl": "http://127.0.0.1:63711/variants/js-handlers__M3__custom-button.html",
+            "finalUrl": "http://127.0.0.1:63711/variants/js-handlers__M3__custom-button.html",
+            "status": 200,
+            "title": "Custom controls",
+            "mainFrameNavigations": 1,
+            "secondNavigation": "not-expected",
+            "blockedRequests": 0
+          },
+          "findings": [
+            {
+              "id": "aria-hidden-focus",
+              "impact": "serious",
+              "wcagTags": [
+                "wcag2a",
+                "wcag412"
+              ],
+              "targets": [
+                "#add-to-cart"
+              ],
+              "components": [
+                "DIV.custom-button"
+              ]
+            },
+            {
+              "id": "landmark-one-main",
+              "impact": "moderate",
+              "wcagTags": [],
+              "targets": [
+                "html"
+              ],
+              "components": [
+                "HTML"
+              ]
+            },
+            {
+              "id": "region",
+              "impact": "moderate",
+              "wcagTags": [],
+              "targets": [
+                "h1",
+                "p:nth-child(2)",
+                "#gift-wrap"
+              ],
+              "components": [
+                "H1",
+                "P",
+                "DIV.custom-checkbox"
+              ]
+            }
+          ]
+        }
+      }
+    },
+    {
+      "pageId": "js-handlers__M5__custom-button",
+      "url": "http://127.0.0.1:63711/variants/js-handlers__M5__custom-button.html",
+      "cluster": "js-handlers",
+      "budgetMs": 1200000,
+      "budgetExceeded": false,
+      "durationMs": 14136,
+      "rawFile": "raw/js-handlers__M5__custom-button.json.gz",
+      "tools": {
+        "gaps": {
+          "status": "ok",
+          "error": null,
+          "budgetExceeded": false,
+          "durationMs": 3073,
+          "load": {
+            "requestedUrl": "http://127.0.0.1:63711/variants/js-handlers__M5__custom-button.html",
+            "finalUrl": "http://127.0.0.1:63711/variants/js-handlers__M5__custom-button.html",
+            "status": 200,
+            "title": "Custom controls",
+            "mainFrameNavigations": 1,
+            "secondNavigation": "not-expected",
+            "blockedRequests": 0
+          },
+          "findings": []
+        },
+        "walk": {
+          "status": "ok",
+          "error": null,
+          "budgetExceeded": false,
+          "durationMs": 7908,
+          "load": {
+            "requestedUrl": "http://127.0.0.1:63711/variants/js-handlers__M5__custom-button.html",
+            "finalUrl": "http://127.0.0.1:63711/variants/js-handlers__M5__custom-button.html",
+            "status": 200,
+            "title": "Custom controls",
+            "mainFrameNavigations": 1,
+            "secondNavigation": "not-expected",
+            "blockedRequests": 0
+          },
+          "findings": {
+            "F": 3,
+            "fIncomplete": false,
+            "fIncompleteCauses": {
+              "crossOriginFrames": 0,
+              "closedShadowRoots": 0
+            },
+            "plannedPresses": 25,
+            "presses": 25,
+            "wraps": 0,
+            "focusLost": 0,
+            "deep": {
+              "inside": 0,
+              "crossOrigin": 0,
+              "closedShadowRoot": 0
+            },
+            "launch": {
+              "browserVersion": "143.0.7499.4",
+              "executableBasename": "chrome-headless-shell"
+            },
+            "suspectedTrap": true,
+            "trap": "suspected",
+            "escapeReachedAt": null,
+            "error": null
+          }
+        },
+        "legacy": {
+          "status": "ok",
+          "error": null,
+          "budgetExceeded": false,
+          "durationMs": 0,
+          "load": null,
+          "findings": {
+            "presses": 25,
+            "trap": {
+              "trapped": true,
+              "firstTrappedPress": 5,
+              "cycleLength": 1,
+              "element": "div#add-to-cart.custom-button \"Add to cart\""
+            },
+            "dynamicViolations": [
+              {
+                "criterion": "2.4.3",
+                "severity": "moderate",
+                "description": "Focus cycling detected - focus returned to previously visited element within short sequence",
+                "evidence": [
+                  "div#add-to-cart.custom-button \"Add to cart\"",
+                  "div#add-to-cart.custom-button \"Add to cart\""
+                ]
+              }
+            ]
+          }
+        },
+        "axe": {
+          "status": "ok",
+          "error": null,
+          "budgetExceeded": false,
+          "durationMs": 3149,
+          "load": {
+            "requestedUrl": "http://127.0.0.1:63711/variants/js-handlers__M5__custom-button.html",
+            "finalUrl": "http://127.0.0.1:63711/variants/js-handlers__M5__custom-button.html",
+            "status": 200,
+            "title": "Custom controls",
+            "mainFrameNavigations": 1,
+            "secondNavigation": "not-expected",
+            "blockedRequests": 0
+          },
+          "findings": [
+            {
+              "id": "landmark-one-main",
+              "impact": "moderate",
+              "wcagTags": [],
+              "targets": [
+                "html"
+              ],
+              "components": [
+                "HTML"
+              ]
+            },
+            {
+              "id": "region",
+              "impact": "moderate",
+              "wcagTags": [],
+              "targets": [
+                "h1",
+                "p:nth-child(2)",
+                "#gift-wrap"
+              ],
+              "components": [
+                "H1",
+                "P",
+                "DIV.custom-checkbox"
+              ]
+            }
+          ]
+        }
+      }
+    },
+    {
+      "pageId": "js-handlers__M6__custom-button",
+      "url": "http://127.0.0.1:63711/variants/js-handlers__M6__custom-button.html",
+      "cluster": "js-handlers",
+      "budgetMs": 1200000,
+      "budgetExceeded": false,
+      "durationMs": 13230,
+      "rawFile": "raw/js-handlers__M6__custom-button.json.gz",
+      "tools": {
+        "gaps": {
+          "status": "ok",
+          "error": null,
+          "budgetExceeded": false,
+          "durationMs": 3081,
+          "load": {
+            "requestedUrl": "http://127.0.0.1:63711/variants/js-handlers__M6__custom-button.html",
+            "finalUrl": "http://127.0.0.1:63711/variants/js-handlers__M6__custom-button.html",
+            "status": 200,
+            "title": "Custom controls",
+            "mainFrameNavigations": 1,
+            "secondNavigation": "not-expected",
+            "blockedRequests": 0
+          },
+          "findings": []
+        },
+        "walk": {
+          "status": "ok",
+          "error": null,
+          "budgetExceeded": false,
+          "durationMs": 7006,
+          "load": {
+            "requestedUrl": "http://127.0.0.1:63711/variants/js-handlers__M6__custom-button.html",
+            "finalUrl": "http://127.0.0.1:63711/variants/js-handlers__M6__custom-button.html",
+            "status": 200,
+            "title": "Custom controls",
+            "mainFrameNavigations": 1,
+            "secondNavigation": "not-expected",
+            "blockedRequests": 0
+          },
+          "findings": {
+            "F": 3,
+            "fIncomplete": false,
+            "fIncompleteCauses": {
+              "crossOriginFrames": 0,
+              "closedShadowRoots": 0
+            },
+            "plannedPresses": 25,
+            "presses": 25,
+            "wraps": 6,
+            "focusLost": 0,
+            "deep": {
+              "inside": 0,
+              "crossOrigin": 0,
+              "closedShadowRoot": 0
+            },
+            "launch": {
+              "browserVersion": "143.0.7499.4",
+              "executableBasename": "chrome-headless-shell"
+            },
+            "suspectedTrap": false,
+            "trap": "no",
+            "escapeReachedAt": null,
+            "error": null
+          }
+        },
+        "legacy": {
+          "status": "ok",
+          "error": null,
+          "budgetExceeded": false,
+          "durationMs": 0,
+          "load": null,
+          "findings": {
+            "presses": 25,
+            "trap": {
+              "trapped": true,
+              "firstTrappedPress": 20,
+              "cycleLength": 4,
+              "element": "div#add-to-cart.custom-button \"Add to cart\""
+            },
+            "dynamicViolations": [
+              {
+                "criterion": "2.4.3",
+                "severity": "moderate",
+                "description": "Focus cycling detected - focus returned to previously visited element within short sequence",
+                "evidence": [
+                  "body",
+                  "body"
+                ]
+              }
+            ]
+          }
+        },
+        "axe": {
+          "status": "ok",
+          "error": null,
+          "budgetExceeded": false,
+          "durationMs": 3137,
+          "load": {
+            "requestedUrl": "http://127.0.0.1:63711/variants/js-handlers__M6__custom-button.html",
+            "finalUrl": "http://127.0.0.1:63711/variants/js-handlers__M6__custom-button.html",
+            "status": 200,
+            "title": "Custom controls",
+            "mainFrameNavigations": 1,
+            "secondNavigation": "not-expected",
+            "blockedRequests": 0
+          },
+          "findings": [
+            {
+              "id": "landmark-one-main",
+              "impact": "moderate",
+              "wcagTags": [],
+              "targets": [
+                "html"
+              ],
+              "components": [
+                "HTML"
+              ]
+            },
+            {
+              "id": "region",
+              "impact": "moderate",
+              "wcagTags": [],
+              "targets": [
+                "h1",
+                "p:nth-child(2)",
+                "#gift-wrap"
+              ],
+              "components": [
+                "H1",
+                "P",
+                "DIV.custom-checkbox"
+              ]
+            }
+          ]
+        }
+      }
+    },
+    {
+      "pageId": "modal__M1__save-button",
+      "url": "http://127.0.0.1:63711/variants/modal__M1__save-button.html",
+      "cluster": "modal",
+      "budgetMs": 1200000,
+      "budgetExceeded": false,
+      "durationMs": 16758,
+      "rawFile": "raw/modal__M1__save-button.json.gz",
+      "tools": {
+        "gaps": {
+          "status": "ok",
+          "error": null,
+          "budgetExceeded": false,
+          "durationMs": 3100,
+          "load": {
+            "requestedUrl": "http://127.0.0.1:63711/variants/modal__M1__save-button.html",
+            "finalUrl": "http://127.0.0.1:63711/variants/modal__M1__save-button.html",
+            "status": 200,
+            "title": "Edit profile dialog",
+            "mainFrameNavigations": 1,
+            "secondNavigation": "not-expected",
+            "blockedRequests": 0
+          },
+          "findings": [
+            {
+              "nodeName": "BUTTON",
+              "id": "dialog-trigger",
+              "class": null,
+              "dataBenchId": "trigger",
+              "gapType": "missing_from_a11y_tree",
+              "severity": "critical",
+              "wcag": [
+                "4.1.2"
+              ]
+            },
+            {
+              "nodeName": "A",
+              "id": null,
+              "class": null,
+              "dataBenchId": "help-link",
+              "gapType": "missing_from_a11y_tree",
+              "severity": "critical",
+              "wcag": [
+                "4.1.2"
+              ]
+            }
+          ]
+        },
+        "walk": {
+          "status": "ok",
+          "error": null,
+          "budgetExceeded": false,
+          "durationMs": 10500,
+          "load": {
+            "requestedUrl": "http://127.0.0.1:63711/variants/modal__M1__save-button.html",
+            "finalUrl": "http://127.0.0.1:63711/variants/modal__M1__save-button.html",
+            "status": 200,
+            "title": "Edit profile dialog",
+            "mainFrameNavigations": 1,
+            "secondNavigation": "not-expected",
+            "blockedRequests": 0
+          },
+          "findings": {
+            "F": 7,
+            "fIncomplete": false,
+            "fIncompleteCauses": {
+              "crossOriginFrames": 0,
+              "closedShadowRoots": 0
+            },
+            "plannedPresses": 45,
+            "presses": 45,
+            "wraps": 0,
+            "focusLost": 0,
+            "deep": {
+              "inside": 0,
+              "crossOrigin": 0,
+              "closedShadowRoot": 0
+            },
+            "launch": {
+              "browserVersion": "143.0.7499.4",
+              "executableBasename": "chrome-headless-shell"
+            },
+            "suspectedTrap": true,
+            "trap": "suspected",
+            "escapeReachedAt": 1,
+            "error": null
+          }
+        },
+        "legacy": {
+          "status": "ok",
+          "error": null,
+          "budgetExceeded": false,
+          "durationMs": 0,
+          "load": null,
+          "findings": {
+            "presses": 45,
+            "trap": {
+              "trapped": true,
+              "firstTrappedPress": 15,
+              "cycleLength": 3,
+              "element": "input#username"
+            },
+            "dynamicViolations": [
+              {
+                "criterion": "2.4.3",
+                "severity": "moderate",
+                "description": "Focus cycling detected - focus returned to previously visited element within short sequence",
+                "evidence": [
+                  "input#username",
+                  "input#username"
+                ]
+              }
+            ]
+          }
+        },
+        "axe": {
+          "status": "ok",
+          "error": null,
+          "budgetExceeded": false,
+          "durationMs": 3152,
+          "load": {
+            "requestedUrl": "http://127.0.0.1:63711/variants/modal__M1__save-button.html",
+            "finalUrl": "http://127.0.0.1:63711/variants/modal__M1__save-button.html",
+            "status": 200,
+            "title": "Edit profile dialog",
+            "mainFrameNavigations": 1,
+            "secondNavigation": "not-expected",
+            "blockedRequests": 0
+          },
+          "findings": []
+        }
+      }
+    },
+    {
+      "pageId": "modal__M3__close-button",
+      "url": "http://127.0.0.1:63711/variants/modal__M3__close-button.html",
+      "cluster": "modal",
+      "budgetMs": 1200000,
+      "budgetExceeded": false,
+      "durationMs": 17599,
+      "rawFile": "raw/modal__M3__close-button.json.gz",
+      "tools": {
+        "gaps": {
+          "status": "ok",
+          "error": null,
+          "budgetExceeded": false,
+          "durationMs": 3102,
+          "load": {
+            "requestedUrl": "http://127.0.0.1:63711/variants/modal__M3__close-button.html",
+            "finalUrl": "http://127.0.0.1:63711/variants/modal__M3__close-button.html",
+            "status": 200,
+            "title": "Edit profile dialog",
+            "mainFrameNavigations": 1,
+            "secondNavigation": "not-expected",
+            "blockedRequests": 0
+          },
+          "findings": [
+            {
+              "nodeName": "BUTTON",
+              "id": "dialog-trigger",
+              "class": null,
+              "dataBenchId": "trigger",
+              "gapType": "missing_from_a11y_tree",
+              "severity": "critical",
+              "wcag": [
+                "4.1.2"
+              ]
+            },
+            {
+              "nodeName": "BUTTON",
+              "id": "dialog-close",
+              "class": "dialog-close",
+              "dataBenchId": "close-button",
+              "gapType": "missing_from_a11y_tree",
+              "severity": "critical",
+              "wcag": [
+                "4.1.2"
+              ]
+            },
+            {
+              "nodeName": "A",
+              "id": null,
+              "class": null,
+              "dataBenchId": "help-link",
+              "gapType": "missing_from_a11y_tree",
+              "severity": "critical",
+              "wcag": [
+                "4.1.2"
+              ]
+            }
+          ]
+        },
+        "walk": {
+          "status": "ok",
+          "error": null,
+          "budgetExceeded": false,
+          "durationMs": 11330,
+          "load": {
+            "requestedUrl": "http://127.0.0.1:63711/variants/modal__M3__close-button.html",
+            "finalUrl": "http://127.0.0.1:63711/variants/modal__M3__close-button.html",
+            "status": 200,
+            "title": "Edit profile dialog",
+            "mainFrameNavigations": 1,
+            "secondNavigation": "not-expected",
+            "blockedRequests": 0
+          },
+          "findings": {
+            "F": 8,
+            "fIncomplete": false,
+            "fIncompleteCauses": {
+              "crossOriginFrames": 0,
+              "closedShadowRoots": 0
+            },
+            "plannedPresses": 50,
+            "presses": 50,
+            "wraps": 0,
+            "focusLost": 0,
+            "deep": {
+              "inside": 0,
+              "crossOrigin": 0,
+              "closedShadowRoot": 0
+            },
+            "launch": {
+              "browserVersion": "143.0.7499.4",
+              "executableBasename": "chrome-headless-shell"
+            },
+            "suspectedTrap": true,
+            "trap": "suspected",
+            "escapeReachedAt": 1,
+            "error": null
+          }
+        },
+        "legacy": {
+          "status": "ok",
+          "error": null,
+          "budgetExceeded": false,
+          "durationMs": 1,
+          "load": null,
+          "findings": {
+            "presses": 50,
+            "trap": {
+              "trapped": true,
+              "firstTrappedPress": 20,
+              "cycleLength": 4,
+              "element": "button#dialog-close.dialog-close \"Close\""
+            },
+            "dynamicViolations": [
+              {
+                "criterion": "2.4.3",
+                "severity": "moderate",
+                "description": "Focus cycling detected - focus returned to previously visited element within short sequence",
+                "evidence": [
+                  "input#username",
+                  "input#username"
+                ]
+              }
+            ]
+          }
+        },
+        "axe": {
+          "status": "ok",
+          "error": null,
+          "budgetExceeded": false,
+          "durationMs": 3161,
+          "load": {
+            "requestedUrl": "http://127.0.0.1:63711/variants/modal__M3__close-button.html",
+            "finalUrl": "http://127.0.0.1:63711/variants/modal__M3__close-button.html",
+            "status": 200,
+            "title": "Edit profile dialog",
+            "mainFrameNavigations": 1,
+            "secondNavigation": "not-expected",
+            "blockedRequests": 0
+          },
+          "findings": []
+        }
+      }
+    },
+    {
+      "pageId": "modal__M4__close-button",
+      "url": "http://127.0.0.1:63711/variants/modal__M4__close-button.html",
+      "cluster": "modal",
+      "budgetMs": 1200000,
+      "budgetExceeded": false,
+      "durationMs": 17615,
+      "rawFile": "raw/modal__M4__close-button.json.gz",
+      "tools": {
+        "gaps": {
+          "status": "ok",
+          "error": null,
+          "budgetExceeded": false,
+          "durationMs": 3100,
+          "load": {
+            "requestedUrl": "http://127.0.0.1:63711/variants/modal__M4__close-button.html",
+            "finalUrl": "http://127.0.0.1:63711/variants/modal__M4__close-button.html",
+            "status": 200,
+            "title": "Edit profile dialog",
+            "mainFrameNavigations": 1,
+            "secondNavigation": "not-expected",
+            "blockedRequests": 0
+          },
+          "findings": [
+            {
+              "nodeName": "BUTTON",
+              "id": "dialog-trigger",
+              "class": null,
+              "dataBenchId": "trigger",
+              "gapType": "missing_from_a11y_tree",
+              "severity": "critical",
+              "wcag": [
+                "4.1.2"
+              ]
+            },
+            {
+              "nodeName": "BUTTON",
+              "id": "dialog-close",
+              "class": "dialog-close",
+              "dataBenchId": "close-button",
+              "gapType": "no_accessible_name",
+              "severity": "serious",
+              "wcag": [
+                "4.1.2",
+                "1.1.1"
+              ]
+            },
+            {
+              "nodeName": "A",
+              "id": null,
+              "class": null,
+              "dataBenchId": "help-link",
+              "gapType": "missing_from_a11y_tree",
+              "severity": "critical",
+              "wcag": [
+                "4.1.2"
+              ]
+            }
+          ]
+        },
+        "walk": {
+          "status": "ok",
+          "error": null,
+          "budgetExceeded": false,
+          "durationMs": 11352,
+          "load": {
+            "requestedUrl": "http://127.0.0.1:63711/variants/modal__M4__close-button.html",
+            "finalUrl": "http://127.0.0.1:63711/variants/modal__M4__close-button.html",
+            "status": 200,
+            "title": "Edit profile dialog",
+            "mainFrameNavigations": 1,
+            "secondNavigation": "not-expected",
+            "blockedRequests": 0
+          },
+          "findings": {
+            "F": 8,
+            "fIncomplete": false,
+            "fIncompleteCauses": {
+              "crossOriginFrames": 0,
+              "closedShadowRoots": 0
+            },
+            "plannedPresses": 50,
+            "presses": 50,
+            "wraps": 0,
+            "focusLost": 0,
+            "deep": {
+              "inside": 0,
+              "crossOrigin": 0,
+              "closedShadowRoot": 0
+            },
+            "launch": {
+              "browserVersion": "143.0.7499.4",
+              "executableBasename": "chrome-headless-shell"
+            },
+            "suspectedTrap": true,
+            "trap": "suspected",
+            "escapeReachedAt": 1,
+            "error": null
+          }
+        },
+        "legacy": {
+          "status": "ok",
+          "error": null,
+          "budgetExceeded": false,
+          "durationMs": 0,
+          "load": null,
+          "findings": {
+            "presses": 50,
+            "trap": {
+              "trapped": true,
+              "firstTrappedPress": 20,
+              "cycleLength": 4,
+              "element": "button#dialog-close.dialog-close"
+            },
+            "dynamicViolations": [
+              {
+                "criterion": "2.4.3",
+                "severity": "moderate",
+                "description": "Focus cycling detected - focus returned to previously visited element within short sequence",
+                "evidence": [
+                  "input#username",
+                  "input#username"
+                ]
+              }
+            ]
+          }
+        },
+        "axe": {
+          "status": "ok",
+          "error": null,
+          "budgetExceeded": false,
+          "durationMs": 3157,
+          "load": {
+            "requestedUrl": "http://127.0.0.1:63711/variants/modal__M4__close-button.html",
+            "finalUrl": "http://127.0.0.1:63711/variants/modal__M4__close-button.html",
+            "status": 200,
+            "title": "Edit profile dialog",
+            "mainFrameNavigations": 1,
+            "secondNavigation": "not-expected",
+            "blockedRequests": 0
+          },
+          "findings": [
+            {
+              "id": "button-name",
+              "impact": "critical",
+              "wcagTags": [
+                "wcag2a",
+                "wcag412"
+              ],
+              "targets": [
+                "#dialog-close"
+              ],
+              "components": [
+                "BUTTON.dialog-close"
+              ]
+            }
+          ]
+        }
+      }
+    },
+    {
+      "pageId": "navbar__M1__dropdown-toggle",
+      "url": "http://127.0.0.1:63711/variants/navbar__M1__dropdown-toggle.html",
+      "cluster": "navbar",
+      "budgetMs": 1200000,
+      "budgetExceeded": false,
+      "durationMs": 19772,
+      "rawFile": "raw/navbar__M1__dropdown-toggle.json.gz",
+      "tools": {
+        "gaps": {
+          "status": "ok",
+          "error": null,
+          "budgetExceeded": false,
+          "durationMs": 3137,
+          "load": {
+            "requestedUrl": "http://127.0.0.1:63711/variants/navbar__M1__dropdown-toggle.html",
+            "finalUrl": "http://127.0.0.1:63711/variants/navbar__M1__dropdown-toggle.html",
+            "status": 200,
+            "title": "Bootstrap-style navbar",
+            "mainFrameNavigations": 1,
+            "secondNavigation": "not-expected",
+            "blockedRequests": 0
+          },
+          "findings": [
+            {
+              "nodeName": "BUTTON",
+              "id": "offcanvas-close",
+              "class": "btn-close",
+              "dataBenchId": "offcanvas-close",
+              "gapType": "missing_from_a11y_tree",
+              "severity": "critical",
+              "wcag": [
+                "4.1.2"
+              ]
+            },
+            {
+              "nodeName": "A",
+              "id": null,
+              "class": "dropdown-item",
+              "dataBenchId": "dropdown-item-1",
+              "gapType": "missing_from_a11y_tree",
+              "severity": "critical",
+              "wcag": [
+                "4.1.2"
+              ]
+            },
+            {
+              "nodeName": "A",
+              "id": null,
+              "class": "dropdown-item",
+              "dataBenchId": "dropdown-item-2",
+              "gapType": "missing_from_a11y_tree",
+              "severity": "critical",
+              "wcag": [
+                "4.1.2"
+              ]
+            },
+            {
+              "nodeName": "A",
+              "id": null,
+              "class": "dropdown-item",
+              "dataBenchId": "dropdown-item-3",
+              "gapType": "missing_from_a11y_tree",
+              "severity": "critical",
+              "wcag": [
+                "4.1.2"
+              ]
+            },
+            {
+              "nodeName": "A",
+              "id": null,
+              "class": "dropdown-item",
+              "dataBenchId": "dropdown-item-4",
+              "gapType": "missing_from_a11y_tree",
+              "severity": "critical",
+              "wcag": [
+                "4.1.2"
+              ]
+            },
+            {
+              "nodeName": "A",
+              "id": null,
+              "class": "dropdown-item",
+              "dataBenchId": "dropdown-item-5",
+              "gapType": "missing_from_a11y_tree",
+              "severity": "critical",
+              "wcag": [
+                "4.1.2"
+              ]
+            },
+            {
+              "nodeName": "A",
+              "id": null,
+              "class": "dropdown-item",
+              "dataBenchId": "dropdown-item-6",
+              "gapType": "missing_from_a11y_tree",
+              "severity": "critical",
+              "wcag": [
+                "4.1.2"
+              ]
+            },
+            {
+              "nodeName": "A",
+              "id": null,
+              "class": null,
+              "dataBenchId": "offcanvas-link-1",
+              "gapType": "missing_from_a11y_tree",
+              "severity": "critical",
+              "wcag": [
+                "4.1.2"
+              ]
+            },
+            {
+              "nodeName": "A",
+              "id": null,
+              "class": null,
+              "dataBenchId": "offcanvas-link-2",
+              "gapType": "missing_from_a11y_tree",
+              "severity": "critical",
+              "wcag": [
+                "4.1.2"
+              ]
+            },
+            {
+              "nodeName": "A",
+              "id": null,
+              "class": null,
+              "dataBenchId": "offcanvas-link-3",
+              "gapType": "missing_from_a11y_tree",
+              "severity": "critical",
+              "wcag": [
+                "4.1.2"
+              ]
+            },
+            {
+              "nodeName": "INPUT",
+              "id": null,
+              "class": null,
+              "dataBenchId": "hidden-csrf",
+              "gapType": "missing_from_a11y_tree",
+              "severity": "critical",
+              "wcag": [
+                "4.1.2"
+              ]
+            },
+            {
+              "nodeName": "INPUT",
+              "id": null,
+              "class": null,
+              "dataBenchId": "hidden-locale",
+              "gapType": "missing_from_a11y_tree",
+              "severity": "critical",
+              "wcag": [
+                "4.1.2"
+              ]
+            },
+            {
+              "nodeName": "INPUT",
+              "id": null,
+              "class": null,
+              "dataBenchId": "hidden-ref",
+              "gapType": "missing_from_a11y_tree",
+              "severity": "critical",
+              "wcag": [
+                "4.1.2"
+              ]
+            },
+            {
+              "nodeName": "DIV",
+              "id": "offcanvas-menu",
+              "class": "offcanvas",
+              "dataBenchId": null,
+              "gapType": "missing_from_a11y_tree",
+              "severity": "critical",
+              "wcag": [
+                "4.1.2"
+              ]
+            },
+            {
+              "nodeName": "DIV",
+              "id": "products-toggle",
+              "class": "nav-link dropdown-toggle",
+              "dataBenchId": "dropdown-toggle",
+              "gapType": "missing_from_a11y_tree",
+              "severity": "critical",
+              "wcag": [
+                "4.1.2"
+              ]
+            }
+          ]
+        },
+        "walk": {
+          "status": "ok",
+          "error": null,
+          "budgetExceeded": false,
+          "durationMs": 13470,
+          "load": {
+            "requestedUrl": "http://127.0.0.1:63711/variants/navbar__M1__dropdown-toggle.html",
+            "finalUrl": "http://127.0.0.1:63711/variants/navbar__M1__dropdown-toggle.html",
+            "status": 200,
+            "title": "Bootstrap-style navbar",
+            "mainFrameNavigations": 1,
+            "secondNavigation": "not-expected",
+            "blockedRequests": 0
+          },
+          "findings": {
+            "F": 11,
+            "fIncomplete": false,
+            "fIncompleteCauses": {
+              "crossOriginFrames": 0,
+              "closedShadowRoots": 0
+            },
+            "plannedPresses": 65,
+            "presses": 65,
+            "wraps": 8,
+            "focusLost": 0,
+            "deep": {
+              "inside": 0,
+              "crossOrigin": 0,
+              "closedShadowRoot": 0
+            },
+            "launch": {
+              "browserVersion": "143.0.7499.4",
+              "executableBasename": "chrome-headless-shell"
+            },
+            "suspectedTrap": false,
+            "trap": "no",
+            "escapeReachedAt": null,
+            "error": null
+          }
+        },
+        "legacy": {
+          "status": "ok",
+          "error": null,
+          "budgetExceeded": false,
+          "durationMs": 0,
+          "load": null,
+          "findings": {
+            "presses": 65,
+            "trap": {
+              "trapped": true,
+              "firstTrappedPress": 40,
+              "cycleLength": 8,
+              "element": "button#navbar-toggler.navbar-toggler \"Toggle navigation\""
+            },
+            "dynamicViolations": []
+          }
+        },
+        "axe": {
+          "status": "ok",
+          "error": null,
+          "budgetExceeded": false,
+          "durationMs": 3158,
+          "load": {
+            "requestedUrl": "http://127.0.0.1:63711/variants/navbar__M1__dropdown-toggle.html",
+            "finalUrl": "http://127.0.0.1:63711/variants/navbar__M1__dropdown-toggle.html",
+            "status": 200,
+            "title": "Bootstrap-style navbar",
+            "mainFrameNavigations": 1,
+            "secondNavigation": "not-expected",
+            "blockedRequests": 0
+          },
+          "findings": [
+            {
+              "id": "color-contrast",
+              "impact": "serious",
+              "wcagTags": [
+                "wcag2aa",
+                "wcag143"
+              ],
+              "targets": [
+                "a[aria-current=\"page\"]",
+                "a[href$=\"#features\"]",
+                "#products-toggle"
+              ],
+              "components": [
+                "A.nav-link",
+                "A.nav-link",
+                "DIV.dropdown-toggle.nav-link"
+              ]
+            }
+          ]
+        }
+      }
+    },
+    {
+      "pageId": "navbar__M3__brand",
+      "url": "http://127.0.0.1:63711/variants/navbar__M3__brand.html",
+      "cluster": "navbar",
+      "budgetMs": 1200000,
+      "budgetExceeded": false,
+      "durationMs": 20598,
+      "rawFile": "raw/navbar__M3__brand.json.gz",
+      "tools": {
+        "gaps": {
+          "status": "ok",
+          "error": null,
+          "budgetExceeded": false,
+          "durationMs": 3140,
+          "load": {
+            "requestedUrl": "http://127.0.0.1:63711/variants/navbar__M3__brand.html",
+            "finalUrl": "http://127.0.0.1:63711/variants/navbar__M3__brand.html",
+            "status": 200,
+            "title": "Bootstrap-style navbar",
+            "mainFrameNavigations": 1,
+            "secondNavigation": "not-expected",
+            "blockedRequests": 0
+          },
+          "findings": [
+            {
+              "nodeName": "BUTTON",
+              "id": "offcanvas-close",
+              "class": "btn-close",
+              "dataBenchId": "offcanvas-close",
+              "gapType": "missing_from_a11y_tree",
+              "severity": "critical",
+              "wcag": [
+                "4.1.2"
+              ]
+            },
+            {
+              "nodeName": "A",
+              "id": null,
+              "class": "navbar-brand",
+              "dataBenchId": "brand",
+              "gapType": "missing_from_a11y_tree",
+              "severity": "critical",
+              "wcag": [
+                "4.1.2"
+              ]
+            },
+            {
+              "nodeName": "A",
+              "id": null,
+              "class": "dropdown-item",
+              "dataBenchId": "dropdown-item-1",
+              "gapType": "missing_from_a11y_tree",
+              "severity": "critical",
+              "wcag": [
+                "4.1.2"
+              ]
+            },
+            {
+              "nodeName": "A",
+              "id": null,
+              "class": "dropdown-item",
+              "dataBenchId": "dropdown-item-2",
+              "gapType": "missing_from_a11y_tree",
+              "severity": "critical",
+              "wcag": [
+                "4.1.2"
+              ]
+            },
+            {
+              "nodeName": "A",
+              "id": null,
+              "class": "dropdown-item",
+              "dataBenchId": "dropdown-item-3",
+              "gapType": "missing_from_a11y_tree",
+              "severity": "critical",
+              "wcag": [
+                "4.1.2"
+              ]
+            },
+            {
+              "nodeName": "A",
+              "id": null,
+              "class": "dropdown-item",
+              "dataBenchId": "dropdown-item-4",
+              "gapType": "missing_from_a11y_tree",
+              "severity": "critical",
+              "wcag": [
+                "4.1.2"
+              ]
+            },
+            {
+              "nodeName": "A",
+              "id": null,
+              "class": "dropdown-item",
+              "dataBenchId": "dropdown-item-5",
+              "gapType": "missing_from_a11y_tree",
+              "severity": "critical",
+              "wcag": [
+                "4.1.2"
+              ]
+            },
+            {
+              "nodeName": "A",
+              "id": null,
+              "class": "dropdown-item",
+              "dataBenchId": "dropdown-item-6",
+              "gapType": "missing_from_a11y_tree",
+              "severity": "critical",
+              "wcag": [
+                "4.1.2"
+              ]
+            },
+            {
+              "nodeName": "A",
+              "id": null,
+              "class": null,
+              "dataBenchId": "offcanvas-link-1",
+              "gapType": "missing_from_a11y_tree",
+              "severity": "critical",
+              "wcag": [
+                "4.1.2"
+              ]
+            },
+            {
+              "nodeName": "A",
+              "id": null,
+              "class": null,
+              "dataBenchId": "offcanvas-link-2",
+              "gapType": "missing_from_a11y_tree",
+              "severity": "critical",
+              "wcag": [
+                "4.1.2"
+              ]
+            },
+            {
+              "nodeName": "A",
+              "id": null,
+              "class": null,
+              "dataBenchId": "offcanvas-link-3",
+              "gapType": "missing_from_a11y_tree",
+              "severity": "critical",
+              "wcag": [
+                "4.1.2"
+              ]
+            },
+            {
+              "nodeName": "INPUT",
+              "id": null,
+              "class": null,
+              "dataBenchId": "hidden-csrf",
+              "gapType": "missing_from_a11y_tree",
+              "severity": "critical",
+              "wcag": [
+                "4.1.2"
+              ]
+            },
+            {
+              "nodeName": "INPUT",
+              "id": null,
+              "class": null,
+              "dataBenchId": "hidden-locale",
+              "gapType": "missing_from_a11y_tree",
+              "severity": "critical",
+              "wcag": [
+                "4.1.2"
+              ]
+            },
+            {
+              "nodeName": "INPUT",
+              "id": null,
+              "class": null,
+              "dataBenchId": "hidden-ref",
+              "gapType": "missing_from_a11y_tree",
+              "severity": "critical",
+              "wcag": [
+                "4.1.2"
+              ]
+            },
+            {
+              "nodeName": "DIV",
+              "id": "offcanvas-menu",
+              "class": "offcanvas",
+              "dataBenchId": null,
+              "gapType": "missing_from_a11y_tree",
+              "severity": "critical",
+              "wcag": [
+                "4.1.2"
+              ]
+            }
+          ]
+        },
+        "walk": {
+          "status": "ok",
+          "error": null,
+          "budgetExceeded": false,
+          "durationMs": 14293,
+          "load": {
+            "requestedUrl": "http://127.0.0.1:63711/variants/navbar__M3__brand.html",
+            "finalUrl": "http://127.0.0.1:63711/variants/navbar__M3__brand.html",
+            "status": 200,
+            "title": "Bootstrap-style navbar",
+            "mainFrameNavigations": 1,
+            "secondNavigation": "not-expected",
+            "blockedRequests": 0
+          },
+          "findings": {
+            "F": 12,
+            "fIncomplete": false,
+            "fIncompleteCauses": {
+              "crossOriginFrames": 0,
+              "closedShadowRoots": 0
+            },
+            "plannedPresses": 70,
+            "presses": 70,
+            "wraps": 7,
+            "focusLost": 0,
+            "deep": {
+              "inside": 0,
+              "crossOrigin": 0,
+              "closedShadowRoot": 0
+            },
+            "launch": {
+              "browserVersion": "143.0.7499.4",
+              "executableBasename": "chrome-headless-shell"
+            },
+            "suspectedTrap": false,
+            "trap": "no",
+            "escapeReachedAt": null,
+            "error": null
+          }
+        },
+        "legacy": {
+          "status": "ok",
+          "error": null,
+          "budgetExceeded": false,
+          "durationMs": 0,
+          "load": null,
+          "findings": {
+            "presses": 70,
+            "trap": {
+              "trapped": true,
+              "firstTrappedPress": 45,
+              "cycleLength": 9,
+              "element": "button#offcanvas-open \"Account menu\""
+            },
+            "dynamicViolations": []
+          }
+        },
+        "axe": {
+          "status": "ok",
+          "error": null,
+          "budgetExceeded": false,
+          "durationMs": 3157,
+          "load": {
+            "requestedUrl": "http://127.0.0.1:63711/variants/navbar__M3__brand.html",
+            "finalUrl": "http://127.0.0.1:63711/variants/navbar__M3__brand.html",
+            "status": 200,
+            "title": "Bootstrap-style navbar",
+            "mainFrameNavigations": 1,
+            "secondNavigation": "not-expected",
+            "blockedRequests": 0
+          },
+          "findings": [
+            {
+              "id": "aria-hidden-focus",
+              "impact": "serious",
+              "wcagTags": [
+                "wcag2a",
+                "wcag412"
+              ],
+              "targets": [
+                ".navbar-brand"
+              ],
+              "components": [
+                "A.navbar-brand"
+              ]
+            },
+            {
+              "id": "color-contrast",
+              "impact": "serious",
+              "wcagTags": [
+                "wcag2aa",
+                "wcag143"
+              ],
+              "targets": [
+                "a[aria-current=\"page\"]",
+                "a[href$=\"#features\"]",
+                "#products-toggle"
+              ],
+              "components": [
+                "A.nav-link",
+                "A.nav-link",
+                "BUTTON.dropdown-toggle.nav-link"
+              ]
+            }
+          ]
+        }
+      }
+    },
+    {
+      "pageId": "navbar__M4__toggler",
+      "url": "http://127.0.0.1:63711/variants/navbar__M4__toggler.html",
+      "cluster": "navbar",
+      "budgetMs": 1200000,
+      "budgetExceeded": false,
+      "durationMs": 20612,
+      "rawFile": "raw/navbar__M4__toggler.json.gz",
+      "tools": {
+        "gaps": {
+          "status": "ok",
+          "error": null,
+          "budgetExceeded": false,
+          "durationMs": 3145,
+          "load": {
+            "requestedUrl": "http://127.0.0.1:63711/variants/navbar__M4__toggler.html",
+            "finalUrl": "http://127.0.0.1:63711/variants/navbar__M4__toggler.html",
+            "status": 200,
+            "title": "Bootstrap-style navbar",
+            "mainFrameNavigations": 1,
+            "secondNavigation": "not-expected",
+            "blockedRequests": 0
+          },
+          "findings": [
+            {
+              "nodeName": "BUTTON",
+              "id": "navbar-toggler",
+              "class": "navbar-toggler",
+              "dataBenchId": "toggler",
+              "gapType": "no_accessible_name",
+              "severity": "serious",
+              "wcag": [
+                "4.1.2",
+                "1.1.1"
+              ]
+            },
+            {
+              "nodeName": "BUTTON",
+              "id": "offcanvas-close",
+              "class": "btn-close",
+              "dataBenchId": "offcanvas-close",
+              "gapType": "missing_from_a11y_tree",
+              "severity": "critical",
+              "wcag": [
+                "4.1.2"
+              ]
+            },
+            {
+              "nodeName": "A",
+              "id": null,
+              "class": "dropdown-item",
+              "dataBenchId": "dropdown-item-1",
+              "gapType": "missing_from_a11y_tree",
+              "severity": "critical",
+              "wcag": [
+                "4.1.2"
+              ]
+            },
+            {
+              "nodeName": "A",
+              "id": null,
+              "class": "dropdown-item",
+              "dataBenchId": "dropdown-item-2",
+              "gapType": "missing_from_a11y_tree",
+              "severity": "critical",
+              "wcag": [
+                "4.1.2"
+              ]
+            },
+            {
+              "nodeName": "A",
+              "id": null,
+              "class": "dropdown-item",
+              "dataBenchId": "dropdown-item-3",
+              "gapType": "missing_from_a11y_tree",
+              "severity": "critical",
+              "wcag": [
+                "4.1.2"
+              ]
+            },
+            {
+              "nodeName": "A",
+              "id": null,
+              "class": "dropdown-item",
+              "dataBenchId": "dropdown-item-4",
+              "gapType": "missing_from_a11y_tree",
+              "severity": "critical",
+              "wcag": [
+                "4.1.2"
+              ]
+            },
+            {
+              "nodeName": "A",
+              "id": null,
+              "class": "dropdown-item",
+              "dataBenchId": "dropdown-item-5",
+              "gapType": "missing_from_a11y_tree",
+              "severity": "critical",
+              "wcag": [
+                "4.1.2"
+              ]
+            },
+            {
+              "nodeName": "A",
+              "id": null,
+              "class": "dropdown-item",
+              "dataBenchId": "dropdown-item-6",
+              "gapType": "missing_from_a11y_tree",
+              "severity": "critical",
+              "wcag": [
+                "4.1.2"
+              ]
+            },
+            {
+              "nodeName": "A",
+              "id": null,
+              "class": null,
+              "dataBenchId": "offcanvas-link-1",
+              "gapType": "missing_from_a11y_tree",
+              "severity": "critical",
+              "wcag": [
+                "4.1.2"
+              ]
+            },
+            {
+              "nodeName": "A",
+              "id": null,
+              "class": null,
+              "dataBenchId": "offcanvas-link-2",
+              "gapType": "missing_from_a11y_tree",
+              "severity": "critical",
+              "wcag": [
+                "4.1.2"
+              ]
+            },
+            {
+              "nodeName": "A",
+              "id": null,
+              "class": null,
+              "dataBenchId": "offcanvas-link-3",
+              "gapType": "missing_from_a11y_tree",
+              "severity": "critical",
+              "wcag": [
+                "4.1.2"
+              ]
+            },
+            {
+              "nodeName": "INPUT",
+              "id": null,
+              "class": null,
+              "dataBenchId": "hidden-csrf",
+              "gapType": "missing_from_a11y_tree",
+              "severity": "critical",
+              "wcag": [
+                "4.1.2"
+              ]
+            },
+            {
+              "nodeName": "INPUT",
+              "id": null,
+              "class": null,
+              "dataBenchId": "hidden-locale",
+              "gapType": "missing_from_a11y_tree",
+              "severity": "critical",
+              "wcag": [
+                "4.1.2"
+              ]
+            },
+            {
+              "nodeName": "INPUT",
+              "id": null,
+              "class": null,
+              "dataBenchId": "hidden-ref",
+              "gapType": "missing_from_a11y_tree",
+              "severity": "critical",
+              "wcag": [
+                "4.1.2"
+              ]
+            },
+            {
+              "nodeName": "DIV",
+              "id": "offcanvas-menu",
+              "class": "offcanvas",
+              "dataBenchId": null,
+              "gapType": "missing_from_a11y_tree",
+              "severity": "critical",
+              "wcag": [
+                "4.1.2"
+              ]
+            }
+          ]
+        },
+        "walk": {
+          "status": "ok",
+          "error": null,
+          "budgetExceeded": false,
+          "durationMs": 14301,
+          "load": {
+            "requestedUrl": "http://127.0.0.1:63711/variants/navbar__M4__toggler.html",
+            "finalUrl": "http://127.0.0.1:63711/variants/navbar__M4__toggler.html",
+            "status": 200,
+            "title": "Bootstrap-style navbar",
+            "mainFrameNavigations": 1,
+            "secondNavigation": "not-expected",
+            "blockedRequests": 0
+          },
+          "findings": {
+            "F": 12,
+            "fIncomplete": false,
+            "fIncompleteCauses": {
+              "crossOriginFrames": 0,
+              "closedShadowRoots": 0
+            },
+            "plannedPresses": 70,
+            "presses": 70,
+            "wraps": 7,
+            "focusLost": 0,
+            "deep": {
+              "inside": 0,
+              "crossOrigin": 0,
+              "closedShadowRoot": 0
+            },
+            "launch": {
+              "browserVersion": "143.0.7499.4",
+              "executableBasename": "chrome-headless-shell"
+            },
+            "suspectedTrap": false,
+            "trap": "no",
+            "escapeReachedAt": null,
+            "error": null
+          }
+        },
+        "legacy": {
+          "status": "ok",
+          "error": null,
+          "budgetExceeded": false,
+          "durationMs": 0,
+          "load": null,
+          "findings": {
+            "presses": 70,
+            "trap": {
+              "trapped": true,
+              "firstTrappedPress": 45,
+              "cycleLength": 9,
+              "element": "button#offcanvas-open \"Account menu\""
+            },
+            "dynamicViolations": []
+          }
+        },
+        "axe": {
+          "status": "ok",
+          "error": null,
+          "budgetExceeded": false,
+          "durationMs": 3159,
+          "load": {
+            "requestedUrl": "http://127.0.0.1:63711/variants/navbar__M4__toggler.html",
+            "finalUrl": "http://127.0.0.1:63711/variants/navbar__M4__toggler.html",
+            "status": 200,
+            "title": "Bootstrap-style navbar",
+            "mainFrameNavigations": 1,
+            "secondNavigation": "not-expected",
+            "blockedRequests": 0
+          },
+          "findings": [
+            {
+              "id": "button-name",
+              "impact": "critical",
+              "wcagTags": [
+                "wcag2a",
+                "wcag412"
+              ],
+              "targets": [
+                "#navbar-toggler"
+              ],
+              "components": [
+                "BUTTON.navbar-toggler"
+              ]
+            },
+            {
+              "id": "color-contrast",
+              "impact": "serious",
+              "wcagTags": [
+                "wcag2aa",
+                "wcag143"
+              ],
+              "targets": [
+                "a[aria-current=\"page\"]",
+                "a[href$=\"#features\"]",
+                "#products-toggle"
+              ],
+              "components": [
+                "A.nav-link",
+                "A.nav-link",
+                "BUTTON.dropdown-toggle.nav-link"
+              ]
+            }
+          ]
+        }
+      }
+    },
+    {
+      "pageId": "navbar__M5__brand",
+      "url": "http://127.0.0.1:63711/variants/navbar__M5__brand.html",
+      "cluster": "navbar",
+      "budgetMs": 1200000,
+      "budgetExceeded": false,
+      "durationMs": 22949,
+      "rawFile": "raw/navbar__M5__brand.json.gz",
+      "tools": {
+        "gaps": {
+          "status": "ok",
+          "error": null,
+          "budgetExceeded": false,
+          "durationMs": 3144,
+          "load": {
+            "requestedUrl": "http://127.0.0.1:63711/variants/navbar__M5__brand.html",
+            "finalUrl": "http://127.0.0.1:63711/variants/navbar__M5__brand.html",
+            "status": 200,
+            "title": "Bootstrap-style navbar",
+            "mainFrameNavigations": 1,
+            "secondNavigation": "not-expected",
+            "blockedRequests": 0
+          },
+          "findings": [
+            {
+              "nodeName": "BUTTON",
+              "id": "offcanvas-close",
+              "class": "btn-close",
+              "dataBenchId": "offcanvas-close",
+              "gapType": "missing_from_a11y_tree",
+              "severity": "critical",
+              "wcag": [
+                "4.1.2"
+              ]
+            },
+            {
+              "nodeName": "A",
+              "id": null,
+              "class": "dropdown-item",
+              "dataBenchId": "dropdown-item-1",
+              "gapType": "missing_from_a11y_tree",
+              "severity": "critical",
+              "wcag": [
+                "4.1.2"
+              ]
+            },
+            {
+              "nodeName": "A",
+              "id": null,
+              "class": "dropdown-item",
+              "dataBenchId": "dropdown-item-2",
+              "gapType": "missing_from_a11y_tree",
+              "severity": "critical",
+              "wcag": [
+                "4.1.2"
+              ]
+            },
+            {
+              "nodeName": "A",
+              "id": null,
+              "class": "dropdown-item",
+              "dataBenchId": "dropdown-item-3",
+              "gapType": "missing_from_a11y_tree",
+              "severity": "critical",
+              "wcag": [
+                "4.1.2"
+              ]
+            },
+            {
+              "nodeName": "A",
+              "id": null,
+              "class": "dropdown-item",
+              "dataBenchId": "dropdown-item-4",
+              "gapType": "missing_from_a11y_tree",
+              "severity": "critical",
+              "wcag": [
+                "4.1.2"
+              ]
+            },
+            {
+              "nodeName": "A",
+              "id": null,
+              "class": "dropdown-item",
+              "dataBenchId": "dropdown-item-5",
+              "gapType": "missing_from_a11y_tree",
+              "severity": "critical",
+              "wcag": [
+                "4.1.2"
+              ]
+            },
+            {
+              "nodeName": "A",
+              "id": null,
+              "class": "dropdown-item",
+              "dataBenchId": "dropdown-item-6",
+              "gapType": "missing_from_a11y_tree",
+              "severity": "critical",
+              "wcag": [
+                "4.1.2"
+              ]
+            },
+            {
+              "nodeName": "A",
+              "id": null,
+              "class": null,
+              "dataBenchId": "offcanvas-link-1",
+              "gapType": "missing_from_a11y_tree",
+              "severity": "critical",
+              "wcag": [
+                "4.1.2"
+              ]
+            },
+            {
+              "nodeName": "A",
+              "id": null,
+              "class": null,
+              "dataBenchId": "offcanvas-link-2",
+              "gapType": "missing_from_a11y_tree",
+              "severity": "critical",
+              "wcag": [
+                "4.1.2"
+              ]
+            },
+            {
+              "nodeName": "A",
+              "id": null,
+              "class": null,
+              "dataBenchId": "offcanvas-link-3",
+              "gapType": "missing_from_a11y_tree",
+              "severity": "critical",
+              "wcag": [
+                "4.1.2"
+              ]
+            },
+            {
+              "nodeName": "INPUT",
+              "id": null,
+              "class": null,
+              "dataBenchId": "hidden-csrf",
+              "gapType": "missing_from_a11y_tree",
+              "severity": "critical",
+              "wcag": [
+                "4.1.2"
+              ]
+            },
+            {
+              "nodeName": "INPUT",
+              "id": null,
+              "class": null,
+              "dataBenchId": "hidden-locale",
+              "gapType": "missing_from_a11y_tree",
+              "severity": "critical",
+              "wcag": [
+                "4.1.2"
+              ]
+            },
+            {
+              "nodeName": "INPUT",
+              "id": null,
+              "class": null,
+              "dataBenchId": "hidden-ref",
+              "gapType": "missing_from_a11y_tree",
+              "severity": "critical",
+              "wcag": [
+                "4.1.2"
+              ]
+            },
+            {
+              "nodeName": "DIV",
+              "id": "offcanvas-menu",
+              "class": "offcanvas",
+              "dataBenchId": null,
+              "gapType": "missing_from_a11y_tree",
+              "severity": "critical",
+              "wcag": [
+                "4.1.2"
+              ]
+            }
+          ]
+        },
+        "walk": {
+          "status": "ok",
+          "error": null,
+          "budgetExceeded": false,
+          "durationMs": 16637,
+          "load": {
+            "requestedUrl": "http://127.0.0.1:63711/variants/navbar__M5__brand.html",
+            "finalUrl": "http://127.0.0.1:63711/variants/navbar__M5__brand.html",
+            "status": 200,
+            "title": "Bootstrap-style navbar",
+            "mainFrameNavigations": 1,
+            "secondNavigation": "not-expected",
+            "blockedRequests": 0
+          },
+          "findings": {
+            "F": 12,
+            "fIncomplete": false,
+            "fIncompleteCauses": {
+              "crossOriginFrames": 0,
+              "closedShadowRoots": 0
+            },
+            "plannedPresses": 70,
+            "presses": 70,
+            "wraps": 0,
+            "focusLost": 0,
+            "deep": {
+              "inside": 0,
+              "crossOrigin": 0,
+              "closedShadowRoot": 0
+            },
+            "launch": {
+              "browserVersion": "143.0.7499.4",
+              "executableBasename": "chrome-headless-shell"
+            },
+            "suspectedTrap": true,
+            "trap": "suspected",
+            "escapeReachedAt": null,
+            "error": null
+          }
+        },
+        "legacy": {
+          "status": "ok",
+          "error": null,
+          "budgetExceeded": false,
+          "durationMs": 1,
+          "load": null,
+          "findings": {
+            "presses": 70,
+            "trap": {
+              "trapped": true,
+              "firstTrappedPress": 5,
+              "cycleLength": 1,
+              "element": "a.navbar-brand \"Brand\""
+            },
+            "dynamicViolations": [
+              {
+                "criterion": "2.4.3",
+                "severity": "moderate",
+                "description": "Focus cycling detected - focus returned to previously visited element within short sequence",
+                "evidence": [
+                  "a.navbar-brand \"Brand\"",
+                  "a.navbar-brand \"Brand\""
+                ]
+              }
+            ]
+          }
+        },
+        "axe": {
+          "status": "ok",
+          "error": null,
+          "budgetExceeded": false,
+          "durationMs": 3158,
+          "load": {
+            "requestedUrl": "http://127.0.0.1:63711/variants/navbar__M5__brand.html",
+            "finalUrl": "http://127.0.0.1:63711/variants/navbar__M5__brand.html",
+            "status": 200,
+            "title": "Bootstrap-style navbar",
+            "mainFrameNavigations": 1,
+            "secondNavigation": "not-expected",
+            "blockedRequests": 0
+          },
+          "findings": [
+            {
+              "id": "color-contrast",
+              "impact": "serious",
+              "wcagTags": [
+                "wcag2aa",
+                "wcag143"
+              ],
+              "targets": [
+                "a[aria-current=\"page\"]",
+                "a[href$=\"#features\"]",
+                "#products-toggle"
+              ],
+              "components": [
+                "A.nav-link",
+                "A.nav-link",
+                "BUTTON.dropdown-toggle.nav-link"
+              ]
+            }
+          ]
+        }
+      }
+    },
+    {
+      "pageId": "navbar__M6__brand",
+      "url": "http://127.0.0.1:63711/variants/navbar__M6__brand.html",
+      "cluster": "navbar",
+      "budgetMs": 1200000,
+      "budgetExceeded": false,
+      "durationMs": 20522,
+      "rawFile": "raw/navbar__M6__brand.json.gz",
+      "tools": {
+        "gaps": {
+          "status": "ok",
+          "error": null,
+          "budgetExceeded": false,
+          "durationMs": 3132,
+          "load": {
+            "requestedUrl": "http://127.0.0.1:63711/variants/navbar__M6__brand.html",
+            "finalUrl": "http://127.0.0.1:63711/variants/navbar__M6__brand.html",
+            "status": 200,
+            "title": "Bootstrap-style navbar",
+            "mainFrameNavigations": 1,
+            "secondNavigation": "not-expected",
+            "blockedRequests": 0
+          },
+          "findings": [
+            {
+              "nodeName": "BUTTON",
+              "id": "offcanvas-close",
+              "class": "btn-close",
+              "dataBenchId": "offcanvas-close",
+              "gapType": "missing_from_a11y_tree",
+              "severity": "critical",
+              "wcag": [
+                "4.1.2"
+              ]
+            },
+            {
+              "nodeName": "A",
+              "id": null,
+              "class": "dropdown-item",
+              "dataBenchId": "dropdown-item-1",
+              "gapType": "missing_from_a11y_tree",
+              "severity": "critical",
+              "wcag": [
+                "4.1.2"
+              ]
+            },
+            {
+              "nodeName": "A",
+              "id": null,
+              "class": "dropdown-item",
+              "dataBenchId": "dropdown-item-2",
+              "gapType": "missing_from_a11y_tree",
+              "severity": "critical",
+              "wcag": [
+                "4.1.2"
+              ]
+            },
+            {
+              "nodeName": "A",
+              "id": null,
+              "class": "dropdown-item",
+              "dataBenchId": "dropdown-item-3",
+              "gapType": "missing_from_a11y_tree",
+              "severity": "critical",
+              "wcag": [
+                "4.1.2"
+              ]
+            },
+            {
+              "nodeName": "A",
+              "id": null,
+              "class": "dropdown-item",
+              "dataBenchId": "dropdown-item-4",
+              "gapType": "missing_from_a11y_tree",
+              "severity": "critical",
+              "wcag": [
+                "4.1.2"
+              ]
+            },
+            {
+              "nodeName": "A",
+              "id": null,
+              "class": "dropdown-item",
+              "dataBenchId": "dropdown-item-5",
+              "gapType": "missing_from_a11y_tree",
+              "severity": "critical",
+              "wcag": [
+                "4.1.2"
+              ]
+            },
+            {
+              "nodeName": "A",
+              "id": null,
+              "class": "dropdown-item",
+              "dataBenchId": "dropdown-item-6",
+              "gapType": "missing_from_a11y_tree",
+              "severity": "critical",
+              "wcag": [
+                "4.1.2"
+              ]
+            },
+            {
+              "nodeName": "A",
+              "id": null,
+              "class": null,
+              "dataBenchId": "offcanvas-link-1",
+              "gapType": "missing_from_a11y_tree",
+              "severity": "critical",
+              "wcag": [
+                "4.1.2"
+              ]
+            },
+            {
+              "nodeName": "A",
+              "id": null,
+              "class": null,
+              "dataBenchId": "offcanvas-link-2",
+              "gapType": "missing_from_a11y_tree",
+              "severity": "critical",
+              "wcag": [
+                "4.1.2"
+              ]
+            },
+            {
+              "nodeName": "A",
+              "id": null,
+              "class": null,
+              "dataBenchId": "offcanvas-link-3",
+              "gapType": "missing_from_a11y_tree",
+              "severity": "critical",
+              "wcag": [
+                "4.1.2"
+              ]
+            },
+            {
+              "nodeName": "INPUT",
+              "id": null,
+              "class": null,
+              "dataBenchId": "hidden-csrf",
+              "gapType": "missing_from_a11y_tree",
+              "severity": "critical",
+              "wcag": [
+                "4.1.2"
+              ]
+            },
+            {
+              "nodeName": "INPUT",
+              "id": null,
+              "class": null,
+              "dataBenchId": "hidden-locale",
+              "gapType": "missing_from_a11y_tree",
+              "severity": "critical",
+              "wcag": [
+                "4.1.2"
+              ]
+            },
+            {
+              "nodeName": "INPUT",
+              "id": null,
+              "class": null,
+              "dataBenchId": "hidden-ref",
+              "gapType": "missing_from_a11y_tree",
+              "severity": "critical",
+              "wcag": [
+                "4.1.2"
+              ]
+            },
+            {
+              "nodeName": "DIV",
+              "id": "offcanvas-menu",
+              "class": "offcanvas",
+              "dataBenchId": null,
+              "gapType": "missing_from_a11y_tree",
+              "severity": "critical",
+              "wcag": [
+                "4.1.2"
+              ]
+            }
+          ]
+        },
+        "walk": {
+          "status": "ok",
+          "error": null,
+          "budgetExceeded": false,
+          "durationMs": 14226,
+          "load": {
+            "requestedUrl": "http://127.0.0.1:63711/variants/navbar__M6__brand.html",
+            "finalUrl": "http://127.0.0.1:63711/variants/navbar__M6__brand.html",
+            "status": 200,
+            "title": "Bootstrap-style navbar",
+            "mainFrameNavigations": 1,
+            "secondNavigation": "not-expected",
+            "blockedRequests": 0
+          },
+          "findings": {
+            "F": 12,
+            "fIncomplete": false,
+            "fIncompleteCauses": {
+              "crossOriginFrames": 0,
+              "closedShadowRoots": 0
+            },
+            "plannedPresses": 70,
+            "presses": 70,
+            "wraps": 7,
+            "focusLost": 0,
+            "deep": {
+              "inside": 0,
+              "crossOrigin": 0,
+              "closedShadowRoot": 0
+            },
+            "launch": {
+              "browserVersion": "143.0.7499.4",
+              "executableBasename": "chrome-headless-shell"
+            },
+            "suspectedTrap": false,
+            "trap": "no",
+            "escapeReachedAt": null,
+            "error": null
+          }
+        },
+        "legacy": {
+          "status": "ok",
+          "error": null,
+          "budgetExceeded": false,
+          "durationMs": 0,
+          "load": null,
+          "findings": {
+            "presses": 70,
+            "trap": {
+              "trapped": true,
+              "firstTrappedPress": 45,
+              "cycleLength": 9,
+              "element": "button \"Search\""
+            },
+            "dynamicViolations": []
+          }
+        },
+        "axe": {
+          "status": "ok",
+          "error": null,
+          "budgetExceeded": false,
+          "durationMs": 3157,
+          "load": {
+            "requestedUrl": "http://127.0.0.1:63711/variants/navbar__M6__brand.html",
+            "finalUrl": "http://127.0.0.1:63711/variants/navbar__M6__brand.html",
+            "status": 200,
+            "title": "Bootstrap-style navbar",
+            "mainFrameNavigations": 1,
+            "secondNavigation": "not-expected",
+            "blockedRequests": 0
+          },
+          "findings": [
+            {
+              "id": "color-contrast",
+              "impact": "serious",
+              "wcagTags": [
+                "wcag2aa",
+                "wcag143"
+              ],
+              "targets": [
+                "a[aria-current=\"page\"]",
+                "a[href$=\"#features\"]",
+                "#products-toggle"
+              ],
+              "components": [
+                "A.nav-link",
+                "A.nav-link",
+                "BUTTON.dropdown-toggle.nav-link"
+              ]
+            }
+          ]
+        }
+      }
+    },
+    {
+      "pageId": "three-links__M3__link-1",
+      "url": "http://127.0.0.1:63711/variants/three-links__M3__link-1.html",
+      "cluster": "three-links",
+      "budgetMs": 1200000,
+      "budgetExceeded": false,
+      "durationMs": 13200,
+      "rawFile": "raw/three-links__M3__link-1.json.gz",
+      "tools": {
+        "gaps": {
+          "status": "ok",
+          "error": null,
+          "budgetExceeded": false,
+          "durationMs": 3088,
+          "load": {
+            "requestedUrl": "http://127.0.0.1:63711/variants/three-links__M3__link-1.html",
+            "finalUrl": "http://127.0.0.1:63711/variants/three-links__M3__link-1.html",
+            "status": 200,
+            "title": "Three links",
+            "mainFrameNavigations": 1,
+            "secondNavigation": "not-expected",
+            "blockedRequests": 0
+          },
+          "findings": [
+            {
+              "nodeName": "A",
+              "id": null,
+              "class": null,
+              "dataBenchId": "link-1",
+              "gapType": "missing_from_a11y_tree",
+              "severity": "critical",
+              "wcag": [
+                "4.1.2"
+              ]
+            }
+          ]
+        },
+        "walk": {
+          "status": "ok",
+          "error": null,
+          "budgetExceeded": false,
+          "durationMs": 6974,
+          "load": {
+            "requestedUrl": "http://127.0.0.1:63711/variants/three-links__M3__link-1.html",
+            "finalUrl": "http://127.0.0.1:63711/variants/three-links__M3__link-1.html",
+            "status": 200,
+            "title": "Three links",
+            "mainFrameNavigations": 1,
+            "secondNavigation": "not-expected",
+            "blockedRequests": 0
+          },
+          "findings": {
+            "F": 3,
+            "fIncomplete": false,
+            "fIncompleteCauses": {
+              "crossOriginFrames": 0,
+              "closedShadowRoots": 0
+            },
+            "plannedPresses": 25,
+            "presses": 25,
+            "wraps": 6,
+            "focusLost": 0,
+            "deep": {
+              "inside": 0,
+              "crossOrigin": 0,
+              "closedShadowRoot": 0
+            },
+            "launch": {
+              "browserVersion": "143.0.7499.4",
+              "executableBasename": "chrome-headless-shell"
+            },
+            "suspectedTrap": false,
+            "trap": "no",
+            "escapeReachedAt": null,
+            "error": null
+          }
+        },
+        "legacy": {
+          "status": "ok",
+          "error": null,
+          "budgetExceeded": false,
+          "durationMs": 0,
+          "load": null,
+          "findings": {
+            "presses": 25,
+            "trap": {
+              "trapped": true,
+              "firstTrappedPress": 20,
+              "cycleLength": 4,
+              "element": "a \"Two\""
+            },
+            "dynamicViolations": [
+              {
+                "criterion": "2.4.3",
+                "severity": "moderate",
+                "description": "Focus cycling detected - focus returned to previously visited element within short sequence",
+                "evidence": [
+                  "a \"One\"",
+                  "a \"One\""
+                ]
+              }
+            ]
+          }
+        },
+        "axe": {
+          "status": "ok",
+          "error": null,
+          "budgetExceeded": false,
+          "durationMs": 3132,
+          "load": {
+            "requestedUrl": "http://127.0.0.1:63711/variants/three-links__M3__link-1.html",
+            "finalUrl": "http://127.0.0.1:63711/variants/three-links__M3__link-1.html",
+            "status": 200,
+            "title": "Three links",
+            "mainFrameNavigations": 1,
+            "secondNavigation": "not-expected",
+            "blockedRequests": 0
+          },
+          "findings": [
+            {
+              "id": "aria-hidden-focus",
+              "impact": "serious",
+              "wcagTags": [
+                "wcag2a",
+                "wcag412"
+              ],
+              "targets": [
+                "a[href$=\"#one\"]"
+              ],
+              "components": [
+                "A"
+              ]
+            },
+            {
+              "id": "landmark-one-main",
+              "impact": "moderate",
+              "wcagTags": [],
+              "targets": [
+                "html"
+              ],
+              "components": [
+                "HTML"
+              ]
+            },
+            {
+              "id": "region",
+              "impact": "moderate",
+              "wcagTags": [],
+              "targets": [
+                "h1",
+                "p:nth-child(3)",
+                "p:nth-child(4)"
+              ],
+              "components": [
+                "H1",
+                "P",
+                "P"
+              ]
+            }
+          ]
+        }
+      }
+    },
+    {
+      "pageId": "three-links__M5__link-1",
+      "url": "http://127.0.0.1:63711/variants/three-links__M5__link-1.html",
+      "cluster": "three-links",
+      "budgetMs": 1200000,
+      "budgetExceeded": false,
+      "durationMs": 14147,
+      "rawFile": "raw/three-links__M5__link-1.json.gz",
+      "tools": {
+        "gaps": {
+          "status": "ok",
+          "error": null,
+          "budgetExceeded": false,
+          "durationMs": 3090,
+          "load": {
+            "requestedUrl": "http://127.0.0.1:63711/variants/three-links__M5__link-1.html",
+            "finalUrl": "http://127.0.0.1:63711/variants/three-links__M5__link-1.html",
+            "status": 200,
+            "title": "Three links",
+            "mainFrameNavigations": 1,
+            "secondNavigation": "not-expected",
+            "blockedRequests": 0
+          },
+          "findings": []
+        },
+        "walk": {
+          "status": "ok",
+          "error": null,
+          "budgetExceeded": false,
+          "durationMs": 7909,
+          "load": {
+            "requestedUrl": "http://127.0.0.1:63711/variants/three-links__M5__link-1.html",
+            "finalUrl": "http://127.0.0.1:63711/variants/three-links__M5__link-1.html",
+            "status": 200,
+            "title": "Three links",
+            "mainFrameNavigations": 1,
+            "secondNavigation": "not-expected",
+            "blockedRequests": 0
+          },
+          "findings": {
+            "F": 3,
+            "fIncomplete": false,
+            "fIncompleteCauses": {
+              "crossOriginFrames": 0,
+              "closedShadowRoots": 0
+            },
+            "plannedPresses": 25,
+            "presses": 25,
+            "wraps": 0,
+            "focusLost": 0,
+            "deep": {
+              "inside": 0,
+              "crossOrigin": 0,
+              "closedShadowRoot": 0
+            },
+            "launch": {
+              "browserVersion": "143.0.7499.4",
+              "executableBasename": "chrome-headless-shell"
+            },
+            "suspectedTrap": true,
+            "trap": "suspected",
+            "escapeReachedAt": null,
+            "error": null
+          }
+        },
+        "legacy": {
+          "status": "ok",
+          "error": null,
+          "budgetExceeded": false,
+          "durationMs": 0,
+          "load": null,
+          "findings": {
+            "presses": 25,
+            "trap": {
+              "trapped": true,
+              "firstTrappedPress": 5,
+              "cycleLength": 1,
+              "element": "a \"One\""
+            },
+            "dynamicViolations": [
+              {
+                "criterion": "2.4.3",
+                "severity": "moderate",
+                "description": "Focus cycling detected - focus returned to previously visited element within short sequence",
+                "evidence": [
+                  "a \"One\"",
+                  "a \"One\""
+                ]
+              }
+            ]
+          }
+        },
+        "axe": {
+          "status": "ok",
+          "error": null,
+          "budgetExceeded": false,
+          "durationMs": 3141,
+          "load": {
+            "requestedUrl": "http://127.0.0.1:63711/variants/three-links__M5__link-1.html",
+            "finalUrl": "http://127.0.0.1:63711/variants/three-links__M5__link-1.html",
+            "status": 200,
+            "title": "Three links",
+            "mainFrameNavigations": 1,
+            "secondNavigation": "not-expected",
+            "blockedRequests": 0
+          },
+          "findings": [
+            {
+              "id": "landmark-one-main",
+              "impact": "moderate",
+              "wcagTags": [],
+              "targets": [
+                "html"
+              ],
+              "components": [
+                "HTML"
+              ]
+            },
+            {
+              "id": "region",
+              "impact": "moderate",
+              "wcagTags": [],
+              "targets": [
+                "h1",
+                "p:nth-child(2)",
+                "p:nth-child(3)",
+                "p:nth-child(4)"
+              ],
+              "components": [
+                "H1",
+                "P",
+                "P",
+                "P"
+              ]
+            }
+          ]
+        }
+      }
+    },
+    {
+      "pageId": "three-links__M6__link-1",
+      "url": "http://127.0.0.1:63711/variants/three-links__M6__link-1.html",
+      "cluster": "three-links",
+      "budgetMs": 1200000,
+      "budgetExceeded": false,
+      "durationMs": 13240,
+      "rawFile": "raw/three-links__M6__link-1.json.gz",
+      "tools": {
+        "gaps": {
+          "status": "ok",
+          "error": null,
+          "budgetExceeded": false,
+          "durationMs": 3075,
+          "load": {
+            "requestedUrl": "http://127.0.0.1:63711/variants/three-links__M6__link-1.html",
+            "finalUrl": "http://127.0.0.1:63711/variants/three-links__M6__link-1.html",
+            "status": 200,
+            "title": "Three links",
+            "mainFrameNavigations": 1,
+            "secondNavigation": "not-expected",
+            "blockedRequests": 0
+          },
+          "findings": []
+        },
+        "walk": {
+          "status": "ok",
+          "error": null,
+          "budgetExceeded": false,
+          "durationMs": 7007,
+          "load": {
+            "requestedUrl": "http://127.0.0.1:63711/variants/three-links__M6__link-1.html",
+            "finalUrl": "http://127.0.0.1:63711/variants/three-links__M6__link-1.html",
+            "status": 200,
+            "title": "Three links",
+            "mainFrameNavigations": 1,
+            "secondNavigation": "not-expected",
+            "blockedRequests": 0
+          },
+          "findings": {
+            "F": 3,
+            "fIncomplete": false,
+            "fIncompleteCauses": {
+              "crossOriginFrames": 0,
+              "closedShadowRoots": 0
+            },
+            "plannedPresses": 25,
+            "presses": 25,
+            "wraps": 6,
+            "focusLost": 0,
+            "deep": {
+              "inside": 0,
+              "crossOrigin": 0,
+              "closedShadowRoot": 0
+            },
+            "launch": {
+              "browserVersion": "143.0.7499.4",
+              "executableBasename": "chrome-headless-shell"
+            },
+            "suspectedTrap": false,
+            "trap": "no",
+            "escapeReachedAt": null,
+            "error": null
+          }
+        },
+        "legacy": {
+          "status": "ok",
+          "error": null,
+          "budgetExceeded": false,
+          "durationMs": 0,
+          "load": null,
+          "findings": {
+            "presses": 25,
+            "trap": {
+              "trapped": true,
+              "firstTrappedPress": 20,
+              "cycleLength": 4,
+              "element": "a \"One\""
+            },
+            "dynamicViolations": [
+              {
+                "criterion": "2.4.3",
+                "severity": "moderate",
+                "description": "Focus cycling detected - focus returned to previously visited element within short sequence",
+                "evidence": [
+                  "body",
+                  "body"
+                ]
+              }
+            ]
+          }
+        },
+        "axe": {
+          "status": "ok",
+          "error": null,
+          "budgetExceeded": false,
+          "durationMs": 3151,
+          "load": {
+            "requestedUrl": "http://127.0.0.1:63711/variants/three-links__M6__link-1.html",
+            "finalUrl": "http://127.0.0.1:63711/variants/three-links__M6__link-1.html",
+            "status": 200,
+            "title": "Three links",
+            "mainFrameNavigations": 1,
+            "secondNavigation": "not-expected",
+            "blockedRequests": 0
+          },
+          "findings": [
+            {
+              "id": "landmark-one-main",
+              "impact": "moderate",
+              "wcagTags": [],
+              "targets": [
+                "html"
+              ],
+              "components": [
+                "HTML"
+              ]
+            },
+            {
+              "id": "region",
+              "impact": "moderate",
+              "wcagTags": [],
+              "targets": [
+                "h1",
+                "p:nth-child(2)",
+                "p:nth-child(3)",
+                "p:nth-child(4)"
+              ],
+              "components": [
+                "H1",
+                "P",
+                "P",
+                "P"
+              ]
+            }
+          ]
+        }
+      }
+    }
+  ]
+}
