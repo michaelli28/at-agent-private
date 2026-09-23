@@ -1,15 +1,31 @@
+import { randomUUID } from 'node:crypto'
 import type { Page } from 'playwright'
 import { z } from 'zod'
 import { runTabWalk, TabWalkOptionsSchema } from '../tab-walk.js'
 import { convertToElementGraph, getAccessibilityTree } from './ax-tree.js'
-import { collectFocusFacts, collectInteractivitySignals, crawlDOM, findHiddenCandidates } from './dom-crawler.js'
+import {
+  anyDetached,
+  collectFocusFacts,
+  collectInteractivitySignals,
+  crawlDOM,
+  findHiddenCandidates,
+} from './dom-crawler.js'
 import { buildBridgeMap, detectGaps } from './gap-detector.js'
 import { groupReach, keyboardEvidence, NO_WALK, walkFailed } from './keyboard.js'
-import type { CrawlError, DualCrawlResult, FocusFacts, KeyboardEvidence } from './types.js'
+import type {
+  CrawlError,
+  DOMElement,
+  DualCrawlResult,
+  FocusFacts,
+  KeyboardEvidence,
+  KeyboardUnassessedReason,
+} from './types.js'
 
 const NAVIGATION_TIMEOUT_MS = 60000
 // Same fixed settle time taskgen uses to let dynamic content load.
 const SETTLE_MS = 3000
+// Window property marking the crawled document; a reload or a navigation leaves a window without it.
+const CRAWL_MARKER = '__atAgentGapCrawl'
 
 export const GapDetectionOptionsSchema = z.object({
   // Tab walk after the crawl, on the same load (true = runTabWalk defaults). Without it not_focusable is never emitted.
@@ -29,11 +45,21 @@ export async function crawlPageWithGapDetection(
   })
   await page.waitForTimeout(SETTLE_MS)
 
-  const axNodes = await getAccessibilityTree(page)
-  const accessibilityTree = convertToElementGraph(axNodes, url, await page.title())
+  // Checked after the walk (acc-gaps#1), so the walk counts only if it ran on the window crawled here. A navigation
+  // during the write leaves the new window unmarked, so the check refuses the walk; a closed page still throws.
+  const token = randomUUID()
+  await page
+    .evaluate(([k, v]) => Reflect.set(window, k, v), [CRAWL_MARKER, token])
+    .catch((err: unknown) => {
+      if (page.isClosed()) throw err
+    })
 
   const crawl = await crawlDOM(page, url)
   const domElements = crawl.elements
+  // Read after the enumeration, so every candidate existed when the tree was read (acc-gaps#6). One removed since has
+  // no box, and findHiddenCandidates drops it instead of it reading as missing from the tree.
+  const axNodes = await getAccessibilityTree(page)
+  const accessibilityTree = convertToElementGraph(axNodes, url, await page.title())
   const visibility = await findHiddenCandidates(page, domElements)
   // A zero-area element may still be a Tab stop (G1b), so it is read like the rest until the walk has run.
   const unrendered = new Set(visibility.hidden.filter((h) => h.reason !== 'zero-area').map((h) => h.backendNodeId))
@@ -50,11 +76,15 @@ export async function crawlPageWithGapDetection(
 
   // After the crawl: the walk moves focus and may open or navigate, which must not change what was crawled.
   const walked = await walkKeyboard(page, options.tabWalk)
+  // A crawled node removed before its box was read has none, so the no-box ones are checked with the rendered ones.
+  const noBox = new Set(visibility.hidden.filter((h) => h.reason === 'no-box').map((h) => h.backendNodeId))
+  const checked = [...crawled, ...domElements.filter((e) => noBox.has(e.backendNodeId))]
+  const keyboard = await checkWalkedDocument(page, { keyboard: walked.keyboard, token, crawled: checked })
 
   // G1c: a zero-area element stays a candidate only as a Tab stop. A complete walk decides by where Tab went alone;
   // after none, or an incomplete one, the DOM's focusability rules read before it count too.
-  const reached = new Set(walked.keyboard.reachedBackendNodeIds)
-  const walkDecides = walked.keyboard.notFocusableAssessed
+  const reached = new Set(keyboard.reachedBackendNodeIds)
+  const walkDecides = keyboard.notFocusableAssessed
   const tabStop = (id: number): boolean => reached.has(id) || (!walkDecides && crawledFocus.get(id)?.focusable === true)
   const hidden = visibility.hidden.filter((h) => !(h.reason === 'zero-area' && tabStop(h.backendNodeId)))
   const hiddenIds = new Set(hidden.map((h) => h.backendNodeId))
@@ -68,7 +98,7 @@ export async function crawlPageWithGapDetection(
   )
 
   const bridgeMap = buildBridgeMap(accessibilityTree)
-  const gaps = detectGaps(candidates, accessibilityTree, signals, { keyboard: walked.keyboard, focus })
+  const gaps = detectGaps(candidates, accessibilityTree, signals, { keyboard, focus })
 
   return {
     pageUrl: url,
@@ -77,10 +107,42 @@ export async function crawlPageWithGapDetection(
     hidden,
     gaps,
     bridgeMap,
-    keyboard: walked.keyboard,
-    reachedByGroup: groupReach(walked.keyboard.reachedBackendNodeIds, focus),
+    keyboard,
+    reachedByGroup: groupReach(keyboard.reachedBackendNodeIds, focus),
     errors: [...crawl.errors, ...visibility.errors, ...signalErrors, ...focusErrors, ...widgetErrors, ...walked.errors],
   }
+}
+
+// acc-gaps#1: the walk describes the crawled nodes only if it ran on them. It did not when the crawled window was
+// replaced (its marker is gone), or when crawled nodes it never reached have left the document (a same-window
+// re-mount, a toast the page removed). A replacement the walk saw is already listed; a closed page keeps its
+// walk-error, and one that closes during this check throws. Nothing is read before the walk, so a change during
+// the crawl is caught here too.
+async function checkWalkedDocument(
+  page: Page,
+  walk: { keyboard: KeyboardEvidence; token: string; crawled: readonly DOMElement[] },
+): Promise<KeyboardEvidence> {
+  const { keyboard } = walk
+  if (!keyboard.walkRan || keyboard.unassessedReasons.includes('document-replaced') || page.isClosed()) return keyboard
+  const reached = new Set(keyboard.reachedBackendNodeIds)
+  const unreached = walk.crawled.filter((e) => !reached.has(e.backendNodeId))
+  const reason: KeyboardUnassessedReason | null = !(await crawlMarked(page, walk.token))
+    ? 'document-replaced'
+    : (await anyDetached(page, unreached))
+      ? 'crawled-nodes-detached'
+      : null
+  if (reason === null) return keyboard
+  return { ...keyboard, notFocusableAssessed: false, unassessedReasons: [...keyboard.unassessedReasons, reason] }
+}
+
+// A read that fails on an open page means a navigation destroyed its context; on a closed page it proves nothing.
+async function crawlMarked(page: Page, token: string): Promise<boolean> {
+  return page
+    .evaluate(([k, v]) => Reflect.get(window, k) === v, [CRAWL_MARKER, token])
+    .catch((err: unknown) => {
+      if (page.isClosed()) throw err
+      return false
+    })
 }
 
 async function walkKeyboard(

@@ -1,5 +1,6 @@
 import { describe, it, expect } from 'vitest'
-import { groupReach } from './keyboard.js'
+import type { FocusRead, TabWalkResult, TabWalkStep } from '../tab-walk.js'
+import { groupReach, keyboardEvidence } from './keyboard.js'
 import type { FocusFacts } from './types.js'
 
 const fact = (f: Partial<FocusFacts> = {}): FocusFacts => ({
@@ -145,5 +146,85 @@ describe('groupReach (G1c: composite widgets)', () => {
       { backendNodeId: 800, rule: 'widget-container' },
     ])
     expect(groupReach([], facts)).toEqual([])
+  })
+})
+
+// acc-gaps#1: a walk is evidence about the crawled document only if it kept one document from its first read on.
+describe('keyboardEvidence (one document from the idle baseline to the last press)', () => {
+  const URL_ = 'http://walk.test/page.html'
+  const read = (backendNodeId: number, tag: string, isBody = false): FocusRead => ({
+    backendNodeId,
+    tag,
+    id: null,
+    className: null,
+    ariaLabel: null,
+    nameAttr: null,
+    nameProp: null,
+    text: null,
+    isBody,
+    hasFocus: !isBody,
+    url: URL_,
+    container: null,
+    deep: { backendNodeId, tag, id: null, isBody, classAttr: null },
+    deepUnavailable: null,
+  })
+  const step = (index: number, settled: FocusRead, over: Partial<TabWalkStep> = {}): TabWalkStep => ({
+    index,
+    key: 'Tab',
+    immediate: settled,
+    settled,
+    focusStyle: null,
+    documentReplaced: false,
+    wrapped: false,
+    focusLost: false,
+    indicator: null,
+    ...over,
+  })
+  // Two links, then focus falls off the end: a clean wrap.
+  const walk = (idle: TabWalkResult['idle'], over: Partial<TabWalkStep> = {}): TabWalkResult => ({
+    direction: 'forward',
+    focusableCount: 2,
+    fIncomplete: false,
+    fIncompleteCauses: { crossOriginFrames: 0, closedShadowRoots: 0 },
+    defaultPresses: 3,
+    presses: 3,
+    settleMs: 150,
+    launchFacts: { browserVersion: null, executableBasename: null },
+    initial: read(9, 'body', true),
+    idle,
+    focusableCountEnd: 2,
+    steps: [
+      step(1, read(900, 'a'), over),
+      step(2, read(901, 'a')),
+      step(3, read(899, 'body', true), { wrapped: true }),
+    ],
+    suspectedTrap: false,
+    escapeProbe: null,
+    error: null,
+  })
+  const idle = (documentReplaced: boolean): TabWalkResult['idle'] => ({
+    after: read(9, 'body', true),
+    documentReplaced,
+    urlChanged: false,
+  })
+
+  it('refuses a walk whose idle baseline saw the document replaced, however cleanly it then wrapped', () => {
+    expect(keyboardEvidence(walk(idle(true)))).toMatchObject({
+      walkRan: true,
+      notFocusableAssessed: false,
+      unassessedReasons: ['document-replaced'],
+    })
+  })
+
+  it('lists document-replaced once when the idle baseline and a press both saw a replacement', () => {
+    expect(keyboardEvidence(walk(idle(true), { documentReplaced: true })).unassessedReasons).toEqual([
+      'document-replaced',
+    ])
+  })
+
+  it('assesses a clean wrap with no idle record, or with an idle baseline that kept the document', () => {
+    for (const w of [walk(null), walk(idle(false))]) {
+      expect(keyboardEvidence(w)).toMatchObject({ notFocusableAssessed: true, unassessedReasons: [] })
+    }
   })
 })

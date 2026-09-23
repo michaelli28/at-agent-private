@@ -142,8 +142,12 @@ export const KEYBOARD_UNASSESSED_REASONS = [
   'focusables-incomplete',
   // Focus never wrapped past the end of the page (a trap), so some stops may never have been tried.
   'no-wrap',
-  // A keypress replaced the document, so later reads are not of the crawled DOM.
+  // The document was replaced after the crawl began (by a keypress, or by the page itself before or during the
+  // walk), so the walk's reads are not of the crawled DOM.
   'document-replaced',
+  // Crawled nodes the walk never reached left the document between the crawl and the walk's end (a same-window
+  // re-mount or document.open(), a toast the page removed), so where Tab went says nothing about them.
+  'crawled-nodes-detached',
 ] as const
 export const KeyboardUnassessedReasonSchema = z.enum(KEYBOARD_UNASSESSED_REASONS)
 export type KeyboardUnassessedReason = z.infer<typeof KeyboardUnassessedReasonSchema>
