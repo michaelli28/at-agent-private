@@ -20,6 +20,7 @@ export type ContextChangeKind = z.infer<typeof ContextChangeKindSchema>
 
 export const UnattributedReasonSchema = z.enum([
   'url-changed-after-settle',
+  'focus-removed-after-settle',
   'document-replaced-no-url-change',
   'no-preceding-stop',
 ])
@@ -39,7 +40,8 @@ export const ContextChangeFindingSchema = z
     severity: z.literal('serious'),
     pressIndex: z.number().int().positive(),
     key: TabKeySchema,
-    // Usually null on a real failure: the element is gone by the time the read lands.
+    // Always null on focus-removed, whose immediate read is body. Usually null on url-changed: the element is gone by
+    // the time the read lands.
     arrivedOn: DeepFocusSchema.nullable(),
     precedingStop: DeepFocusSchema.nullable(),
     fromUrl: z.string(),
@@ -131,9 +133,18 @@ export function judgeContextChange(walk: TabWalkResult): ContextChangeResult {
       })
     } else if (step.settled.isBody && step.settled.hasFocus) {
       // isBody && hasFocus is focus DROPPED; a wrap past the last stop is isBody && !hasFocus.
-      if (step.focusLost) {
-        // C: F55 — focus thrown away the moment it arrived, after a real stop in this segment.
+      if (step.focusLost && step.immediate.isBody && step.immediate.hasFocus) {
+        // C: F55 — focus thrown away the moment it arrived, after a real stop in this segment. Like A, the drop must
+        // already show at the immediate read.
         findings.push(finding('focus-removed'))
+      } else if (step.focusLost) {
+        // C': it dropped during the settle, like A'. A page timer cannot be told from a deferred focus handler, so any
+        // F55 removal first seen after the immediate read is refused too, whatever deferred it (a timer, a CSS
+        // animation, chained rAF): a cost, stated in bench/COVERAGE.md.
+        unattributed.push({
+          pressIndex: step.index,
+          reason: 'focus-removed-after-settle',
+        })
       } else {
         // D: no preceding stop to attribute the drop to. Indistinguishable from "the first stop is
         // simply unreachable", which belongs to the 2.1.1 gap path. Recorded, never reported.

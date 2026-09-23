@@ -240,6 +240,23 @@ describe('judgeContextChange', () => {
     expect(finding.toUrl).toBe(BASE_URL)
   })
 
+  it('a drop first seen at the settled read is refused, not reported', () => {
+    // The immediate read, about 1 ms after the press, still names the stop, and focus is gone only at the settled read
+    // 150 ms later. A page timer and a deferred focus handler look the same there, so the press is refused like A'.
+    const result = judgeContextChange(
+      makeWalk([
+        step(1, elementRead(11, BASE_URL)),
+        step(2, elementRead(12, BASE_URL)),
+        step(3, bodyRead(BASE_URL, true), { immediate: elementRead(13, BASE_URL), focusLost: true }),
+        step(4, elementRead(11, BASE_URL)),
+      ]),
+    )
+
+    expect(result.findings).toEqual([])
+    expect(result.unattributed).toEqual([{ pressIndex: 3, reason: 'focus-removed-after-settle' }])
+    expect(result.verdict).toBe('pass')
+  })
+
   it('a wrap is never a context change', () => {
     const steps: TabWalkStep[] = []
     for (let i = 1; i <= 8; i++) {
@@ -345,6 +362,15 @@ const BLUR_ON_FOCUS = `<!doctype html><html lang="en"><head><meta charset="utf-8
 <p><a id="k4" href="#four">Four</a></p>
 </body></html>`
 
+// The second link blurs itself 60 ms after focus arrives: after the immediate read, inside the 150 ms settle.
+const DEFERRED_BLUR = `<!doctype html><html lang="en"><head><meta charset="utf-8"><title>Deferred blur</title></head><body>
+<h1>A deferred F55: the second link throws focus away 60 ms late</h1>
+<p><a id="k1" href="#one">One</a></p>
+<p><a id="k2" href="#two" onfocus="var e = this; setTimeout(function () { e.blur() }, 60)">Two</a></p>
+<p><a id="k3" href="#three">Three</a></p>
+<p><a id="k4" href="#four">Four</a></p>
+</body></html>`
+
 describe('judgeContextChange on a live page', () => {
   let client: BrowserClient
   const pages: BrowserPage[] = []
@@ -368,6 +394,11 @@ describe('judgeContextChange on a live page', () => {
     await page.playwrightPage.setContent(BLUR_ON_FOCUS, { waitUntil: 'load' })
 
     const walk = await runTabWalk(page.playwrightPage, { settleMs: 20 })
+    // The settle refusal's premise, on walk facts alone: a synchronous blur has already dropped focus when the press
+    // returns. If Chromium ever defers it past the immediate read, clause C refuses every F55 drop; this names why.
+    const lost = walk.steps.filter((s) => s.focusLost)
+    expect(lost.length).toBeGreaterThanOrEqual(5)
+    expect(lost.filter((s) => !(s.immediate.isBody && s.immediate.hasFocus)).map((s) => s.index)).toEqual([])
     const result = judgeContextChange(walk)
 
     expect(result.verdict).toBe('fail')
@@ -375,5 +406,20 @@ describe('judgeContextChange on a live page', () => {
     expect(result.findings.length).toBeGreaterThanOrEqual(5)
     const named = new Set(result.findings.map((f) => f.precedingStop?.id ?? null))
     expect([...named]).toEqual(['k1'])
+  })
+
+  it('a blur deferred past the immediate read is refused, not reported', async () => {
+    const page = await client.newPage()
+    pages.push(page)
+    await page.playwrightPage.setContent(DEFERRED_BLUR, { waitUntil: 'load' })
+
+    // The default 150 ms settle: a 20 ms settle would take the settled read before the 60 ms blur.
+    const walk = await runTabWalk(page.playwrightPage)
+    const result = judgeContextChange(walk)
+
+    expect(result.findings).toEqual([])
+    expect(result.unattributed.length).toBeGreaterThanOrEqual(5)
+    expect(result.unattributed.filter((u) => u.reason !== 'focus-removed-after-settle')).toEqual([])
+    expect(result.verdict).toBe('pass')
   })
 })
