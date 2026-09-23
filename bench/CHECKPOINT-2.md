@@ -18,7 +18,9 @@ Base for Stage B is **d9e2cb5**. Gates below ran at **118bb99**.
 | `npx vitest run bench`    | 227 passed, 1 expected skip |
 
 Evidence class: units and fixture replays, plus browser tests in real headless Chromium. The dev
-harness runs at 118bb99 are local runs in the headless shell. **No held-out set has been run.**
+harness runs at 118bb99 are local runs in the headless shell. **No held-out set has been run on the
+fixed checker.** Both were run before any fix, as the pre-fix baseline at cd3b122 (recorded in
+8f21614); `bench/COVERAGE.md` says what the fix design saw of them.
 
 ---
 
@@ -103,8 +105,9 @@ gone at e822472, so the ordering is checkable from history rather than asserted.
 
 ## What Checkpoint 2 does NOT establish
 
-- **No held-out set has been run.** The dev numbers are regression evidence and are never headline
-  numbers (`prompts/2-at-agent.md:98`). `bench/REPORT.md` does not exist.
+- **No held-out set has been run on the fixed checker** (only the pre-fix baseline, above). The dev
+  numbers are regression evidence and are never headline numbers (`prompts/2-at-agent.md:98`).
+  `bench/REPORT.md` does not exist.
 - Detection on seeded defects is not real-world detection — the operators are Michael's own.
 - The 20-item spot-check in `bench/SPOTCHECK.md` is 0 of 20, so no label has been human-verified.
 - `bench/COVERAGE.md` lists what the verdicts do not cover, what the fix design saw of the held-out
