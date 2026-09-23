@@ -163,7 +163,14 @@ export function judgeContextChange(walk: TabWalkResult): ContextChangeResult {
   // BEFORE the idle settle, so a page that navigates with no keypress leaves press 1 comparing
   // against a URL the page has already left — clause A then manufactures a focus-caused change on
   // exactly the page this control exists for. Nothing in such a walk is attributable to focus.
-  const movedWithoutInput = walk.idle !== null && (walk.idle.urlChanged || walk.idle.documentReplaced)
+  // A fragment-only idle change is no navigation (contextUrl), unless the walk also refused a drop that landed in the
+  // settle: a timer setting location.hash clears focus by itself, and a tick in the ~1 ms before an immediate read
+  // would still be reported, so such a walk stays refused.
+  const movedWithoutInput =
+    walk.idle !== null &&
+    (contextUrl(walk.idle.after.url) !== contextUrl(walk.initial.url) ||
+      walk.idle.documentReplaced ||
+      (walk.idle.urlChanged && unattributed.some((u) => u.reason === 'focus-removed-after-settle')))
 
   const reason: ContextChangeUndeterminedReason | null =
     walk.error !== null

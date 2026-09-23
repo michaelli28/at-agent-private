@@ -320,7 +320,7 @@ describe('judgeContextChange', () => {
   it('a page that navigates with no input cannot attribute anything to focus', () => {
     const walk = makeWalk([step(1, elementRead(11, BASE_URL)), step(2, elementRead(12, BASE_URL))], {
       idle: {
-        after: bodyRead(BASE_URL, true),
+        after: bodyRead(`${BASE_URL}?redirected=1`, true),
         documentReplaced: false,
         urlChanged: true,
       },
@@ -330,6 +330,52 @@ describe('judgeContextChange', () => {
     expect(result.verdict).toBe('undetermined')
     expect(result.reason).toBe('page-navigates-without-input')
     expect(result.findings).toEqual([])
+  })
+
+  it('a fragment-only change in the idle window is not navigation', () => {
+    // A scroll-spy rewrites #slide-N while the page idles. Every other URL comparison here strips the fragment, so the
+    // causality control does too, and a real F55 drop seen at the immediate read is reported.
+    const slide = (n: number): string => `${BASE_URL}#slide-${n}`
+    const walk = makeWalk(
+      [
+        step(1, elementRead(11, slide(2))),
+        step(2, elementRead(12, slide(2))),
+        step(3, bodyRead(slide(3), true), { focusLost: true }),
+        step(4, elementRead(11, slide(3))),
+      ],
+      { idle: { after: bodyRead(slide(2), true), documentReplaced: false, urlChanged: true } },
+    )
+    const result = judgeContextChange(walk)
+
+    expect(result.verdict).toBe('fail')
+    expect(result.reason).toBeNull()
+    expect(result.findings.map((f) => `${f.kind}@${f.pressIndex}`)).toEqual(['focus-removed@3'])
+  })
+
+  it('a fragment ticker that drops focus inside the settle stays refused', () => {
+    // A timer setting location.hash = '#sN' is a fragment navigation, and it clears focus: the idle baseline sees the
+    // fragment move and every drop lands in the settle. A tick in the ~1 ms before an immediate read would still be
+    // reported, failing about 1 walk in 5, so a walk showing both signs keeps the pre-fix undetermined.
+    const at = (n: number): string => `${BASE_URL}#s${n}`
+    const walk = makeWalk(
+      [
+        step(1, elementRead(11, at(1))),
+        step(2, bodyRead(at(2), true), { immediate: elementRead(11, at(1)), focusLost: true }),
+        step(3, bodyRead(at(3), true), { immediate: elementRead(11, at(2)), focusLost: true }),
+        step(4, bodyRead(at(1), true), { immediate: elementRead(11, at(3)), focusLost: true }),
+      ],
+      { idle: { after: bodyRead(at(1), true), documentReplaced: false, urlChanged: true } },
+    )
+    const result = judgeContextChange(walk)
+
+    expect(result.verdict).toBe('undetermined')
+    expect(result.reason).toBe('page-navigates-without-input')
+    expect(result.findings).toEqual([])
+    expect(result.unattributed.map((u) => `${u.reason}@${u.pressIndex}`)).toEqual([
+      'focus-removed-after-settle@2',
+      'focus-removed-after-settle@3',
+      'focus-removed-after-settle@4',
+    ])
   })
 
   it('the causality control outranks a finding a load-time navigation manufactures', () => {
@@ -369,6 +415,17 @@ const DEFERRED_BLUR = `<!doctype html><html lang="en"><head><meta charset="utf-8
 <p><a id="k2" href="#two" onfocus="var e = this; setTimeout(function () { e.blur() }, 60)">Two</a></p>
 <p><a id="k3" href="#three">Three</a></p>
 <p><a id="k4" href="#four">Four</a></p>
+</body></html>`
+
+// BLUR_ON_FOCUS plus a scroll-spy that rewrites only the URL fragment every 100 ms, so the idle baseline sees the URL
+// change with no input. replaceState moves no focus: every drop is the second link's own.
+const SCROLL_SPY_BLUR = `<!doctype html><html lang="en"><head><meta charset="utf-8"><title>Scroll-spy</title></head><body>
+<h1>F55 on a page whose fragment ticks</h1>
+<p><a id="k1" href="#one">One</a></p>
+<p><a id="k2" href="#two" onfocus="this.blur()">Two</a></p>
+<p><a id="k3" href="#three">Three</a></p>
+<p><a id="k4" href="#four">Four</a></p>
+<script>var n = 0; setInterval(function () { n++; history.replaceState(null, '', '#tick-' + n) }, 100)</script>
 </body></html>`
 
 describe('judgeContextChange on a live page', () => {
@@ -421,5 +478,21 @@ describe('judgeContextChange on a live page', () => {
     expect(result.unattributed.length).toBeGreaterThanOrEqual(5)
     expect(result.unattributed.filter((u) => u.reason !== 'focus-removed-after-settle')).toEqual([])
     expect(result.verdict).toBe('pass')
+  })
+
+  it('a scroll-spy fragment timer does not void a real F55 failure', async () => {
+    const page = await client.newPage()
+    pages.push(page)
+    await page.playwrightPage.setContent(SCROLL_SPY_BLUR, { waitUntil: 'load' })
+
+    // The default settle, so the 100 ms timer lands inside the idle baseline.
+    const walk = await runTabWalk(page.playwrightPage)
+    expect(walk.idle?.urlChanged).toBe(true)
+    const result = judgeContextChange(walk)
+
+    expect(result.reason).toBeNull()
+    expect(result.verdict).toBe('fail')
+    expect(result.findings.every((f) => f.kind === 'focus-removed')).toBe(true)
+    expect(result.findings.length).toBeGreaterThanOrEqual(5)
   })
 })
