@@ -205,8 +205,13 @@ const PREPARE_FN = `function (key) {
   ;(${BLUR_ALL_FN})(win.document)
   this.scrollIntoView({ block: 'center', inline: 'nearest', behavior: 'instant' })
 }`
-// Script focus after a keyboard walk matches :focus-visible as Tab focus does; it must not scroll.
+// Script focus after a keyboard walk matches :focus-visible as Tab focus does; it must not scroll. The Tab keydown
+// before it is for page script that draws a ring only when focus follows a keydown (flying-focus); being untrusted,
+// it moves nothing, and focusing the element once more (Shift+Tab, Tab) would re-run its blur timers instead.
 const FOCUS_FN = `function () {
+  const doc = this.ownerDocument
+  const init = { key: 'Tab', code: 'Tab', keyCode: 9, which: 9, bubbles: true, cancelable: true, composed: true }
+  ;(doc.body || doc.documentElement).dispatchEvent(new KeyboardEvent('keydown', init))
   this.focus({ preventScroll: true, focusVisible: true })
 }`
 const BLUR_FN = `function () {

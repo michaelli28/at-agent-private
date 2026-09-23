@@ -685,6 +685,39 @@ document.addEventListener('focusout', () => { ring.style.display = 'none' })
       expect(result.verdict).toBe('pass')
     })
 
+    it('an overlay ring drawn only when focus follows a Tab keydown -> present from pixels, not absent', async () => {
+      const html = doc(
+        'Keydown ring',
+        FLYING_RING,
+        `<p><a id="k1" class="one" href="#1">One</a></p><p><a id="k2" class="two" href="#2">Two</a></p>
+<div id="ring"></div>
+<script>
+const ring = document.getElementById('ring')
+let tabAt = 0
+document.addEventListener('keydown', (e) => { if (e.key === 'Tab') tabAt = Date.now() }, true)
+document.addEventListener('focusin', (e) => {
+  if (Date.now() - tabAt > 100) return
+  const r = e.target.getBoundingClientRect()
+  Object.assign(ring.style, { display: 'block', left: (r.left + scrollX - 4) + 'px', top: (r.top + scrollY - 4) + 'px',
+    width: (r.width + 4) + 'px', height: (r.height + 4) + 'px' })
+})
+document.addEventListener('focusout', () => { ring.style.display = 'none' })
+</script>`,
+      )
+      // A keyboard user sees the ring (checked on a page of its own: the script's globals cannot load twice).
+      const probe = await client.newPage()
+      pages.push(probe)
+      await probe.playwrightPage.setContent(html, { waitUntil: 'load' })
+      await probe.playwrightPage.keyboard.press('Tab')
+      expect(await probe.playwrightPage.evaluate(() => document.getElementById('ring')?.style.display)).toBe('block')
+
+      const result = await check(html)
+      for (const id of ['k1', 'k2']) {
+        expect(element(result, id)).toMatchObject({ indicator: 'present', evidence: 'screenshot' })
+      }
+      expect(result.verdict).toBe('pass')
+    })
+
     it('screenshots elements inside a same-origin frame, an open shadow root and below the fold', async () => {
       const frame = '<style>a:focus { outline: none }</style><a id="f0" href="#f0">F0</a>'
       const result = await check(
