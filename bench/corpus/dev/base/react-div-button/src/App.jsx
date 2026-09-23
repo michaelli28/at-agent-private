@@ -1,10 +1,22 @@
 import { useState } from "react";
+import { createPortal } from "react-dom";
 
 // data-bench-id props render into the DOM, so labels can address React-rendered elements.
 export function App() {
   const [status, setStatus] = useState("");
   return (
     <main>
+      {/* A portal into the static header: React marks the host _reactListening and delegates from it. */}
+      {createPortal(
+        <button
+          type="button"
+          data-bench-id="share-button"
+          onClick={() => setStatus("Link copied")}
+        >
+          Share
+        </button>,
+        document.getElementById("header-actions"),
+      )}
       <h1>Canvas tote bag</h1>
       <p>$24.00</p>
       {/* Keyboard-inaccessible on purpose: onClick on a div, no role, no tabIndex. */}

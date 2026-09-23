@@ -7,14 +7,18 @@ import { dirname, join, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import { z } from "zod";
+import type { ElementLabel } from "./corpus/labels-schema.js";
 import { MOUNTS, SERVE_ORIGIN, type Mount } from "./serve.js";
 import {
+  CHECKPOINT1_CORPUS,
   GAP_OPERATORS,
   KEYBOARD_CRITERIA,
   SPOTCHECK_PATH,
   SPOTCHECK_SEED,
   badMappingPool,
   devElementPool,
+  devGapTargetPool,
+  devPageFlagPool,
   drawSpotcheck,
   loadSources,
   renderSpotcheck,
@@ -137,6 +141,82 @@ describe("drawSpotcheck", () => {
     expect(other.items.map((i) => i.key)).not.toEqual(
       drawn.items.map((i) => i.key),
     );
+  });
+
+  it("keeps every dev pool to the Checkpoint-1 corpus: a later base, element or operator never enters the draw", () => {
+    const m1 = Object.values(sources.variants.variants).find(
+      (v) => v.operator === "M1",
+    );
+    if (m1 === undefined) throw new Error("no M1 variant to copy");
+    const react = sources.base.pages["react-div-button"];
+    const later: ElementLabel = {
+      interactive: true,
+      keyboardAccessible: false,
+      expectedGapType: "wrong_role",
+      note: "added after Checkpoint 1",
+    };
+    // A new base, a new element on a Checkpoint-1 base, and a gap-operator variant on each.
+    const grown: Sources = {
+      ...sources,
+      base: {
+        ...sources.base,
+        pages: {
+          ...sources.base.pages,
+          "later-base": sources.base.pages[m1.base],
+          "react-div-button": {
+            ...react,
+            elements: { ...react.elements, "later-element": later },
+          },
+        },
+      },
+      variants: {
+        ...sources.variants,
+        variants: {
+          ...sources.variants.variants,
+          [`later-base__M1__${m1.target}`]: {
+            ...m1,
+            base: "later-base",
+            file: `later-base__M1__${m1.target}.html`,
+          },
+          "react-div-button__M1__later-element": {
+            ...m1,
+            base: "react-div-button",
+            target: "later-element",
+            file: "react-div-button__M1__later-element.html",
+            elements: { ...react.elements, "later-element": later },
+          },
+        },
+      },
+    };
+    const regrown = drawSpotcheck(grown);
+    expect(regrown.items.map((i) => i.key)).toEqual(
+      drawn.items.map((i) => i.key),
+    );
+    expect(regrown.poolSizes).toEqual(drawn.poolSizes);
+    const bases = new Set(Object.keys(CHECKPOINT1_CORPUS.elements));
+    const elements = new Set<string>(
+      Object.entries(CHECKPOINT1_CORPUS.elements).flatMap(([base, ids]) =>
+        ids.map((id) => `${base}#${id}`),
+      ),
+    );
+    const ops = new Set<string>(CHECKPOINT1_CORPUS.operators);
+    // Keys: `<page>` or `<page>#<element>`, where a variant page is `<base>__<op>__<target>`.
+    const inside = (key: string): boolean => {
+      const [page, id] = key.split("#");
+      const [base, op, target] = page.split("__");
+      if (op === undefined)
+        return id === undefined
+          ? bases.has(base)
+          : elements.has(`${base}#${id}`);
+      return ops.has(op) && elements.has(`${base}#${target}`);
+    };
+    for (const pool of [
+      devElementPool(grown),
+      devPageFlagPool(grown),
+      ...GAP_OPERATORS.map((op) => devGapTargetPool(grown, op)),
+    ]) {
+      for (const item of pool) expect(inside(item.key), item.key).toBe(true);
+    }
   });
 
   it("draws one seeded-variant gap target per gap operator M1-M4 among the dev element labels, served under /variants/", () => {

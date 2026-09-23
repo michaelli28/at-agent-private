@@ -1,4 +1,4 @@
-// The gap detector against the dev-corpus labels: the 8 bases, the 33 seeded variants (generated into a temp dir, as
+// The gap detector against the dev-corpus labels: every base, every seeded variant (generated into a temp dir, as
 // seed.test.ts does) and a React stale-no-op page built here. Dev material only: never bench/corpus/test, the vendored
 // W3C pages or any test-* results. Launches Chromium, so run outside the sandbox: npx vitest run bench/gaps-dev.test.ts
 import { spawnSync } from "node:child_process";
@@ -37,7 +37,8 @@ const CORPUS = join(BENCH, "corpus", "dev");
 const REACT_MODULES = join(CORPUS, ".deps", "react-18.3.1", "node_modules");
 const TSX = join(ROOT, "node_modules", ".bin", "tsx");
 const LONG = 600_000;
-// A short settle keeps 35 walks fast; these pages move focus synchronously.
+// A short settle keeps the walks fast; these pages move focus synchronously, except M8, whose 60 ms blur lands after
+// this settle and before the harness's default one (both read the target as reached, so both miss it).
 const OPTIONS = { tabWalk: { settleMs: 30 } };
 
 // React removes onClick on re-render but leaves the no-op el.onclick it planted (bench/probes/react/RESULT.md).
@@ -64,9 +65,26 @@ let server: StaticServer;
 let browser: Browser;
 let baseLabels: BaseLabelsFile;
 let variantLabels: VariantLabelsFile;
+// How many variants the seeder reported writing: the count is the seeder's, never a number pinned here.
+let seededCount = 0;
 const rows: string[] = [];
 
 type Row = { page: string; gaps: string; expected: string; problems: string[] };
+
+// The old checker's false alarms on disclosure-tabs' own elements: a <details> read as a nameless control, and the
+// second tab of each roving tablist, whose container has no box, read as not_focusable. not_focusable is decided only
+// on a walk that wraps, so a variant with a trap or a navigation keeps just the <details> alarms.
+const DETAILS_ALARMS = [
+  "faq-shipping: want [] got [no_accessible_name]",
+  "faq-returns: want [] got [no_accessible_name]",
+];
+const DISCLOSURE_ALARMS = [
+  "float-tab-2: want [] got [not_focusable]",
+  "contents-tab-2: want [] got [not_focusable]",
+  ...DETAILS_ALARMS,
+];
+const alarmsOn = (page: string, alarms: string[]): string[] =>
+  alarms.map((a) => `${page}: ${a}`);
 
 async function detect(path: string): Promise<DualCrawlResult> {
   const context = await browser.newContext();
@@ -155,6 +173,7 @@ beforeAll(async () => {
     timeout: 240_000,
   });
   expect(seed.status, `${seed.stdout}${seed.stderr}`).toBe(0);
+  seededCount = Number(/^wrote (\d+) variants/m.exec(seed.stdout)?.[1] ?? 0);
   baseLabels = BaseLabelsFileSchema.parse(
     JSON.parse(readFileSync(join(CORPUS, "labels.json"), "utf8")),
   );
@@ -217,21 +236,40 @@ describe("dev bases (F1 navbar hidden elements, F2/F9 React div, F3 walk, 0 gaps
         );
         problems.push(...checkKeyboard(pageId, base.page, result));
       }
-      expect(problems).toEqual([]);
+      // Recorded, not hidden, and pinned both ways, as in the variant test below.
+      const known = [
+        // React marks a portal host _reactListening and delegates the portal's events from it; the detector reads
+        // those listeners as the host's own.
+        "react-div-button: portal-host: want [] got [wrong_role]",
+        ...alarmsOn("disclosure-tabs", DISCLOSURE_ALARMS),
+        // Content an open modal <dialog> blocks is left out of the accessibility tree.
+        "native-dialog: shop-link: want [] got [missing_from_a11y_tree]",
+        "native-dialog: join-button: want [] got [missing_from_a11y_tree]",
+        // <main> is re-rendered on the first keydown, so the walk reaches only new nodes, none the crawl listed. Only
+        // the links are flagged: the buttons' click handling is delegated to the document, and the not_focusable
+        // branch needs an own click handler or cursor:pointer.
+        "remount-on-keydown: home-link: want [] got [not_focusable]",
+        "remount-on-keydown: about-link: want [] got [not_focusable]",
+      ];
+      expect(problems.filter((p) => known.includes(p)).sort()).toEqual(
+        [...known].sort(),
+      );
+      expect(problems.filter((p) => !known.includes(p))).toEqual([]);
     },
     LONG,
   );
 });
 
-describe("dev variants (all 33 seeded targets and every other labelled element)", () => {
+describe("dev variants (every seeded target and every other labelled element)", () => {
   it(
-    "M1 -> wrong_role, M2 -> not_focusable, M3 -> hidden_but_interactive, M4 -> no_accessible_name, M5/M6 -> none, M7 -> not_focusable",
+    "M1 -> wrong_role, M2/M7/M8/M9 -> not_focusable, M3 -> hidden_but_interactive, M4 -> no_accessible_name, M5/M6/M10-M12 -> none, M13 (decoy) -> none",
     async () => {
       const problems: string[] = [];
       const variants = Object.entries(variantLabels.variants).sort(
         ([a], [b]) => (a < b ? -1 : 1),
       );
-      expect(variants).toHaveLength(33);
+      expect(seededCount).toBeGreaterThan(0);
+      expect(variants).toHaveLength(seededCount);
       for (const [id, v] of variants) {
         const result = await detect(`/variants/${v.file}`);
         problems.push(
@@ -241,14 +279,55 @@ describe("dev variants (all 33 seeded targets and every other labelled element)"
         );
         problems.push(...checkKeyboard(id, v.page, result));
       }
-      // Recorded, not hidden: the detector's not_focusable branch needs a click handler or
-      // cursor:pointer (packages/accessibility/src/gaps/gap-detector.ts:227-231), which an <input>
-      // has neither of, so the F55 input's 2.1.1 failure is missed. Pinned both ways: the day it is
-      // caught, or the day another miss joins it, this test is red.
+      // Recorded, not hidden, and pinned both ways: the day one is fixed, or another joins them, this test is red.
       const known = [
+        // The detector's not_focusable branch needs a click handler or cursor:pointer
+        // (packages/accessibility/src/gaps/gap-detector.ts:227-231), which an <input> has neither of, so the F55
+        // input's 2.1.1 failure is missed.
         "form__M7__email-input: target email-input: want [not_focusable] got []",
+        "form__M9__email-input: target email-input: want [not_focusable] got []",
+        // Focus held for tens of milliseconds counts as reached: the detector takes an element as reached when
+        // either read after a Tab press found focus on it (gaps/keyboard.ts), and M8 blurs 60 ms after arrival.
+        "form__M8__email-input: target email-input: want [not_focusable] got []",
+        "good-operable__M8__nav-about: target nav-about: want [not_focusable] got []",
+        "identical-links__M8__read-more-01: target read-more-01: want [not_focusable] got []",
+        "js-handlers__M8__custom-button: target custom-button: want [not_focusable] got []",
+        "navbar__M8__brand: target brand: want [not_focusable] got []",
+        "three-links__M8__link-1: target link-1: want [not_focusable] got []",
+        "disclosure-tabs__M8__a-skip-link: target a-skip-link: want [not_focusable] got []",
+        "one-button__M8__only-button: target only-button: want [not_focusable] got []",
+        "scroll-panel__M8__agree-button: target agree-button: want [not_focusable] got []",
+        // False alarms on the M13 decoy: Chromium leaves inert content out of the accessibility tree, and the
+        // detector reports every candidate missing from it as missing_from_a11y_tree.
+        "form__M13__email-input: target email-input: want [] got [missing_from_a11y_tree]",
+        "good-operable__M13__nav-about: target nav-about: want [] got [missing_from_a11y_tree]",
+        "identical-links__M13__read-more-01: target read-more-01: want [] got [missing_from_a11y_tree]",
+        "js-handlers__M13__custom-button: target custom-button: want [] got [missing_from_a11y_tree]",
+        "modal__M13__close-button: target close-button: want [] got [missing_from_a11y_tree]",
+        "navbar__M13__brand: target brand: want [] got [missing_from_a11y_tree]",
+        "three-links__M13__link-1: target link-1: want [] got [missing_from_a11y_tree]",
+        "disclosure-tabs__M13__a-skip-link: target a-skip-link: want [] got [missing_from_a11y_tree]",
+        "one-button__M13__only-button: target only-button: want [] got [missing_from_a11y_tree]",
+        "scroll-panel__M13__agree-button: target agree-button: want [] got [missing_from_a11y_tree]",
+        // The disclosure-tabs base's own alarms, carried into its variants.
+        ...[
+          "disclosure-tabs__M3__a-skip-link",
+          "disclosure-tabs__M7__a-skip-link",
+          "disclosure-tabs__M8__a-skip-link",
+          "disclosure-tabs__M9__a-skip-link",
+          "disclosure-tabs__M13__a-skip-link",
+        ].flatMap((id) => alarmsOn(id, DISCLOSURE_ALARMS)),
+        ...[
+          "disclosure-tabs__M5__a-skip-link",
+          "disclosure-tabs__M6__a-skip-link",
+          "disclosure-tabs__M10__faq-returns-summary",
+          "disclosure-tabs__M11__a-skip-link",
+        ].flatMap((id) => alarmsOn(id, DETAILS_ALARMS)),
       ];
-      expect(problems.filter((p) => known.includes(p))).toEqual(known);
+      // Sorted: the list is grouped by cause, the problems come in variant order.
+      expect(problems.filter((p) => known.includes(p)).sort()).toEqual(
+        [...known].sort(),
+      );
       expect(problems.filter((p) => !known.includes(p))).toEqual([]);
     },
     LONG,
@@ -281,11 +360,14 @@ describe("M7 blur-on-focus (F55: focus removed as soon as it arrives)", () => {
       .filter(([, v]) => v.operator === "M7")
       .sort(([a], [b]) => (a < b ? -1 : 1));
     expect(m7.map(([id]) => id)).toEqual([
+      "disclosure-tabs__M7__a-skip-link",
       "form__M7__email-input",
       "good-operable__M7__nav-about",
       "identical-links__M7__read-more-01",
       "js-handlers__M7__custom-button",
       "navbar__M7__brand",
+      "one-button__M7__only-button",
+      "scroll-panel__M7__agree-button",
       "three-links__M7__link-1",
     ]);
     // F55 is a focus-lost page, not a trap: bench/probes/wrap/RESULT.md records that the next Tab

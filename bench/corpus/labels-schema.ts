@@ -13,7 +13,21 @@ export const GAP_TYPES = [
 export const GapTypeSchema = z.enum(GAP_TYPES);
 export type GapType = z.infer<typeof GapTypeSchema>;
 
-export const OPERATOR_IDS = ["M1", "M2", "M3", "M4", "M5", "M6", "M7"] as const;
+export const OPERATOR_IDS = [
+  "M1",
+  "M2",
+  "M3",
+  "M4",
+  "M5",
+  "M6",
+  "M7",
+  "M8",
+  "M9",
+  "M10",
+  "M11",
+  "M12",
+  "M13",
+] as const;
 export const OperatorIdSchema = z.enum(OPERATOR_IDS);
 export type OperatorId = z.infer<typeof OperatorIdSchema>;
 

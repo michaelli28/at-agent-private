@@ -1,0 +1,2517 @@
+{
+  "schemaVersion": 3,
+  "set": "dev-fixtures",
+  "complete": true,
+  "createdAt": "2026-09-23T06:45:54.609Z",
+  "git": {
+    "sha": "0a71e4e68ec862f8ea2836a6914c32f4193a7880",
+    "shortSha": "0a71e4e",
+    "dirty": false,
+    "dirtyPaths": []
+  },
+  "launch": {
+    "mode": "headless-shell",
+    "browserVersion": "143.0.7499.4",
+    "executablePath": "/Users/possible/Library/Caches/ms-playwright/chromium-1200/chrome-mac-arm64/Google Chrome for Testing.app/Contents/MacOS/Google Chrome for Testing",
+    "executablePathNote": "chromium.executablePath() names the full Chromium build even when chromium.launch() runs chrome-headless-shell; browserProcessPath is the launched binary.",
+    "browserProcessPath": "/Users/possible/Library/Caches/ms-playwright/chromium_headless_shell-1200/chrome-headless-shell-mac-arm64/chrome-headless-shell",
+    "userAgent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) HeadlessChrome/143.0.7499.4 Safari/537.36",
+    "playwrightVersion": "1.57.0"
+  },
+  "axeCoreVersion": "4.11.0",
+  "nodeVersion": "v24.10.0",
+  "config": {
+    "budgetMs": 1200000,
+    "waitUntil": "domcontentloaded",
+    "settleMs": 3000,
+    "loadTimeoutMs": 60000,
+    "walkOptions": "runTabWalk defaults",
+    "localOnly": true,
+    "pageFilter": null
+  },
+  "inputs": [
+    {
+      "path": "bench/corpus/dev/labels.json",
+      "sha256": "0629d82389980c308fb66aee3da534132811438f00b879adfdedd9ea8fec37e9"
+    },
+    {
+      "path": "bench/corpus/dev/base/good-operable.html",
+      "sha256": "5135903047d300bddc855efdf336246320d971a7f157444b0833ee17704e00d7"
+    },
+    {
+      "path": "bench/corpus/dev/base/identical-links.html",
+      "sha256": "ea0ee012cdd4bf013a3898b1d17966bfffc008248b0de6e27d75ded26ee806aa"
+    },
+    {
+      "path": "bench/corpus/dev/base/three-links.html",
+      "sha256": "5a0a46fbf7516efd06650e5345b469b7ae6b534f434de2b924c4752b5d83258f"
+    },
+    {
+      "path": "bench/corpus/dev/base/navbar.html",
+      "sha256": "756d9dbc902b69e5aefd65f8d615a562dfd617e37cdf14ccf4c345aeefec4a73"
+    },
+    {
+      "path": "bench/corpus/dev/base/form.html",
+      "sha256": "c3a0740a112a9a34bb029de45813a5f5032992bc8cb4572b6fd3526204745c41"
+    },
+    {
+      "path": "bench/corpus/dev/base/js-handlers.html",
+      "sha256": "9e9986dfe79063115372aa5f93d4b29d212b38a39451d13e95413d25e1263664"
+    },
+    {
+      "path": "bench/corpus/dev/base/modal.html",
+      "sha256": "7b8407883a3dfa7734be89eee48af720e7aad8ae60591f0347d0e1de5d3ef883"
+    },
+    {
+      "path": "bench/corpus/dev/base/react-div-button/index.html",
+      "sha256": "6513c586d6af42b6f8dbabe5b2a45f4fcdac7132d751ef801ae151db766cbfde"
+    },
+    {
+      "path": "bench/corpus/dev/base/disclosure-tabs.html",
+      "sha256": "9a3b319a93d87bf54cd9340d2d2cb57d54667fd4e7f9320831620c45f4b152f3"
+    },
+    {
+      "path": "bench/corpus/dev/base/native-dialog.html",
+      "sha256": "cf0601ac2914703fea91d948610ec043171eb4c65c27750f1ab2ca7b8bf39830"
+    },
+    {
+      "path": "bench/corpus/dev/base/one-button.html",
+      "sha256": "5cb9b60c7d572cc46e28667444550702574012d6613b097979f95119374b5061"
+    },
+    {
+      "path": "bench/corpus/dev/base/scroll-panel.html",
+      "sha256": "40a461431a7696e04d79d91020a50bc3ac3f0288e7b8589385d8e863f68aa889"
+    },
+    {
+      "path": "bench/corpus/dev/base/remount-on-keydown.html",
+      "sha256": "66d56a0237b87d6d9332fa598a300bf1ff253109c7cde48559a785c24a60e8c6"
+    },
+    {
+      "path": "bench/corpus/dev/base/native-dialog.js",
+      "sha256": "2945f9f60d0d5c2edeeebfaa41385402d13ac406c3e605d9f657470d54395edf"
+    },
+    {
+      "path": "bench/corpus/dev/base/remount-on-keydown.js",
+      "sha256": "e4015ccae8f26faeb672bc4a0dc894e66557d10218fc11deb504d3db80ea4842"
+    },
+    {
+      "path": "bench/corpus/dev/base/react-div-button/app.js",
+      "sha256": "f5063ba5874420c5be6f88e3fdf86530f3c947442b1564f09a93d79e9fa59ab3"
+    }
+  ],
+  "notes": [
+    "3.2.1 in the old DynamicEvaluator fires only when an agent 'navigate' action follows a focus event; a scripted Tab walk never produces one, so the legacy baseline cannot report 3.2.1 on any page.",
+    "Per page the tools run in the order gaps, axe, walk (the legacy replay reuses that walk), each in its own fresh context and load: goto domcontentloaded + 3000 ms settle, the gap detector's own load.",
+    "Legacy trap: detectTrap() is replayed after every walk press; trapped is its verdict after the last press, and firstTrappedPress is the first press where it said trapped (report.ts scores a page flagged if it ever did, as the agent latches trapDetected).",
+    "Legacy trap trigger: detectTrap() says trapped once the last 5·L identity strings are one block of L strings repeated 5 times, for any L ≤ 10 (maxHistorySize 50 / minCycleCount 5). It is a property of the string sequence, not of F: a clean page whose headless-shell Tab cycle (every stop, then body on the wrap) is at most 10 strings long fires at press 5·L, and identity collisions shorten the cycle, so identical id-less links fire as a 1-string cycle after five in a row and a repeating group of strings fires on pages with many more stops.",
+    "The legacy identity is rebuilt from each press's immediate read (the walk's step.immediate: top-level document.activeElement as soon as keyboard.press resolves, with no settle), which is when executeTab reads it; focus a page script moves later is not seen, and focus inside frames or shadow roots shows as the container.",
+    "Walk trap (the new checker): judgeKeyboardTrap over this walk. pass = focus reached the end of the page, or it was confined but Escape or the opposite Tab key got out (a correct modal). fail = confined with neither key escaping. undetermined = the walk errored, F is only a lower bound, the focusable count changed mid-walk, or no release probe ran; an undetermined verdict is never counted as flagged: a miss on a detection count, and on a false-alarm count it scores like a clean pass, with the worst case printed beside it. contextChange is judgeContextChange (3.2.1 incl. F55) over the same walk. The legacy detector's verdicts are reported as-is, unchanged, from the frozen copy in bench/legacy-detectors.ts.",
+    "Gaps run their own Tab walk on their own load (tabWalk: true). F3 needs it: without a walk the detector never emits not_focusable at all, so a run without it reports 0 not_focusable whatever the page does. That is a SECOND walk per page, separate from the one the judges read, and it roughly doubles the per-page keyboard cost.",
+    "Each page's gaps run records the detector's own keyboard evidence (tools.gaps.findings.keyboard): whether the walk ran, whether not_focusable was assessed, and the reasons if it was not. A page where it was NOT assessed is scored undetermined for 2.1.1 and 2.4.7 in BOTH columns -- never counted as flagged: a miss on a detection count, a clean-looking pass on a false-alarm count, whose worst case is printed beside it -- and drops the rule-of-three bound there, because the only gap type carrying those criteria could not be emitted at all. Without this record a check that could not run is indistinguishable in the report from a check that ran and found nothing.",
+    "Gaps come from the CURRENT post-fix detector (F1/F2/F3/F9 landed at 6b7abff and c1f94b2: hidden elements are filtered, reachability comes from the Tab walk). The same gap findings feed both the before and the after column, so the before/after delta isolates the keyboard rules and takes no credit for the gap fixes; those were measured separately against cd3b122."
+  ],
+  "pages": [
+    {
+      "pageId": "disclosure-tabs",
+      "url": "http://127.0.0.1:58585/corpus/dev/base/disclosure-tabs.html",
+      "cluster": "disclosure-tabs",
+      "budgetMs": 1200000,
+      "budgetExceeded": false,
+      "durationMs": 20788,
+      "rawFile": "raw/disclosure-tabs.json.gz",
+      "tools": {
+        "gaps": {
+          "status": "ok",
+          "error": null,
+          "budgetExceeded": false,
+          "durationMs": 8868,
+          "load": {
+            "requestedUrl": "http://127.0.0.1:58585/corpus/dev/base/disclosure-tabs.html",
+            "finalUrl": "http://127.0.0.1:58585/corpus/dev/base/disclosure-tabs.html",
+            "status": 200,
+            "title": "Walnut desk",
+            "mainFrameNavigations": 1,
+            "secondNavigation": "not-expected",
+            "blockedRequests": 0
+          },
+          "findings": {
+            "gaps": [
+              {
+                "nodeName": "DETAILS",
+                "id": null,
+                "class": null,
+                "dataBenchId": "faq-shipping",
+                "gapType": "no_accessible_name",
+                "severity": "serious",
+                "wcag": [
+                  "4.1.2",
+                  "1.1.1"
+                ]
+              },
+              {
+                "nodeName": "DETAILS",
+                "id": null,
+                "class": null,
+                "dataBenchId": "faq-returns",
+                "gapType": "no_accessible_name",
+                "severity": "serious",
+                "wcag": [
+                  "4.1.2",
+                  "1.1.1"
+                ]
+              },
+              {
+                "nodeName": "DIV",
+                "id": null,
+                "class": null,
+                "dataBenchId": "float-tab-2",
+                "gapType": "not_focusable",
+                "severity": "critical",
+                "wcag": [
+                  "2.1.1",
+                  "2.4.7"
+                ]
+              },
+              {
+                "nodeName": "DIV",
+                "id": null,
+                "class": null,
+                "dataBenchId": "contents-tab-2",
+                "gapType": "not_focusable",
+                "severity": "critical",
+                "wcag": [
+                  "2.1.1",
+                  "2.4.7"
+                ]
+              }
+            ],
+            "keyboard": {
+              "walkRan": true,
+              "notFocusableAssessed": true,
+              "unassessedReasons": [],
+              "walkError": null,
+              "reachedCount": 6
+            }
+          }
+        },
+        "walk": {
+          "status": "ok",
+          "error": null,
+          "budgetExceeded": false,
+          "durationMs": 8754,
+          "load": {
+            "requestedUrl": "http://127.0.0.1:58585/corpus/dev/base/disclosure-tabs.html",
+            "finalUrl": "http://127.0.0.1:58585/corpus/dev/base/disclosure-tabs.html",
+            "status": 200,
+            "title": "Walnut desk",
+            "mainFrameNavigations": 1,
+            "secondNavigation": "not-expected",
+            "blockedRequests": 0
+          },
+          "findings": {
+            "F": 5,
+            "fIncomplete": false,
+            "fIncompleteCauses": {
+              "crossOriginFrames": 0,
+              "closedShadowRoots": 0
+            },
+            "plannedPresses": 35,
+            "presses": 35,
+            "wraps": 5,
+            "focusLost": 0,
+            "deep": {
+              "inside": 0,
+              "crossOrigin": 0,
+              "closedShadowRoot": 0
+            },
+            "launch": {
+              "browserVersion": "143.0.7499.4",
+              "executableBasename": "chrome-headless-shell"
+            },
+            "suspectedTrap": false,
+            "trap": {
+              "wcagCriterion": "2.1.2",
+              "verdict": "pass",
+              "reason": null,
+              "keyboardTrap": false,
+              "trapEscapable": null,
+              "singleDirection": true,
+              "directionsWalked": [
+                "forward"
+              ],
+              "launch": {
+                "browserVersion": "143.0.7499.4",
+                "executableBasename": "chrome-headless-shell"
+              },
+              "directions": [
+                {
+                  "direction": "forward",
+                  "verdict": "pass",
+                  "reason": null,
+                  "confined": false,
+                  "endOfPage": {
+                    "signal": "body-unfocused",
+                    "atPress": 6
+                  },
+                  "release": "not-probed",
+                  "region": [
+                    12,
+                    18,
+                    24,
+                    33,
+                    46
+                  ],
+                  "focusableCount": 5,
+                  "stuckOn": null,
+                  "escapeUrlChanged": false,
+                  "documentReplacements": []
+                }
+              ]
+            },
+            "contextChange": {
+              "wcagCriterion": "3.2.1",
+              "verdict": "pass",
+              "reason": null,
+              "fIncomplete": false,
+              "findings": [],
+              "unattributed": []
+            },
+            "escapeReachedAt": null,
+            "error": null
+          }
+        },
+        "legacy": {
+          "status": "ok",
+          "error": null,
+          "budgetExceeded": false,
+          "durationMs": 1,
+          "load": null,
+          "findings": {
+            "presses": 35,
+            "trap": {
+              "trapped": true,
+              "firstTrappedPress": 30,
+              "cycleLength": 6,
+              "element": "body"
+            },
+            "dynamicViolations": []
+          }
+        },
+        "axe": {
+          "status": "ok",
+          "error": null,
+          "budgetExceeded": false,
+          "durationMs": 3159,
+          "load": {
+            "requestedUrl": "http://127.0.0.1:58585/corpus/dev/base/disclosure-tabs.html",
+            "finalUrl": "http://127.0.0.1:58585/corpus/dev/base/disclosure-tabs.html",
+            "status": 200,
+            "title": "Walnut desk",
+            "mainFrameNavigations": 1,
+            "secondNavigation": "not-expected",
+            "blockedRequests": 0
+          },
+          "findings": []
+        }
+      }
+    },
+    {
+      "pageId": "form",
+      "url": "http://127.0.0.1:58585/corpus/dev/base/form.html",
+      "cluster": "form",
+      "budgetMs": 1200000,
+      "budgetExceeded": false,
+      "durationMs": 22231,
+      "rawFile": "raw/form.json.gz",
+      "tools": {
+        "gaps": {
+          "status": "ok",
+          "error": null,
+          "budgetExceeded": false,
+          "durationMs": 9576,
+          "load": {
+            "requestedUrl": "http://127.0.0.1:58585/corpus/dev/base/form.html",
+            "finalUrl": "http://127.0.0.1:58585/corpus/dev/base/form.html",
+            "status": 200,
+            "title": "Contact form",
+            "mainFrameNavigations": 1,
+            "secondNavigation": "not-expected",
+            "blockedRequests": 0
+          },
+          "findings": {
+            "gaps": [],
+            "keyboard": {
+              "walkRan": true,
+              "notFocusableAssessed": true,
+              "unassessedReasons": [],
+              "walkError": null,
+              "reachedCount": 7
+            }
+          }
+        },
+        "walk": {
+          "status": "ok",
+          "error": null,
+          "budgetExceeded": false,
+          "durationMs": 9503,
+          "load": {
+            "requestedUrl": "http://127.0.0.1:58585/corpus/dev/base/form.html",
+            "finalUrl": "http://127.0.0.1:58585/corpus/dev/base/form.html",
+            "status": 200,
+            "title": "Contact form",
+            "mainFrameNavigations": 1,
+            "secondNavigation": "not-expected",
+            "blockedRequests": 0
+          },
+          "findings": {
+            "F": 6,
+            "fIncomplete": false,
+            "fIncompleteCauses": {
+              "crossOriginFrames": 0,
+              "closedShadowRoots": 0
+            },
+            "plannedPresses": 40,
+            "presses": 40,
+            "wraps": 5,
+            "focusLost": 0,
+            "deep": {
+              "inside": 0,
+              "crossOrigin": 0,
+              "closedShadowRoot": 0
+            },
+            "launch": {
+              "browserVersion": "143.0.7499.4",
+              "executableBasename": "chrome-headless-shell"
+            },
+            "suspectedTrap": false,
+            "trap": {
+              "wcagCriterion": "2.1.2",
+              "verdict": "pass",
+              "reason": null,
+              "keyboardTrap": false,
+              "trapEscapable": null,
+              "singleDirection": true,
+              "directionsWalked": [
+                "forward"
+              ],
+              "launch": {
+                "browserVersion": "143.0.7499.4",
+                "executableBasename": "chrome-headless-shell"
+              },
+              "directions": [
+                {
+                  "direction": "forward",
+                  "verdict": "pass",
+                  "reason": null,
+                  "confined": false,
+                  "endOfPage": {
+                    "signal": "body-unfocused",
+                    "atPress": 7
+                  },
+                  "release": "not-probed",
+                  "region": [
+                    68,
+                    18,
+                    24,
+                    30,
+                    60,
+                    64
+                  ],
+                  "focusableCount": 6,
+                  "stuckOn": null,
+                  "escapeUrlChanged": false,
+                  "documentReplacements": []
+                }
+              ]
+            },
+            "contextChange": {
+              "wcagCriterion": "3.2.1",
+              "verdict": "pass",
+              "reason": null,
+              "fIncomplete": false,
+              "findings": [],
+              "unattributed": []
+            },
+            "escapeReachedAt": null,
+            "error": null
+          }
+        },
+        "legacy": {
+          "status": "ok",
+          "error": null,
+          "budgetExceeded": false,
+          "durationMs": 0,
+          "load": null,
+          "findings": {
+            "presses": 40,
+            "trap": {
+              "trapped": true,
+              "firstTrappedPress": 35,
+              "cycleLength": 7,
+              "element": "button#send \"Send message\""
+            },
+            "dynamicViolations": []
+          }
+        },
+        "axe": {
+          "status": "ok",
+          "error": null,
+          "budgetExceeded": false,
+          "durationMs": 3147,
+          "load": {
+            "requestedUrl": "http://127.0.0.1:58585/corpus/dev/base/form.html",
+            "finalUrl": "http://127.0.0.1:58585/corpus/dev/base/form.html",
+            "status": 200,
+            "title": "Contact form",
+            "mainFrameNavigations": 1,
+            "secondNavigation": "not-expected",
+            "blockedRequests": 0
+          },
+          "findings": [
+            {
+              "id": "landmark-one-main",
+              "impact": "moderate",
+              "wcagTags": [],
+              "targets": [
+                "html"
+              ],
+              "components": [
+                "HTML"
+              ]
+            },
+            {
+              "id": "region",
+              "impact": "moderate",
+              "wcagTags": [],
+              "targets": [
+                "h1",
+                "div:nth-child(1)",
+                "div:nth-child(2)",
+                "div:nth-child(3)",
+                "div:nth-child(4)",
+                "div:nth-child(5)"
+              ],
+              "components": [
+                "H1",
+                "DIV",
+                "DIV",
+                "DIV",
+                "DIV",
+                "DIV"
+              ]
+            }
+          ]
+        }
+      }
+    },
+    {
+      "pageId": "good-operable",
+      "url": "http://127.0.0.1:58585/corpus/dev/base/good-operable.html",
+      "cluster": "good-operable",
+      "budgetMs": 1200000,
+      "budgetExceeded": false,
+      "durationMs": 23776,
+      "rawFile": "raw/good-operable.json.gz",
+      "tools": {
+        "gaps": {
+          "status": "ok",
+          "error": null,
+          "budgetExceeded": false,
+          "durationMs": 10340,
+          "load": {
+            "requestedUrl": "http://127.0.0.1:58585/corpus/dev/base/good-operable.html",
+            "finalUrl": "http://127.0.0.1:58585/corpus/dev/base/good-operable.html",
+            "status": 200,
+            "title": "Good Operable Page",
+            "mainFrameNavigations": 1,
+            "secondNavigation": "not-expected",
+            "blockedRequests": 0
+          },
+          "findings": {
+            "gaps": [],
+            "keyboard": {
+              "walkRan": true,
+              "notFocusableAssessed": true,
+              "unassessedReasons": [],
+              "walkError": null,
+              "reachedCount": 8
+            }
+          }
+        },
+        "walk": {
+          "status": "ok",
+          "error": null,
+          "budgetExceeded": false,
+          "durationMs": 10277,
+          "load": {
+            "requestedUrl": "http://127.0.0.1:58585/corpus/dev/base/good-operable.html",
+            "finalUrl": "http://127.0.0.1:58585/corpus/dev/base/good-operable.html",
+            "status": 200,
+            "title": "Good Operable Page",
+            "mainFrameNavigations": 1,
+            "secondNavigation": "not-expected",
+            "blockedRequests": 0
+          },
+          "findings": {
+            "F": 7,
+            "fIncomplete": false,
+            "fIncompleteCauses": {
+              "crossOriginFrames": 0,
+              "closedShadowRoots": 0
+            },
+            "plannedPresses": 45,
+            "presses": 45,
+            "wraps": 5,
+            "focusLost": 0,
+            "deep": {
+              "inside": 0,
+              "crossOrigin": 0,
+              "closedShadowRoot": 0
+            },
+            "launch": {
+              "browserVersion": "143.0.7499.4",
+              "executableBasename": "chrome-headless-shell"
+            },
+            "suspectedTrap": false,
+            "trap": {
+              "wcagCriterion": "2.1.2",
+              "verdict": "pass",
+              "reason": null,
+              "keyboardTrap": false,
+              "trapEscapable": null,
+              "singleDirection": true,
+              "directionsWalked": [
+                "forward"
+              ],
+              "launch": {
+                "browserVersion": "143.0.7499.4",
+                "executableBasename": "chrome-headless-shell"
+              },
+              "directions": [
+                {
+                  "direction": "forward",
+                  "verdict": "pass",
+                  "reason": null,
+                  "confined": false,
+                  "endOfPage": {
+                    "signal": "body-unfocused",
+                    "atPress": 8
+                  },
+                  "release": "not-probed",
+                  "region": [
+                    37,
+                    48,
+                    3,
+                    19,
+                    22,
+                    29,
+                    33
+                  ],
+                  "focusableCount": 7,
+                  "stuckOn": null,
+                  "escapeUrlChanged": false,
+                  "documentReplacements": []
+                }
+              ]
+            },
+            "contextChange": {
+              "wcagCriterion": "3.2.1",
+              "verdict": "pass",
+              "reason": null,
+              "fIncomplete": false,
+              "findings": [],
+              "unattributed": []
+            },
+            "escapeReachedAt": null,
+            "error": null
+          }
+        },
+        "legacy": {
+          "status": "ok",
+          "error": null,
+          "budgetExceeded": false,
+          "durationMs": 0,
+          "load": null,
+          "findings": {
+            "presses": 45,
+            "trap": {
+              "trapped": true,
+              "firstTrappedPress": 40,
+              "cycleLength": 8,
+              "element": "a \"Contact\""
+            },
+            "dynamicViolations": []
+          }
+        },
+        "axe": {
+          "status": "ok",
+          "error": null,
+          "budgetExceeded": false,
+          "durationMs": 3152,
+          "load": {
+            "requestedUrl": "http://127.0.0.1:58585/corpus/dev/base/good-operable.html",
+            "finalUrl": "http://127.0.0.1:58585/corpus/dev/base/good-operable.html",
+            "status": 200,
+            "title": "Good Operable Page",
+            "mainFrameNavigations": 1,
+            "secondNavigation": "not-expected",
+            "blockedRequests": 0
+          },
+          "findings": []
+        }
+      }
+    },
+    {
+      "pageId": "identical-links",
+      "url": "http://127.0.0.1:58585/corpus/dev/base/identical-links.html",
+      "cluster": "identical-links",
+      "budgetMs": 1200000,
+      "budgetExceeded": false,
+      "durationMs": 32033,
+      "rawFile": "raw/identical-links.json.gz",
+      "tools": {
+        "gaps": {
+          "status": "ok",
+          "error": null,
+          "budgetExceeded": false,
+          "durationMs": 14328,
+          "load": {
+            "requestedUrl": "http://127.0.0.1:58585/corpus/dev/base/identical-links.html",
+            "finalUrl": "http://127.0.0.1:58585/corpus/dev/base/identical-links.html",
+            "status": 200,
+            "title": "Identical links",
+            "mainFrameNavigations": 1,
+            "secondNavigation": "not-expected",
+            "blockedRequests": 0
+          },
+          "findings": {
+            "gaps": [],
+            "keyboard": {
+              "walkRan": true,
+              "notFocusableAssessed": true,
+              "unassessedReasons": [],
+              "walkError": null,
+              "reachedCount": 13
+            }
+          }
+        },
+        "walk": {
+          "status": "ok",
+          "error": null,
+          "budgetExceeded": false,
+          "durationMs": 14535,
+          "load": {
+            "requestedUrl": "http://127.0.0.1:58585/corpus/dev/base/identical-links.html",
+            "finalUrl": "http://127.0.0.1:58585/corpus/dev/base/identical-links.html",
+            "status": 200,
+            "title": "Identical links",
+            "mainFrameNavigations": 1,
+            "secondNavigation": "not-expected",
+            "blockedRequests": 0
+          },
+          "findings": {
+            "F": 12,
+            "fIncomplete": false,
+            "fIncompleteCauses": {
+              "crossOriginFrames": 0,
+              "closedShadowRoots": 0
+            },
+            "plannedPresses": 70,
+            "presses": 70,
+            "wraps": 5,
+            "focusLost": 0,
+            "deep": {
+              "inside": 0,
+              "crossOrigin": 0,
+              "closedShadowRoot": 0
+            },
+            "launch": {
+              "browserVersion": "143.0.7499.4",
+              "executableBasename": "chrome-headless-shell"
+            },
+            "suspectedTrap": false,
+            "trap": {
+              "wcagCriterion": "2.1.2",
+              "verdict": "pass",
+              "reason": null,
+              "keyboardTrap": false,
+              "trapEscapable": null,
+              "singleDirection": true,
+              "directionsWalked": [
+                "forward"
+              ],
+              "launch": {
+                "browserVersion": "143.0.7499.4",
+                "executableBasename": "chrome-headless-shell"
+              },
+              "directions": [
+                {
+                  "direction": "forward",
+                  "verdict": "pass",
+                  "reason": null,
+                  "confined": false,
+                  "endOfPage": {
+                    "signal": "body-unfocused",
+                    "atPress": 13
+                  },
+                  "release": "not-probed",
+                  "region": [
+                    43,
+                    48,
+                    53,
+                    58,
+                    63,
+                    68,
+                    73,
+                    18,
+                    23,
+                    28,
+                    33,
+                    38
+                  ],
+                  "focusableCount": 12,
+                  "stuckOn": null,
+                  "escapeUrlChanged": false,
+                  "documentReplacements": []
+                }
+              ]
+            },
+            "contextChange": {
+              "wcagCriterion": "3.2.1",
+              "verdict": "pass",
+              "reason": null,
+              "fIncomplete": false,
+              "findings": [],
+              "unattributed": []
+            },
+            "escapeReachedAt": null,
+            "error": null
+          }
+        },
+        "legacy": {
+          "status": "ok",
+          "error": null,
+          "budgetExceeded": false,
+          "durationMs": 1,
+          "load": null,
+          "findings": {
+            "presses": 70,
+            "trap": {
+              "trapped": true,
+              "firstTrappedPress": 5,
+              "cycleLength": 1,
+              "element": "a \"Read more\""
+            },
+            "dynamicViolations": [
+              {
+                "criterion": "2.4.3",
+                "severity": "moderate",
+                "description": "Focus cycling detected - focus returned to previously visited element within short sequence",
+                "evidence": [
+                  "a \"Read more\"",
+                  "a \"Read more\""
+                ]
+              }
+            ]
+          }
+        },
+        "axe": {
+          "status": "ok",
+          "error": null,
+          "budgetExceeded": false,
+          "durationMs": 3164,
+          "load": {
+            "requestedUrl": "http://127.0.0.1:58585/corpus/dev/base/identical-links.html",
+            "finalUrl": "http://127.0.0.1:58585/corpus/dev/base/identical-links.html",
+            "status": 200,
+            "title": "Identical links",
+            "mainFrameNavigations": 1,
+            "secondNavigation": "not-expected",
+            "blockedRequests": 0
+          },
+          "findings": [
+            {
+              "id": "landmark-one-main",
+              "impact": "moderate",
+              "wcagTags": [],
+              "targets": [
+                "html"
+              ],
+              "components": [
+                "HTML"
+              ]
+            },
+            {
+              "id": "region",
+              "impact": "moderate",
+              "wcagTags": [],
+              "targets": [
+                "h1",
+                "ul"
+              ],
+              "components": [
+                "H1",
+                "UL.grid"
+              ]
+            }
+          ]
+        }
+      }
+    },
+    {
+      "pageId": "js-handlers",
+      "url": "http://127.0.0.1:58585/corpus/dev/base/js-handlers.html",
+      "cluster": "js-handlers",
+      "budgetMs": 1200000,
+      "budgetExceeded": false,
+      "durationMs": 17703,
+      "rawFile": "raw/js-handlers.json.gz",
+      "tools": {
+        "gaps": {
+          "status": "ok",
+          "error": null,
+          "budgetExceeded": false,
+          "durationMs": 7379,
+          "load": {
+            "requestedUrl": "http://127.0.0.1:58585/corpus/dev/base/js-handlers.html",
+            "finalUrl": "http://127.0.0.1:58585/corpus/dev/base/js-handlers.html",
+            "status": 200,
+            "title": "Custom controls",
+            "mainFrameNavigations": 1,
+            "secondNavigation": "not-expected",
+            "blockedRequests": 0
+          },
+          "findings": {
+            "gaps": [],
+            "keyboard": {
+              "walkRan": true,
+              "notFocusableAssessed": true,
+              "unassessedReasons": [],
+              "walkError": null,
+              "reachedCount": 4
+            }
+          }
+        },
+        "walk": {
+          "status": "ok",
+          "error": null,
+          "budgetExceeded": false,
+          "durationMs": 7157,
+          "load": {
+            "requestedUrl": "http://127.0.0.1:58585/corpus/dev/base/js-handlers.html",
+            "finalUrl": "http://127.0.0.1:58585/corpus/dev/base/js-handlers.html",
+            "status": 200,
+            "title": "Custom controls",
+            "mainFrameNavigations": 1,
+            "secondNavigation": "not-expected",
+            "blockedRequests": 0
+          },
+          "findings": {
+            "F": 3,
+            "fIncomplete": false,
+            "fIncompleteCauses": {
+              "crossOriginFrames": 0,
+              "closedShadowRoots": 0
+            },
+            "plannedPresses": 25,
+            "presses": 25,
+            "wraps": 6,
+            "focusLost": 0,
+            "deep": {
+              "inside": 0,
+              "crossOrigin": 0,
+              "closedShadowRoot": 0
+            },
+            "launch": {
+              "browserVersion": "143.0.7499.4",
+              "executableBasename": "chrome-headless-shell"
+            },
+            "suspectedTrap": false,
+            "trap": {
+              "wcagCriterion": "2.1.2",
+              "verdict": "pass",
+              "reason": null,
+              "keyboardTrap": false,
+              "trapEscapable": null,
+              "singleDirection": true,
+              "directionsWalked": [
+                "forward"
+              ],
+              "launch": {
+                "browserVersion": "143.0.7499.4",
+                "executableBasename": "chrome-headless-shell"
+              },
+              "directions": [
+                {
+                  "direction": "forward",
+                  "verdict": "pass",
+                  "reason": null,
+                  "confined": false,
+                  "endOfPage": {
+                    "signal": "body-unfocused",
+                    "atPress": 4
+                  },
+                  "release": "not-probed",
+                  "region": [
+                    18,
+                    21,
+                    16
+                  ],
+                  "focusableCount": 3,
+                  "stuckOn": null,
+                  "escapeUrlChanged": false,
+                  "documentReplacements": []
+                }
+              ]
+            },
+            "contextChange": {
+              "wcagCriterion": "3.2.1",
+              "verdict": "pass",
+              "reason": null,
+              "fIncomplete": false,
+              "findings": [],
+              "unattributed": []
+            },
+            "escapeReachedAt": null,
+            "error": null
+          }
+        },
+        "legacy": {
+          "status": "ok",
+          "error": null,
+          "budgetExceeded": false,
+          "durationMs": 0,
+          "load": null,
+          "findings": {
+            "presses": 25,
+            "trap": {
+              "trapped": true,
+              "firstTrappedPress": 20,
+              "cycleLength": 4,
+              "element": "div#gift-wrap.custom-checkbox \"Gift wrap\""
+            },
+            "dynamicViolations": [
+              {
+                "criterion": "2.4.3",
+                "severity": "moderate",
+                "description": "Focus cycling detected - focus returned to previously visited element within short sequence",
+                "evidence": [
+                  "div#add-to-cart.custom-button \"Add to cart\"",
+                  "div#add-to-cart.custom-button \"Add to cart\""
+                ]
+              }
+            ]
+          }
+        },
+        "axe": {
+          "status": "ok",
+          "error": null,
+          "budgetExceeded": false,
+          "durationMs": 3160,
+          "load": {
+            "requestedUrl": "http://127.0.0.1:58585/corpus/dev/base/js-handlers.html",
+            "finalUrl": "http://127.0.0.1:58585/corpus/dev/base/js-handlers.html",
+            "status": 200,
+            "title": "Custom controls",
+            "mainFrameNavigations": 1,
+            "secondNavigation": "not-expected",
+            "blockedRequests": 0
+          },
+          "findings": [
+            {
+              "id": "landmark-one-main",
+              "impact": "moderate",
+              "wcagTags": [],
+              "targets": [
+                "html"
+              ],
+              "components": [
+                "HTML"
+              ]
+            },
+            {
+              "id": "region",
+              "impact": "moderate",
+              "wcagTags": [],
+              "targets": [
+                "h1",
+                "p:nth-child(2)",
+                "#gift-wrap"
+              ],
+              "components": [
+                "H1",
+                "P",
+                "DIV.custom-checkbox"
+              ]
+            }
+          ]
+        }
+      }
+    },
+    {
+      "pageId": "modal",
+      "url": "http://127.0.0.1:58585/corpus/dev/base/modal.html",
+      "cluster": "modal",
+      "budgetMs": 1200000,
+      "budgetExceeded": false,
+      "durationMs": 25713,
+      "rawFile": "raw/modal.json.gz",
+      "tools": {
+        "gaps": {
+          "status": "ok",
+          "error": null,
+          "budgetExceeded": false,
+          "durationMs": 11148,
+          "load": {
+            "requestedUrl": "http://127.0.0.1:58585/corpus/dev/base/modal.html",
+            "finalUrl": "http://127.0.0.1:58585/corpus/dev/base/modal.html",
+            "status": 200,
+            "title": "Edit profile dialog",
+            "mainFrameNavigations": 1,
+            "secondNavigation": "not-expected",
+            "blockedRequests": 0
+          },
+          "findings": {
+            "gaps": [],
+            "keyboard": {
+              "walkRan": true,
+              "notFocusableAssessed": false,
+              "unassessedReasons": [
+                "no-wrap"
+              ],
+              "walkError": null,
+              "reachedCount": 4
+            }
+          }
+        },
+        "walk": {
+          "status": "ok",
+          "error": null,
+          "budgetExceeded": false,
+          "durationMs": 11413,
+          "load": {
+            "requestedUrl": "http://127.0.0.1:58585/corpus/dev/base/modal.html",
+            "finalUrl": "http://127.0.0.1:58585/corpus/dev/base/modal.html",
+            "status": 200,
+            "title": "Edit profile dialog",
+            "mainFrameNavigations": 1,
+            "secondNavigation": "not-expected",
+            "blockedRequests": 0
+          },
+          "findings": {
+            "F": 8,
+            "fIncomplete": false,
+            "fIncompleteCauses": {
+              "crossOriginFrames": 0,
+              "closedShadowRoots": 0
+            },
+            "plannedPresses": 50,
+            "presses": 50,
+            "wraps": 0,
+            "focusLost": 0,
+            "deep": {
+              "inside": 0,
+              "crossOrigin": 0,
+              "closedShadowRoot": 0
+            },
+            "launch": {
+              "browserVersion": "143.0.7499.4",
+              "executableBasename": "chrome-headless-shell"
+            },
+            "suspectedTrap": true,
+            "trap": {
+              "wcagCriterion": "2.1.2",
+              "verdict": "pass",
+              "reason": null,
+              "keyboardTrap": true,
+              "trapEscapable": true,
+              "singleDirection": true,
+              "directionsWalked": [
+                "forward"
+              ],
+              "launch": {
+                "browserVersion": "143.0.7499.4",
+                "executableBasename": "chrome-headless-shell"
+              },
+              "directions": [
+                {
+                  "direction": "forward",
+                  "verdict": "pass",
+                  "reason": null,
+                  "confined": true,
+                  "endOfPage": null,
+                  "release": "escape-key",
+                  "region": [
+                    41,
+                    43,
+                    3,
+                    36
+                  ],
+                  "focusableCount": 8,
+                  "stuckOn": null,
+                  "escapeUrlChanged": false,
+                  "documentReplacements": []
+                }
+              ]
+            },
+            "contextChange": {
+              "wcagCriterion": "3.2.1",
+              "verdict": "pass",
+              "reason": null,
+              "fIncomplete": false,
+              "findings": [],
+              "unattributed": []
+            },
+            "escapeReachedAt": 1,
+            "error": null
+          }
+        },
+        "legacy": {
+          "status": "ok",
+          "error": null,
+          "budgetExceeded": false,
+          "durationMs": 0,
+          "load": null,
+          "findings": {
+            "presses": 50,
+            "trap": {
+              "trapped": true,
+              "firstTrappedPress": 20,
+              "cycleLength": 4,
+              "element": "button#dialog-close.dialog-close \"Close\""
+            },
+            "dynamicViolations": [
+              {
+                "criterion": "2.4.3",
+                "severity": "moderate",
+                "description": "Focus cycling detected - focus returned to previously visited element within short sequence",
+                "evidence": [
+                  "input#username",
+                  "input#username"
+                ]
+              }
+            ]
+          }
+        },
+        "axe": {
+          "status": "ok",
+          "error": null,
+          "budgetExceeded": false,
+          "durationMs": 3146,
+          "load": {
+            "requestedUrl": "http://127.0.0.1:58585/corpus/dev/base/modal.html",
+            "finalUrl": "http://127.0.0.1:58585/corpus/dev/base/modal.html",
+            "status": 200,
+            "title": "Edit profile dialog",
+            "mainFrameNavigations": 1,
+            "secondNavigation": "not-expected",
+            "blockedRequests": 0
+          },
+          "findings": []
+        }
+      }
+    },
+    {
+      "pageId": "native-dialog",
+      "url": "http://127.0.0.1:58585/corpus/dev/base/native-dialog.html",
+      "cluster": "native-dialog",
+      "budgetMs": 1200000,
+      "budgetExceeded": false,
+      "durationMs": 17439,
+      "rawFile": "raw/native-dialog.json.gz",
+      "tools": {
+        "gaps": {
+          "status": "ok",
+          "error": null,
+          "budgetExceeded": false,
+          "durationMs": 7164,
+          "load": {
+            "requestedUrl": "http://127.0.0.1:58585/corpus/dev/base/native-dialog.html",
+            "finalUrl": "http://127.0.0.1:58585/corpus/dev/base/native-dialog.html",
+            "status": 200,
+            "title": "Age check",
+            "mainFrameNavigations": 1,
+            "secondNavigation": "not-expected",
+            "blockedRequests": 0
+          },
+          "findings": {
+            "gaps": [
+              {
+                "nodeName": "BUTTON",
+                "id": null,
+                "class": null,
+                "dataBenchId": "join-button",
+                "gapType": "missing_from_a11y_tree",
+                "severity": "critical",
+                "wcag": [
+                  "4.1.2"
+                ]
+              },
+              {
+                "nodeName": "A",
+                "id": null,
+                "class": null,
+                "dataBenchId": "shop-link",
+                "gapType": "missing_from_a11y_tree",
+                "severity": "critical",
+                "wcag": [
+                  "4.1.2"
+                ]
+              }
+            ],
+            "keyboard": {
+              "walkRan": true,
+              "notFocusableAssessed": true,
+              "unassessedReasons": [],
+              "walkError": null,
+              "reachedCount": 2
+            }
+          }
+        },
+        "walk": {
+          "status": "ok",
+          "error": null,
+          "budgetExceeded": false,
+          "durationMs": 7126,
+          "load": {
+            "requestedUrl": "http://127.0.0.1:58585/corpus/dev/base/native-dialog.html",
+            "finalUrl": "http://127.0.0.1:58585/corpus/dev/base/native-dialog.html",
+            "status": 200,
+            "title": "Age check",
+            "mainFrameNavigations": 1,
+            "secondNavigation": "not-expected",
+            "blockedRequests": 0
+          },
+          "findings": {
+            "F": 3,
+            "fIncomplete": false,
+            "fIncompleteCauses": {
+              "crossOriginFrames": 0,
+              "closedShadowRoots": 0
+            },
+            "plannedPresses": 25,
+            "presses": 25,
+            "wraps": 13,
+            "focusLost": 0,
+            "deep": {
+              "inside": 0,
+              "crossOrigin": 0,
+              "closedShadowRoot": 0
+            },
+            "launch": {
+              "browserVersion": "143.0.7499.4",
+              "executableBasename": "chrome-headless-shell"
+            },
+            "suspectedTrap": false,
+            "trap": {
+              "wcagCriterion": "2.1.2",
+              "verdict": "pass",
+              "reason": null,
+              "keyboardTrap": false,
+              "trapEscapable": null,
+              "singleDirection": true,
+              "directionsWalked": [
+                "forward"
+              ],
+              "launch": {
+                "browserVersion": "143.0.7499.4",
+                "executableBasename": "chrome-headless-shell"
+              },
+              "directions": [
+                {
+                  "direction": "forward",
+                  "verdict": "pass",
+                  "reason": null,
+                  "confined": false,
+                  "endOfPage": {
+                    "signal": "body-unfocused",
+                    "atPress": 1
+                  },
+                  "release": "not-probed",
+                  "region": [
+                    23
+                  ],
+                  "focusableCount": 3,
+                  "stuckOn": null,
+                  "escapeUrlChanged": false,
+                  "documentReplacements": []
+                }
+              ]
+            },
+            "contextChange": {
+              "wcagCriterion": "3.2.1",
+              "verdict": "pass",
+              "reason": null,
+              "fIncomplete": false,
+              "findings": [],
+              "unattributed": []
+            },
+            "escapeReachedAt": null,
+            "error": null
+          }
+        },
+        "legacy": {
+          "status": "ok",
+          "error": null,
+          "budgetExceeded": false,
+          "durationMs": 0,
+          "load": null,
+          "findings": {
+            "presses": 25,
+            "trap": {
+              "trapped": true,
+              "firstTrappedPress": 10,
+              "cycleLength": 2,
+              "element": "button \"Yes, enter\""
+            },
+            "dynamicViolations": [
+              {
+                "criterion": "2.4.3",
+                "severity": "moderate",
+                "description": "Focus cycling detected - focus returned to previously visited element within short sequence",
+                "evidence": [
+                  "body",
+                  "body"
+                ]
+              }
+            ]
+          }
+        },
+        "axe": {
+          "status": "ok",
+          "error": null,
+          "budgetExceeded": false,
+          "durationMs": 3145,
+          "load": {
+            "requestedUrl": "http://127.0.0.1:58585/corpus/dev/base/native-dialog.html",
+            "finalUrl": "http://127.0.0.1:58585/corpus/dev/base/native-dialog.html",
+            "status": 200,
+            "title": "Age check",
+            "mainFrameNavigations": 1,
+            "secondNavigation": "not-expected",
+            "blockedRequests": 0
+          },
+          "findings": []
+        }
+      }
+    },
+    {
+      "pageId": "navbar",
+      "url": "http://127.0.0.1:58585/corpus/dev/base/navbar.html",
+      "cluster": "navbar",
+      "budgetMs": 1200000,
+      "budgetExceeded": false,
+      "durationMs": 31664,
+      "rawFile": "raw/navbar.json.gz",
+      "tools": {
+        "gaps": {
+          "status": "ok",
+          "error": null,
+          "budgetExceeded": false,
+          "durationMs": 14311,
+          "load": {
+            "requestedUrl": "http://127.0.0.1:58585/corpus/dev/base/navbar.html",
+            "finalUrl": "http://127.0.0.1:58585/corpus/dev/base/navbar.html",
+            "status": 200,
+            "title": "Bootstrap-style navbar",
+            "mainFrameNavigations": 1,
+            "secondNavigation": "not-expected",
+            "blockedRequests": 0
+          },
+          "findings": {
+            "gaps": [],
+            "keyboard": {
+              "walkRan": true,
+              "notFocusableAssessed": true,
+              "unassessedReasons": [],
+              "walkError": null,
+              "reachedCount": 9
+            }
+          }
+        },
+        "walk": {
+          "status": "ok",
+          "error": null,
+          "budgetExceeded": false,
+          "durationMs": 14195,
+          "load": {
+            "requestedUrl": "http://127.0.0.1:58585/corpus/dev/base/navbar.html",
+            "finalUrl": "http://127.0.0.1:58585/corpus/dev/base/navbar.html",
+            "status": 200,
+            "title": "Bootstrap-style navbar",
+            "mainFrameNavigations": 1,
+            "secondNavigation": "not-expected",
+            "blockedRequests": 0
+          },
+          "findings": {
+            "F": 12,
+            "fIncomplete": false,
+            "fIncompleteCauses": {
+              "crossOriginFrames": 0,
+              "closedShadowRoots": 0
+            },
+            "plannedPresses": 70,
+            "presses": 70,
+            "wraps": 7,
+            "focusLost": 0,
+            "deep": {
+              "inside": 0,
+              "crossOrigin": 0,
+              "closedShadowRoot": 0
+            },
+            "launch": {
+              "browserVersion": "143.0.7499.4",
+              "executableBasename": "chrome-headless-shell"
+            },
+            "suspectedTrap": false,
+            "trap": {
+              "wcagCriterion": "2.1.2",
+              "verdict": "pass",
+              "reason": null,
+              "keyboardTrap": false,
+              "trapEscapable": null,
+              "singleDirection": true,
+              "directionsWalked": [
+                "forward"
+              ],
+              "launch": {
+                "browserVersion": "143.0.7499.4",
+                "executableBasename": "chrome-headless-shell"
+              },
+              "directions": [
+                {
+                  "direction": "forward",
+                  "verdict": "pass",
+                  "reason": null,
+                  "confined": false,
+                  "endOfPage": {
+                    "signal": "body-unfocused",
+                    "atPress": 9
+                  },
+                  "release": "not-probed",
+                  "region": [
+                    23,
+                    26,
+                    51,
+                    59,
+                    61,
+                    13,
+                    15,
+                    20
+                  ],
+                  "focusableCount": 12,
+                  "stuckOn": null,
+                  "escapeUrlChanged": false,
+                  "documentReplacements": []
+                }
+              ]
+            },
+            "contextChange": {
+              "wcagCriterion": "3.2.1",
+              "verdict": "pass",
+              "reason": null,
+              "fIncomplete": false,
+              "findings": [],
+              "unattributed": []
+            },
+            "escapeReachedAt": null,
+            "error": null
+          }
+        },
+        "legacy": {
+          "status": "ok",
+          "error": null,
+          "budgetExceeded": false,
+          "durationMs": 0,
+          "load": null,
+          "findings": {
+            "presses": 70,
+            "trap": {
+              "trapped": true,
+              "firstTrappedPress": 45,
+              "cycleLength": 9,
+              "element": "button#offcanvas-open \"Account menu\""
+            },
+            "dynamicViolations": []
+          }
+        },
+        "axe": {
+          "status": "ok",
+          "error": null,
+          "budgetExceeded": false,
+          "durationMs": 3153,
+          "load": {
+            "requestedUrl": "http://127.0.0.1:58585/corpus/dev/base/navbar.html",
+            "finalUrl": "http://127.0.0.1:58585/corpus/dev/base/navbar.html",
+            "status": 200,
+            "title": "Bootstrap-style navbar",
+            "mainFrameNavigations": 1,
+            "secondNavigation": "not-expected",
+            "blockedRequests": 0
+          },
+          "findings": [
+            {
+              "id": "color-contrast",
+              "impact": "serious",
+              "wcagTags": [
+                "wcag2aa",
+                "wcag143"
+              ],
+              "targets": [
+                "a[aria-current=\"page\"]",
+                "a[href$=\"#features\"]",
+                "#products-toggle"
+              ],
+              "components": [
+                "A.nav-link",
+                "A.nav-link",
+                "BUTTON.dropdown-toggle.nav-link"
+              ]
+            }
+          ]
+        }
+      }
+    },
+    {
+      "pageId": "one-button",
+      "url": "http://127.0.0.1:58585/corpus/dev/base/one-button.html",
+      "cluster": "one-button",
+      "budgetMs": 1200000,
+      "budgetExceeded": false,
+      "durationMs": 14277,
+      "rawFile": "raw/one-button.json.gz",
+      "tools": {
+        "gaps": {
+          "status": "ok",
+          "error": null,
+          "budgetExceeded": false,
+          "durationMs": 5579,
+          "load": {
+            "requestedUrl": "http://127.0.0.1:58585/corpus/dev/base/one-button.html",
+            "finalUrl": "http://127.0.0.1:58585/corpus/dev/base/one-button.html",
+            "status": 200,
+            "title": "Newsletter",
+            "mainFrameNavigations": 1,
+            "secondNavigation": "not-expected",
+            "blockedRequests": 0
+          },
+          "findings": {
+            "gaps": [],
+            "keyboard": {
+              "walkRan": true,
+              "notFocusableAssessed": true,
+              "unassessedReasons": [],
+              "walkError": null,
+              "reachedCount": 2
+            }
+          }
+        },
+        "walk": {
+          "status": "ok",
+          "error": null,
+          "budgetExceeded": false,
+          "durationMs": 5553,
+          "load": {
+            "requestedUrl": "http://127.0.0.1:58585/corpus/dev/base/one-button.html",
+            "finalUrl": "http://127.0.0.1:58585/corpus/dev/base/one-button.html",
+            "status": 200,
+            "title": "Newsletter",
+            "mainFrameNavigations": 1,
+            "secondNavigation": "not-expected",
+            "blockedRequests": 0
+          },
+          "findings": {
+            "F": 1,
+            "fIncomplete": false,
+            "fIncompleteCauses": {
+              "crossOriginFrames": 0,
+              "closedShadowRoots": 0
+            },
+            "plannedPresses": 15,
+            "presses": 15,
+            "wraps": 7,
+            "focusLost": 0,
+            "deep": {
+              "inside": 0,
+              "crossOrigin": 0,
+              "closedShadowRoot": 0
+            },
+            "launch": {
+              "browserVersion": "143.0.7499.4",
+              "executableBasename": "chrome-headless-shell"
+            },
+            "suspectedTrap": false,
+            "trap": {
+              "wcagCriterion": "2.1.2",
+              "verdict": "pass",
+              "reason": null,
+              "keyboardTrap": false,
+              "trapEscapable": null,
+              "singleDirection": true,
+              "directionsWalked": [
+                "forward"
+              ],
+              "launch": {
+                "browserVersion": "143.0.7499.4",
+                "executableBasename": "chrome-headless-shell"
+              },
+              "directions": [
+                {
+                  "direction": "forward",
+                  "verdict": "pass",
+                  "reason": null,
+                  "confined": false,
+                  "endOfPage": {
+                    "signal": "body-unfocused",
+                    "atPress": 2
+                  },
+                  "release": "not-probed",
+                  "region": [
+                    14
+                  ],
+                  "focusableCount": 1,
+                  "stuckOn": null,
+                  "escapeUrlChanged": false,
+                  "documentReplacements": []
+                }
+              ]
+            },
+            "contextChange": {
+              "wcagCriterion": "3.2.1",
+              "verdict": "pass",
+              "reason": null,
+              "fIncomplete": false,
+              "findings": [],
+              "unattributed": []
+            },
+            "escapeReachedAt": null,
+            "error": null
+          }
+        },
+        "legacy": {
+          "status": "ok",
+          "error": null,
+          "budgetExceeded": false,
+          "durationMs": 0,
+          "load": null,
+          "findings": {
+            "presses": 15,
+            "trap": {
+              "trapped": true,
+              "firstTrappedPress": 10,
+              "cycleLength": 2,
+              "element": "body"
+            },
+            "dynamicViolations": [
+              {
+                "criterion": "2.4.3",
+                "severity": "moderate",
+                "description": "Focus cycling detected - focus returned to previously visited element within short sequence",
+                "evidence": [
+                  "button#subscribe \"Subscribe\"",
+                  "button#subscribe \"Subscribe\""
+                ]
+              }
+            ]
+          }
+        },
+        "axe": {
+          "status": "ok",
+          "error": null,
+          "budgetExceeded": false,
+          "durationMs": 3139,
+          "load": {
+            "requestedUrl": "http://127.0.0.1:58585/corpus/dev/base/one-button.html",
+            "finalUrl": "http://127.0.0.1:58585/corpus/dev/base/one-button.html",
+            "status": 200,
+            "title": "Newsletter",
+            "mainFrameNavigations": 1,
+            "secondNavigation": "not-expected",
+            "blockedRequests": 0
+          },
+          "findings": [
+            {
+              "id": "landmark-one-main",
+              "impact": "moderate",
+              "wcagTags": [],
+              "targets": [
+                "html"
+              ],
+              "components": [
+                "HTML"
+              ]
+            },
+            {
+              "id": "region",
+              "impact": "moderate",
+              "wcagTags": [],
+              "targets": [
+                "h1",
+                "p:nth-child(2)"
+              ],
+              "components": [
+                "H1",
+                "P"
+              ]
+            }
+          ]
+        }
+      }
+    },
+    {
+      "pageId": "react-div-button",
+      "url": "http://127.0.0.1:58585/corpus/dev/base/react-div-button/index.html",
+      "cluster": "react-div-button",
+      "budgetMs": 1200000,
+      "budgetExceeded": false,
+      "durationMs": 15914,
+      "rawFile": "raw/react-div-button.json.gz",
+      "tools": {
+        "gaps": {
+          "status": "ok",
+          "error": null,
+          "budgetExceeded": false,
+          "durationMs": 6387,
+          "load": {
+            "requestedUrl": "http://127.0.0.1:58585/corpus/dev/base/react-div-button/index.html",
+            "finalUrl": "http://127.0.0.1:58585/corpus/dev/base/react-div-button/index.html",
+            "status": 200,
+            "title": "React div button",
+            "mainFrameNavigations": 1,
+            "secondNavigation": "not-expected",
+            "blockedRequests": 0
+          },
+          "findings": {
+            "gaps": [
+              {
+                "nodeName": "DIV",
+                "id": "header-actions",
+                "class": null,
+                "dataBenchId": "portal-host",
+                "gapType": "wrong_role",
+                "severity": "serious",
+                "wcag": [
+                  "4.1.2"
+                ]
+              },
+              {
+                "nodeName": "DIV",
+                "id": null,
+                "class": "add-to-cart",
+                "dataBenchId": "add-to-cart-div",
+                "gapType": "wrong_role",
+                "severity": "serious",
+                "wcag": [
+                  "4.1.2"
+                ]
+              }
+            ],
+            "keyboard": {
+              "walkRan": true,
+              "notFocusableAssessed": true,
+              "unassessedReasons": [],
+              "walkError": null,
+              "reachedCount": 3
+            }
+          }
+        },
+        "walk": {
+          "status": "ok",
+          "error": null,
+          "budgetExceeded": false,
+          "durationMs": 6367,
+          "load": {
+            "requestedUrl": "http://127.0.0.1:58585/corpus/dev/base/react-div-button/index.html",
+            "finalUrl": "http://127.0.0.1:58585/corpus/dev/base/react-div-button/index.html",
+            "status": 200,
+            "title": "React div button",
+            "mainFrameNavigations": 1,
+            "secondNavigation": "not-expected",
+            "blockedRequests": 0
+          },
+          "findings": {
+            "F": 2,
+            "fIncomplete": false,
+            "fIncompleteCauses": {
+              "crossOriginFrames": 0,
+              "closedShadowRoots": 0
+            },
+            "plannedPresses": 20,
+            "presses": 20,
+            "wraps": 6,
+            "focusLost": 0,
+            "deep": {
+              "inside": 0,
+              "crossOrigin": 0,
+              "closedShadowRoot": 0
+            },
+            "launch": {
+              "browserVersion": "143.0.7499.4",
+              "executableBasename": "chrome-headless-shell"
+            },
+            "suspectedTrap": false,
+            "trap": {
+              "wcagCriterion": "2.1.2",
+              "verdict": "pass",
+              "reason": null,
+              "keyboardTrap": false,
+              "trapEscapable": null,
+              "singleDirection": true,
+              "directionsWalked": [
+                "forward"
+              ],
+              "launch": {
+                "browserVersion": "143.0.7499.4",
+                "executableBasename": "chrome-headless-shell"
+              },
+              "directions": [
+                {
+                  "direction": "forward",
+                  "verdict": "pass",
+                  "reason": null,
+                  "confined": false,
+                  "endOfPage": {
+                    "signal": "body-unfocused",
+                    "atPress": 3
+                  },
+                  "release": "not-probed",
+                  "region": [
+                    12,
+                    22
+                  ],
+                  "focusableCount": 2,
+                  "stuckOn": null,
+                  "escapeUrlChanged": false,
+                  "documentReplacements": []
+                }
+              ]
+            },
+            "contextChange": {
+              "wcagCriterion": "3.2.1",
+              "verdict": "pass",
+              "reason": null,
+              "fIncomplete": false,
+              "findings": [],
+              "unattributed": []
+            },
+            "escapeReachedAt": null,
+            "error": null
+          }
+        },
+        "legacy": {
+          "status": "ok",
+          "error": null,
+          "budgetExceeded": false,
+          "durationMs": 1,
+          "load": null,
+          "findings": {
+            "presses": 20,
+            "trap": {
+              "trapped": true,
+              "firstTrappedPress": 15,
+              "cycleLength": 3,
+              "element": "body"
+            },
+            "dynamicViolations": [
+              {
+                "criterion": "2.4.3",
+                "severity": "moderate",
+                "description": "Focus cycling detected - focus returned to previously visited element within short sequence",
+                "evidence": [
+                  "button \"Share\"",
+                  "button \"Share\""
+                ]
+              }
+            ]
+          }
+        },
+        "axe": {
+          "status": "ok",
+          "error": null,
+          "budgetExceeded": false,
+          "durationMs": 3154,
+          "load": {
+            "requestedUrl": "http://127.0.0.1:58585/corpus/dev/base/react-div-button/index.html",
+            "finalUrl": "http://127.0.0.1:58585/corpus/dev/base/react-div-button/index.html",
+            "status": 200,
+            "title": "React div button",
+            "mainFrameNavigations": 1,
+            "secondNavigation": "not-expected",
+            "blockedRequests": 0
+          },
+          "findings": []
+        }
+      }
+    },
+    {
+      "pageId": "remount-on-keydown",
+      "url": "http://127.0.0.1:58585/corpus/dev/base/remount-on-keydown.html",
+      "cluster": "remount-on-keydown",
+      "budgetMs": 1200000,
+      "budgetExceeded": false,
+      "durationMs": 19015,
+      "rawFile": "raw/remount-on-keydown.json.gz",
+      "tools": {
+        "gaps": {
+          "status": "ok",
+          "error": null,
+          "budgetExceeded": false,
+          "durationMs": 7946,
+          "load": {
+            "requestedUrl": "http://127.0.0.1:58585/corpus/dev/base/remount-on-keydown.html",
+            "finalUrl": "http://127.0.0.1:58585/corpus/dev/base/remount-on-keydown.html",
+            "status": 200,
+            "title": "Canvas tote bag",
+            "mainFrameNavigations": 1,
+            "secondNavigation": "not-expected",
+            "blockedRequests": 0
+          },
+          "findings": {
+            "gaps": [
+              {
+                "nodeName": "A",
+                "id": null,
+                "class": null,
+                "dataBenchId": "home-link",
+                "gapType": "not_focusable",
+                "severity": "critical",
+                "wcag": [
+                  "2.1.1",
+                  "2.4.7"
+                ]
+              },
+              {
+                "nodeName": "A",
+                "id": null,
+                "class": null,
+                "dataBenchId": "about-link",
+                "gapType": "not_focusable",
+                "severity": "critical",
+                "wcag": [
+                  "2.1.1",
+                  "2.4.7"
+                ]
+              }
+            ],
+            "keyboard": {
+              "walkRan": true,
+              "notFocusableAssessed": true,
+              "unassessedReasons": [],
+              "walkError": null,
+              "reachedCount": 5
+            }
+          }
+        },
+        "walk": {
+          "status": "ok",
+          "error": null,
+          "budgetExceeded": false,
+          "durationMs": 7930,
+          "load": {
+            "requestedUrl": "http://127.0.0.1:58585/corpus/dev/base/remount-on-keydown.html",
+            "finalUrl": "http://127.0.0.1:58585/corpus/dev/base/remount-on-keydown.html",
+            "status": 200,
+            "title": "Canvas tote bag",
+            "mainFrameNavigations": 1,
+            "secondNavigation": "not-expected",
+            "blockedRequests": 0
+          },
+          "findings": {
+            "F": 4,
+            "fIncomplete": false,
+            "fIncompleteCauses": {
+              "crossOriginFrames": 0,
+              "closedShadowRoots": 0
+            },
+            "plannedPresses": 30,
+            "presses": 30,
+            "wraps": 6,
+            "focusLost": 0,
+            "deep": {
+              "inside": 0,
+              "crossOrigin": 0,
+              "closedShadowRoot": 0
+            },
+            "launch": {
+              "browserVersion": "143.0.7499.4",
+              "executableBasename": "chrome-headless-shell"
+            },
+            "suspectedTrap": false,
+            "trap": {
+              "wcagCriterion": "2.1.2",
+              "verdict": "pass",
+              "reason": null,
+              "keyboardTrap": false,
+              "trapEscapable": null,
+              "singleDirection": true,
+              "directionsWalked": [
+                "forward"
+              ],
+              "launch": {
+                "browserVersion": "143.0.7499.4",
+                "executableBasename": "chrome-headless-shell"
+              },
+              "directions": [
+                {
+                  "direction": "forward",
+                  "verdict": "pass",
+                  "reason": null,
+                  "confined": false,
+                  "endOfPage": {
+                    "signal": "body-unfocused",
+                    "atPress": 5
+                  },
+                  "release": "not-probed",
+                  "region": [
+                    27,
+                    28,
+                    29,
+                    30
+                  ],
+                  "focusableCount": 4,
+                  "stuckOn": null,
+                  "escapeUrlChanged": false,
+                  "documentReplacements": []
+                }
+              ]
+            },
+            "contextChange": {
+              "wcagCriterion": "3.2.1",
+              "verdict": "pass",
+              "reason": null,
+              "fIncomplete": false,
+              "findings": [],
+              "unattributed": []
+            },
+            "escapeReachedAt": null,
+            "error": null
+          }
+        },
+        "legacy": {
+          "status": "ok",
+          "error": null,
+          "budgetExceeded": false,
+          "durationMs": 0,
+          "load": null,
+          "findings": {
+            "presses": 30,
+            "trap": {
+              "trapped": true,
+              "firstTrappedPress": 25,
+              "cycleLength": 5,
+              "element": "a \"Home\""
+            },
+            "dynamicViolations": []
+          }
+        },
+        "axe": {
+          "status": "ok",
+          "error": null,
+          "budgetExceeded": false,
+          "durationMs": 3133,
+          "load": {
+            "requestedUrl": "http://127.0.0.1:58585/corpus/dev/base/remount-on-keydown.html",
+            "finalUrl": "http://127.0.0.1:58585/corpus/dev/base/remount-on-keydown.html",
+            "status": 200,
+            "title": "Canvas tote bag",
+            "mainFrameNavigations": 1,
+            "secondNavigation": "not-expected",
+            "blockedRequests": 0
+          },
+          "findings": []
+        }
+      }
+    },
+    {
+      "pageId": "scroll-panel",
+      "url": "http://127.0.0.1:58585/corpus/dev/base/scroll-panel.html",
+      "cluster": "scroll-panel",
+      "budgetMs": 1200000,
+      "budgetExceeded": false,
+      "durationMs": 17425,
+      "rawFile": "raw/scroll-panel.json.gz",
+      "tools": {
+        "gaps": {
+          "status": "ok",
+          "error": null,
+          "budgetExceeded": false,
+          "durationMs": 7159,
+          "load": {
+            "requestedUrl": "http://127.0.0.1:58585/corpus/dev/base/scroll-panel.html",
+            "finalUrl": "http://127.0.0.1:58585/corpus/dev/base/scroll-panel.html",
+            "status": 200,
+            "title": "Terms of service",
+            "mainFrameNavigations": 1,
+            "secondNavigation": "not-expected",
+            "blockedRequests": 0
+          },
+          "findings": {
+            "gaps": [],
+            "keyboard": {
+              "walkRan": true,
+              "notFocusableAssessed": true,
+              "unassessedReasons": [],
+              "walkError": null,
+              "reachedCount": 6
+            }
+          }
+        },
+        "walk": {
+          "status": "ok",
+          "error": null,
+          "budgetExceeded": false,
+          "durationMs": 7124,
+          "load": {
+            "requestedUrl": "http://127.0.0.1:58585/corpus/dev/base/scroll-panel.html",
+            "finalUrl": "http://127.0.0.1:58585/corpus/dev/base/scroll-panel.html",
+            "status": 200,
+            "title": "Terms of service",
+            "mainFrameNavigations": 1,
+            "secondNavigation": "not-expected",
+            "blockedRequests": 0
+          },
+          "findings": {
+            "F": 3,
+            "fIncomplete": false,
+            "fIncompleteCauses": {
+              "crossOriginFrames": 0,
+              "closedShadowRoots": 0
+            },
+            "plannedPresses": 25,
+            "presses": 25,
+            "wraps": 4,
+            "focusLost": 0,
+            "deep": {
+              "inside": 0,
+              "crossOrigin": 0,
+              "closedShadowRoot": 0
+            },
+            "launch": {
+              "browserVersion": "143.0.7499.4",
+              "executableBasename": "chrome-headless-shell"
+            },
+            "suspectedTrap": false,
+            "trap": {
+              "wcagCriterion": "2.1.2",
+              "verdict": "pass",
+              "reason": null,
+              "keyboardTrap": false,
+              "trapEscapable": null,
+              "singleDirection": true,
+              "directionsWalked": [
+                "forward"
+              ],
+              "launch": {
+                "browserVersion": "143.0.7499.4",
+                "executableBasename": "chrome-headless-shell"
+              },
+              "directions": [
+                {
+                  "direction": "forward",
+                  "verdict": "pass",
+                  "reason": null,
+                  "confined": false,
+                  "endOfPage": {
+                    "signal": "body-unfocused",
+                    "atPress": 6
+                  },
+                  "release": "not-probed",
+                  "region": [
+                    23,
+                    26,
+                    15
+                  ],
+                  "focusableCount": 3,
+                  "stuckOn": null,
+                  "escapeUrlChanged": false,
+                  "documentReplacements": []
+                }
+              ]
+            },
+            "contextChange": {
+              "wcagCriterion": "3.2.1",
+              "verdict": "pass",
+              "reason": null,
+              "fIncomplete": false,
+              "findings": [],
+              "unattributed": []
+            },
+            "escapeReachedAt": null,
+            "error": null
+          }
+        },
+        "legacy": {
+          "status": "ok",
+          "error": null,
+          "budgetExceeded": false,
+          "durationMs": 0,
+          "load": null,
+          "findings": {
+            "presses": 25,
+            "trap": {
+              "trapped": false,
+              "firstTrappedPress": null,
+              "cycleLength": 0,
+              "element": null
+            },
+            "dynamicViolations": []
+          }
+        },
+        "axe": {
+          "status": "ok",
+          "error": null,
+          "budgetExceeded": false,
+          "durationMs": 3139,
+          "load": {
+            "requestedUrl": "http://127.0.0.1:58585/corpus/dev/base/scroll-panel.html",
+            "finalUrl": "http://127.0.0.1:58585/corpus/dev/base/scroll-panel.html",
+            "status": 200,
+            "title": "Terms of service",
+            "mainFrameNavigations": 1,
+            "secondNavigation": "not-expected",
+            "blockedRequests": 0
+          },
+          "findings": [
+            {
+              "id": "landmark-one-main",
+              "impact": "moderate",
+              "wcagTags": [],
+              "targets": [
+                "html"
+              ],
+              "components": [
+                "HTML"
+              ]
+            },
+            {
+              "id": "region",
+              "impact": "moderate",
+              "wcagTags": [],
+              "targets": [
+                "h1",
+                "p:nth-child(2)",
+                "p:nth-child(3)",
+                "div[role=\"group\"]"
+              ],
+              "components": [
+                "H1",
+                "P",
+                "P",
+                "DIV"
+              ]
+            },
+            {
+              "id": "scrollable-region-focusable",
+              "impact": "serious",
+              "wcagTags": [
+                "wcag2a",
+                "wcag211",
+                "wcag213"
+              ],
+              "targets": [
+                "div[aria-label=\"Terms of service text\"]",
+                "div[aria-label=\"Privacy notice text\"]"
+              ],
+              "components": [
+                "DIV.region",
+                "DIV.region"
+              ]
+            }
+          ]
+        }
+      }
+    },
+    {
+      "pageId": "three-links",
+      "url": "http://127.0.0.1:58585/corpus/dev/base/three-links.html",
+      "cluster": "three-links",
+      "budgetMs": 1200000,
+      "budgetExceeded": false,
+      "durationMs": 17423,
+      "rawFile": "raw/three-links.json.gz",
+      "tools": {
+        "gaps": {
+          "status": "ok",
+          "error": null,
+          "budgetExceeded": false,
+          "durationMs": 7155,
+          "load": {
+            "requestedUrl": "http://127.0.0.1:58585/corpus/dev/base/three-links.html",
+            "finalUrl": "http://127.0.0.1:58585/corpus/dev/base/three-links.html",
+            "status": 200,
+            "title": "Three links",
+            "mainFrameNavigations": 1,
+            "secondNavigation": "not-expected",
+            "blockedRequests": 0
+          },
+          "findings": {
+            "gaps": [],
+            "keyboard": {
+              "walkRan": true,
+              "notFocusableAssessed": true,
+              "unassessedReasons": [],
+              "walkError": null,
+              "reachedCount": 4
+            }
+          }
+        },
+        "walk": {
+          "status": "ok",
+          "error": null,
+          "budgetExceeded": false,
+          "durationMs": 7132,
+          "load": {
+            "requestedUrl": "http://127.0.0.1:58585/corpus/dev/base/three-links.html",
+            "finalUrl": "http://127.0.0.1:58585/corpus/dev/base/three-links.html",
+            "status": 200,
+            "title": "Three links",
+            "mainFrameNavigations": 1,
+            "secondNavigation": "not-expected",
+            "blockedRequests": 0
+          },
+          "findings": {
+            "F": 3,
+            "fIncomplete": false,
+            "fIncompleteCauses": {
+              "crossOriginFrames": 0,
+              "closedShadowRoots": 0
+            },
+            "plannedPresses": 25,
+            "presses": 25,
+            "wraps": 6,
+            "focusLost": 0,
+            "deep": {
+              "inside": 0,
+              "crossOrigin": 0,
+              "closedShadowRoot": 0
+            },
+            "launch": {
+              "browserVersion": "143.0.7499.4",
+              "executableBasename": "chrome-headless-shell"
+            },
+            "suspectedTrap": false,
+            "trap": {
+              "wcagCriterion": "2.1.2",
+              "verdict": "pass",
+              "reason": null,
+              "keyboardTrap": false,
+              "trapEscapable": null,
+              "singleDirection": true,
+              "directionsWalked": [
+                "forward"
+              ],
+              "launch": {
+                "browserVersion": "143.0.7499.4",
+                "executableBasename": "chrome-headless-shell"
+              },
+              "directions": [
+                {
+                  "direction": "forward",
+                  "verdict": "pass",
+                  "reason": null,
+                  "confined": false,
+                  "endOfPage": {
+                    "signal": "body-unfocused",
+                    "atPress": 4
+                  },
+                  "release": "not-probed",
+                  "region": [
+                    16,
+                    19,
+                    13
+                  ],
+                  "focusableCount": 3,
+                  "stuckOn": null,
+                  "escapeUrlChanged": false,
+                  "documentReplacements": []
+                }
+              ]
+            },
+            "contextChange": {
+              "wcagCriterion": "3.2.1",
+              "verdict": "pass",
+              "reason": null,
+              "fIncomplete": false,
+              "findings": [],
+              "unattributed": []
+            },
+            "escapeReachedAt": null,
+            "error": null
+          }
+        },
+        "legacy": {
+          "status": "ok",
+          "error": null,
+          "budgetExceeded": false,
+          "durationMs": 0,
+          "load": null,
+          "findings": {
+            "presses": 25,
+            "trap": {
+              "trapped": true,
+              "firstTrappedPress": 20,
+              "cycleLength": 4,
+              "element": "a \"Two\""
+            },
+            "dynamicViolations": [
+              {
+                "criterion": "2.4.3",
+                "severity": "moderate",
+                "description": "Focus cycling detected - focus returned to previously visited element within short sequence",
+                "evidence": [
+                  "a \"One\"",
+                  "a \"One\""
+                ]
+              }
+            ]
+          }
+        },
+        "axe": {
+          "status": "ok",
+          "error": null,
+          "budgetExceeded": false,
+          "durationMs": 3132,
+          "load": {
+            "requestedUrl": "http://127.0.0.1:58585/corpus/dev/base/three-links.html",
+            "finalUrl": "http://127.0.0.1:58585/corpus/dev/base/three-links.html",
+            "status": 200,
+            "title": "Three links",
+            "mainFrameNavigations": 1,
+            "secondNavigation": "not-expected",
+            "blockedRequests": 0
+          },
+          "findings": [
+            {
+              "id": "landmark-one-main",
+              "impact": "moderate",
+              "wcagTags": [],
+              "targets": [
+                "html"
+              ],
+              "components": [
+                "HTML"
+              ]
+            },
+            {
+              "id": "region",
+              "impact": "moderate",
+              "wcagTags": [],
+              "targets": [
+                "h1",
+                "p:nth-child(2)",
+                "p:nth-child(3)",
+                "p:nth-child(4)"
+              ],
+              "components": [
+                "H1",
+                "P",
+                "P",
+                "P"
+              ]
+            }
+          ]
+        }
+      }
+    }
+  ]
+}

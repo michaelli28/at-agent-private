@@ -91,9 +91,10 @@ function variants(): [string, VariantLabels][] {
   );
 }
 
-function firstVariant(op: OperatorId): [string, VariantLabels] {
-  const found = variants().find(([, v]) => v.operator === op);
-  if (!found) throw new Error(`no variant for ${op}`);
+// Every variant of an operator: a behaviour test that took only the first would depend on which base sorts first.
+function ofOperator(op: OperatorId): [string, VariantLabels][] {
+  const found = variants().filter(([, v]) => v.operator === op);
+  if (found.length === 0) throw new Error(`no variant for ${op}`);
   return found;
 }
 
@@ -168,7 +169,7 @@ describe("generation", () => {
     for (const [id, v] of variants()) {
       const base = baseLabels.pages[v.base];
       expect(base, id).toBeDefined();
-      const lostKeyboard = v.operator === "M1" || v.operator === "M2";
+      const lostKeyboard = ["M1", "M2", "M8", "M9", "M13"].includes(v.operator);
       const revealedByTarget = (label: ElementLabel): boolean => {
         const seen = new Set<string>();
         let cur = label.revealedBy;
@@ -200,8 +201,16 @@ describe("generation", () => {
         M5: null,
         M6: null,
         M7: "not_focusable",
+        M8: "not_focusable",
+        M9: "not_focusable",
+        M10: null,
+        M11: null,
+        M12: null,
+        // The decoy: the page switched the target off, so the right answer is no gap.
+        M13: null,
       };
       expect(target.expectedGapType, id).toBe(expectedGap[v.operator]);
+      expect(target.interactive, id).toBe(v.operator !== "M13");
       if (v.operator === "M1") {
         expect(target.acceptableGapTypes, id).toEqual([
           "wrong_role",
@@ -214,14 +223,20 @@ describe("generation", () => {
           "missing_from_a11y_tree",
         ]);
       }
+      const trap = ["M5", "M10", "M11", "M12"].includes(v.operator);
       expect(v.page.keyboardTrap, id).toBe(
-        v.operator === "M5" ? true : base.page.keyboardTrap,
+        trap ? true : base.page.keyboardTrap,
       );
       expect(v.page.trapEscapable, id).toBe(
-        v.operator === "M5" ? false : base.page.trapEscapable,
+        trap ? false : base.page.trapEscapable,
       );
       expect(v.page.contextChangeOnFocus, id).toBe(
         v.operator === "M6" ? true : base.page.contextChangeOnFocus,
+      );
+      expect(v.page.focusLostOnArrival, id).toBe(
+        ["M7", "M8", "M9"].includes(v.operator)
+          ? true
+          : base.page.focusLostOnArrival,
       );
     }
   });
@@ -293,6 +308,8 @@ const FactsSchema = z.array(
     tabIndex: z.number(),
     disabled: z.boolean(),
     visible: z.boolean(),
+    // Inside a composite widget (the roles gaps/dom-crawler.ts COMPOSITE_ROLES lists), counting from the parent.
+    widgetMember: z.boolean(),
   }),
 );
 
@@ -312,12 +329,16 @@ describe("labels agree with the DOM", () => {
           labels: v,
         })),
       ];
+      const roving = new Set<string>();
       for (const p of pages) {
         const page = await open(p.path, Object.keys(p.labels.elements));
         const facts = FactsSchema.parse(
           await page.evaluate(`Array.prototype.map.call(document.querySelectorAll('[data-bench-id]'), function (el) {
             return { id: el.getAttribute('data-bench-id'), tabIndex: el.tabIndex, disabled: el.disabled === true,
-              visible: el.checkVisibility({ visibilityProperty: true, opacityProperty: true }) };
+              visible: el.checkVisibility({ visibilityProperty: true, opacityProperty: true }),
+              widgetMember: el.parentElement !== null && el.parentElement.closest(
+                '[role="radiogroup"], [role="tablist"], [role="menu"], [role="menubar"], [role="listbox"], ' +
+                '[role="grid"], [role="treegrid"], [role="tree"], [role="toolbar"]') !== null };
           })`),
         );
         await page.close();
@@ -329,7 +350,23 @@ describe("labels agree with the DOM", () => {
           const where = `${p.id} ${f.id}`;
           if (label.revealedBy) {
             expect(f.visible, `${where} is hidden until revealed`).toBe(false);
+          } else if (
+            label.interactive &&
+            label.keyboardAccessible &&
+            f.widgetMember &&
+            f.tabIndex === -1
+          ) {
+            // Roving tabindex: a composite widget's inactive member is out of the Tab order by design and reached
+            // with arrow keys. The markup side is asserted here, the arrow keys in "base pages behave as labelled"
+            // (disclosure-tabs); the pinned list below keeps a new member from slipping through untested.
+            roving.add(`${"base" in p.labels ? p.labels.base : p.id} ${f.id}`);
+            expect(
+              !f.disabled && f.visible,
+              `${where} is a visible roving-tabindex member`,
+            ).toBe(true);
           } else if (label.interactive && label.keyboardAccessible) {
+            // native-dialog's background controls pass only because el.tabIndex ignores inertness: the modal
+            // opened on load blocks them until Confirm closes it ("base pages behave as labelled").
             expect(
               f.tabIndex >= 0 && !f.disabled && f.visible,
               `${where} is focusable`,
@@ -339,7 +376,7 @@ describe("labels agree with the DOM", () => {
             p.labels.page.focusLostOnArrival &&
             f.id === p.labels.target
           ) {
-            // M7 takes keyboard access away at run time, not in the markup: a focus handler blurs the
+            // M7-M9 take keyboard access away at run time, not in the markup: a focus handler blurs the
             // element, so it stays focusable in the DOM while a Tab walk can never leave focus on it.
             // Asserting the markup side keeps this case honest instead of exempt.
             expect(
@@ -351,94 +388,402 @@ describe("labels agree with the DOM", () => {
           }
         }
       }
+      expect([...roving].sort()).toEqual([
+        "disclosure-tabs contents-tab-2",
+        "disclosure-tabs float-tab-2",
+      ]);
     },
     LONG,
   );
 });
 
 describe("operators behave as labelled", () => {
-  it("M1 turns a native button into a mouse-only div", async () => {
-    const [id, v] = firstVariant("M1");
-    const page = await open(`/variants/${v.file}`, [v.target]);
-    expect(
-      await page.evaluate(`document.querySelector('${sel(v.target)}').tagName`),
-      id,
-    ).toBe("DIV");
-    expect(
-      await page.evaluate(
-        `document.querySelector('${sel(v.target)}').tabIndex`,
-      ),
-      id,
-    ).toBe(-1);
-    expect((await axNode(page, v.target)).role?.value, id).not.toBe("button");
-    await page.click(sel(v.target));
-    expect(await page.evaluate("window.__benchClicks"), id).toEqual([v.target]);
-    await page.close();
-  });
+  it(
+    "M1 turns a native button into a mouse-only div",
+    async () => {
+      for (const [id, v] of ofOperator("M1")) {
+        const page = await open(`/variants/${v.file}`, [v.target]);
+        expect(
+          await page.evaluate(
+            `document.querySelector('${sel(v.target)}').tagName`,
+          ),
+          id,
+        ).toBe("DIV");
+        expect(
+          await page.evaluate(
+            `document.querySelector('${sel(v.target)}').tabIndex`,
+          ),
+          id,
+        ).toBe(-1);
+        expect((await axNode(page, v.target)).role?.value, id).not.toBe(
+          "button",
+        );
+        await page.click(sel(v.target));
+        expect(await page.evaluate("window.__benchClicks"), id).toEqual([
+          v.target,
+        ]);
+        await page.close();
+      }
+    },
+    LONG,
+  );
 
-  it("M2 leaves a role=button div out of the tab order", async () => {
-    const [id, v] = firstVariant("M2");
-    const page = await open(`/variants/${v.file}`, [v.target]);
-    expect(
-      await page.evaluate(
-        `document.querySelector('${sel(v.target)}').tabIndex`,
-      ),
-      id,
-    ).toBe(-1);
-    expect((await axNode(page, v.target)).role?.value, id).toBe("button");
-    await page.close();
-  });
+  it(
+    "M2 leaves a role=button div out of the tab order",
+    async () => {
+      for (const [id, v] of ofOperator("M2")) {
+        const page = await open(`/variants/${v.file}`, [v.target]);
+        expect(
+          await page.evaluate(
+            `document.querySelector('${sel(v.target)}').tabIndex`,
+          ),
+          id,
+        ).toBe(-1);
+        expect((await axNode(page, v.target)).role?.value, id).toBe("button");
+        await page.close();
+      }
+    },
+    LONG,
+  );
 
-  it("M3 hides a focusable control from assistive technology", async () => {
-    const [id, v] = firstVariant("M3");
-    const page = await open(`/variants/${v.file}`, [v.target]);
-    expect((await axNode(page, v.target)).ignored, id).toBe(true);
-    await page.focus(sel(v.target));
-    expect(await activeId(page), id).toBe(v.target);
-    await page.close();
-  });
+  it(
+    "M3 hides a focusable control from assistive technology",
+    async () => {
+      for (const [id, v] of ofOperator("M3")) {
+        const page = await open(`/variants/${v.file}`, [v.target]);
+        expect((await axNode(page, v.target)).ignored, id).toBe(true);
+        await page.focus(sel(v.target));
+        expect(await activeId(page), id).toBe(v.target);
+        await page.close();
+      }
+    },
+    LONG,
+  );
 
-  it("M4 strips the accessible name from an icon button", async () => {
-    const [id, v] = firstVariant("M4");
-    const basePage = await open(`/corpus/${baseLabels.pages[v.base].file}`, [
-      v.target,
-    ]);
-    expect((await axNode(basePage, v.target)).name?.value ?? "", id).not.toBe(
-      "",
+  it(
+    "M4 strips the accessible name from an icon button",
+    async () => {
+      for (const [id, v] of ofOperator("M4")) {
+        const basePage = await open(
+          `/corpus/${baseLabels.pages[v.base].file}`,
+          [v.target],
+        );
+        expect(
+          (await axNode(basePage, v.target)).name?.value ?? "",
+          id,
+        ).not.toBe("");
+        await basePage.close();
+        const page = await open(`/variants/${v.file}`, [v.target]);
+        expect((await axNode(page, v.target)).name?.value ?? "", id).toBe("");
+        await page.close();
+      }
+    },
+    LONG,
+  );
+
+  it(
+    "M5 traps Tab and Shift+Tab on one element",
+    async () => {
+      for (const [id, v] of ofOperator("M5")) {
+        const page = await open(`/variants/${v.file}`, [v.target]);
+        await page.focus(sel(v.target));
+        await page.keyboard.press("Tab");
+        expect(await activeId(page), id).toBe(v.target);
+        await page.keyboard.press("Shift+Tab");
+        expect(await activeId(page), id).toBe(v.target);
+        await page.keyboard.press("Escape");
+        await page.keyboard.press("Tab");
+        expect(await activeId(page), id).toBe(v.target);
+        await page.close();
+      }
+    },
+    LONG,
+  );
+
+  it(
+    "M6 navigates when one element receives focus",
+    async () => {
+      for (const [id, v] of ofOperator("M6")) {
+        const basePage = await open(
+          `/corpus/${baseLabels.pages[v.base].file}`,
+          [v.target],
+        );
+        await basePage.focus(sel(v.target));
+        expect(basePage.url(), id).not.toContain("changed=1");
+        await basePage.close();
+        const page = await open(`/variants/${v.file}`, [v.target]);
+        await Promise.all([
+          page.waitForURL(/\?changed=1$/),
+          page.focus(sel(v.target)),
+        ]);
+        await page.close();
+      }
+    },
+    LONG,
+  );
+
+  it(
+    "M7 drops focus from its target to body the moment it arrives",
+    async () => {
+      for (const [id, v] of ofOperator("M7")) {
+        const basePage = await open(
+          `/corpus/${baseLabels.pages[v.base].file}`,
+          [v.target],
+        );
+        await basePage.focus(sel(v.target));
+        expect(await activeId(basePage), `${id}: base holds focus`).toBe(
+          v.target,
+        );
+        await basePage.close();
+        const page = await open(`/variants/${v.file}`, [v.target]);
+        expect(
+          await page.evaluate(`(function () {
+            document.querySelector('${sel(v.target)}').focus();
+            return document.activeElement === document.body;
+          })()`),
+          `${id} drops focus on arrival`,
+        ).toBe(true);
+        await page.close();
+      }
+    },
+    LONG,
+  );
+
+  const onBody = async (page: Page): Promise<boolean> =>
+    (await page.evaluate(
+      "document.activeElement === null || document.activeElement === document.body",
+    )) === true;
+
+  it(
+    "M8 keeps focus on its target for a moment, then drops it to body, and the next Tab moves on",
+    async () => {
+      for (const [id, v] of ofOperator("M8")) {
+        const page = await open(`/variants/${v.file}`, [v.target]);
+        // One evaluate reads focus at once and again after the 60 ms timer, so a slow round trip cannot
+        // land the first read after the blur.
+        const reads = z.array(z.boolean()).parse(
+          await page.evaluate(`new Promise(function (done) {
+            var el = document.querySelector('${sel(v.target)}');
+            el.focus();
+            var held = document.activeElement === el;
+            setTimeout(function () { done([held, document.activeElement === document.body]); }, 150);
+          })`),
+        );
+        expect(reads, `${id}: [held at once, on body after 150 ms]`).toEqual([
+          true,
+          true,
+        ]);
+        await page.keyboard.press("Tab");
+        expect(await activeId(page), id).not.toBe(v.target);
+        await page.close();
+      }
+    },
+    LONG,
+  );
+
+  it(
+    "M9 drops focus from its target at once while a timer rewrites only the URL fragment, in the same document",
+    async () => {
+      for (const [id, v] of ofOperator("M9")) {
+        const page = await open(`/variants/${v.file}`, [v.target]);
+        expect(
+          await page.evaluate(`(function () {
+            window.__benchSameDocument = true;
+            document.querySelector('${sel(v.target)}').focus();
+            return document.activeElement === document.body;
+          })()`),
+          `${id} drops focus on arrival`,
+        ).toBe(true);
+        await page.waitForTimeout(350);
+        expect(await page.evaluate("location.hash"), id).toMatch(/^#tick-\d+$/);
+        // Still the document the marker was set in: the fragment timer loaded nothing.
+        expect(await page.evaluate("window.__benchSameDocument"), id).toBe(
+          true,
+        );
+        expect(await onBody(page), id).toBe(true);
+        await page.close();
+      }
+    },
+    LONG,
+  );
+
+  it(
+    "M10 sends Tab on the last stop to the first and Shift+Tab on the first to the last, so once in the loop Tab and Shift+Tab never leave it",
+    async () => {
+      // The loop: every element that passes the script's own stop test, in document order.
+      const STOPS = `Array.prototype.filter.call(document.querySelectorAll('*'), function (el) {
+        return el.tabIndex >= 0 && !el.disabled && el.checkVisibility({ visibilityProperty: true });
+      })`;
+      const FIRST_STOP = `${STOPS}[0]`;
+      const inLoop = async (page: Page): Promise<boolean> =>
+        (await page.evaluate(
+          `${STOPS}.indexOf(document.activeElement) >= 0`,
+        )) === true;
+      for (const [id, v] of ofOperator("M10")) {
+        const page = await open(`/variants/${v.file}`, [v.target]);
+        const presses =
+          2 * z.number().parse(await page.evaluate(`${STOPS}.length`)) + 2;
+        // Twice round the loop and more, Tab from a fresh load, then Shift+Tab from the target: every press lands in it.
+        for (let i = 0; i < presses; i++) {
+          await page.keyboard.press("Tab");
+          expect(await inLoop(page), `${id} Tab ${i + 1}`).toBe(true);
+        }
+        await page.focus(sel(v.target));
+        for (let i = 0; i < presses; i++) {
+          await page.keyboard.press("Shift+Tab");
+          expect(await inLoop(page), `${id} Shift+Tab ${i + 1}`).toBe(true);
+        }
+        await page.focus(sel(v.target));
+        await page.keyboard.press("Tab");
+        expect(
+          await page.evaluate(`document.activeElement === ${FIRST_STOP}`),
+          `${id}: Tab on the last stop`,
+        ).toBe(true);
+        await page.keyboard.press("Shift+Tab");
+        expect(await activeId(page), `${id}: Shift+Tab on the first`).toBe(
+          v.target,
+        );
+        await page.keyboard.press("Escape");
+        await page.keyboard.press("Tab");
+        expect(
+          await page.evaluate(`document.activeElement === ${FIRST_STOP}`),
+          `${id}: Escape releases nothing`,
+        ).toBe(true);
+        await page.close();
+        // Shift+Tab from a fresh load enters at the page's last Tab stop. With the Tab walk above, this puts every
+        // stop Chromium reaches from load in the loop, on every base but scroll-panel (next test).
+        if (!id.startsWith("scroll-panel__")) {
+          const fresh = await open(`/variants/${v.file}`, [v.target]);
+          await fresh.keyboard.press("Shift+Tab");
+          expect(await inLoop(fresh), `${id}: Shift+Tab from load`).toBe(true);
+          await fresh.close();
+        }
+      }
+    },
+    LONG,
+  );
+
+  it("scroll-panel__M10: the two scroll regions sit outside the loop, so Shift+Tab from a fresh load reaches one and the next Tab leaves the page", async () => {
+    const found = ofOperator("M10").find(([id]) =>
+      id.startsWith("scroll-panel__"),
     );
-    await basePage.close();
+    if (!found) throw new Error("no M10 variant on scroll-panel");
+    const [, v] = found;
     const page = await open(`/variants/${v.file}`, [v.target]);
-    expect((await axNode(page, v.target)).name?.value ?? "", id).toBe("");
-    await page.close();
-  });
-
-  it("M5 traps Tab and Shift+Tab on one element", async () => {
-    const [id, v] = firstVariant("M5");
-    const page = await open(`/variants/${v.file}`, [v.target]);
-    await page.focus(sel(v.target));
-    await page.keyboard.press("Tab");
-    expect(await activeId(page), id).toBe(v.target);
     await page.keyboard.press("Shift+Tab");
-    expect(await activeId(page), id).toBe(v.target);
-    await page.keyboard.press("Escape");
+    expect(
+      await page.evaluate("document.activeElement.getAttribute('aria-label')"),
+    ).toBe("Privacy notice text");
     await page.keyboard.press("Tab");
-    expect(await activeId(page), id).toBe(v.target);
+    expect(await onBody(page)).toBe(true);
+    expect(await page.evaluate("document.hasFocus()")).toBe(false);
     await page.close();
   });
 
-  it("M6 navigates when one element receives focus", async () => {
-    const [id, v] = firstVariant("M6");
-    const basePage = await open(`/corpus/${baseLabels.pages[v.base].file}`, [
-      v.target,
-    ]);
-    await basePage.focus(sel(v.target));
-    expect(basePage.url(), id).not.toContain("changed=1");
-    await basePage.close();
-    const page = await open(`/variants/${v.file}`, [v.target]);
-    await Promise.all([
-      page.waitForURL(/\?changed=1$/),
-      page.focus(sel(v.target)),
-    ]);
+  it(
+    "M11 replaces its target with a copy on Tab and Shift+Tab and focuses the copy, so focus never leaves it",
+    async () => {
+      for (const [id, v] of ofOperator("M11")) {
+        const page = await open(`/variants/${v.file}`, [v.target]);
+        await page.focus(sel(v.target));
+        await page.evaluate("window.__benchFirst = document.activeElement");
+        for (const key of ["Tab", "Shift+Tab", "Escape", "Tab", "Tab"]) {
+          await page.keyboard.press(key);
+          expect(await activeId(page), `${id} after ${key}`).toBe(v.target);
+        }
+        expect(
+          await page.evaluate("window.__benchFirst.isConnected"),
+          `${id}: the focused node is a copy`,
+        ).toBe(false);
+        await page.close();
+      }
+    },
+    LONG,
+  );
+
+  it(
+    "M12 loops Tab among its target and the two scroll regions after it, and Shift+Tab the other way",
+    async () => {
+      for (const [id, v] of ofOperator("M12")) {
+        const page = await open(`/variants/${v.file}`, [v.target]);
+        // 0 = the target, 1 and 2 = the scroll regions after it, -1 = anywhere else.
+        const at = async (): Promise<unknown> =>
+          page.evaluate(`(function () {
+            var t = document.querySelector('${sel(v.target)}');
+            return [t, t.nextElementSibling, t.nextElementSibling.nextElementSibling].indexOf(document.activeElement);
+          })()`);
+        await page.focus(sel(v.target));
+        const path: unknown[] = [];
+        for (const key of ["Tab", "Tab", "Tab", "Tab", "Tab", "Tab"]) {
+          await page.keyboard.press(key);
+          path.push(await at());
+        }
+        for (const key of ["Shift+Tab", "Shift+Tab", "Shift+Tab", "Escape"]) {
+          await page.keyboard.press(key);
+          path.push(await at());
+        }
+        await page.keyboard.press("Tab");
+        path.push(await at());
+        expect(path, id).toEqual([1, 2, 0, 1, 2, 0, 2, 1, 0, 0, 1]);
+        await page.close();
+      }
+    },
+    LONG,
+  );
+
+  it(
+    "M13 makes one control inert and transparent: it takes no focus and no clicks, and assistive technology ignores it",
+    async () => {
+      for (const [id, v] of ofOperator("M13")) {
+        const page = await open(`/variants/${v.file}`, [v.target]);
+        expect(
+          await page.evaluate(`(function () {
+            var el = document.querySelector('${sel(v.target)}');
+            return [el.inert, getComputedStyle(el).opacity];
+          })()`),
+          id,
+        ).toEqual([true, "0"]);
+        await page.focus(sel(v.target));
+        expect(await activeId(page), id).not.toBe(v.target);
+        // A click at its centre reaches whatever lies beneath it, never a tagged element, and navigates nowhere.
+        const url = page.url();
+        await page.evaluate(`document.addEventListener('click', function (e) {
+          var hit = e.target.closest ? e.target.closest('[data-bench-id]') : null;
+          window.__benchHit = hit ? hit.getAttribute('data-bench-id') : null;
+        }, true)`);
+        const box = await page.locator(sel(v.target)).boundingBox();
+        if (box === null) throw new Error(`${id}: target has no box`);
+        await page.mouse.click(box.x + box.width / 2, box.y + box.height / 2);
+        expect(await page.evaluate("window.__benchHit"), id).toBeNull();
+        expect(page.url(), id).toBe(url);
+        expect((await axNode(page, v.target)).ignored, id).toBe(true);
+        await page.close();
+      }
+    },
+    LONG,
+  );
+
+  it("M13 on the modal leaves its trap as labelled: focus stays in the dialog and Escape returns it to the trigger", async () => {
+    const [id, v] = ofOperator("M13").find(([, x]) => x.base === "modal") ?? [
+      "",
+      null,
+    ];
+    if (v === null) throw new Error("no M13 variant on the modal");
+    expect(v.page, id).toMatchObject({
+      keyboardTrap: true,
+      trapEscapable: true,
+    });
+    const page = await open(`/variants/${v.file}`, Object.keys(v.elements));
+    const inside = ["name-input", "username-input", "save-button"];
+    expect(await activeId(page), id).toBe("name-input");
+    for (const key of ["Tab", "Shift+Tab"]) {
+      for (let i = 0; i < 6; i++) {
+        await page.keyboard.press(key);
+        expect(inside, `${id} ${key} ${i + 1}`).toContain(await activeId(page));
+      }
+    }
+    await page.keyboard.press("Escape");
+    expect(await activeId(page), id).toBe("trigger");
     await page.close();
   });
 });
@@ -544,6 +889,149 @@ describe("base pages behave as labelled", () => {
     expect(
       await page.evaluate('document.getElementById("status").textContent'),
     ).toBe("Saved to wishlist");
+    // The share button is portalled into the static header's host div, and works from the keyboard there.
+    expect(
+      await page.evaluate(
+        `document.querySelector('${sel("portal-host")}').contains(document.querySelector('${sel("share-button")}'))`,
+      ),
+    ).toBe(true);
+    await page.focus(sel("share-button"));
+    await page.keyboard.press("Enter");
+    expect(
+      await page.evaluate('document.getElementById("status").textContent'),
+    ).toBe("Link copied");
+    await page.close();
+  });
+
+  const tabPath = async (page: Page, presses: number): Promise<unknown[]> => {
+    const path: unknown[] = [];
+    for (let i = 0; i < presses; i++) {
+      await page.keyboard.press("Tab");
+      path.push(await activeId(page));
+    }
+    return path;
+  };
+
+  it("native-dialog: focus starts in the dialog, Tab leaves the page instead of reaching the background, and Confirm opens the page", async () => {
+    const labels = baseLabels.pages["native-dialog"];
+    expect(labels.page).toMatchObject({ keyboardTrap: false });
+    const page = await open(
+      `/corpus/${labels.file}`,
+      Object.keys(labels.elements),
+    );
+    // null: focus has left the document for the browser's own UI, so the native modal confines nothing.
+    expect([await activeId(page), ...(await tabPath(page, 4))]).toEqual([
+      "confirm-button",
+      null,
+      "confirm-button",
+      null,
+      "confirm-button",
+    ]);
+    await page.keyboard.press("Enter");
+    expect(
+      await page.evaluate('document.getElementById("age-gate").open'),
+    ).toBe(false);
+    expect(await tabPath(page, 2)).toEqual(["shop-link", "join-button"]);
+    await page.close();
+  });
+
+  it("disclosure-tabs: Tab reaches each tablist's selected tab and each summary, ArrowRight moves to tab 2, Enter opens a details", async () => {
+    const labels = baseLabels.pages["disclosure-tabs"];
+    const page = await open(
+      `/corpus/${labels.file}`,
+      Object.keys(labels.elements),
+    );
+    expect(await tabPath(page, 5)).toEqual([
+      "a-skip-link",
+      "float-tab-1",
+      "contents-tab-1",
+      "faq-shipping-summary",
+      "faq-returns-summary",
+    ]);
+    for (const list of ["float", "contents"]) {
+      await page.focus(sel(`${list}-tab-1`));
+      await page.keyboard.press("ArrowRight");
+      expect(await activeId(page), list).toBe(`${list}-tab-2`);
+    }
+    await page.focus(sel("faq-shipping-summary"));
+    await page.keyboard.press("Enter");
+    expect(
+      await page.evaluate(
+        `document.querySelector('${sel("faq-shipping")}').open`,
+      ),
+    ).toBe(true);
+    await page.close();
+  });
+
+  it("one-button: Tab reaches the only button, Enter works, and the next Tab leaves the page", async () => {
+    const labels = baseLabels.pages["one-button"];
+    const page = await open(
+      `/corpus/${labels.file}`,
+      Object.keys(labels.elements),
+    );
+    expect(await tabPath(page, 1)).toEqual(["only-button"]);
+    await page.keyboard.press("Enter");
+    expect(
+      await page.evaluate('document.getElementById("status").textContent'),
+    ).toBe("Subscribed");
+    expect(await tabPath(page, 2)).toEqual([null, "only-button"]);
+    await page.close();
+  });
+
+  it("scroll-panel: Tab passes the button, then both scroll regions (untagged Tab stops), then leaves the page", async () => {
+    const labels = baseLabels.pages["scroll-panel"];
+    const page = await open(
+      `/corpus/${labels.file}`,
+      Object.keys(labels.elements),
+    );
+    const path: unknown[] = [];
+    for (let i = 0; i < 6; i++) {
+      await page.keyboard.press("Tab");
+      path.push(
+        await page.evaluate(
+          "document.activeElement.getAttribute('data-bench-id') || document.activeElement.getAttribute('aria-label')",
+        ),
+      );
+    }
+    expect(path).toEqual([
+      "link-1",
+      "link-2",
+      "agree-button",
+      "Terms of service text",
+      "Privacy notice text",
+      null,
+    ]);
+    await page.focus(sel("agree-button"));
+    await page.keyboard.press("Enter");
+    expect(
+      await page.evaluate('document.getElementById("status").textContent'),
+    ).toBe("Thanks, you have agreed");
+    await page.close();
+  });
+
+  it("remount-on-keydown: the first keydown re-renders main, and Tab still reaches every control, which still works", async () => {
+    const labels = baseLabels.pages["remount-on-keydown"];
+    const page = await open(
+      `/corpus/${labels.file}`,
+      Object.keys(labels.elements),
+    );
+    await page.evaluate(
+      `window.__benchFirst = document.querySelector('${sel("home-link")}')`,
+    );
+    expect(await tabPath(page, 4)).toEqual([
+      "home-link",
+      "about-link",
+      "buy-button",
+      "cart-button",
+    ]);
+    expect(await page.evaluate("window.__benchFirst.isConnected")).toBe(false);
+    const status = (): Promise<unknown> =>
+      page.evaluate('document.getElementById("status").textContent');
+    await page.keyboard.press("Enter");
+    expect(await status()).toBe("Added to cart");
+    await page.keyboard.press("Shift+Tab");
+    await page.keyboard.press("Enter");
+    expect(await status()).toBe("Bought");
     await page.close();
   });
 });

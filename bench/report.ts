@@ -17,6 +17,7 @@ import {
   VariantLabelsFileSchema,
   acceptedGapTypes,
   type BaseLabelsFile,
+  type OperatorId,
   type VariantLabels,
   type VariantLabelsFile,
 } from "./corpus/labels-schema.js";
@@ -530,31 +531,41 @@ function renderHeadlineDelta(
 
 type Cell = "Y" | "N" | "E" | "U";
 
-// Did the checker flag the seeded target? M5 is the 2.1.2 oracle and M6 the 3.2.1 one, so they read a
-// different detector per column: before = the frozen legacy trap / legacy 3.2.1, after = the judges'
-// verdicts. M1-M4 and M7 are gap-target operators, and the gap detector is shared, so their cell is
-// the same in both columns by construction.
+// Operators scored by a page-level verdict rather than a gap on the target: 2.1.2 for the traps, 3.2.1 for M6's
+// navigation and for M8/M9, which exist to show the 3.2.1 judge's two timing fixes. M7 plants the same focus drop
+// but is scored on its target's not_focusable gap. Every other operator reads the shared gap detector.
+const TRAP_OPERATORS: readonly OperatorId[] = ["M5", "M10", "M11", "M12"];
+const CONTEXT_OPERATORS: readonly OperatorId[] = ["M6", "M8", "M9"];
+// A decoy's target is labelled with no gap, so a Y on it is a false alarm.
+const DECOY_OPERATORS: readonly OperatorId[] = ["M13"];
+const GAP_TARGET_OPERATORS = OPERATOR_IDS.filter(
+  (op) => !TRAP_OPERATORS.includes(op) && !CONTEXT_OPERATORS.includes(op),
+);
+
+// Did the checker flag the seeded target? The trap and context operators read a different detector per
+// column: before = the frozen legacy trap / legacy 3.2.1, after = the judges' verdicts. The gap-target
+// operators read the gap detector, which is shared, so their cell is the same in both columns by
+// construction.
 function flaggedTarget(
   page: PageResult,
   v: Pick<VariantLabels, "operator" | "target" | "elements">,
   column: "before" | "after",
 ): Cell {
-  if (v.operator === "M5" || v.operator === "M6") {
+  const trap = TRAP_OPERATORS.includes(v.operator);
+  if (trap || CONTEXT_OPERATORS.includes(v.operator)) {
     if (column === "after") {
       const walk = page.tools.walk.findings;
       if (walk === null) return "E";
-      const verdict =
-        v.operator === "M5" ? walk.trap.verdict : walk.contextChange.verdict;
+      const verdict = trap ? walk.trap.verdict : walk.contextChange.verdict;
       return verdict === "fail" ? "Y" : verdict === "undetermined" ? "U" : "N";
     }
     const legacy = page.tools.legacy.findings;
     if (legacy === null) return "E";
-    const hit =
-      v.operator === "M5"
-        ? legacyTrapFlagged(legacy.trap)
-        : legacy.dynamicViolations.some((d) => d.criterion === "3.2.1");
+    const hit = trap
+      ? legacyTrapFlagged(legacy.trap)
+      : legacy.dynamicViolations.some((d) => d.criterion === "3.2.1");
     if (hit) return "Y";
-    return v.operator === "M5" && legacyTrapUndetermined(page) ? "U" : "N";
+    return trap && legacyTrapUndetermined(page) ? "U" : "N";
   }
   const gaps = page.tools.gaps.findings;
   if (gaps === null) return "E";
@@ -596,10 +607,11 @@ function renderDevVariants(
   const operators = OPERATOR_IDS.filter((op) =>
     rows.some((r) => r.label.operator === op),
   );
+  const gapOps = GAP_TARGET_OPERATORS.join(", ");
   out.push(
-    "Flagged = a gap on the target's data-bench-id (M1–M4, M7), the 2.1.2 verdict (M5), the 3.2.1 verdict (M6). Y flagged · N missed · U undetermined (counted as a miss) · E tool error · · no variant. † the unmodified base page (dev-fixtures, same commit) already carries the same flag, so that Y is not evidence the seeded change was seen.",
+    `Flagged = a gap on the target's data-bench-id (${gapOps}), the 2.1.2 verdict (${TRAP_OPERATORS.join(", ")}), the 3.2.1 verdict (${CONTEXT_OPERATORS.join(", ")}). Y flagged · N missed · U undetermined (counted as a miss) · E tool error · · no variant. † the unmodified base page (dev-fixtures, same commit) already carries the same flag, so that Y is not evidence the seeded change was seen. ${DECOY_OPERATORS.join(", ")} is a decoy whose target is labelled with no gap: a Y in its row is a false alarm, and its per-operator count below is a false-alarm count.`,
     "",
-    "A cell that changed between the columns prints before→after; an unchanged cell prints once. M1–M4 and M7 read the shared gap detector, so they can never change.",
+    `A cell that changed between the columns prints before→after; an unchanged cell prints once. ${gapOps} read the shared gap detector, so they can never change.`,
     "",
     `| operator | ${bases.join(" | ")} |`,
     `|---|${bases.map(() => "---").join("|")}|`,

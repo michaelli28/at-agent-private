@@ -31,7 +31,7 @@
 
 ## What the fix design saw of the held-out set (decided 2026-09-20)
 
-The fixes were designed from the dev corpus and the probes. Three places where held-out knowledge
+The fixes were designed from the dev corpus and the probes. The places where held-out knowledge
 nonetheless touched a decision, stated here rather than left for a reader to find:
 
 - **The F55 rule was chosen knowing how the BAD pages fail.** `packages/accessibility/src/context-change.ts`
@@ -48,6 +48,13 @@ nonetheless touched a decision, stated here rather than left for a reader to fin
   the F55 rule would not execute for the first time on the test set. It was added before the fix it
   supports was measured, it changes no test-set page, and it is labelled 3.2.1 only. Disclosed in
   the same spirit as the two committed sampling-rule amendments.
+- **M8-M13 and five dev bases were added after the labels froze** (round 2, 2026-09-23): operators
+  M8-M13, the bases `disclosure-tabs`, `native-dialog`, `one-button`, `scroll-panel` and
+  `remount-on-keydown`, and a portal on `react-div-button`. Each was built to show one round-2 checker
+  fix, so the old → new dev deltas they produce hold by construction and are not independent evidence
+  that the fixes work. They change no test-set page. The spot-check stays pinned to the Checkpoint-1
+  corpus (`CHECKPOINT1_CORPUS` in `bench/spotcheck.ts`): its 20 recorded answers stand, and none of
+  them covers this material.
 
 ## What the harness does NOT measure (decided 2026-09-20)
 
@@ -71,3 +78,46 @@ nonetheless touched a decision, stated here rather than left for a reader to fin
   so those files fail to parse on version rather than silently mis-parsing. Re-render them at their
   own commit; they are a frozen artifact. The same now applies to the v2 dev runs at e1eb294 and
   118bb99.
+
+## Round-2 fixes: what they cover and cost (decided 2026-09-23)
+
+The labelling calls the round-2 dev material needed, and the two Run A cross-product cells no design predicted
+(the old checker at 0a71e4e, `bench/results/0a71e4e/dev-variants`). What each fix covers and costs is added
+with the fix.
+
+- **M10, a script loop from the last stop the script counts to the first, is labelled a 2.1.2 trap.** Once
+  focus is in the loop, Tab and Shift+Tab never take it out. WCAG 2.1.2 is worded per component, and
+  where the loop holds several components focus can leave each of them. The label schema's
+  "Tab/Shift+Tab alone cannot move focus out of some region" takes the loop as the region, so the M10
+  variants carry `keyboardTrap: true, trapEscapable: false`. Read per component, all but one would be
+  clean: on `one-button__M10__only-button` the loop is the page's one button, which Tab and Shift+Tab
+  never leave, a per-component trap like M5. The loop holds every stop whose `tabIndex` is 0 or more; on
+  eight M10 pages that is every Tab stop Chromium reaches from load. On `scroll-panel__M10__agree-button`
+  it is not: the two keyboard-focusable scrollers after `agree-button` report `tabIndex` -1 and sit
+  outside the loop, so Shift+Tab from a fresh load reaches one and the next Tab leaves the page. On
+  `navbar__M10__offcanvas-open` a person who opens the account menu with Enter can Tab past the loop's
+  end and out of the page. Both labels stand, because focus in the loop never leaves it by Tab or
+  Shift+Tab alone.
+- **M11's copy is made with `cloneNode`, which drops listeners added with `addEventListener`.** On
+  `js-handlers`, `one-button` and `scroll-panel` the target therefore stops working after the first Tab
+  press on it: Enter on the copy does nothing. The label stays `keyboardAccessible: true`, because the
+  schema's rule is reachable and operable from a fresh page load, and from a fresh load Tab reaches the
+  original, which Enter operates.
+- **`native-dialog` is labelled clean.** Its age gate is a `<dialog>` opened with `showModal()` on
+  load. The page behind it is inert until Confirm closes the dialog and is then reachable with Tab, so
+  the background controls are labelled accessible with no gap. Tab from Confirm leaves the page for the
+  browser's own UI, so the page is no trap (`keyboardTrap: false`). Its script is a file, so no operator
+  is seeded on it.
+- **`remount-on-keydown` is labelled clean.** It re-renders `<main>` on its first keydown, so the gap
+  detector's crawl and its Tab walk see different nodes: a hazard for the checker, not a WCAG defect,
+  because every control still works from the keyboard. Its script is a file, so no operator is seeded
+  on it; an operator's script would bind to nodes the first keydown removes.
+- **`one-button__M7__only-button` reads 3.2.1 `pass`, an old-checker miss.** The walk marks a drop
+  `focusLost` only after focus has been on a real element in the document (`lastRealSeen`, `tab-walk.ts`).
+  The page's only stop blurs on arrival, so every read is `body` and all 8 drops are filed
+  `no-preceding-stop`; the gap detector does flag it `not_focusable`. B1's settle fix also needs `focusLost`,
+  so the cell stays `pass`.
+- **`scroll-panel__M6__agree-button` reads 2.1.2 `undetermined / document-replaced`; the other 8 M6 pages
+  pass.** The walk counts 3 stops (not the two scrollers), so the judge wants a wrap in the last 4 presses,
+  and a lap here is 6. M6's reload at press 3 puts the wraps at 9, 15 and 21, none in 22-25, and a replaced
+  document turns off the all-stops-visited signal. A refusal on a page labelled no trap, not a wrong verdict.

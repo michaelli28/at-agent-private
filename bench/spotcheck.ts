@@ -14,6 +14,7 @@ import {
   type ElementLabel,
   type OperatorId,
   type PageFlags,
+  type VariantLabels,
   type VariantLabelsFile,
 } from "./corpus/labels-schema.js";
 import { SERVE_ORIGIN, serveUrl } from "./serve.js";
@@ -56,6 +57,99 @@ export const GAP_OPERATORS = [
 ] as const satisfies readonly OperatorId[];
 type GapOperator = (typeof GAP_OPERATORS)[number];
 const DEV_BASE_ELEMENTS = QUOTAS.devElement - GAP_OPERATORS.length;
+
+// The corpus the 20 recorded answers were drawn from (Checkpoint 1, 722307b): these 8 bases with the elements each had
+// then, and operators M1-M7. Every dev pool keeps to it, so a base, element or operator added later never enters a
+// draw and the committed draw and its answers stand. Frozen: growing the corpus never edits it.
+export const CHECKPOINT1_CORPUS = {
+  operators: ["M1", "M2", "M3", "M4", "M5", "M6", "M7"],
+  elements: {
+    "good-operable": [
+      "skip-link",
+      "search-input",
+      "search-submit",
+      "nav-home",
+      "nav-about",
+      "nav-contact",
+      "sitemap-link",
+    ],
+    "identical-links": [
+      "read-more-01",
+      "read-more-02",
+      "read-more-03",
+      "read-more-04",
+      "read-more-05",
+      "read-more-06",
+      "read-more-07",
+      "read-more-08",
+      "read-more-09",
+      "read-more-10",
+      "read-more-11",
+      "read-more-12",
+    ],
+    "three-links": ["link-1", "link-2", "link-3"],
+    navbar: [
+      "brand",
+      "toggler",
+      "nav-home",
+      "nav-features",
+      "dropdown-toggle",
+      "dropdown-item-1",
+      "dropdown-item-2",
+      "dropdown-item-3",
+      "dropdown-item-4",
+      "dropdown-item-5",
+      "dropdown-item-6",
+      "hidden-csrf",
+      "hidden-locale",
+      "hidden-ref",
+      "search-input",
+      "search-submit",
+      "offcanvas-open",
+      "offcanvas-close",
+      "offcanvas-link-1",
+      "offcanvas-link-2",
+      "offcanvas-link-3",
+    ],
+    form: [
+      "name-input",
+      "email-input",
+      "topic-select",
+      "message-textarea",
+      "subscribe-checkbox",
+      "submit-button",
+    ],
+    "js-handlers": ["custom-button", "custom-checkbox", "native-button"],
+    modal: [
+      "focus-guard-start",
+      "trigger",
+      "help-link",
+      "name-input",
+      "username-input",
+      "save-button",
+      "close-button",
+      "focus-guard-end",
+    ],
+    "react-div-button": ["add-to-cart-div", "wishlist-button", "plain-div"],
+  },
+} as const satisfies {
+  operators: readonly OperatorId[];
+  elements: Readonly<Record<string, readonly string[]>>;
+};
+const CHECKPOINT1_OPERATORS: ReadonlySet<string> = new Set(
+  CHECKPOINT1_CORPUS.operators,
+);
+const CHECKPOINT1_BASES: ReadonlySet<string> = new Set(
+  Object.keys(CHECKPOINT1_CORPUS.elements),
+);
+const CHECKPOINT1_ELEMENTS: ReadonlySet<string> = new Set(
+  Object.entries(CHECKPOINT1_CORPUS.elements).flatMap(([base, ids]) =>
+    ids.map((id) => `${base}#${id}`),
+  ),
+);
+const inCheckpoint1 = (v: VariantLabels): boolean =>
+  CHECKPOINT1_OPERATORS.has(v.operator) &&
+  CHECKPOINT1_ELEMENTS.has(`${v.base}#${v.target}`);
 
 const ReaderSchema = z.enum(["A", "B"]);
 type Reader = z.infer<typeof ReaderSchema>;
@@ -273,20 +367,22 @@ const flagsRecorded = (f: PageFlags): string =>
 
 export function devElementPool(s: Sources): SpotItem[] {
   return Object.entries(s.base.pages).flatMap(([pageId, page]) =>
-    Object.entries(page.elements).map(([id, label]) => ({
-      stratum: "devElement" as const,
-      key: `${pageId}#${id}`,
-      title: `${pageId} · ${code(id)}`,
-      open: `<${serveUrl("/corpus/", `dev/${page.file}`)}> and find ${benchSel(id)}`,
-      test: elementTest(id, page.elements),
-      recorded: elementRecorded(label),
-    })),
+    Object.entries(page.elements)
+      .filter(([id]) => CHECKPOINT1_ELEMENTS.has(`${pageId}#${id}`))
+      .map(([id, label]) => ({
+        stratum: "devElement" as const,
+        key: `${pageId}#${id}`,
+        title: `${pageId} · ${code(id)}`,
+        open: `<${serveUrl("/corpus/", `dev/${page.file}`)}> and find ${benchSel(id)}`,
+        test: elementTest(id, page.elements),
+        recorded: elementRecorded(label),
+      })),
   );
 }
 
 export function devGapTargetPool(s: Sources, op: GapOperator): SpotItem[] {
   return Object.entries(s.variants.variants)
-    .filter(([, v]) => v.operator === op)
+    .filter(([, v]) => v.operator === op && inCheckpoint1(v))
     .map(([id, v]) => {
       const label = v.elements[v.target];
       if (label.expectedGapType === null)
@@ -303,22 +399,26 @@ export function devGapTargetPool(s: Sources, op: GapOperator): SpotItem[] {
 }
 
 export function devPageFlagPool(s: Sources): SpotItem[] {
-  const base = Object.entries(s.base.pages).map(([pageId, page]) => ({
-    stratum: "devPageFlags" as const,
-    key: pageId,
-    title: `${pageId} (base page)`,
-    open: `<${serveUrl("/corpus/", `dev/${page.file}`)}>`,
-    test: FLAG_TEST,
-    recorded: flagsRecorded(page.page),
-  }));
-  const variants = Object.entries(s.variants.variants).map(([id, v]) => ({
-    stratum: "devPageFlags" as const,
-    key: id,
-    title: `${id} (${v.operator} applied to ${benchSel(v.target)})`,
-    open: `<${serveUrl("/variants/", v.file)}>`,
-    test: FLAG_TEST,
-    recorded: flagsRecorded(v.page),
-  }));
+  const base = Object.entries(s.base.pages)
+    .filter(([pageId]) => CHECKPOINT1_BASES.has(pageId))
+    .map(([pageId, page]) => ({
+      stratum: "devPageFlags" as const,
+      key: pageId,
+      title: `${pageId} (base page)`,
+      open: `<${serveUrl("/corpus/", `dev/${page.file}`)}>`,
+      test: FLAG_TEST,
+      recorded: flagsRecorded(page.page),
+    }));
+  const variants = Object.entries(s.variants.variants)
+    .filter(([, v]) => inCheckpoint1(v))
+    .map(([id, v]) => ({
+      stratum: "devPageFlags" as const,
+      key: id,
+      title: `${id} (${v.operator} applied to ${benchSel(v.target)})`,
+      open: `<${serveUrl("/variants/", v.file)}>`,
+      test: FLAG_TEST,
+      recorded: flagsRecorded(v.page),
+    }));
   return [...base, ...variants];
 }
 

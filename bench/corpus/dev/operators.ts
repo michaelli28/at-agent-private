@@ -1,5 +1,6 @@
-// Seeded defect operators M1-M7: which elements each applies to, how it mutates the DOM (in Chromium), the one inline
-// script it may append, and how it changes the ground-truth labels.
+// Seeded defect operators M1-M13: which elements each applies to, how it mutates the DOM (in Chromium), the one inline
+// script it may append, and how it changes the ground-truth labels. M8-M13 were added after the labels froze, each to
+// show one round-2 checker fix before and after (bench/COVERAGE.md); M13 is a decoy whose right answer is no gap.
 import {
   VariantLabelsSchema,
   variantId,
@@ -24,6 +25,15 @@ export const IN_PAGE_LIB = String.raw`(function () {
       el.checkVisibility({ visibilityProperty: true, opacityProperty: true });
   }
   function focusable(el) { return visible(el) && el.tabIndex >= 0 && el.disabled !== true; }
+  // A Tab stop as M10's script tests it. No opacity test on purpose: an opacity-0 focus guard is still a Tab stop.
+  function tabStop(el) { return el.tabIndex >= 0 && !el.disabled && el.checkVisibility({ visibilityProperty: true }); }
+  // A keyboard-focusable scroller: it scrolls, and nothing inside it takes focus (Chromium then makes the box a Tab stop).
+  function scrollRegion(el) {
+    if (el === null) return false;
+    var overflow = getComputedStyle(el).overflowY;
+    return (overflow === 'auto' || overflow === 'scroll') && el.scrollHeight > el.clientHeight &&
+      !Array.prototype.some.call(el.querySelectorAll('*'), function (n) { return n.tabIndex >= 0; });
+  }
   function visibleText(el) {
     var copy = el.cloneNode(true);
     copy.querySelectorAll(NAME_ONLY).forEach(function (n) { n.remove(); });
@@ -48,7 +58,23 @@ export const IN_PAGE_LIB = String.raw`(function () {
     },
     M5: focusable,
     M6: focusable,
-    M7: focusable
+    M7: focusable,
+    M8: focusable,
+    M9: focusable,
+    // The last element in document order, tagged or not, that passes the script's stop test, so the loop holds every
+    // stop that test counts. Document order is Tab order only without a positive tabindex, which no dev base has. The
+    // test misses stops whose tabIndex reads -1, such as keyboard-focusable scrollers: on scroll-panel the target is
+    // agree-button and the two scroll regions after it sit outside the loop (bench/COVERAGE.md).
+    M10: function (el) {
+      var all = Array.prototype.slice.call(document.querySelectorAll('*'));
+      return focusable(el) && !all.slice(all.indexOf(el) + 1).some(tabStop);
+    },
+    M11: focusable,
+    M12: function (el) {
+      var next = el.nextElementSibling;
+      return focusable(el) && scrollRegion(next) && scrollRegion(next.nextElementSibling);
+    },
+    M13: focusable
   };
   var MUTATE = {
     M1: function (el) {
@@ -70,7 +96,13 @@ export const IN_PAGE_LIB = String.raw`(function () {
     },
     M5: function () {},
     M6: function () {},
-    M7: function () {}
+    M7: function () {},
+    M8: function () {},
+    M9: function () {},
+    M10: function () {},
+    M11: function () {},
+    M12: function () {},
+    M13: function (el) { el.setAttribute('inert', ''); el.style.opacity = '0'; }
   };
   // Document markup with operator scripts dropped and every tagged element collapsed to a slot, so two pages can be
   // compared outside their tagged elements.
@@ -123,7 +155,7 @@ type Operator = {
   summary: string;
   // Page-level defects are seeded only on pages with none, so the page flag is attributable to the seed.
   pageLevel: boolean;
-  // false for script-only operators (M5, M6): the target's markup is untouched and its script carries the change.
+  // false for script-only operators (M5-M12): the target's markup is untouched and its script carries the change.
   changesMarkup: boolean;
   // Source of the single <script data-bench-op> appended as the last child of <body>, or null.
   script: ((target: string) => string) | null;
@@ -270,6 +302,109 @@ export const OPERATORS: Record<OperatorId, Operator> = {
     reflag: (f) => ({ ...f, focusLostOnArrival: true }),
     // An element that cannot hold focus cannot be activated, so whatever it reveals is unreachable too.
     // No M7 target in this corpus reveals another element, so this path is not exercised today.
+    removesKeyboardAccess: true,
+  },
+  M8: {
+    summary:
+      "focus handler on one element that blurs it 60 ms after focus (a deferred W3C F55)",
+    pageLevel: true,
+    changesMarkup: false,
+    // 60 ms is past the ~1 ms in which a walk first reads focus after a press and inside its 150 ms settle: the
+    // deferred removal the round-2 3.2.1 settle fix is built to refuse, so this row records that fix's cost.
+    script: (t) =>
+      `${byId(t)}.addEventListener('focus', function () { var e = this; setTimeout(function () { e.blur(); }, 60); });`,
+    // Labelled by what a person gets, as M7. The gap detector counts an element reached when either read after a Tab
+    // press found focus on it (gaps/keyboard.ts), so focus held for 60 ms reads as reachable: every M8 target is a
+    // known gap-detector miss (bench/gaps-dev.test.ts), not a label to change.
+    relabel: (l) =>
+      seeded(l, "M8", {
+        keyboardAccessible: false,
+        gap: "not_focusable",
+        what: "a focus handler blurs this element 60 ms after Tab reaches it (a deferred W3C F55), so focus never stays on it long enough to operate it; focus continues past it, so this is NOT a 2.1.2 trap.",
+      }),
+    reflag: (f) => ({ ...f, focusLostOnArrival: true }),
+    removesKeyboardAccess: true,
+  },
+  M9: {
+    summary:
+      "M7's blur-on-focus plus a timer that rewrites the URL fragment every 100 ms (a scroll-spy)",
+    pageLevel: true,
+    changesMarkup: false,
+    // replaceState, not location.hash: the fragment changes while the page idles and no focus moves, so the only focus
+    // drops are the target's own. The timer touches no element, so the script still addresses the target alone.
+    script: (t) =>
+      `${byId(t)}.addEventListener('focus', function () { this.blur(); }); var n = 0; setInterval(function () { n++; history.replaceState(null, '', '#tick-' + n); }, 100);`,
+    relabel: (l) =>
+      seeded(l, "M9", {
+        keyboardAccessible: false,
+        gap: "not_focusable",
+        what: "a focus handler blurs this element as soon as Tab reaches it (W3C F55) while a timer rewrites only the URL fragment every 100 ms (a scroll-spy that moves no focus and loads nothing); focus continues past it, so this is NOT a 2.1.2 trap.",
+      }),
+    reflag: (f) => ({ ...f, focusLostOnArrival: true }),
+    removesKeyboardAccess: true,
+  },
+  M10: {
+    summary:
+      "Tab on the last stop focuses the first, and Shift+Tab on the first focuses the last (a script loop over every stop with tabIndex 0 or more)",
+    pageLevel: true,
+    changesMarkup: false,
+    script: (t) =>
+      `(function () { function stop(el) { return el.tabIndex >= 0 && !el.disabled && el.checkVisibility({ visibilityProperty: true }); } var last = ${byId(t)}; function first() { return Array.prototype.find.call(document.querySelectorAll('*'), stop); } document.addEventListener('keydown', function (e) { if (e.key !== 'Tab') return; if (!e.shiftKey && document.activeElement === last) { e.preventDefault(); first().focus(); } else if (e.shiftKey && document.activeElement === first()) { e.preventDefault(); last.focus(); } }); })();`,
+    // Once focus is in the loop, Tab and Shift+Tab never take it out. Labelled a 2.1.2 trap by reading the loop as the
+    // region in "cannot move focus out of some region", a decision recorded with its ambiguity in bench/COVERAGE.md.
+    relabel: (l) => ({
+      ...l,
+      note: `M10: Tab here jumps to the page's first Tab stop and Shift+Tab on that first stop jumps here, so once focus is in this loop Tab and Shift+Tab alone never leave it (page-level keyboardTrap; Escape does not release it). Base: ${l.note}`,
+    }),
+    reflag: (f) => ({ ...f, keyboardTrap: true, trapEscapable: false }),
+    removesKeyboardAccess: false,
+  },
+  M11: {
+    summary:
+      "Tab on one element replaces it with a copy of itself and focuses the copy (a stop re-rendered on every press)",
+    pageLevel: true,
+    changesMarkup: false,
+    // The copy keeps data-bench-id, so --check (which presses no key) sees an unchanged page.
+    script: (t) =>
+      `(function () { var cur = ${byId(t)}; document.addEventListener('keydown', function (e) { if (e.key !== 'Tab' || document.activeElement !== cur) return; e.preventDefault(); var copy = cur.cloneNode(true); cur.replaceWith(copy); cur = copy; copy.focus(); }); })();`,
+    relabel: (l) => ({
+      ...l,
+      note: `M11: Tab and Shift+Tab here replace this element with a copy of itself and focus the copy, so focus never leaves it (page-level keyboardTrap; Escape does not release it). Base: ${l.note}`,
+    }),
+    reflag: (f) => ({ ...f, keyboardTrap: true, trapEscapable: false }),
+    removesKeyboardAccess: false,
+  },
+  M12: {
+    summary:
+      "Tab loops among one element and the two scroll regions after it (a trap region padded with stops the walk does not count)",
+    pageLevel: true,
+    changesMarkup: false,
+    // The regions are addressed through the target's siblings, not by data-bench-id: they are keyboard-focusable
+    // scrollers, Tab stops that carry no tag and that the walk's focusable count misses.
+    script: (t) =>
+      `(function () { var el = ${byId(t)}; var region = [el, el.nextElementSibling, el.nextElementSibling.nextElementSibling]; document.addEventListener('keydown', function (e) { if (e.key !== 'Tab') return; if (!e.shiftKey && document.activeElement === region[2]) { e.preventDefault(); region[0].focus(); } else if (e.shiftKey && document.activeElement === region[0]) { e.preventDefault(); region[2].focus(); } }); })();`,
+    relabel: (l) => ({
+      ...l,
+      note: `M12: Tab and Shift+Tab loop focus among this element and the two scroll regions after it, so focus never leaves those three (page-level keyboardTrap; Escape does not release it). Base: ${l.note}`,
+    }),
+    reflag: (f) => ({ ...f, keyboardTrap: true, trapEscapable: false }),
+    removesKeyboardAccess: false,
+  },
+  M13: {
+    summary:
+      "inert plus opacity: 0 on one element, as on a fade carousel's inactive slide (a decoy: the right answer is no gap)",
+    pageLevel: false,
+    changesMarkup: true,
+    script: null,
+    // Not seeded(), which makes the target interactive: the page switched this element off.
+    relabel: (l) => ({
+      interactive: false,
+      keyboardAccessible: false,
+      expectedGapType: null,
+      note: `M13 (decoy): inert and opacity: 0 switch this element off for mouse, keyboard and assistive technology alike, as a page does for a fade carousel's inactive slide; no accessibility gap. Base: ${l.note}`,
+    }),
+    reflag: samePage,
+    // Whatever only this element reveals is switched off with it.
     removesKeyboardAccess: true,
   },
 };
