@@ -264,6 +264,17 @@ function fakePage(pageId: string, f: Fake): PageResult {
   };
 }
 
+// run.ts legacyFrom records the replay of a walk that stopped early as "partial", findings kept.
+function cutReplay(page: PageResult): PageResult {
+  const cut = structuredClone(page);
+  cut.tools.legacy = {
+    ...cut.tools.legacy,
+    status: "partial",
+    error: "replayed 10 of 25 planned presses: the walk stopped early",
+  };
+  return cut;
+}
+
 function fakeSummary(
   set: PageSet,
   pages: PageResult[],
@@ -537,6 +548,36 @@ describe("an undetermined verdict counts as a miss", () => {
     expect(cells[3]).toContain("rule of 3");
   });
 
+  it("calls 2.1.2 undetermined in the before column when the legacy replay was cut before its trap fired", () => {
+    // The judge calls the same short walk undetermined; the frozen replay saw only the presses before
+    // the cut, so an untripped trap there is unobserved, not a clean pass. A trap it did see still counts.
+    const pages = [
+      cutReplay(
+        fakePage("after/home", { walk: { trap: trapUndetermined("short-walk") } }),
+      ),
+      cutReplay(
+        fakePage("after/news", {
+          trapped: true,
+          walk: { trap: trapUndetermined("short-walk") },
+        }),
+      ),
+    ];
+    const out = renderReport(
+      input({ "test-bad": fakeSummary("test-bad", pages) }),
+    );
+    const cells = row(out, "### False alarms", "2.1.2")
+      .split("|")
+      .map((c) => c.trim());
+    expect(cells[3]).toContain(
+      "1/2 · 0.50 [0.09, 0.91] · 1 undetermined (worst case 2/2 · 1.00)",
+    );
+    const perPage = out.slice(out.indexOf("#### Per page"));
+    const line = (id: string) =>
+      perPage.split("\n").find((l) => l.startsWith(`| ${id} |`)) ?? "";
+    expect(line("after/home")).toContain("| P UU– |");
+    expect(line("after/news")).toContain("| P OU– |");
+  });
+
   it("keeps the tool-error exclusion separate from an undetermined verdict", () => {
     const broken = structuredClone(summary.pages[0]);
     broken.tools.walk = {
@@ -781,6 +822,19 @@ describe("renderReport: dev-variants and dev-fixtures", () => {
     // An undetermined verdict is its own mark, and the legend says it counts as a miss.
     expect(gridLine(out, "M6")).toMatch(/\| N→U \|$/);
     expect(out).toContain("U undetermined (counted as a miss)");
+  });
+
+  it("marks the before M5 cell U when the legacy replay was cut before its trap fired", () => {
+    const cut = fakeSummary("dev-variants", [
+      cutReplay(
+        fakePage("b2__M5__t3", {
+          cluster: "b2",
+          walk: { trap: trapUndetermined("short-walk") },
+        }),
+      ),
+    ]);
+    const out = renderReport(input({ "dev-variants": cut }, { variantLabels }));
+    expect(gridLine(out, "M5")).toMatch(/\| U \|$/);
   });
 
   it("keeps the gap-type confusion matrix separate and counts acceptable types", () => {

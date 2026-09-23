@@ -229,8 +229,20 @@ const currentRan = (p: PageResult): boolean =>
   p.tools.gaps.findings !== null && p.tools.walk.findings !== null;
 const axeRan = (p: PageResult): boolean => p.tools.axe.findings !== null;
 
-// One scored column of the headline tables. `undetermined` is what the judges can report and the
-// frozen detectors cannot: it stays in the denominator and counts as a miss.
+// A legacy replay of a walk that stopped early (run.ts records it "partial") never saw the presses after
+// the cut, so a trap that had not fired by then was not observed -- the 2.1.2 judge calls the same walk
+// short-walk. A trap the replay did see still counts.
+function legacyTrapUndetermined(page: PageResult): boolean {
+  const legacy = page.tools.legacy;
+  return (
+    legacy.status === "partial" &&
+    legacy.findings !== null &&
+    !legacyTrapFlagged(legacy.findings.trap)
+  );
+}
+
+// One scored column of the headline tables. `undetermined` = the column ran but did not observe the
+// criterion on this page: it stays in the denominator and counts as a miss.
 type Column = {
   ran: (p: PageResult) => boolean;
   criteria: (p: PageResult) => Map<string, Set<string>>;
@@ -243,7 +255,9 @@ const never = (): boolean => false;
 const BEFORE: Column = {
   ran: oursRan,
   criteria: ourCriteria,
-  undetermined: gapUndetermined,
+  undetermined: (p, criterion) =>
+    (criterion === "2.1.2" && legacyTrapUndetermined(p)) ||
+    gapUndetermined(p, criterion),
 };
 const AFTER: Column = {
   ran: currentRan,
@@ -434,7 +448,7 @@ function renderTestBad(summary: Summary, truth: BadTruth | null): string[] {
         ? "E"
         : ours.has(c)
           ? "O"
-          : gapUndetermined(p, c)
+          : BEFORE.undetermined(p, c)
             ? "U"
             : "–";
       const n = !currentRan(p)
@@ -539,7 +553,8 @@ function flaggedTarget(
       v.operator === "M5"
         ? legacyTrapFlagged(legacy.trap)
         : legacy.dynamicViolations.some((d) => d.criterion === "3.2.1");
-    return hit ? "Y" : "N";
+    if (hit) return "Y";
+    return v.operator === "M5" && legacyTrapUndetermined(page) ? "U" : "N";
   }
   const gaps = page.tools.gaps.findings;
   if (gaps === null) return "E";
