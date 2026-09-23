@@ -22,7 +22,9 @@ export function keyboardEvidence(walk: TabWalkResult): KeyboardEvidence {
   if (walk.error) reasons.push('walk-error')
   if (walk.fIncomplete) reasons.push('focusables-incomplete')
   if (walk.suspectedTrap === true) reasons.push('no-wrap')
-  if (walk.steps.some((s) => s.documentReplaced)) reasons.push('document-replaced')
+  // The idle baseline before the first press counts too: a replacement there leaves every press on another document.
+  const replaced = walk.idle?.documentReplaced === true || walk.steps.some((s) => s.documentReplaced)
+  if (replaced) reasons.push('document-replaced')
 
   const reached = new Set<number>()
   for (const step of walk.steps) {

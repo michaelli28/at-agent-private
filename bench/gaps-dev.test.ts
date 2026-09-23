@@ -223,11 +223,10 @@ describe("dev bases (F1 navbar hidden elements, F2/F9 React div, F3 walk, 0 gaps
       }
       // Recorded, not hidden, and pinned both ways, as in the variant test below.
       const known = [
-        // <main> is re-rendered on the first keydown, so the walk reaches only new nodes, none the crawl listed. Only
-        // the links are flagged: the buttons' click handling is delegated to the document, and the not_focusable
-        // branch needs an own click handler or cursor:pointer.
-        "remount-on-keydown: home-link: want [] got [not_focusable]",
-        "remount-on-keydown: about-link: want [] got [not_focusable]",
+        // <main> is re-rendered on the first keydown, so the walk reaches only new nodes, none the crawl listed. The
+        // crawled nodes it never reached have left the document, so the walk is refused and not_focusable is not
+        // assessed: no gap, and 2.1.1 and 2.4.7 undetermined, on a page labelled clean.
+        "remount-on-keydown: notFocusableAssessed false, want true (crawled-nodes-detached)",
       ];
       expect(problems.filter((p) => known.includes(p)).sort()).toEqual(
         [...known].sort(),

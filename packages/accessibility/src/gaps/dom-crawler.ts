@@ -696,6 +696,27 @@ export async function findHiddenCandidates(page: Page, elements: readonly DOMEle
   }
 }
 
+// acc-gaps#1: whether any of these crawled elements has left the document. One that no longer resolves was collected
+// after it left. A closed page proves nothing, so its error propagates.
+export async function anyDetached(page: Page, elements: readonly DOMElement[]): Promise<boolean> {
+  if (elements.length === 0) return false
+  const cdp = await openDomSession(page)
+  try {
+    for (const element of elements) {
+      const connected = await callOnNode(cdp, element.backendNodeId, 'function () { return this.isConnected }').catch(
+        (err: unknown) => {
+          if (page.isClosed()) throw err
+          return false
+        },
+      )
+      if (connected !== true) return true
+    }
+    return false
+  } finally {
+    await closeDomSession(cdp)
+  }
+}
+
 function errorMessage(err: unknown): string {
   // Playwright appends a multi-line call log; the first line carries the cause.
   return (err instanceof Error ? err.message : String(err)).split('\n')[0]
