@@ -214,11 +214,40 @@ const ELEMENTS_BY_ID_FN = `function () {
   return out
 }`
 
+async function elementsById(page: Page): Promise<Map<string, DOMElement>> {
+  const byId = new Map<string, DOMElement>()
+  const cdp = await page.context().newCDPSession(page)
+  await cdp.send('DOM.getDocument', { depth: 0 })
+  const { result } = await cdp.send('Runtime.evaluate', { expression: `(${ELEMENTS_BY_ID_FN})()` })
+  const { result: entries } = await cdp.send('Runtime.getProperties', {
+    objectId: result.objectId ?? '',
+    ownProperties: true,
+  })
+  for (const entry of entries) {
+    if (!/^\d+$/.test(entry.name) || !entry.value?.objectId) continue
+    const { node } = await cdp.send('DOM.describeNode', { objectId: entry.value.objectId })
+    const attributes: Record<string, string> = {}
+    for (let i = 0; i < (node.attributes ?? []).length; i += 2)
+      attributes[node.attributes![i]] = node.attributes![i + 1]
+    byId.set(attributes['id'], {
+      nodeId: 0,
+      backendNodeId: node.backendNodeId,
+      nodeName: node.nodeName,
+      localName: node.localName,
+      attributes,
+      boundingBox: null,
+      pageUrl: 'http://fixture.test/',
+    })
+  }
+  await cdp.detach()
+  return byId
+}
+
 describe('collectFocusFacts (G1b)', () => {
   let client: BrowserClient
   let browserPage: BrowserPage
   let page: Page
-  const byId = new Map<string, DOMElement>()
+  let byId: Map<string, DOMElement>
   let facts: Map<number, FocusFacts>
 
   beforeAll(async () => {
@@ -227,30 +256,7 @@ describe('collectFocusFacts (G1b)', () => {
     browserPage = await client.newPage()
     page = browserPage.playwrightPage
     await page.setContent(FOCUS_FACTS_HTML)
-    const cdp = await page.context().newCDPSession(page)
-    await cdp.send('DOM.getDocument', { depth: 0 })
-    const { result } = await cdp.send('Runtime.evaluate', { expression: `(${ELEMENTS_BY_ID_FN})()` })
-    const { result: entries } = await cdp.send('Runtime.getProperties', {
-      objectId: result.objectId ?? '',
-      ownProperties: true,
-    })
-    for (const entry of entries) {
-      if (!/^\d+$/.test(entry.name) || !entry.value?.objectId) continue
-      const { node } = await cdp.send('DOM.describeNode', { objectId: entry.value.objectId })
-      const attributes: Record<string, string> = {}
-      for (let i = 0; i < (node.attributes ?? []).length; i += 2)
-        attributes[node.attributes![i]] = node.attributes![i + 1]
-      byId.set(attributes['id'], {
-        nodeId: 0,
-        backendNodeId: node.backendNodeId,
-        nodeName: node.nodeName,
-        localName: node.localName,
-        attributes,
-        boundingBox: null,
-        pageUrl: 'http://fixture.test/',
-      })
-    }
-    await cdp.detach()
+    byId = await elementsById(page)
     const collected = await collectFocusFacts(page, [...byId.values()])
     expect(collected.errors).toEqual([])
     facts = collected.facts
@@ -348,6 +354,56 @@ describe('collectFocusFacts (G1b)', () => {
   })
 })
 
+// Content the page switched off: a <dialog> opened with showModal() makes everything outside it inert (aria-hidden or
+// not), and CSS interactivity: inert does what the inert attribute does (F2).
+const SWITCHED_OFF_HTML = `<!doctype html><html lang="en"><head><title>switched off</title></head><body>
+<main aria-hidden="true"><a id="bg-hidden" href="#a">Shop</a></main>
+<button id="bg">Join</button>
+<dialog id="dlg" aria-label="Age gate"><button id="in-dialog">Confirm</button>
+<div inert><button id="in-dialog-inert">Later</button></div>
+<div style="interactivity: inert"><button id="in-dialog-css-inert">Skip</button></div></dialog>
+<script>document.getElementById('dlg').showModal()</script>
+</body></html>`
+
+describe('collectFocusFacts on content the page switched off (F2)', () => {
+  let client: BrowserClient
+  let browserPage: BrowserPage
+  let page: Page
+  let byId: Map<string, DOMElement>
+  let facts: Map<number, FocusFacts>
+
+  beforeAll(async () => {
+    client = new BrowserClient()
+    await client.launch()
+    browserPage = await client.newPage()
+    page = browserPage.playwrightPage
+    await page.setContent(SWITCHED_OFF_HTML)
+    byId = await elementsById(page)
+    const collected = await collectFocusFacts(page, [...byId.values()])
+    expect(collected.errors).toEqual([])
+    facts = collected.facts
+  })
+
+  afterAll(async () => {
+    await browserPage.close()
+    await client.close()
+  })
+
+  const factsOf = (id: string): FocusFacts | undefined => facts.get(byId.get(id)?.backendNodeId ?? -1)
+
+  it('marks everything outside an open modal <dialog>, and CSS interactivity: inert, as disabled', () => {
+    const ids = ['in-dialog', 'in-dialog-inert', 'in-dialog-css-inert', 'bg', 'bg-hidden']
+    expect(Object.fromEntries(ids.map((id) => [id, factsOf(id)?.disabled]))).toEqual({
+      'in-dialog': false,
+      'in-dialog-inert': true,
+      'in-dialog-css-inert': true,
+      bg: true,
+      'bg-hidden': true,
+    })
+    expect([factsOf('in-dialog')?.focusable, factsOf('bg')?.focusable]).toEqual([true, false])
+  })
+})
+
 // React's internals are simulated here (the real-React stale case runs in bench/gaps-dev.test.ts): __reactProps$ holds
 // the current handler props, __reactContainer$ marks the root, and React plants a no-op el.onclick for onClick.
 const DISCOVERY_HTML = `<!doctype html><html lang="en"><head><title>discovery</title></head><body>
@@ -423,5 +479,91 @@ describe('discovery by listeners and React props (F9)', () => {
       'react-hover': false,
       'react-listener': true,
     })
+  })
+})
+
+// React 17+ marks every root and portal container it delegates events from with _reactListening<random> and adds its
+// own listeners there; a portal host is otherwise a plain div. #root-class is a root, #own an ordinary control (F9).
+const DELEGATION_HTML = `<!doctype html><html lang="en"><head><title>delegation</title></head><body>
+<header><div id="portal"></div><div id="portal-class" class="page-actions"></div></header>
+<div id="root-class" class="app-actions"></div>
+<div id="own">Own</div>
+<script>
+var noop = function () {}
+var hosts = ['portal', 'portal-class', 'root-class']
+hosts.forEach(function (id) {
+  var el = document.getElementById(id)
+  el._reactListeningq7x2 = true
+  el.addEventListener('click', noop)
+  el.addEventListener('keydown', noop)
+  el.addEventListener('pointerdown', noop)
+})
+document.getElementById('root-class').__reactContainer$t = {}
+document.getElementById('own').addEventListener('click', noop)
+</script>
+</body></html>`
+
+describe('React delegation hosts (F9)', () => {
+  let client: BrowserClient
+  let browserPage: BrowserPage
+  let page: Page
+  let elements: DOMElement[]
+
+  beforeAll(async () => {
+    client = new BrowserClient()
+    await client.launch()
+    browserPage = await client.newPage()
+    page = browserPage.playwrightPage
+    await page.setContent(DELEGATION_HTML)
+    const crawl = await crawlDOM(page, 'http://fixture.test/')
+    expect(crawl.errors).toEqual([])
+    elements = crawl.elements
+  })
+
+  afterAll(async () => {
+    await browserPage.close()
+    await client.close()
+  })
+
+  it("does not count the listeners React delegates from a root or portal container as the container's own", async () => {
+    const handler: Record<string, boolean> = {}
+    for (const element of elements) {
+      const { signals, errors } = await getInteractivitySignals(page, element)
+      expect(errors).toEqual([])
+      handler[idOf(element)] = signals.hasClickHandler
+    }
+    expect(handler).toEqual({ portal: false, 'portal-class': false, 'root-class': false, own: true })
+  })
+})
+
+describe('isSemanticInteractive for a <details> disclosure', () => {
+  let client: BrowserClient
+  let browserPage: BrowserPage
+  let page: Page
+  let elements: DOMElement[]
+
+  beforeAll(async () => {
+    client = new BrowserClient()
+    await client.launch()
+    browserPage = await client.newPage()
+    page = browserPage.playwrightPage
+    await page.setContent(
+      '<!doctype html><html lang="en"><head><title>details</title></head><body>' +
+        '<details id="details"><summary id="summary">Shipping</summary><p>3 days</p></details></body></html>',
+    )
+    elements = (await crawlDOM(page, 'http://fixture.test/')).elements
+  })
+
+  afterAll(async () => {
+    await browserPage.close()
+    await client.close()
+  })
+
+  it('is false for the <details> (a group) and true for its <summary> (the control)', async () => {
+    const semantic: Record<string, boolean> = {}
+    for (const element of elements) {
+      semantic[idOf(element)] = (await getInteractivitySignals(page, element)).signals.isSemanticInteractive
+    }
+    expect(semantic).toEqual({ details: false, summary: true })
   })
 })

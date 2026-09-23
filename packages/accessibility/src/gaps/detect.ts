@@ -5,7 +5,7 @@ import { convertToElementGraph, getAccessibilityTree } from './ax-tree.js'
 import { collectFocusFacts, collectInteractivitySignals, crawlDOM, findHiddenCandidates } from './dom-crawler.js'
 import { buildBridgeMap, detectGaps } from './gap-detector.js'
 import { groupReach, keyboardEvidence, NO_WALK, walkFailed } from './keyboard.js'
-import type { CrawlError, DualCrawlResult, KeyboardEvidence } from './types.js'
+import type { CrawlError, DualCrawlResult, FocusFacts, KeyboardEvidence } from './types.js'
 
 const NAVIGATION_TIMEOUT_MS = 60000
 // Same fixed settle time taskgen uses to let dynamic content load.
@@ -40,6 +40,13 @@ export async function crawlPageWithGapDetection(
   const crawled = domElements.filter((e) => !unrendered.has(e.backendNodeId))
   const { signals, errors: signalErrors } = await collectInteractivitySignals(page, crawled)
   const { facts: crawledFocus, errors: focusErrors } = await collectFocusFacts(page, crawled)
+  // G1c: a container's keydown handler serves its members whatever the container's own box, so an unrendered
+  // (display:contents) container a member names is read too, and a hidden one keeps its facts below.
+  const widgetIds = new Set(
+    [...crawledFocus.values()].flatMap((f) => (f.compositeWidget === null ? [] : [f.compositeWidget])),
+  )
+  const unrenderedWidgets = domElements.filter((e) => unrendered.has(e.backendNodeId) && widgetIds.has(e.backendNodeId))
+  const { facts: widgetFocus, errors: widgetErrors } = await collectFocusFacts(page, unrenderedWidgets)
 
   // After the crawl: the walk moves focus and may open or navigate, which must not change what was crawled.
   const walked = await walkKeyboard(page, options.tabWalk)
@@ -52,7 +59,13 @@ export async function crawlPageWithGapDetection(
   const hidden = visibility.hidden.filter((h) => !(h.reason === 'zero-area' && tabStop(h.backendNodeId)))
   const hiddenIds = new Set(hidden.map((h) => h.backendNodeId))
   const candidates = domElements.filter((e) => !hiddenIds.has(e.backendNodeId))
-  const focus = new Map([...crawledFocus].filter(([id]) => !hiddenIds.has(id)))
+  // A hidden container is no Tab stop, so its keydown handler fires only for its own members: it keeps its facts as a
+  // widget, never as a member of an outer one.
+  const focus = new Map(
+    [...crawledFocus, ...widgetFocus].flatMap(([id, f]): Array<[number, FocusFacts]> =>
+      !hiddenIds.has(id) ? [[id, f]] : widgetIds.has(id) ? [[id, { ...f, compositeWidget: null }]] : [],
+    ),
+  )
 
   const bridgeMap = buildBridgeMap(accessibilityTree)
   const gaps = detectGaps(candidates, accessibilityTree, signals, { keyboard: walked.keyboard, focus })
@@ -66,7 +79,7 @@ export async function crawlPageWithGapDetection(
     bridgeMap,
     keyboard: walked.keyboard,
     reachedByGroup: groupReach(walked.keyboard.reachedBackendNodeIds, focus),
-    errors: [...crawl.errors, ...visibility.errors, ...signalErrors, ...focusErrors, ...walked.errors],
+    errors: [...crawl.errors, ...visibility.errors, ...signalErrors, ...focusErrors, ...widgetErrors, ...walked.errors],
   }
 }
 

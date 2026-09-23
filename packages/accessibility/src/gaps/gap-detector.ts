@@ -164,6 +164,10 @@ function classifyGap(
 ): AccessibilityGap | null {
   const { accessibilityTree, bridgeMap } = ctx
   const axElementId = bridgeMap.get(domElement.backendNodeId)
+  // F2: disabled or inert (which covers everything outside an open modal <dialog>) and left unexposed: the page switched
+  // it off for mouse, keyboard and assistive technology alike, so it is not a candidate. An exposed one is still judged.
+  const exposed = axElementId !== undefined && accessibilityTree.elements.get(axElementId)?.ignored === false
+  if (!exposed && ctx.focus.get(domElement.backendNodeId)?.disabled) return null
 
   if (!axElementId) {
     return createGap(
