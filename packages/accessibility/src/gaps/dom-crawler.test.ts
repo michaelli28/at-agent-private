@@ -481,3 +481,57 @@ describe('discovery by listeners and React props (F9)', () => {
     })
   })
 })
+
+// React 17+ marks every root and portal container it delegates events from with _reactListening<random> and adds its
+// own listeners there; a portal host is otherwise a plain div. #root-class is a root, #own an ordinary control (F9).
+const DELEGATION_HTML = `<!doctype html><html lang="en"><head><title>delegation</title></head><body>
+<header><div id="portal"></div><div id="portal-class" class="page-actions"></div></header>
+<div id="root-class" class="app-actions"></div>
+<div id="own">Own</div>
+<script>
+var noop = function () {}
+var hosts = ['portal', 'portal-class', 'root-class']
+hosts.forEach(function (id) {
+  var el = document.getElementById(id)
+  el._reactListeningq7x2 = true
+  el.addEventListener('click', noop)
+  el.addEventListener('keydown', noop)
+  el.addEventListener('pointerdown', noop)
+})
+document.getElementById('root-class').__reactContainer$t = {}
+document.getElementById('own').addEventListener('click', noop)
+</script>
+</body></html>`
+
+describe('React delegation hosts (F9)', () => {
+  let client: BrowserClient
+  let browserPage: BrowserPage
+  let page: Page
+  let elements: DOMElement[]
+
+  beforeAll(async () => {
+    client = new BrowserClient()
+    await client.launch()
+    browserPage = await client.newPage()
+    page = browserPage.playwrightPage
+    await page.setContent(DELEGATION_HTML)
+    const crawl = await crawlDOM(page, 'http://fixture.test/')
+    expect(crawl.errors).toEqual([])
+    elements = crawl.elements
+  })
+
+  afterAll(async () => {
+    await browserPage.close()
+    await client.close()
+  })
+
+  it("does not count the listeners React delegates from a root or portal container as the container's own", async () => {
+    const handler: Record<string, boolean> = {}
+    for (const element of elements) {
+      const { signals, errors } = await getInteractivitySignals(page, element)
+      expect(errors).toEqual([])
+      handler[idOf(element)] = signals.hasClickHandler
+    }
+    expect(handler).toEqual({ portal: false, 'portal-class': false, 'root-class': false, own: true })
+  })
+})

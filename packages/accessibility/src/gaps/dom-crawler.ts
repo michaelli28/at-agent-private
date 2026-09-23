@@ -130,6 +130,7 @@ const REACT_FACTS_FN = `function () {
       return activation.test(p) && typeof props[p] === 'function'
     }),
     onclickProperty: typeof this.onclick === 'function',
+    delegationHost: Object.keys(this).some(function (k) { return k.indexOf('_reactListening') === 0 }),
   }
 }`
 
@@ -456,6 +457,7 @@ const ReactFactsSchema = z.object({
   hasProps: z.boolean(),
   activation: z.boolean(),
   onclickProperty: z.boolean(),
+  delegationHost: z.boolean(),
 })
 
 export type SignalsRead = {
@@ -522,9 +524,13 @@ async function readSignals(cdp: CDPSession, element: DOMElement): Promise<Signal
           id,
         )
 
-  // The one click listener that is React's no-op el.onclick does not count once props exist (F9).
-  const ownListeners =
-    react?.hasProps && react.onclickProperty ? withoutOne(listenerTypes ?? [], 'click') : (listenerTypes ?? [])
+  // The one click listener that is React's no-op el.onclick does not count once props exist (F9). React 17+ marks
+  // each root and portal container it delegates events from with _reactListening<random>: those listeners are React's.
+  const ownListeners = react?.delegationHost
+    ? []
+    : react?.hasProps && react.onclickProperty
+      ? withoutOne(listenerTypes ?? [], 'click')
+      : (listenerTypes ?? [])
 
   return {
     signals: {

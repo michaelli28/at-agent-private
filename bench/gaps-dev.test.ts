@@ -238,9 +238,6 @@ describe("dev bases (F1 navbar hidden elements, F2/F9 React div, F3 walk, 0 gaps
       }
       // Recorded, not hidden, and pinned both ways, as in the variant test below.
       const known = [
-        // React marks a portal host _reactListening and delegates the portal's events from it; the detector reads
-        // those listeners as the host's own.
-        "react-div-button: portal-host: want [] got [wrong_role]",
         ...alarmsOn("disclosure-tabs", DISCLOSURE_ALARMS),
         // <main> is re-rendered on the first keydown, so the walk reaches only new nodes, none the crawl listed. Only
         // the links are flagged: the buttons' click handling is delegated to the document, and the not_focusable
