@@ -685,3 +685,106 @@ describe('crawlPageWithGapDetection on <details> disclosures (F2)', () => {
     expect(Object.fromEntries(result.gaps.map((g) => [benchId(g), g.gapType]))).toEqual({})
   })
 })
+
+// Roving tablists whose container has no box: floated tabs leave it zero-area, display:contents gives it none. Its
+// keydown listener serves its members either way. plain-tablist handles no arrow keys; none-tablist is display:none.
+const ROVING_HIDDEN_HTML = probePage(`<a href="#a" data-bench-id="first">First</a>
+<div role="tablist" aria-label="Floated" data-roving data-bench-id="float-tablist">
+<div role="tab" data-item tabindex="0" style="float:left" data-bench-id="float-1" onclick="void 0">One</div>
+<div role="tab" data-item tabindex="-1" style="float:left" data-bench-id="float-2" onclick="void 0">Two</div>
+</div><div style="clear:both"></div>
+<div role="tablist" aria-label="Contents" data-roving data-bench-id="contents-tablist" style="display:contents">
+<div role="tab" data-item tabindex="0" data-bench-id="contents-1" onclick="void 0">Three</div>
+<div role="tab" data-item tabindex="-1" data-bench-id="contents-2" onclick="void 0">Four</div>
+</div>
+<div role="tablist" aria-label="No arrows" data-bench-id="plain-tablist" style="display:contents">
+<div role="tab" tabindex="0" data-bench-id="plain-1" onclick="void 0">Five</div>
+<div role="tab" tabindex="-1" data-bench-id="plain-2" onclick="void 0">Six</div>
+</div>
+<div role="tablist" aria-label="Hidden" data-roving data-bench-id="none-tablist" style="display:none">
+<div role="tab" data-item tabindex="0" data-bench-id="none-1" onclick="void 0">Seven</div>
+</div>
+<a href="#end" data-bench-id="last">End</a>${ARROWS}`)
+
+// A menubar with no arrow-key handling around a submenu with no box and its own keydown listener: the submenu's
+// listener fires only for its own members, so it must not make the menubar's m2 reachable.
+const nestedHtml = (submenuStyle: string): string =>
+  probePage(`<a href="#a" data-bench-id="first">First</a>
+<div role="menubar" aria-label="Main" data-bench-id="bar">
+<div role="menuitem" tabindex="0" onclick="void 0" data-bench-id="m1">File</div>
+<div role="menuitem" tabindex="-1" onclick="void 0" data-bench-id="m2">Edit</div>
+<div role="menu" aria-label="File" data-bench-id="sub" style="${submenuStyle}">
+<div role="menuitem" tabindex="-1" data-bench-id="s1">Undo</div>
+</div>
+</div>
+<a href="#end" data-bench-id="last">End</a>
+<script>document.querySelector('[data-bench-id=sub]').addEventListener('keydown', function () {})</script>`)
+
+// The submenu's listener serving its own members: s2 is reached with the arrow keys from s1.
+const NESTED_INNER_ROVING_HTML = probePage(`<a href="#a" data-bench-id="first">First</a>
+<div role="menubar" aria-label="Main" data-bench-id="bar">
+<div role="menuitem" tabindex="0" onclick="void 0" data-bench-id="m1">File</div>
+<div role="menu" aria-label="Sizes" data-bench-id="sub" style="display:contents">
+<div role="menuitemradio" tabindex="0" onclick="void 0" data-bench-id="s1">Small</div>
+<div role="menuitemradio" tabindex="-1" onclick="void 0" data-bench-id="s2">Large</div>
+</div>
+</div>
+<a href="#end" data-bench-id="last">End</a>
+<script>document.querySelector('[data-bench-id=sub]').addEventListener('keydown', function () {})</script>`)
+
+describe('crawlPageWithGapDetection on widget containers with no box (G1c)', () => {
+  let client: BrowserClient
+  let page: BrowserPage
+
+  beforeAll(async () => {
+    client = new BrowserClient()
+    await client.launch()
+    page = await client.newPage()
+  })
+
+  afterAll(async () => {
+    await page.close()
+    await client.close()
+  })
+
+  async function detectProbe(html: string): Promise<DualCrawlResult> {
+    await page.playwrightPage.unrouteAll()
+    await page.playwrightPage.route(URL_, (route) => route.fulfill({ contentType: 'text/html', body: html }))
+    return crawlPageWithGapDetection(page.playwrightPage, URL_, { tabWalk: { settleMs: 50 } })
+  }
+
+  const byId = (r: DualCrawlResult): Record<string, string> =>
+    Object.fromEntries(r.gaps.map((g) => [benchId(g), g.gapType]))
+  const groupOf = (r: DualCrawlResult): Record<string, string> => {
+    const ids = new Map(r.domElements.map((e) => [e.backendNodeId, e.attributes['data-bench-id'] ?? e.localName]))
+    return Object.fromEntries(r.reachedByGroup.map((g) => [ids.get(g.backendNodeId), g.rule]))
+  }
+
+  it('counts the members a zero-area or display:contents container moves between with arrow keys as reached', async () => {
+    const result = await detectProbe(ROVING_HIDDEN_HTML)
+    expect(result.keyboard.notFocusableAssessed).toBe(true)
+    expect(byId(result)).toEqual({ 'plain-2': 'not_focusable' })
+    expect(groupOf(result)).toMatchObject({ 'float-2': 'composite-widget', 'contents-2': 'composite-widget' })
+    const ids = new Map(result.domElements.map((e) => [e.backendNodeId, e.attributes['data-bench-id']]))
+    expect(Object.fromEntries(result.hidden.map((h) => [ids.get(h.backendNodeId), h.reason]))).toMatchObject({
+      'float-tablist': 'zero-area',
+      'contents-tablist': 'no-box',
+    })
+  })
+
+  it("does not lend a submenu's keydown listener to the menubar around it, whatever hides the submenu", async () => {
+    for (const style of ['height:0;overflow:hidden', 'display:contents']) {
+      const result = await detectProbe(nestedHtml(style))
+      expect(result.keyboard.notFocusableAssessed, style).toBe(true)
+      expect(byId(result), style).toEqual({ m2: 'not_focusable' })
+      expect(groupOf(result), style).not.toHaveProperty('m2')
+    }
+  })
+
+  it("still counts a display:contents submenu's own members as reached through its keydown listener", async () => {
+    const result = await detectProbe(NESTED_INNER_ROVING_HTML)
+    expect(result.keyboard.notFocusableAssessed).toBe(true)
+    expect(byId(result)).toEqual({})
+    expect(groupOf(result)).toMatchObject({ s2: 'composite-widget' })
+  })
+})

@@ -71,16 +71,6 @@ const rows: string[] = [];
 
 type Row = { page: string; gaps: string; expected: string; problems: string[] };
 
-// The old checker's false alarms on disclosure-tabs' own elements: the second tab of each roving tablist, whose
-// container has no box, read as not_focusable. not_focusable is decided only on a walk that wraps, so a variant with
-// a trap or a navigation has none.
-const DISCLOSURE_ALARMS = [
-  "float-tab-2: want [] got [not_focusable]",
-  "contents-tab-2: want [] got [not_focusable]",
-];
-const alarmsOn = (page: string, alarms: string[]): string[] =>
-  alarms.map((a) => `${page}: ${a}`);
-
 async function detect(path: string): Promise<DualCrawlResult> {
   const context = await browser.newContext();
   try {
@@ -233,7 +223,6 @@ describe("dev bases (F1 navbar hidden elements, F2/F9 React div, F3 walk, 0 gaps
       }
       // Recorded, not hidden, and pinned both ways, as in the variant test below.
       const known = [
-        ...alarmsOn("disclosure-tabs", DISCLOSURE_ALARMS),
         // <main> is re-rendered on the first keydown, so the walk reaches only new nodes, none the crawl listed. Only
         // the links are flagged: the buttons' click handling is delegated to the document, and the not_focusable
         // branch needs an own click handler or cursor:pointer.
@@ -286,14 +275,6 @@ describe("dev variants (every seeded target and every other labelled element)", 
         "disclosure-tabs__M8__a-skip-link: target a-skip-link: want [not_focusable] got []",
         "one-button__M8__only-button: target only-button: want [not_focusable] got []",
         "scroll-panel__M8__agree-button: target agree-button: want [not_focusable] got []",
-        // The disclosure-tabs base's own alarms, carried into its variants.
-        ...[
-          "disclosure-tabs__M3__a-skip-link",
-          "disclosure-tabs__M7__a-skip-link",
-          "disclosure-tabs__M8__a-skip-link",
-          "disclosure-tabs__M9__a-skip-link",
-          "disclosure-tabs__M13__a-skip-link",
-        ].flatMap((id) => alarmsOn(id, DISCLOSURE_ALARMS)),
       ];
       // Sorted: the list is grouped by cause, the problems come in variant order.
       expect(problems.filter((p) => known.includes(p)).sort()).toEqual(
