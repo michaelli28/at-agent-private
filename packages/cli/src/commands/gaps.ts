@@ -12,8 +12,6 @@ import { formatJSON } from '../output.js'
 export interface GapsCommandOptions {
   url: string
   json?: boolean
-  // Tab walk on the same load, the only source of not_focusable; on unless false.
-  tabWalk?: boolean
 }
 
 export interface GapsCommandResult {
@@ -33,8 +31,9 @@ export async function runGaps(options: GapsCommandOptions): Promise<GapsCommandR
 
     try {
       // The detector navigates itself (domcontentloaded + fixed settle), so no page.goto here.
+      // The Tab walk on the same load is the only source of not_focusable.
       const result = await crawlPageWithGapDetection(page.playwrightPage, options.url, {
-        tabWalk: options.tabWalk ?? true,
+        tabWalk: true,
       })
       const summary = summarizeGaps(result.gaps)
       const { notFocusableAssessed, unassessedReasons, walkError } = result.keyboard

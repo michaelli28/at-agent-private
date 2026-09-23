@@ -118,14 +118,6 @@ describe('runGaps', () => {
     expect(result.output).toContain('DIV element with interactivity signals is not exposed in the accessibility tree')
   })
 
-  it('skips the Tab walk only when asked (F3)', async () => {
-    await runGaps({ url: 'https://example.com', tabWalk: false })
-
-    expect(crawlPageWithGapDetection).toHaveBeenCalledWith({ marker: 'playwright-page' }, 'https://example.com', {
-      tabWalk: false,
-    })
-  })
-
   it('says in text and JSON output when not_focusable was not assessed, and why (F3)', async () => {
     const detected = await crawlPageWithGapDetection(
       {} as Parameters<typeof crawlPageWithGapDetection>[0],
