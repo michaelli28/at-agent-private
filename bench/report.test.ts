@@ -17,6 +17,7 @@ import {
 } from "./corpus/labels-schema.js";
 import {
   BadTruthSchema,
+  REPORT_CODE,
   axeCriteria,
   criterionFromAxeTag,
   currentCriteria,
@@ -1144,5 +1145,19 @@ describe("keyboard evidence: a check that could not run is not a check that pass
     expect(line("M7")).toContain("U");
     expect(line("M7")).not.toMatch(/\| N \|/);
     expect(line("M3")).toMatch(/\| N \|/);
+  });
+});
+
+describe("the footer's report-code-uncommitted check", () => {
+  // A local edit to any module the report computes its cells from must mark the footer, or a report
+  // built from edited mappings (GAP_WCAG_MAPPING, WALK_GATED_GAP_TYPES, ...) reads as clean.
+  it("covers report.ts and every local module it imports", () => {
+    const source = readFileSync(join(BENCH, "report.ts"), "utf8");
+    const imported = [...source.matchAll(/from "(\.{1,2}\/[^"]+)\.js";/g)].map(
+      (m) => `${m[1].replace(/^\.\//, "")}.ts`,
+    );
+    expect(imported.length).toBeGreaterThan(0);
+    expect(REPORT_CODE).toContain("report.ts");
+    expect(imported.filter((path) => !REPORT_CODE.includes(path))).toEqual([]);
   });
 });
