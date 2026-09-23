@@ -1,7 +1,7 @@
 import { describe, it, expect } from 'vitest'
 import { NavigatorState, NavigationResult, NavigableNode } from './types.js'
 import { ScreenReaderNavigator } from './screen-reader-navigator.js'
-import type { AccessibilityNode } from '@at-agent/browser'
+import { BrowserClient, type AccessibilityNode } from '@at-agent/browser'
 
 describe('Screen Reader Navigator Types', () => {
   it('should have NavigableNode type with required fields', () => {
@@ -271,5 +271,24 @@ describe('ScreenReaderNavigator - Role Navigation', () => {
     const result = navigator.moveToMain()
     expect(result.success).toBe(false)
     expect(result.message).toBe('No main content')
+  })
+})
+
+describe('ScreenReaderNavigator on a real BrowserPage.accessibilityTree()', () => {
+  it('browse mode reads prose, which the tree names text and paragraph', async () => {
+    const client = new BrowserClient()
+    await client.launch()
+    try {
+      const page = await client.newPage()
+      await page.playwrightPage.setContent('<h1>Title</h1><p>Some prose.</p><p>Visit <a href="#x">the shop</a> today.</p>')
+      const navigator = new ScreenReaderNavigator()
+      navigator.loadTree(await page.accessibilityTree())
+
+      const read: string[] = []
+      for (let r = navigator.moveNext(); r.success; r = navigator.moveNext()) read.push(`${r.node?.role}:${r.node?.name}`)
+      expect(read).toEqual(['heading:Title', 'paragraph:Some prose.', 'text:Visit', 'link:the shop', 'text:today.'])
+    } finally {
+      await client.close()
+    }
   })
 })
