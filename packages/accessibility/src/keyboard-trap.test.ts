@@ -150,6 +150,72 @@ function synthWalk(steps: TabWalkStep[], over: Partial<TabWalkResult> = {}): Tab
   }
 }
 
+// Walks written as press ids: WRAP is a press that wrapped to the unfocused body, any other id a real stop.
+const WRAP = 0
+
+const repeat = (id: number, n: number): number[] => Array<number>(n).fill(id)
+
+// `n` presses around `lap`, starting `offset` presses into it.
+const around = (lap: readonly number[], n: number, offset = 0): number[] =>
+  Array.from({ length: n }, (_, i) => lap[(i + offset) % lap.length])
+
+const fresh = (from: number, n: number): number[] => Array.from({ length: n }, (_, i) => from + i)
+
+// A full-length walk with F counted stops, as runTabWalk records it.
+function fullWalk(focusableCount: number, ids: readonly number[], escapeProbe: EscapeProbe | null): TabWalkResult {
+  const steps = ids.map((id, i) =>
+    id === WRAP ? synthStep(i + 1, bodyRead(false), { wrapped: true }) : synthStep(i + 1, elementRead(id)),
+  )
+  return synthWalk(steps, { focusableCount, focusableCountEnd: focusableCount, escapeProbe })
+}
+
+// The probe runTabWalk runs after `ids`: its seen set is the last F+1 presses; Escape stays on the last stop
+// unless `escape` says otherwise; Shift+Tab then follows `path` (WRAP = a wrap) and stops at the first unseen
+// element or wrap.
+function probeAfter(
+  ids: readonly number[],
+  focusableCount: number,
+  path: readonly number[],
+  escape: Partial<EscapeProbe['escape']> = {},
+): EscapeProbe {
+  const seen = [...new Set(ids.slice(-(focusableCount + 1)).filter((id) => id !== WRAP))]
+  const last = elementRead(ids[ids.length - 1])
+  const stayed = { after: last, documentReplaced: false, urlChanged: false, unseenElement: false, wrapped: false }
+  const steps: EscapeProbe['steps'] = []
+  let reachedAt: number | null = null
+  for (const [i, id] of path.entries()) {
+    const unseenElement = id !== WRAP && !seen.includes(id)
+    steps.push({
+      index: i + 1,
+      key: 'Shift+Tab',
+      settled: id === WRAP ? bodyRead(false) : elementRead(id),
+      documentReplaced: false,
+      unseenElement,
+      wrapped: id === WRAP,
+    })
+    if (unseenElement || id === WRAP) {
+      reachedAt = i + 1
+      break
+    }
+  }
+  return {
+    probeKey: 'Shift+Tab',
+    seenBackendNodeIds: seen,
+    before: last,
+    escape: { ...stayed, ...escape },
+    maxPresses: focusableCount + 2,
+    steps,
+    reachedAt,
+  }
+}
+
+// A probe that got nowhere, or none when the last F+1 presses wrapped (runTabWalk's gate): the worst case for a
+// clean walk that reaches the probe.
+function stuckProbe(ids: readonly number[], focusableCount: number): EscapeProbe | null {
+  if (ids.slice(-(focusableCount + 1)).includes(WRAP)) return null
+  return probeAfter(ids, focusableCount, repeat(ids[ids.length - 1], focusableCount + 2))
+}
+
 describe('judgeKeyboardTrap', () => {
   // 1
   it('clean page: the wrap is the end of the page, not a cycle', () => {
@@ -174,8 +240,9 @@ describe('judgeKeyboardTrap', () => {
     expect(judgeKeyboardTrap([walk]).verdict).toBe('pass')
   })
 
-  // 3
-  it('truncated clean walk: every counted stop visited is also the end of the page', () => {
+  // 3 — its six presses are the first six of a script loop over every stop, so no judge can pass this walk and
+  // fail that loop: with no wrap, a complete count is not the end of the page, and the walk is short.
+  it('truncated walk that never wrapped: every counted stop visited is not the end of the page', () => {
     const ids = [11, 12, 13, 11, 12, 13]
     const walk = synthWalk(
       ids.map((id, i) => synthStep(i + 1, elementRead(id))),
@@ -187,12 +254,10 @@ describe('judgeKeyboardTrap', () => {
       },
     )
     const result = judgeKeyboardTrap([walk])
-    expect(result.verdict).toBe('pass')
+    expect(result.verdict).toBe('undetermined')
+    expect(result.reason).toBe('short-walk')
     expect(result.keyboardTrap).toBe(false)
-    expect(result.directions[0].endOfPage).toEqual({
-      signal: 'all-stops-visited',
-      atPress: 3,
-    })
+    expect(result.directions[0].endOfPage).toBeNull()
   })
 
   // A trap the walk meets only after it has visited every counted stop: stuck on the last stop, cycling
@@ -312,7 +377,7 @@ describe('judgeKeyboardTrap', () => {
   })
 
   // 7
-  it('region size is recorded, never a verdict input', () => {
+  it('a region smaller than F is recorded, never a verdict input', () => {
     const navbar = recorded('dev-fixtures', 'navbar')
     const navbarResult = judgeKeyboardTrap([navbar])
     expect(navbar.focusableCount).toBe(12)
@@ -410,5 +475,228 @@ describe('judgeKeyboardTrap', () => {
     expect(both.verdict).toBe('fail')
     expect(both.singleDirection).toBe(false)
     expect(both.directionsWalked).toEqual(['forward', 'backward'])
+  })
+})
+
+// acc-walk#1's residuals: four traps whose last F+1 presses reach F distinct identities without leaving the page,
+// which the count used to take for the end of it. A: the page's only stop. B: a script loop over every counted
+// stop. C: a region padded with Tab stops F does not count (keyboard-focusable scrollers). D: a stop re-rendered on
+// every press. Each walk has the shape of its chrome-headless-shell walk; tab-walk.test.ts runs the pages.
+describe('judgeKeyboardTrap: a complete count is the end of the page only after a recent wrap', () => {
+  it("A: a Tab-swallow trap on the page's only stop is a trap", () => {
+    const ids = repeat(11, 15)
+    const result = judgeKeyboardTrap([fullWalk(1, ids, probeAfter(ids, 1, repeat(11, 3)))])
+    expect(result.verdict).toBe('fail')
+    expect(result.directions[0].endOfPage).toBeNull()
+    expect(result.directions[0].release).toBe('none')
+    expect(result.directions[0].stuckOn?.backendNodeId).toBe(11)
+  })
+
+  it('A: the only stop trapping after one lap is a trap', () => {
+    const ids = [11, WRAP, ...repeat(11, 13)]
+    expect(judgeKeyboardTrap([fullWalk(1, ids, probeAfter(ids, 1, repeat(11, 3)))]).verdict).toBe('fail')
+  })
+
+  // Shift+Tab walks the loop backwards (l3 l2 l1 l3 l2 from l1).
+  it('B: a script loop over every counted stop is a trap', () => {
+    const ids = around([11, 12, 13], 25)
+    const result = judgeKeyboardTrap([fullWalk(3, ids, probeAfter(ids, 3, [13, 12, 11, 13, 12]))])
+    expect(result.verdict).toBe('fail')
+    expect(result.directions[0].release).toBe('none')
+  })
+
+  it('B: a loop over every stop that arms after one lap is a trap', () => {
+    const ids = [11, 12, 13, WRAP, ...around([11, 12, 13], 21)]
+    expect(judgeKeyboardTrap([fullWalk(3, ids, probeAfter(ids, 3, [12, 11, 13, 12, 11]))]).verdict).toBe('fail')
+  })
+
+  // Two links, then a dialog whose button and two scrollers loop: F counts the links and the button.
+  it('C: a trap region padded with stops F does not count, reaching exactly F, is a trap', () => {
+    const fromLoad = [11, 12, ...around([13, 31, 32], 23)]
+    const afterOneLap = [11, 12, 13, 31, 32, WRAP, 11, 12, ...around([13, 31, 32], 17)]
+    for (const ids of [fromLoad, afterOneLap]) {
+      const result = judgeKeyboardTrap([fullWalk(3, ids, probeAfter(ids, 3, [13, 32, 31, 13, 32]))])
+      expect(result.verdict).toBe('fail')
+      expect([...result.directions[0].region].sort((a, b) => a - b)).toEqual([13, 31, 32])
+    }
+  })
+
+  it('C: a padded region larger than F whose probe gets nowhere is a trap', () => {
+    const ids = [11, ...around([13, 31, 32], 19)]
+    const result = judgeKeyboardTrap([fullWalk(2, ids, probeAfter(ids, 2, [32, 31, 13, 32]))])
+    expect(result.verdict).toBe('fail')
+    expect(result.directions[0].region).toHaveLength(3)
+    expect(result.directions[0].release).toBe('none')
+  })
+
+  // The probe's seen set is the last F+1 presses, so in a region of F+2 stops one member lies outside it and
+  // reads as unseen: the release came from the seen window, not from the page.
+  it('a region of F+2 stops whose probe reaches the member outside the last F+1 presses is refused', () => {
+    const ids = [11, ...around([13, 31, 32, 33], 19)]
+    const result = judgeKeyboardTrap([fullWalk(2, ids, probeAfter(ids, 2, [31, 13, 33]))])
+    expect(result.verdict).toBe('undetermined')
+    expect(result.reason).toBe('focusables-exceeded')
+    expect(result.keyboardTrap).toBe(false)
+  })
+
+  // More than F, not F: 12 scrollers then a datetime-local (F = 1), as chrome-headless-shell 143 walks it. The walk
+  // finds 13 stops, but its last F+1 presses reach one, the input, and the third Shift+Tab leaves the input for
+  // the last scroller, a node the probe has not seen.
+  it('a walk whose last F+1 presses reach exactly F stops keeps its release read through node identity', () => {
+    const ids = [...fresh(100, 12), ...repeat(11, 3)]
+    const result = judgeKeyboardTrap([fullWalk(1, ids, probeAfter(ids, 1, [11, 11, 111]))])
+    expect(result.verdict).toBe('pass')
+    expect(result.directions[0].region).toEqual([11])
+    expect(result.directions[0].release).toBe('opposite-key')
+  })
+
+  // Every press lands on a new node. F=3: two links and the button; F=1: the button alone.
+  const rerenderedEveryPress: ReadonlyArray<[number, number[]]> = [
+    [3, [11, 12, ...fresh(100, 23)]],
+    [1, fresh(100, 15)],
+  ]
+
+  // The probe's first Shift+Tab lands on a new node too.
+  it('D: a stop re-rendered on every press is refused, never passed', () => {
+    for (const [focusableCount, ids] of rerenderedEveryPress) {
+      const result = judgeKeyboardTrap([fullWalk(focusableCount, ids, probeAfter(ids, focusableCount, [200]))])
+      expect(result.verdict, `F=${focusableCount}`).toBe('undetermined')
+      expect(result.reason, `F=${focusableCount}`).toBe('focusables-exceeded')
+    }
+  })
+
+  // Clause 9's half of the refusal: a page that re-renders the stop on Escape as well lands Escape on a node the
+  // probe has not seen, which is no more a release than an unseen Shift+Tab. The Shift+Tabs stay on the last stop,
+  // so the refusal can only come from clause 9.
+  it('D: an Escape that lands on a new node is refused, never a release', () => {
+    for (const [focusableCount, ids] of rerenderedEveryPress) {
+      const stayed = repeat(ids[ids.length - 1], focusableCount + 2)
+      const probe = probeAfter(ids, focusableCount, stayed, { after: elementRead(200), unseenElement: true })
+      const result = judgeKeyboardTrap([fullWalk(focusableCount, ids, probe)])
+      expect(result.verdict, `F=${focusableCount}`).toBe('undetermined')
+      expect(result.reason, `F=${focusableCount}`).toBe('focusables-exceeded')
+    }
+  })
+
+  // Chromium Tabs through the fields of a date or time input on one element (chrome-headless-shell 143:
+  // datetime-local 7 presses, date 4, month 3), so a clean lap can take more than F+1 presses. The wrap window is
+  // measured in the laps the walk saw, not in F.
+  it('a lone datetime-local (seven presses on one element) still ends at all stops visited', () => {
+    const ids = [...repeat(11, 7), WRAP, ...repeat(11, 7)]
+    const result = judgeKeyboardTrap([fullWalk(1, ids, probeAfter(ids, 1, repeat(11, 3)))])
+    expect(result.verdict).toBe('pass')
+    expect(result.directions[0].endOfPage?.signal).toBe('all-stops-visited')
+  })
+
+  it('date, link, month (4 + 1 + 3 presses a lap) still ends at all stops visited', () => {
+    const ids = around([...repeat(11, 4), 12, ...repeat(13, 3), WRAP], 25)
+    const result = judgeKeyboardTrap([fullWalk(3, ids, probeAfter(ids, 3, [13, 12, 11, 11, 11]))])
+    expect(result.verdict).toBe('pass')
+    expect(result.directions[0].endOfPage?.signal).toBe('all-stops-visited')
+  })
+
+  // Two laps, not one: headed Chromium mixes wraps that show body with wraps that skip it
+  // (bench/probes/wrap/RESULT.md:17), so a walk that saw body on every wrap so far can go two laps without it.
+  // F=3 with 4-press laps: the window is 9, so up to 8 presses after the last wrap still end the page.
+  it('the recent-wrap window is 2·max(F, L)+1 presses, two of the longest laps measured', () => {
+    for (let after = 5; after <= 9; after++) {
+      const ids = [...around([11, 12, 13, WRAP], 16), ...around([11, 12, 13], after)]
+      const signal = endOfPage(fullWalk(3, ids, null))?.signal ?? null
+      expect(signal, `${after} presses after the last wrap`).toBe(after <= 8 ? 'all-stops-visited' : null)
+    }
+    // Five laps, then one that skips body, end the 25-press walk: a clean page, even when its probe gets nowhere.
+    const ids = [...around([11, 12, 13, WRAP], 20), 11, 12, 13, 11, 12]
+    expect(judgeKeyboardTrap([fullWalk(3, ids, stuckProbe(ids, 3))]).verdict).toBe('pass')
+  })
+
+  // Unactivated new headless skips body on every other wrap (bench/probes/wrap/RESULT.md:16), so some end
+  // phases hold no wrap in their last F+1 presses. Each phase gets a probe that got nowhere, the worst case.
+  it('every end phase of the unactivated F=3 cycle passes, with or without its first stop re-rendered', () => {
+    for (let offset = 0; offset < 7; offset++) {
+      const plain = around([11, 12, 13, 11, 12, 13, WRAP], 25, offset)
+      const rerendered = plain.map((id, i) => (id === 11 && i > 0 ? 21 : id))
+      for (const ids of [plain, rerendered]) {
+        expect(judgeKeyboardTrap([fullWalk(3, ids, stuckProbe(ids, 3))]).verdict, `phase ${offset}`).toBe('pass')
+      }
+    }
+  })
+
+  it('a clean one-stop page passes in every end phase of the unactivated and headed-irregular cycles', () => {
+    for (const cycle of [
+      [11, 11, WRAP],
+      [11, 11, WRAP, 11, WRAP, 11, 11, WRAP],
+    ]) {
+      for (let offset = 0; offset < cycle.length; offset++) {
+        const ids = around(cycle, 15, offset)
+        const verdict = judgeKeyboardTrap([fullWalk(1, ids, stuckProbe(ids, 1))]).verdict
+        expect(verdict, `${cycle.join(' ')} phase ${offset}`).toBe('pass')
+      }
+    }
+  })
+
+  // chrome-headless-shell stops on scrollers F does not count, so the tail can hold more stops than F.
+  it('a shell walk over two stops F does not count passes in every end phase, never failed or refused', () => {
+    for (let offset = 0; offset < 6; offset++) {
+      const ids = around([11, 12, 13, 31, 32, WRAP], 25, offset)
+      expect(judgeKeyboardTrap([fullWalk(3, ids, stuckProbe(ids, 3))]).verdict, `phase ${offset}`).toBe('pass')
+    }
+  })
+
+  it('F=0: one uncounted stop that swallows Tab and Shift+Tab is a trap', () => {
+    const ids = repeat(31, 10)
+    expect(judgeKeyboardTrap([fullWalk(0, ids, probeAfter(ids, 0, repeat(31, 2)))]).verdict).toBe('fail')
+  })
+
+  // More stops than F, but neither release below is read through node identity.
+  it('F=0 with two uncounted scrollers: a probe that reaches a wrap is a release', () => {
+    const ids = around([31, 32, WRAP], 10)
+    const result = judgeKeyboardTrap([fullWalk(0, ids, probeAfter(ids, 0, [WRAP]))])
+    expect(result.verdict).toBe('pass')
+    expect(result.directions[0].release).toBe('opposite-key')
+  })
+
+  it('a padded region larger than F whose Escape replaces the document is released by Escape', () => {
+    const ids = [11, ...around([13, 31, 32], 19)]
+    const probe = probeAfter(ids, 2, [41], { after: bodyRead(true), documentReplaced: true })
+    const result = judgeKeyboardTrap([fullWalk(2, ids, probe)])
+    expect(result.verdict).toBe('pass')
+    expect(result.directions[0].release).toBe('escape-key')
+  })
+
+  // The Shift+Tabs stay in the region, so only Escape can release.
+  it('a padded region larger than F whose Escape wraps is released by Escape', () => {
+    const ids = [11, ...around([13, 31, 32], 19)]
+    const probe = probeAfter(ids, 2, [32, 31, 13, 32], { after: bodyRead(false), wrapped: true })
+    const result = judgeKeyboardTrap([fullWalk(2, ids, probe)])
+    expect(result.verdict).toBe('pass')
+    expect(result.directions[0].release).toBe('escape-key')
+  })
+
+  // The refusal's cost, pinned. F counted and U uncounted one-press stops first wrap at press F+U+1, so with
+  // U >= 4F+10 the 5(F+1)+5-press walk never wraps, and its release is read through identity with more stops
+  // than F. One stop fewer and the walk's last press is the wrap.
+  it('a clean page with 4F+10 or more stops F does not count never wraps in the walk and is refused', () => {
+    for (const focusableCount of [1, 3]) {
+      const presses = 5 * (focusableCount + 1) + 5
+      const cases: ReadonlyArray<[number, 'undetermined' | 'pass']> = [
+        [4 * focusableCount + 10, 'undetermined'],
+        [4 * focusableCount + 9, 'pass'],
+      ]
+      for (const [uncounted, verdict] of cases) {
+        const ids = around([...fresh(100, focusableCount + uncounted), WRAP], presses)
+        const last = ids[ids.length - 1]
+        // Shift+Tab steps back one stop a press; the first stop before the last F+1 presses is unseen.
+        const probe = ids.slice(-(focusableCount + 1)).includes(WRAP)
+          ? null
+          : probeAfter(
+              ids,
+              focusableCount,
+              Array.from({ length: focusableCount + 2 }, (_, i) => last - 1 - i),
+            )
+        const result = judgeKeyboardTrap([fullWalk(focusableCount, ids, probe)])
+        expect(result.verdict, `F=${focusableCount} U=${uncounted}`).toBe(verdict)
+        if (verdict === 'undetermined') expect(result.reason).toBe('focusables-exceeded')
+      }
+    }
   })
 })
