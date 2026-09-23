@@ -9,7 +9,6 @@ const nodes: AXNode[] = [
     ignored: false,
     role: { value: 'RootWebArea' },
     name: { value: 'Page' },
-    childIds: ['2', '3', '4', '5', '6', '7', '8'],
     backendDOMNodeId: 100,
   },
   {
@@ -56,7 +55,6 @@ const nodes: AXNode[] = [
     ignored: false,
     role: { value: 'navigation' },
     name: { value: '' },
-    childIds: ['6'],
     backendDOMNodeId: 107,
   },
 ]
@@ -90,34 +88,12 @@ describe('convertToElementGraph', () => {
     expect(graph.elements.get(`${URL_}#node-3`)).toMatchObject({ ignored: false, ignoredReasons: [] })
   })
 
-  it('leaves ignored nodes out of the role indices and the interactive count', () => {
-    expect(graph.buttons).toEqual([])
-  })
-
   it('carries backendDOMNodeId across as the DOM bridge', () => {
     expect(graph.elements.get(`${URL_}#node-4`)?.backendDOMNodeId).toBe(103)
   })
 
-  it('computes type flags, indices and outbound links', () => {
-    expect(graph.headings).toEqual([`${URL_}#node-2`])
+  it('computes type flags', () => {
     expect(graph.elements.get(`${URL_}#node-2`)?.typeFlags.headingLevel).toBe(2)
-    expect(graph.landmarks).toEqual([`${URL_}#node-8`])
-    expect(graph.links).toEqual([`${URL_}#node-6`])
-    expect(graph.outboundLinks).toEqual([
-      {
-        elementId: `${URL_}#node-6`,
-        targetUrl: 'http://fixture.test/next',
-        linkText: 'Next',
-      },
-    ])
-    expect(graph.interactiveCount).toBe(1)
     expect(graph.elementCount).toBe(8)
-  })
-
-  it('links children to parents; a child claimed twice keeps the last parent', () => {
-    // node 6 is listed by both the root and the navigation node; the later claim wins.
-    expect(graph.elements.get(`${URL_}#node-6`)?.parent).toBe(`${URL_}#node-8`)
-    expect(graph.elements.get(`${URL_}#node-8`)?.children).toEqual([`${URL_}#node-6`])
-    expect(graph.rootElementIds).toEqual([`${URL_}#node-1`])
   })
 })

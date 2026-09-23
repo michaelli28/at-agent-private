@@ -162,8 +162,6 @@ export {
   type ElementTypeFlags,
   ElementNodeSchema,
   type ElementNode,
-  OutboundLinkSchema,
-  type OutboundLink,
   PageElementGraphSchema,
   type PageElementGraph,
   DualCrawlResultSchema,

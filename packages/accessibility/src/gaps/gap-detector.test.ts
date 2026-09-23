@@ -69,26 +69,14 @@ function tree(axNodes: AxFixture[]): PageElementGraph {
       ignored: n.ignoredReasons !== undefined,
       ignoredReasons: n.ignoredReasons ?? [],
       typeFlags: flags,
-      children: [],
-      parent: null,
     })
   })
   return {
     pageUrl: PAGE,
     title: 'fixture',
     elements,
-    rootElementIds: [],
-    headings: [],
-    landmarks: [],
-    buttons: [],
-    formFields: [],
-    links: [],
-    tables: [],
-    lists: [],
-    outboundLinks: [],
     crawledAt: new Date(0),
     elementCount: elements.size,
-    interactiveCount: 0,
   }
 }
 
