@@ -26,7 +26,7 @@
 - **F55 ships with no recorded dev fixture.** `focusLostOnArrival` is false on all 8 dev bases (bench/corpus/dev/labels.json) and on all 27 variants recorded at cd3b122, because no operator in bench/corpus/dev/operators.ts produced it when they were seeded. The M7 blur-on-focus operator was added at 4d7356a so the rule has dev-corpus evidence, but the variants recorded at cd3b122 predate it: until a fresh dev-variant run is recorded, the focus-removed rule is proven on synthetic and inline fixtures plus the M7 variant, not on any recorded baseline walk.
 - **A same-document SPA route change is not seen.** The URL rule needs `location.href` to change.
 - **One observation, one criterion.** An F55 failure also fails 2.1.1 and 2.4.7; those stay with the gap detector and the focus-indicator check, so 3.2.1 recall is not counted three times.
-- **A context change that arrives after the 150 ms settle is refused, not reported** — a timer cannot be told from a focus handler. Those presses are listed as `url-changed-after-settle`.
+- **A context change that arrives after the 150 ms settle is refused, not reported** — a timer cannot be told from a focus handler. Those presses are listed as `url-changed-after-settle`. Since round 2 a focus drop first seen at the settled read is refused the same way, as `focus-removed-after-settle` (see the round-2 section).
 - **An `undetermined` verdict counts as a miss.** It stays in both denominators and is printed as its own count beside the rate, so the before/after comparison stays like-for-like. A judge that refuses to decide must not be able to buy detection by shrinking the denominator it is scored on. The asymmetry is stated rather than hidden: on a clean page a refusal scores exactly like a correct pass, so the false-alarm cell also prints the worst case (the rate if every refusal had been a false alarm) and drops the rule-of-three bound, which assumes every page was observed.
 
 ## What the fix design saw of the held-out set (decided 2026-09-20)
@@ -112,6 +112,36 @@ with the fix.
   detector's crawl and its Tab walk see different nodes: a hazard for the checker, not a WCAG defect,
   because every control still works from the keyboard. Its script is a file, so no operator is seeded
   on it; an operator's script would bind to nodes the first keydown removes.
+- **3.2.1: the settle fix refuses a focus drop first seen at the settled read.** The walk reads focus
+  about 1 ms after each Tab press and again after the 150 ms settle. A drop that shows only at the second
+  read is listed as `focus-removed-after-settle`, not reported, as a late URL change already was: a page
+  timer cannot be told from a focus handler there. The refusal covers any focus removal first seen after
+  the first read, whatever deferred it: a timer of 1 ms or more, a CSS animation, or chained
+  `requestAnimationFrame` calls. Measured on real `chrome-headless-shell` walks of small local pages (5
+  walks, 30 drops each): `setTimeout(blur, 1)`, a blur two `requestAnimationFrame` calls later, and a 60 ms
+  CSS animation to `visibility: hidden` with no script were each refused on 30 of 30 drops. A removal
+  made in the focus handler (`blur()`) or in the next task or frame (`setTimeout(blur, 0)`, one
+  `requestAnimationFrame`) already shows at the first read and is still reported, 30 of 30 each. The
+  design's walks found the same for `display: none`, `inert`, `disabled` and removing the element.
+  The cost is planted as M8, whose target blurs 60 ms after focus: re-judging Run A's recorded walks, all 9
+  M8 variants go from `fail` to `pass`. That is the fix's price, not an improvement.
+- **3.2.1: the settle fix still leaks on a timer that drops focus with no URL change.** A tick that lands
+  in the ~1 ms between a press and its first read is still reported. A small local page whose timer
+  replaced a button every 100 ms (about 30 drops a walk) was walked 10 times in `chrome-headless-shell`
+  when the fix was designed: 2 walks still failed, against 10 of 10 before. The mixed-timing refusal that
+  would close this was declined.
+- **3.2.1: the idle fix stops a fragment-only change voiding the walk.** Before the first press the walk
+  watches the idle page, and a URL change there voids the walk as
+  `undetermined / page-navigates-without-input`. A change to the `#fragment` alone no longer does, as every
+  other URL comparison in the judge already ignores it, except on a walk that also has a
+  `focus-removed-after-settle` refusal: a timer setting `location.hash` clears focus by itself, so that
+  walk stays `undetermined`. Re-judged, 8 of the 9 M9 variants go from `undetermined` to `fail` with the
+  same findings. `one-button__M9__only-button` goes to `pass`: the walk never sets `focusLost` there, the
+  same miss as `one-button__M7__only-button` below, which the void was hiding.
+- **3.2.1, M8: focus held for tens of milliseconds counts as reached by the gap detector.** It takes an
+  element as reached when either read after a Tab press found focus on it (`gaps/keyboard.ts`). An M8
+  target holds focus for 60 ms, so a person cannot operate it and it is labelled `not_focusable`, but the
+  detector reports no gap: 9 known misses, pinned in `bench/gaps-dev.test.ts`.
 - **`one-button__M7__only-button` reads 3.2.1 `pass`, an old-checker miss.** The walk marks a drop
   `focusLost` only after focus has been on a real element in the document (`lastRealSeen`, `tab-walk.ts`).
   The page's only stop blurs on arrival, so every read is `body` and all 8 drops are filed
