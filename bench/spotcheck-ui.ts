@@ -574,7 +574,9 @@ const PAGE = String.raw`<!doctype html>
   <main><div id="detail"></div></main>
 </div>
 <script>
-const state = { items: [], answers: {}, cur: 0, itemsSha256: null };
+// unsaved: why the last save failed. Kept here, not only in the span, because every render
+// replaces the span -- the auto-advance erased the warning 180 ms after it appeared.
+const state = { items: [], answers: {}, cur: 0, itemsSha256: null, unsaved: null };
 const esc = (s) => String(s ?? "").replace(/[&<>"]/g, (c) => ({ "&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;" }[c]));
 // spotcheck.ts escapes angle brackets for markdown (\<button>); undo that for display.
 const unmd = (s) => String(s ?? "").replace(/\\([<>\u0060*_])/g, "$1");
@@ -653,7 +655,9 @@ function render() {
     '<textarea id="note" placeholder="e.g. took focus on the 2nd Tab, Enter did nothing">' + esc(a.note) + "</textarea>",
     '<div class="row" style="margin-top:12px"><div class="btns">' +
       '<button class="ghost" id="prevbtn">← Previous</button><button class="ghost" id="nextbtn">Next →</button></div>' +
-      '<span class="saved" id="saved">saved</span></div></div>',
+      (state.unsaved
+        ? '<span class="saved on" id="saved" style="color:var(--disagree)">' + esc(state.unsaved) + "</span>"
+        : '<span class="saved" id="saved">saved</span>') + "</div></div>",
     '<div class="card"><div class="row"><div><h2 style="margin:0 0 4px">When you are done</h2>' +
       '<span class="hint">Verdicts save to spotcheck-answers.json as you type. This copies them into SPOTCHECK.md.</span></div>' +
       '<button class="ghost" id="writemd">Write into SPOTCHECK.md</button></div></div>',
@@ -692,9 +696,13 @@ function mark(v) {
   const cur = (state.answers[it.n] || {}).verdict;
   const next = cur === v ? null : v;
   const note = document.getElementById("note").value;
-  save(it.n, next, note);
+  const saving = save(it.n, next, note);
   render();
-  if (next) setTimeout(() => move(1), 180);
+  // Move on only once the verdict is on disk; a rejected one has been taken back, so redraw.
+  saving.then((ok) => {
+    if (!ok) render();
+    else if (next) setTimeout(() => move(1), 180);
+  });
 }
 
 function move(d) {
@@ -705,21 +713,34 @@ function move(d) {
 }
 
 async function save(n, verdict, note) {
-  state.answers[n] = { verdict: verdict, note: note };
-  const r = await fetch("/api/answer", {
-    method: "POST",
-    headers: { "content-type": "application/json" },
-    body: JSON.stringify({ n: n, verdict: verdict, note: note, itemsSha256: state.itemsSha256 }),
-  });
+  const before = state.answers[n];
+  const mine = { verdict: verdict, note: note };
+  state.answers[n] = mine;
+  let r = null;
+  try {
+    r = await fetch("/api/answer", {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({ n: n, verdict: verdict, note: note, itemsSha256: state.itemsSha256 }),
+    });
+  } catch (e) { /* server gone: handled below as not saved */ }
   const s = document.getElementById("saved");
-  if (!r.ok) {
-    // The worklist changed underneath this page. Say so instead of letting the reviewer keep
-    // judging into a void.
-    const d = await r.json().catch(() => ({}));
-    if (s) { s.textContent = d.reason || "not saved — reload"; s.style.color = "var(--disagree)"; s.classList.add("on"); }
-    return;
+  if (!r || !r.ok) {
+    // Not on disk (the worklist changed underneath this page, or the server is gone), so take it
+    // back -- the dot and the count must not claim it -- and say so instead of letting the
+    // reviewer keep judging into a void.
+    if (state.answers[n] === mine) {
+      if (before) state.answers[n] = before;
+      else delete state.answers[n];
+    }
+    const d = r ? await r.json().catch(() => ({})) : {};
+    state.unsaved = d.reason || "not saved — reload";
+    if (s) { s.textContent = state.unsaved; s.style.color = "var(--disagree)"; s.classList.add("on"); }
+    return false;
   }
-  if (s) { s.classList.add("on"); setTimeout(() => s.classList.remove("on"), 900); }
+  state.unsaved = null;
+  if (s) { s.textContent = "saved"; s.style.color = ""; s.classList.add("on"); setTimeout(() => s.classList.remove("on"), 900); }
+  return true;
 }
 
 async function writeMd() {

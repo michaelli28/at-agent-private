@@ -304,4 +304,65 @@ describe("the review page", () => {
     },
     LONG,
   );
+
+  it(
+    "counts a saved verdict and moves on to the next item",
+    async () => {
+      const ui = await startUi(worklist(3));
+      const page = await open(ui);
+      await page.click("button.v.agree");
+      await expect.poll(() => page.textContent("h1")).toMatch(/^2\. /);
+      expect(await page.textContent("#prog")).toBe("1 of 3 marked");
+      expect(await page.locator("nav .dot.agree").count()).toBe(1);
+      const saved = JSON.parse(
+        readFileSync(ui.md.replace(/\.md$/, "-answers.json"), "utf8"),
+      ) as { answers: Record<string, { verdict: string | null }> };
+      expect(saved.answers["1"].verdict).toBe("agree");
+    },
+    LONG,
+  );
+
+  // The verdict went into the page's state before the POST and stayed there on a 409, so the dot
+  // and the count said "saved"; the one warning was then erased by the auto-advance 180 ms later.
+  it(
+    "does not show a rejected verdict as saved, and keeps the warning up",
+    async () => {
+      const ui = await startUi(worklist(3));
+      const page = await open(ui);
+      // Regenerated while the page is open: its itemsSha256 no longer matches, so the server 409s.
+      writeFileSync(ui.md, worklist(3, ["item 1", "REDRAWN", "item 3"]));
+      await page.click("button.v.agree");
+      await page.waitForTimeout(600); // well past the 180 ms auto-advance
+      expect(await page.textContent("#prog")).toBe("0 of 3 marked");
+      expect(await page.locator("nav .dot.agree").count()).toBe(0);
+      expect(await page.textContent("#saved")).toContain(
+        "the worklist changed",
+      );
+      expect(await page.getAttribute("#saved", "class")).toContain("on");
+      // Still there after the page redraws for another item.
+      await page.click("#nextbtn");
+      expect(await page.textContent("h1")).toMatch(/^2\. /);
+      expect(await page.textContent("#saved")).toContain(
+        "the worklist changed",
+      );
+    },
+    LONG,
+  );
+
+  // A refused connection threw out of save() unhandled: the verdict looked saved, nothing was said.
+  it(
+    "says a verdict was not saved when the server is gone",
+    async () => {
+      const ui = await startUi(worklist(2));
+      const page = await open(ui);
+      await ui.stop();
+      await page.click("button.v.agree");
+      await page.waitForTimeout(600);
+      expect(await page.textContent("#prog")).toBe("0 of 2 marked");
+      expect(await page.locator("nav .dot.agree").count()).toBe(0);
+      expect(await page.textContent("#saved")).toContain("not saved");
+      expect(await page.getAttribute("#saved", "class")).toContain("on");
+    },
+    LONG,
+  );
 });
