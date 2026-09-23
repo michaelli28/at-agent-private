@@ -151,6 +151,22 @@ describe('BrowserPage', () => {
       await highlightPromise
       await page.close()
     })
+
+    it('returns at once on a target the page lacks, leaving the failure to the action', async () => {
+      page = await client.newPage()
+      await page.playwrightPage.setContent('<button>Submit</button>')
+
+      const outcome = await Promise.race([
+        page.highlight('button', { name: 'Sumbit' }, 'CLICK', 0).then(
+          () => 'returned',
+          (error: Error) => `threw: ${error.message}`,
+        ),
+        new Promise((resolve) => setTimeout(() => resolve('still waiting after 2 s'), 2000)),
+      ])
+
+      expect(outcome).toBe('returned')
+      await page.close()
+    })
   })
 
   describe('screenshot', () => {
