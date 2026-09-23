@@ -695,7 +695,7 @@ describe("renderReport: dev-variants and dev-fixtures", () => {
   };
   const variant = (
     base: string,
-    op: "M1" | "M3" | "M5" | "M6",
+    op: "M1" | "M3" | "M5" | "M6" | "M8" | "M10" | "M13",
     target: string,
     label: ElementLabel,
   ) => [
@@ -703,11 +703,13 @@ describe("renderReport: dev-variants and dev-fixtures", () => {
     {
       file: `${base}__${op}__${target}.html`,
       page:
-        op === "M5"
+        op === "M5" || op === "M10"
           ? { ...flags, keyboardTrap: true, trapEscapable: false }
           : op === "M6"
             ? { ...flags, contextChangeOnFocus: true }
-            : flags,
+            : op === "M8"
+              ? { ...flags, focusLostOnArrival: true }
+              : flags,
       elements: { [target]: label },
       base,
       operator: op,
@@ -735,6 +737,20 @@ describe("renderReport: dev-variants and dev-fixtures", () => {
       ),
       variant("b2", "M5", "t3", el()),
       variant("b2", "M6", "t4", el()),
+      // One operator of each kind added in round 2: 3.2.1 (M8), 2.1.2 (M10) and the gap decoy (M13).
+      variant(
+        "b2",
+        "M8",
+        "t5",
+        el({ keyboardAccessible: false, expectedGapType: "not_focusable" }),
+      ),
+      variant("b2", "M10", "t6", el()),
+      variant(
+        "b1",
+        "M13",
+        "t7",
+        el({ interactive: false, keyboardAccessible: false }),
+      ),
     ]),
   });
   const variants = fakeSummary("dev-variants", [
@@ -762,6 +778,24 @@ describe("renderReport: dev-variants and dev-fixtures", () => {
       cluster: "b2",
       dynamic: ["2.4.3"],
       walk: { contextChange: contextFail() },
+    }),
+    // M8's target carries a gap, which a gap-read would score Y; its cell is the 3.2.1 judge's pass.
+    fakePage("b2__M8__t5", {
+      cluster: "b2",
+      gaps: [
+        gap({
+          dataBenchId: "t5",
+          gapType: "not_focusable",
+          wcag: ["2.1.1", "2.4.7"],
+        }),
+      ],
+    }),
+    fakePage("b2__M10__t6", { cluster: "b2", walk: { trap: trapFail() } }),
+    // A gap on the decoy's target is a false alarm, and it still reads as Y.
+    fakePage("b1__M13__t7", {
+      cluster: "b1",
+      gaps: [gap({ dataBenchId: "t7" })],
+      walk: { trap: trapFail() },
     }),
   ]);
   const fixtures = fakeSummary("dev-fixtures", [
@@ -799,6 +833,12 @@ describe("renderReport: dev-variants and dev-fixtures", () => {
     expect(line("M5")).toMatch(/\| · \| Y \|$/);
     // M6: the frozen column missed it; the 3.2.1 judge flags it.
     expect(line("M6")).toMatch(/\| · \| N→Y \|$/);
+    // M8 reads the 3.2.1 verdict (a pass), not the gap on its target; M10 reads the 2.1.2 verdict; M13
+    // reads the gap detector, not the page's trap verdict, and the legend calls its Y a false alarm.
+    expect(line("M8")).toMatch(/\| · \| N \|$/);
+    expect(line("M10")).toMatch(/\| · \| N→Y \|$/);
+    expect(line("M13")).toMatch(/\| Y \| · \|$/);
+    expect(md).toContain("a Y in its row is a false alarm");
     expect(md).toContain("Flagged per operator (before → after):");
   });
 

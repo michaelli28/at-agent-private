@@ -168,7 +168,7 @@ describe("generation", () => {
     for (const [id, v] of variants()) {
       const base = baseLabels.pages[v.base];
       expect(base, id).toBeDefined();
-      const lostKeyboard = v.operator === "M1" || v.operator === "M2";
+      const lostKeyboard = ["M1", "M2", "M8", "M9", "M13"].includes(v.operator);
       const revealedByTarget = (label: ElementLabel): boolean => {
         const seen = new Set<string>();
         let cur = label.revealedBy;
@@ -200,8 +200,15 @@ describe("generation", () => {
         M5: null,
         M6: null,
         M7: "not_focusable",
+        M8: "not_focusable",
+        M9: "not_focusable",
+        M10: null,
+        M11: null,
+        // The decoy: the page switched the target off, so the right answer is no gap.
+        M13: null,
       };
       expect(target.expectedGapType, id).toBe(expectedGap[v.operator]);
+      expect(target.interactive, id).toBe(v.operator !== "M13");
       if (v.operator === "M1") {
         expect(target.acceptableGapTypes, id).toEqual([
           "wrong_role",
@@ -214,14 +221,20 @@ describe("generation", () => {
           "missing_from_a11y_tree",
         ]);
       }
+      const trap = ["M5", "M10", "M11"].includes(v.operator);
       expect(v.page.keyboardTrap, id).toBe(
-        v.operator === "M5" ? true : base.page.keyboardTrap,
+        trap ? true : base.page.keyboardTrap,
       );
       expect(v.page.trapEscapable, id).toBe(
-        v.operator === "M5" ? false : base.page.trapEscapable,
+        trap ? false : base.page.trapEscapable,
       );
       expect(v.page.contextChangeOnFocus, id).toBe(
         v.operator === "M6" ? true : base.page.contextChangeOnFocus,
+      );
+      expect(v.page.focusLostOnArrival, id).toBe(
+        ["M7", "M8", "M9"].includes(v.operator)
+          ? true
+          : base.page.focusLostOnArrival,
       );
     }
   });
@@ -339,7 +352,7 @@ describe("labels agree with the DOM", () => {
             p.labels.page.focusLostOnArrival &&
             f.id === p.labels.target
           ) {
-            // M7 takes keyboard access away at run time, not in the markup: a focus handler blurs the
+            // M7-M9 take keyboard access away at run time, not in the markup: a focus handler blurs the
             // element, so it stays focusable in the DOM while a Tab walk can never leave focus on it.
             // Asserting the markup side keeps this case honest instead of exempt.
             expect(
@@ -439,6 +452,192 @@ describe("operators behave as labelled", () => {
       page.waitForURL(/\?changed=1$/),
       page.focus(sel(v.target)),
     ]);
+    await page.close();
+  });
+
+  // M8-M13 were added after the labels froze, so every variant is checked, not only the first.
+  const ofOperator = (op: OperatorId): [string, VariantLabels][] =>
+    variants().filter(([, v]) => v.operator === op);
+  const onBody = async (page: Page): Promise<boolean> =>
+    (await page.evaluate(
+      "document.activeElement === null || document.activeElement === document.body",
+    )) === true;
+
+  it(
+    "M8 keeps focus on its target for a moment, then drops it to body, and the next Tab moves on",
+    async () => {
+      for (const [id, v] of ofOperator("M8")) {
+        const page = await open(`/variants/${v.file}`, [v.target]);
+        // One evaluate reads focus at once and again after the 60 ms timer, so a slow round trip cannot
+        // land the first read after the blur.
+        const reads = z.array(z.boolean()).parse(
+          await page.evaluate(`new Promise(function (done) {
+            var el = document.querySelector('${sel(v.target)}');
+            el.focus();
+            var held = document.activeElement === el;
+            setTimeout(function () { done([held, document.activeElement === document.body]); }, 150);
+          })`),
+        );
+        expect(reads, `${id}: [held at once, on body after 150 ms]`).toEqual([
+          true,
+          true,
+        ]);
+        await page.keyboard.press("Tab");
+        expect(await activeId(page), id).not.toBe(v.target);
+        await page.close();
+      }
+    },
+    LONG,
+  );
+
+  it(
+    "M9 drops focus from its target at once while a timer rewrites only the URL fragment, in the same document",
+    async () => {
+      for (const [id, v] of ofOperator("M9")) {
+        const page = await open(`/variants/${v.file}`, [v.target]);
+        expect(
+          await page.evaluate(`(function () {
+            window.__benchSameDocument = true;
+            document.querySelector('${sel(v.target)}').focus();
+            return document.activeElement === document.body;
+          })()`),
+          `${id} drops focus on arrival`,
+        ).toBe(true);
+        await page.waitForTimeout(350);
+        expect(await page.evaluate("location.hash"), id).toMatch(/^#tick-\d+$/);
+        // Still the document the marker was set in: the fragment timer loaded nothing.
+        expect(await page.evaluate("window.__benchSameDocument"), id).toBe(
+          true,
+        );
+        expect(await onBody(page), id).toBe(true);
+        await page.close();
+      }
+    },
+    LONG,
+  );
+
+  it(
+    "M10 sends Tab on the last stop to the first and Shift+Tab on the first to the last, so once in the loop Tab and Shift+Tab never leave it",
+    async () => {
+      // The loop: every element that passes the script's own stop test, in document order.
+      const STOPS = `Array.prototype.filter.call(document.querySelectorAll('*'), function (el) {
+        return el.tabIndex >= 0 && !el.disabled && el.checkVisibility({ visibilityProperty: true });
+      })`;
+      const FIRST_STOP = `${STOPS}[0]`;
+      const inLoop = async (page: Page): Promise<boolean> =>
+        (await page.evaluate(
+          `${STOPS}.indexOf(document.activeElement) >= 0`,
+        )) === true;
+      for (const [id, v] of ofOperator("M10")) {
+        const page = await open(`/variants/${v.file}`, [v.target]);
+        const presses =
+          2 * z.number().parse(await page.evaluate(`${STOPS}.length`)) + 2;
+        // Twice round the loop and more, Tab from a fresh load, then Shift+Tab from the target: every press lands in it.
+        for (let i = 0; i < presses; i++) {
+          await page.keyboard.press("Tab");
+          expect(await inLoop(page), `${id} Tab ${i + 1}`).toBe(true);
+        }
+        await page.focus(sel(v.target));
+        for (let i = 0; i < presses; i++) {
+          await page.keyboard.press("Shift+Tab");
+          expect(await inLoop(page), `${id} Shift+Tab ${i + 1}`).toBe(true);
+        }
+        await page.focus(sel(v.target));
+        await page.keyboard.press("Tab");
+        expect(
+          await page.evaluate(`document.activeElement === ${FIRST_STOP}`),
+          `${id}: Tab on the last stop`,
+        ).toBe(true);
+        await page.keyboard.press("Shift+Tab");
+        expect(await activeId(page), `${id}: Shift+Tab on the first`).toBe(
+          v.target,
+        );
+        await page.keyboard.press("Escape");
+        await page.keyboard.press("Tab");
+        expect(
+          await page.evaluate(`document.activeElement === ${FIRST_STOP}`),
+          `${id}: Escape releases nothing`,
+        ).toBe(true);
+        await page.close();
+      }
+    },
+    LONG,
+  );
+
+  it(
+    "M11 replaces its target with a copy on Tab and Shift+Tab and focuses the copy, so focus never leaves it",
+    async () => {
+      for (const [id, v] of ofOperator("M11")) {
+        const page = await open(`/variants/${v.file}`, [v.target]);
+        await page.focus(sel(v.target));
+        await page.evaluate("window.__benchFirst = document.activeElement");
+        for (const key of ["Tab", "Shift+Tab", "Escape", "Tab", "Tab"]) {
+          await page.keyboard.press(key);
+          expect(await activeId(page), `${id} after ${key}`).toBe(v.target);
+        }
+        expect(
+          await page.evaluate("window.__benchFirst.isConnected"),
+          `${id}: the focused node is a copy`,
+        ).toBe(false);
+        await page.close();
+      }
+    },
+    LONG,
+  );
+
+  it(
+    "M13 makes one control inert and transparent: it takes no focus and no clicks, and assistive technology ignores it",
+    async () => {
+      for (const [id, v] of ofOperator("M13")) {
+        const page = await open(`/variants/${v.file}`, [v.target]);
+        expect(
+          await page.evaluate(`(function () {
+            var el = document.querySelector('${sel(v.target)}');
+            return [el.inert, getComputedStyle(el).opacity];
+          })()`),
+          id,
+        ).toEqual([true, "0"]);
+        await page.focus(sel(v.target));
+        expect(await activeId(page), id).not.toBe(v.target);
+        // A click at its centre reaches whatever lies beneath it, never a tagged element, and navigates nowhere.
+        const url = page.url();
+        await page.evaluate(`document.addEventListener('click', function (e) {
+          var hit = e.target.closest ? e.target.closest('[data-bench-id]') : null;
+          window.__benchHit = hit ? hit.getAttribute('data-bench-id') : null;
+        }, true)`);
+        const box = await page.locator(sel(v.target)).boundingBox();
+        if (box === null) throw new Error(`${id}: target has no box`);
+        await page.mouse.click(box.x + box.width / 2, box.y + box.height / 2);
+        expect(await page.evaluate("window.__benchHit"), id).toBeNull();
+        expect(page.url(), id).toBe(url);
+        expect((await axNode(page, v.target)).ignored, id).toBe(true);
+        await page.close();
+      }
+    },
+    LONG,
+  );
+
+  it("M13 on the modal leaves its trap as labelled: focus stays in the dialog and Escape returns it to the trigger", async () => {
+    const [id, v] = ofOperator("M13").find(([, x]) => x.base === "modal") ?? [
+      "",
+      null,
+    ];
+    if (v === null) throw new Error("no M13 variant on the modal");
+    expect(v.page, id).toMatchObject({
+      keyboardTrap: true,
+      trapEscapable: true,
+    });
+    const page = await open(`/variants/${v.file}`, Object.keys(v.elements));
+    const inside = ["name-input", "username-input", "save-button"];
+    expect(await activeId(page), id).toBe("name-input");
+    for (const key of ["Tab", "Shift+Tab"]) {
+      for (let i = 0; i < 6; i++) {
+        await page.keyboard.press(key);
+        expect(inside, `${id} ${key} ${i + 1}`).toContain(await activeId(page));
+      }
+    }
+    await page.keyboard.press("Escape");
+    expect(await activeId(page), id).toBe("trigger");
     await page.close();
   });
 });

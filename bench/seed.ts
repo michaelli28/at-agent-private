@@ -4,11 +4,11 @@
 //
 // --check re-loads every base and variant with scripts ON and requires that each variant differs from its base in
 // EXACTLY one data-bench-id element, comparing per-id outerHTML plus all markup outside tagged elements.
-// Inline scripts: M1/M5/M6/M7 add behaviour a DOM attribute cannot carry (addEventListener), so each appends ONE
+// Inline scripts: M1 and M5-M11 add behaviour a DOM attribute cannot carry (addEventListener), so each appends ONE
 // <script data-bench-op data-bench-target> as the last child of <body>. The check accounts for it explicitly: the base
 // has none; the variant has exactly the operator's script, byte-equal to what the operator generates for the target,
 // last in <body>, and addressing no element but the target; it is then dropped before the rest of the markup is
-// compared. M1 also rewrites the target, so its outerHTML must differ. M5/M6/M7 are script-only: every outerHTML must be
+// compared. M1 also rewrites the target, so its outerHTML must differ. M5-M11 are script-only: every outerHTML must be
 // unchanged, and the one-element change is the script bound to the target.
 // --check also regenerates everything and fails if the files on disk are stale.
 //
@@ -53,7 +53,7 @@ import {
 const BENCH = dirname(fileURLToPath(import.meta.url));
 export const CORPUS_DIR = join(BENCH, "corpus", "dev");
 export const DEFAULT_OUT_DIR = join(CORPUS_DIR, "variants");
-const VARIANT_FILE = /^[a-z0-9-]+__M[1-7]__[a-z0-9-]+\.html$/;
+const VARIANT_FILE = /^[a-z0-9-]+__M(?:[1-9]|1[0-3])__[a-z0-9-]+\.html$/;
 const LABELS_FILE = "labels.json";
 
 export type StaticServer = { origin: string; close: () => Promise<void> };
