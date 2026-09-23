@@ -231,3 +231,58 @@ with the fix.
   do not assess `not_focusable`). The other 86 pages are unchanged, the M8 and `form__M9` `not_focusable`
   misses included. These pages were built to show the fixes, so this shows the fixes run, not how much they
   help.
+- **gaps timing: a Tab walk counts only if it ran on the nodes the crawl listed.** The detector flags a crawled
+  control the walk never reached `not_focusable` (critical). A page reloaded before or during the walk (its idle
+  baseline included), re-mounted in the same window, or rewritten with `document.open()` left the walk reaching
+  only new nodes, so every crawled control was flagged on a page with no defect. The detector now marks the
+  window before the crawl and checks after the walk: a lost mark gives `document-replaced`, and a crawled node the
+  walk never reached that has left the document gives `crawled-nodes-detached`. The nodes checked include those
+  read as `no-box`, because a node removed before its box is read has none: without them, a re-mount right after
+  the crawl left no candidate to check, and a real `not_focusable` was lost with the page scored as an assessed
+  pass (CONFIRMED by two tests in `detect-timing.test.ts`: a re-mount just before the box read, and one just
+  after the tree read). Either way `not_focusable` is not assessed, so the page's 2.1.1 and 2.4.7 cells are
+  undetermined, and the page stays in both columns. Nothing is read before the walk. A navigation that lands
+  while the mark is written destroys the write's context: the error is caught, and the new window, which has no
+  mark, is refused as `document-replaced` after the walk (CONFIRMED by a test page that reloads from inside the
+  write, and on pages that reload themselves around the end of the 3 s settle or carry a 3 s meta refresh: the
+  write threw in 8 of 39 runs before, in none of 105 after). A page closed during the walk keeps its
+  `walk-error`. What still throws: a page closed while the mark is written, as any read of a closed page did
+  before, or while the post-walk check runs, which now throws
+  (`Target page, context or browser has been closed`) where it used to return a result, so `bench/run.ts`
+  records no gap result for it; and a navigation that lands during the title read after the tree read
+  (`Execution context was destroyed`), as before these fixes (1 of those 105 runs; 3 of 31 self-reload runs at
+  `6ee3b83`). On the probe (`bench/probes/gap-timing/RESULT.md`) the reload, idle-baseline and
+  `document.open()` rows go from 4 × `not_focusable` to no gap.
+- **gaps timing: the accessibility tree is read after the DOM crawl.** Every candidate now existed when the tree was
+  read, so content the page adds while the detector reads is no longer flagged `missing_from_a11y_tree`
+  (critical): on the probe's timer page, 20 to 23 flags in 5 of 5 runs before, none in 5 of 5 after. A page
+  replaced or re-mounted right after the tree read gives no gap, because its crawled nodes are gone before their
+  boxes are read; with a walk it is refused (`document-replaced`, or `crawled-nodes-detached` for a re-mount in
+  the same window). Without a walk nothing says the page changed, but `bench/run.ts` and the CLI always walk.
+- **gaps timing: a refused walk falls back to the no-walk result, and that can add flags.** Only a walk shows that
+  an aria-hidden control is hidden from the keyboard too; without one the static rule flags it
+  `hidden_but_interactive` (moderate). The rule is kept on refused walks (decided 2026-09-23). Pinned in
+  `packages/accessibility/src/gaps/detect-timing.test.ts`: a modal page replaced before the walk gains 2 such flags
+  on its correct aria-hidden background, and a modal page whose background drops a toast on the third keydown,
+  with no replacement at all, gains 3. A zero-area Tab stop the walk never holds can also gain a flag (the probe's
+  zero-area row: `wrong_role`, serious). The refusal fires whenever the page's own script removes a crawled node
+  the walk never reached, shown or not (a `no-box` one counts too), such as a toast, a carousel re-rendering its
+  slides or a React re-key: that page's 2.1.1 and 2.4.7 go undetermined, and a real `not_focusable` on it is
+  missed. Withholding aria-hidden flags on a refused walk was declined: real M3-type flags would then read as
+  clean, and 4.1.2 has no undetermined path in the bench.
+- **gaps timing: what the check cannot see (ASSUMED: reasoned from the code, not measured).** An attribute-only
+  change during the walk (`aria-hidden` toggled, `tabindex` removed on focus) keeps the node, so nothing is
+  refused and the crawl's reads stay those of crawl time. A node the walk reached and the page then replaced is not
+  refused: the reach was real. A crawled node detached and re-attached before the check reads as connected. A node
+  detached exactly at the tree read and re-attached before its box is read still reads as missing from the tree. A
+  replacement after the walk's last press, before the check, refuses a walk that was sound. The check costs one
+  script call before the crawl, one after the walk, and one CDP read per unreached crawled node, `no-box` ones
+  included, until the first detached one: 96 to 103 ms for 350 on the probe.
+- **gaps timing: on the dev pages the two fixes change the gap result of exactly 1 of 107 pages.** Measured by
+  running every dev page through the detector as `bench/gaps-dev.test.ts` does, before the fixes and after each
+  of them, in `chrome-headless-shell`:
+  `remount-on-keydown`, which re-renders `<main>` on its first keydown, goes from `not_focusable` on `home-link`
+  and `about-link` to no gap, with `not_focusable` not assessed (`crawled-nodes-detached`), so its 2.1.1 and 2.4.7
+  cells become undetermined on a page labelled clean. The other 106 pages are unchanged in gap list, assessment
+  and reasons, the earlier gap fixes' cells included. The page was built to show this hazard, so this shows the
+  fix runs, not how much it helps.
