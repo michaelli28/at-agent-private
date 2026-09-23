@@ -45,9 +45,6 @@ export function runDirName(
 }
 export const SUBSET_DIR_RE = /^([a-z-]+)--subset-[0-9a-f]{10}$/;
 
-export const TOOL_IDS = ["gaps", "walk", "legacy", "axe"] as const;
-export type ToolId = (typeof TOOL_IDS)[number];
-
 // ok: findings, no error. partial: findings AND an error (budget hit or walk stopped). error / skipped: no findings.
 export const ToolStatusSchema = z.enum(["ok", "partial", "error", "skipped"]);
 export type ToolStatus = z.infer<typeof ToolStatusSchema>;
