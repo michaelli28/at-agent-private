@@ -74,7 +74,8 @@ const INTERACTIVE_CLASS_PATTERNS = [
   'tab',
 ]
 
-const SEMANTIC_TAGS = ['button', 'a', 'input', 'select', 'textarea', 'details', 'summary']
+// Not details: it is a group, and its summary is the control.
+const SEMANTIC_TAGS = ['button', 'a', 'input', 'select', 'textarea', 'summary']
 // Pointer events added (F9): Radix/shadcn-style components activate on pointerdown.
 const LISTENER_TYPES = [
   'click',

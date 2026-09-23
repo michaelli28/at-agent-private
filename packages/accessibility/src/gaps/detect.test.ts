@@ -657,3 +657,31 @@ describe('crawlPageWithGapDetection on content the page switched off (F2)', () =
     expect(byId(result)).toEqual({ 'bg-link': 'missing_from_a11y_tree', 'bg-btn': 'missing_from_a11y_tree' })
   })
 })
+
+// A <details> is a group named by nothing; its <summary> is the control and carries the name (F2).
+const DETAILS_HTML = probePage(`<details data-bench-id="faq"><summary data-bench-id="faq-summary">Shipping</summary><p>3 days</p></details>
+<details open data-bench-id="faq-open"><summary data-bench-id="faq-open-summary">Returns</summary><p>30 days</p></details>
+<details data-bench-id="faq-pointer" style="cursor:pointer"><summary data-bench-id="faq-pointer-summary">Sizes</summary><p>S-XL</p></details>`)
+
+describe('crawlPageWithGapDetection on <details> disclosures (F2)', () => {
+  let client: BrowserClient
+  let page: BrowserPage
+
+  beforeAll(async () => {
+    client = new BrowserClient()
+    await client.launch()
+    page = await client.newPage()
+  })
+
+  afterAll(async () => {
+    await page.close()
+    await client.close()
+  })
+
+  it('flags no <details>, closed, open or cursor:pointer, as a control without a name', async () => {
+    await page.playwrightPage.route(URL_, (route) => route.fulfill({ contentType: 'text/html', body: DETAILS_HTML }))
+    const result = await crawlPageWithGapDetection(page.playwrightPage, URL_, { tabWalk: { settleMs: 50 } })
+    expect(result.keyboard.notFocusableAssessed).toBe(true)
+    expect(Object.fromEntries(result.gaps.map((g) => [benchId(g), g.gapType]))).toEqual({})
+  })
+})

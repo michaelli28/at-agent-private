@@ -71,17 +71,12 @@ const rows: string[] = [];
 
 type Row = { page: string; gaps: string; expected: string; problems: string[] };
 
-// The old checker's false alarms on disclosure-tabs' own elements: a <details> read as a nameless control, and the
-// second tab of each roving tablist, whose container has no box, read as not_focusable. not_focusable is decided only
-// on a walk that wraps, so a variant with a trap or a navigation keeps just the <details> alarms.
-const DETAILS_ALARMS = [
-  "faq-shipping: want [] got [no_accessible_name]",
-  "faq-returns: want [] got [no_accessible_name]",
-];
+// The old checker's false alarms on disclosure-tabs' own elements: the second tab of each roving tablist, whose
+// container has no box, read as not_focusable. not_focusable is decided only on a walk that wraps, so a variant with
+// a trap or a navigation has none.
 const DISCLOSURE_ALARMS = [
   "float-tab-2: want [] got [not_focusable]",
   "contents-tab-2: want [] got [not_focusable]",
-  ...DETAILS_ALARMS,
 ];
 const alarmsOn = (page: string, alarms: string[]): string[] =>
   alarms.map((a) => `${page}: ${a}`);
@@ -299,12 +294,6 @@ describe("dev variants (every seeded target and every other labelled element)", 
           "disclosure-tabs__M9__a-skip-link",
           "disclosure-tabs__M13__a-skip-link",
         ].flatMap((id) => alarmsOn(id, DISCLOSURE_ALARMS)),
-        ...[
-          "disclosure-tabs__M5__a-skip-link",
-          "disclosure-tabs__M6__a-skip-link",
-          "disclosure-tabs__M10__faq-returns-summary",
-          "disclosure-tabs__M11__a-skip-link",
-        ].flatMap((id) => alarmsOn(id, DETAILS_ALARMS)),
       ];
       // Sorted: the list is grouped by cause, the problems come in variant order.
       expect(problems.filter((p) => known.includes(p)).sort()).toEqual(

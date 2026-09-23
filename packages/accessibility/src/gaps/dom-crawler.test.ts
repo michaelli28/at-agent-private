@@ -535,3 +535,35 @@ describe('React delegation hosts (F9)', () => {
     expect(handler).toEqual({ portal: false, 'portal-class': false, 'root-class': false, own: true })
   })
 })
+
+describe('isSemanticInteractive for a <details> disclosure', () => {
+  let client: BrowserClient
+  let browserPage: BrowserPage
+  let page: Page
+  let elements: DOMElement[]
+
+  beforeAll(async () => {
+    client = new BrowserClient()
+    await client.launch()
+    browserPage = await client.newPage()
+    page = browserPage.playwrightPage
+    await page.setContent(
+      '<!doctype html><html lang="en"><head><title>details</title></head><body>' +
+        '<details id="details"><summary id="summary">Shipping</summary><p>3 days</p></details></body></html>',
+    )
+    elements = (await crawlDOM(page, 'http://fixture.test/')).elements
+  })
+
+  afterAll(async () => {
+    await browserPage.close()
+    await client.close()
+  })
+
+  it('is false for the <details> (a group) and true for its <summary> (the control)', async () => {
+    const semantic: Record<string, boolean> = {}
+    for (const element of elements) {
+      semantic[idOf(element)] = (await getInteractivitySignals(page, element)).signals.isSemanticInteractive
+    }
+    expect(semantic).toEqual({ details: false, summary: true })
+  })
+})

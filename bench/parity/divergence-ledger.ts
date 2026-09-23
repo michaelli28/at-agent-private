@@ -26,7 +26,7 @@ export const DIVERGENCE_LEDGER: Record<string, LedgerEntry[]> =
       { fix: "F2", diff: 'ax+ none "" ignored:presentationalRole', count: 3 },
       { fix: "F2", diff: 'ax+ none "" ignored:uninteresting', count: 2 },
     ],
-    // Hidden inputs/buttons dropped (F1); unnamed clickable generics and aria-hidden controls get wrong_role/hidden_but_interactive (F2); not_focusable now comes from the Tab walk, which also catches the junk tabindex and the href-less anchor (F3).
+    // Hidden inputs/buttons dropped (F1); unnamed clickable generics and aria-hidden controls get wrong_role/hidden_but_interactive (F2); not_focusable now comes from the Tab walk, which also catches the junk tabindex and the href-less anchor (F3); the <details> is a group, not a control missing its name (F2).
     "branches-inline": [
       { fix: "F2", diff: 'ax+ generic ""', count: 5 },
       { fix: "F2", diff: 'ax+ none "" ignored:ariaHiddenElement' },
@@ -69,6 +69,10 @@ export const DIVERGENCE_LEDGER: Record<string, LedgerEntry[]> =
       {
         fix: "F1",
         diff: "gap- BUTTON[button-hidden-attr] missing_from_a11y_tree/critical: BUTTON element with interactivity signals is not exposed in the accessibility tree",
+      },
+      {
+        fix: "F2",
+        diff: "gap- DETAILS[details] no_accessible_name/serious: Interactive DETAILS element has no accessible name",
       },
       {
         fix: "F2",
