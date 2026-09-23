@@ -349,6 +349,21 @@ describe("the review page", () => {
     LONG,
   );
 
+  it(
+    "marks the blind list's items held-out",
+    async () => {
+      const ui = await startUi(
+        worklist(2).replace("# W", "# Blind labelling — held-out flags"),
+      );
+      const page = await open(ui);
+      expect(await page.locator("nav .grp.held").count()).toBe(1);
+      expect(await page.textContent("#detail")).toContain(
+        "held-out item: keep this out of chat",
+      );
+    },
+    LONG,
+  );
+
   // A refused connection threw out of save() unhandled: the verdict looked saved, nothing was said.
   it(
     "says a verdict was not saved when the server is gone",
