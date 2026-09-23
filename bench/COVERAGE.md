@@ -199,3 +199,35 @@ with the fix.
   pass.** The walk counts 3 stops (not the two scrollers), so the judge wants a wrap in the last 4 presses,
   and a lap here is 6. M6's reload at press 3 puts the wraps at 9, 15 and 21, none in 22-25, and a replaced
   document turns off the all-stops-visited signal. A refusal on a page labelled no trap, not a wrong verdict.
+- **gaps: content the page switched off is no candidate once Chromium leaves it unexposed.** Chromium leaves
+  out of the accessibility tree anything under the `inert` attribute or CSS `interactivity: inert`, and
+  everything outside an open modal `<dialog>`; the detector flagged each such control
+  `missing_from_a11y_tree` (critical). It now reads all three from the DOM and drops a disabled or inert
+  candidate Chromium does not expose, aria-hidden or not. A disabled control Chromium exposes is still judged.
+  The cost: a real defect behind a modal open at load goes unjudged, as one in an aria-hidden page behind a
+  modal already did after a walk. The page behind a modal `<dialog>` in a shadow root keeps
+  `missing_from_a11y_tree` (pinned in `gaps/detect.test.ts`). With two modals stacked, the page behind both is
+  dropped, but the controls inside the lower modal keep `missing_from_a11y_tree` (run on a probe page, not
+  pinned). An `aria-modal` element changes no flag (run on a probe page); by the design's probes it removes
+  nothing from Chromium 143's tree. A mouse-only control that is only aria-hidden stays critical: Chromium
+  prunes every aria-hidden element that cannot take focus, so trusting its aria-hidden reason instead would
+  have silenced 12 of 12 such controls on the design's probe.
+- **gaps: a React root or portal container no longer owns React's delegated listeners.** React 17+ marks each
+  container it delegates events from with `_reactListening<random>` and listens there, so an empty portal host
+  was flagged `wrong_role`. A marked element's CDP listeners no longer count as its own; an inline `onclick` or
+  a React activation prop still does. A container that is also a real control through its own
+  `addEventListener` loses that signal. React 16 sets no marker, and Svelte 5 and Solid delegate without one,
+  so they are unchanged (from the design's reading of their source, not run).
+- **gaps: a `<details>` is a group, not a control missing its name.** Its `<summary>` is the named control. A
+  `<details>` with its own click listener keeps `wrong_role`.
+- **gaps: a roving tablist whose container has no box keeps its arrow-key evidence.** A zero-area or
+  `display: contents` container's keydown handler credits its own members, never an outer widget around it.
+  Arrow keys handled on the document are still not seen, so such members stay `not_focusable`.
+- **gaps: on the dev pages the four fixes change exactly 21 of 107 gap cells.** Measured by the live
+  `bench/gaps-dev.test.ts` run over every dev page, before and after, in `chrome-headless-shell`: all 10 M13
+  targets lose their false `missing_from_a11y_tree`; `native-dialog` goes from 2 flags to 0;
+  `react-div-button` loses `wrong_role@portal-host` and keeps `wrong_role@add-to-cart-div`; `disclosure-tabs`
+  and its 9 variants lose all 4 of the page's own alarms (2 on the M5, M6, M10 and M11 variants, whose walks
+  do not assess `not_focusable`). The other 86 pages are unchanged, the M8 and `form__M9` `not_focusable`
+  misses included. These pages were built to show the fixes, so this shows the fixes run, not how much they
+  help.
