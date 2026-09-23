@@ -45,9 +45,6 @@ export async function crawlPageWithGapDetection(
   })
   await page.waitForTimeout(SETTLE_MS)
 
-  const axNodes = await getAccessibilityTree(page)
-  const accessibilityTree = convertToElementGraph(axNodes, url, await page.title())
-
   // Checked after the walk (acc-gaps#1), so the walk counts only if it ran on the window crawled here. A navigation
   // during the write leaves the new window unmarked, so the check refuses the walk; a closed page still throws.
   const token = randomUUID()
@@ -59,6 +56,10 @@ export async function crawlPageWithGapDetection(
 
   const crawl = await crawlDOM(page, url)
   const domElements = crawl.elements
+  // Read after the enumeration, so every candidate existed when the tree was read (acc-gaps#6). One removed since has
+  // no box, and findHiddenCandidates drops it instead of it reading as missing from the tree.
+  const axNodes = await getAccessibilityTree(page)
+  const accessibilityTree = convertToElementGraph(axNodes, url, await page.title())
   const visibility = await findHiddenCandidates(page, domElements)
   // A zero-area element may still be a Tab stop (G1b), so it is read like the rest until the walk has run.
   const unrendered = new Set(visibility.hidden.filter((h) => h.reason !== 'zero-area').map((h) => h.backendNodeId))

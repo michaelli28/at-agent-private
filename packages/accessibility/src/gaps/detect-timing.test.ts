@@ -1,5 +1,5 @@
-// acc-gaps#1: the crawl and the Tab walk must describe one document. Each race is made deterministic by wrapping the
-// CDP sessions the detector opens and changing the page at one chosen call.
+// acc-gaps#1 and #6: the crawl, the accessibility-tree read and the Tab walk must describe one document. Each race is
+// made deterministic by wrapping the CDP sessions the detector opens and changing the page at one chosen call.
 import { describe, it, expect, beforeAll, afterAll } from 'vitest'
 import { chromium, type Browser, type BrowserContext, type Page } from 'playwright'
 import { crawlPageWithGapDetection, type GapDetectionOptions } from './detect.js'
@@ -74,6 +74,7 @@ type Hook = {
 
 const isWalkMarkerWrite = (method: string, params: CdpParams): boolean =>
   method === 'Runtime.evaluate' && String(params.expression).startsWith(WALK_MARKER_WRITE)
+const isAxRead = (method: string): boolean => method === 'Accessibility.getFullAXTree'
 // findHiddenCandidates' first box read; the crawl's own box reads pass a nodeId.
 const isBoxRead = (method: string, params: CdpParams): boolean =>
   method === 'DOM.getBoxModel' && 'backendNodeId' in params
@@ -246,7 +247,86 @@ describe('crawlPageWithGapDetection when the page changes between its reads', ()
         expect(await d.page.evaluate(() => sessionStorage.getItem('reloadedInCrawlMark'))).toBe('1')
         expect(r.keyboard.notFocusableAssessed).toBe(false)
         expect(r.keyboard.unassessedReasons).toEqual(['document-replaced'])
-        expect(r.gaps.filter((g) => g.gapType === 'not_focusable')).toEqual([])
+        expect(gapsOf(r)).toEqual({})
+      } finally {
+        await d.context.close()
+      }
+    })
+  })
+
+  describe('acc-gaps#6: the accessibility tree and the crawl read different DOMs', () => {
+    it('never reports a control inserted mid-crawl as missing from the accessibility tree', async () => {
+      const d = await detect(
+        CONTROLS,
+        {
+          when: 'after',
+          // The crawl's first element read (selector "button"); the switch matches a later selector.
+          match: (m) => m === 'DOM.describeNode',
+          act: (page) =>
+            page.evaluate(() => {
+              const s = document.createElement('div')
+              s.setAttribute('role', 'switch')
+              s.setAttribute('aria-checked', 'false')
+              s.setAttribute('tabindex', '0')
+              s.setAttribute('onclick', 'void 0')
+              s.setAttribute('data-bench-id', 'late')
+              s.textContent = 'Late option'
+              document.querySelector('main')?.append(s)
+            }),
+        },
+        false,
+      )
+      try {
+        const r = await d.run
+        expect(d.fired()).toBe(true)
+        expect(r.domElements.map((e) => e.attributes['data-bench-id'])).toContain('late')
+        expect(gapsOf(r)).toEqual({})
+      } finally {
+        await d.context.close()
+      }
+    })
+
+    // Nothing throws: the crawled nodes are gone before their boxes are read, and the walk runs on another window.
+    it('flags nothing and refuses the walk when the document is replaced just after the tree read', async () => {
+      const d = await detect(CONTROLS, { when: 'after', match: isAxRead, act: reload })
+      try {
+        const r = await d.run
+        expect(d.fired()).toBe(true)
+        expect(gapsOf(r)).toEqual({})
+        expect(r.keyboard).toMatchObject({ notFocusableAssessed: false, unassessedReasons: ['document-replaced'] })
+      } finally {
+        await d.context.close()
+      }
+    })
+
+    // The same-window twin: the marker survives, so only the crawled nodes gone before their box read refuse the walk.
+    it('flags nothing and refuses the walk when the page re-mounts just after the tree read', async () => {
+      const d = await detect(WITH_DEFECT, { when: 'after', match: isAxRead, act: remount })
+      try {
+        const r = await d.run
+        expect(d.fired()).toBe(true)
+        expect(gapsOf(r)).toEqual({})
+        expect(r.keyboard).toMatchObject({ notFocusableAssessed: false, unassessedReasons: ['crawled-nodes-detached'] })
+      } finally {
+        await d.context.close()
+      }
+    })
+
+    // Guard for the new order's own window (crawl, then tree read): a control removed in between has no box.
+    it('does not report a crawled control removed just before the tree read', async () => {
+      const d = await detect(
+        CONTROLS,
+        {
+          when: 'before',
+          match: isAxRead,
+          act: (page) => page.evaluate(() => document.querySelector('[data-bench-id="about"]')?.remove()),
+        },
+        false,
+      )
+      try {
+        const r = await d.run
+        expect(d.fired()).toBe(true)
+        expect(gapsOf(r)).toEqual({})
       } finally {
         await d.context.close()
       }
