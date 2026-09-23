@@ -817,6 +817,49 @@ describe("renderReport: dev-variants and dev-fixtures", () => {
       grid.split("\n").find((l) => l.startsWith("| M1 |")) ?? "no M1 row";
     expect(m1).toMatch(/\| Y \| · \|$/);
   });
+
+  it("names a recorded page the labels file does not know instead of dropping it silently", () => {
+    const extra = fakeSummary("dev-variants", [
+      ...variants.pages,
+      fakePage("b9__M1__gone", { cluster: "b9" }),
+    ]);
+    const out = renderReport(
+      input({ "dev-variants": extra }, { variantLabels }),
+    );
+    expect(out).toContain("Not in the labels file (ignored): b9__M1__gone.");
+  });
+
+  it("says how many targets the gap-type table left out for a gaps-tool error", () => {
+    // The per-operator line keeps an errored page in its denominator as a miss; the gap-type table
+    // cannot read a gap off it, so without the count its targets column silently disagrees.
+    const broken = structuredClone(variants.pages[0]);
+    broken.tools.gaps = {
+      status: "error",
+      error: "crawl died",
+      budgetExceeded: false,
+      durationMs: 1,
+      load: null,
+      findings: null,
+    };
+    const out = renderReport(
+      input(
+        {
+          "dev-variants": fakeSummary("dev-variants", [
+            broken,
+            ...variants.pages.slice(1),
+          ]),
+        },
+        { variantLabels },
+      ),
+    );
+    expect(out).toContain("M1 0/1 → 0/1");
+    const confusion = out.slice(
+      out.indexOf("#### Gap type on the seeded target"),
+    );
+    const wrongRole =
+      confusion.split("\n").find((l) => l.startsWith("| wrong_role |")) ?? "";
+    expect(wrongRole).toContain("| wrong_role | 0 (1 excluded: tool error) |");
+  });
 });
 
 describe("subset runs", () => {

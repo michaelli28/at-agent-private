@@ -570,6 +570,11 @@ function renderDevVariants(
     const label = labels.variants[page.pageId];
     return label === undefined ? [] : [{ page, label }];
   });
+  const unlabelled = summary.pages
+    .filter((p) => labels.variants[p.pageId] === undefined)
+    .map((p) => p.pageId);
+  if (unlabelled.length > 0)
+    out.push(`Not in the labels file (ignored): ${unlabelled.join(", ")}.`, "");
   if (rows.length === 0)
     return [...out, "No labelled variant pages recorded in this run.", ""];
   const bases = [...new Set(rows.map((r) => r.label.base))].sort();
@@ -633,12 +638,13 @@ function renderDevVariants(
     `|---|---|${GAP_TYPES.map(() => "---").join("|")}|---|---|`,
   );
   for (const expected of GAP_TYPES) {
-    const targets = rows.filter(
-      (r) =>
-        r.label.elements[r.label.target]?.expectedGapType === expected &&
-        r.page.tools.gaps.findings !== null,
+    const labelled = rows.filter(
+      (r) => r.label.elements[r.label.target]?.expectedGapType === expected,
     );
-    if (targets.length === 0) continue;
+    if (labelled.length === 0) continue;
+    // A gaps-tool error has no gap to read; the per-operator line above still counts it as a miss.
+    const targets = labelled.filter((r) => r.page.tools.gaps.findings !== null);
+    const excluded = labelled.length - targets.length;
     const reported = targets.map(
       (r) =>
         new Set(
@@ -659,7 +665,7 @@ function renderDevVariants(
     );
     const none = reported.filter((s) => s.size === 0).length;
     out.push(
-      `| ${expected} | ${targets.length} | ${byType.join(" | ")} | ${none} | ${accepted}/${targets.length} |`,
+      `| ${expected} | ${targets.length}${excluded > 0 ? ` (${excluded} excluded: tool error)` : ""} | ${byType.join(" | ")} | ${none} | ${accepted}/${targets.length} |`,
     );
   }
   out.push("");
