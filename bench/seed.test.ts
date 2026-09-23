@@ -91,9 +91,10 @@ function variants(): [string, VariantLabels][] {
   );
 }
 
-function firstVariant(op: OperatorId): [string, VariantLabels] {
-  const found = variants().find(([, v]) => v.operator === op);
-  if (!found) throw new Error(`no variant for ${op}`);
+// Every variant of an operator: a behaviour test that took only the first would depend on which base sorts first.
+function ofOperator(op: OperatorId): [string, VariantLabels][] {
+  const found = variants().filter(([, v]) => v.operator === op);
+  if (found.length === 0) throw new Error(`no variant for ${op}`);
   return found;
 }
 
@@ -397,94 +398,157 @@ describe("labels agree with the DOM", () => {
 });
 
 describe("operators behave as labelled", () => {
-  it("M1 turns a native button into a mouse-only div", async () => {
-    const [id, v] = firstVariant("M1");
-    const page = await open(`/variants/${v.file}`, [v.target]);
-    expect(
-      await page.evaluate(`document.querySelector('${sel(v.target)}').tagName`),
-      id,
-    ).toBe("DIV");
-    expect(
-      await page.evaluate(
-        `document.querySelector('${sel(v.target)}').tabIndex`,
-      ),
-      id,
-    ).toBe(-1);
-    expect((await axNode(page, v.target)).role?.value, id).not.toBe("button");
-    await page.click(sel(v.target));
-    expect(await page.evaluate("window.__benchClicks"), id).toEqual([v.target]);
-    await page.close();
-  });
+  it(
+    "M1 turns a native button into a mouse-only div",
+    async () => {
+      for (const [id, v] of ofOperator("M1")) {
+        const page = await open(`/variants/${v.file}`, [v.target]);
+        expect(
+          await page.evaluate(
+            `document.querySelector('${sel(v.target)}').tagName`,
+          ),
+          id,
+        ).toBe("DIV");
+        expect(
+          await page.evaluate(
+            `document.querySelector('${sel(v.target)}').tabIndex`,
+          ),
+          id,
+        ).toBe(-1);
+        expect((await axNode(page, v.target)).role?.value, id).not.toBe(
+          "button",
+        );
+        await page.click(sel(v.target));
+        expect(await page.evaluate("window.__benchClicks"), id).toEqual([
+          v.target,
+        ]);
+        await page.close();
+      }
+    },
+    LONG,
+  );
 
-  it("M2 leaves a role=button div out of the tab order", async () => {
-    const [id, v] = firstVariant("M2");
-    const page = await open(`/variants/${v.file}`, [v.target]);
-    expect(
-      await page.evaluate(
-        `document.querySelector('${sel(v.target)}').tabIndex`,
-      ),
-      id,
-    ).toBe(-1);
-    expect((await axNode(page, v.target)).role?.value, id).toBe("button");
-    await page.close();
-  });
+  it(
+    "M2 leaves a role=button div out of the tab order",
+    async () => {
+      for (const [id, v] of ofOperator("M2")) {
+        const page = await open(`/variants/${v.file}`, [v.target]);
+        expect(
+          await page.evaluate(
+            `document.querySelector('${sel(v.target)}').tabIndex`,
+          ),
+          id,
+        ).toBe(-1);
+        expect((await axNode(page, v.target)).role?.value, id).toBe("button");
+        await page.close();
+      }
+    },
+    LONG,
+  );
 
-  it("M3 hides a focusable control from assistive technology", async () => {
-    const [id, v] = firstVariant("M3");
-    const page = await open(`/variants/${v.file}`, [v.target]);
-    expect((await axNode(page, v.target)).ignored, id).toBe(true);
-    await page.focus(sel(v.target));
-    expect(await activeId(page), id).toBe(v.target);
-    await page.close();
-  });
+  it(
+    "M3 hides a focusable control from assistive technology",
+    async () => {
+      for (const [id, v] of ofOperator("M3")) {
+        const page = await open(`/variants/${v.file}`, [v.target]);
+        expect((await axNode(page, v.target)).ignored, id).toBe(true);
+        await page.focus(sel(v.target));
+        expect(await activeId(page), id).toBe(v.target);
+        await page.close();
+      }
+    },
+    LONG,
+  );
 
-  it("M4 strips the accessible name from an icon button", async () => {
-    const [id, v] = firstVariant("M4");
-    const basePage = await open(`/corpus/${baseLabels.pages[v.base].file}`, [
-      v.target,
-    ]);
-    expect((await axNode(basePage, v.target)).name?.value ?? "", id).not.toBe(
-      "",
-    );
-    await basePage.close();
-    const page = await open(`/variants/${v.file}`, [v.target]);
-    expect((await axNode(page, v.target)).name?.value ?? "", id).toBe("");
-    await page.close();
-  });
+  it(
+    "M4 strips the accessible name from an icon button",
+    async () => {
+      for (const [id, v] of ofOperator("M4")) {
+        const basePage = await open(
+          `/corpus/${baseLabels.pages[v.base].file}`,
+          [v.target],
+        );
+        expect(
+          (await axNode(basePage, v.target)).name?.value ?? "",
+          id,
+        ).not.toBe("");
+        await basePage.close();
+        const page = await open(`/variants/${v.file}`, [v.target]);
+        expect((await axNode(page, v.target)).name?.value ?? "", id).toBe("");
+        await page.close();
+      }
+    },
+    LONG,
+  );
 
-  it("M5 traps Tab and Shift+Tab on one element", async () => {
-    const [id, v] = firstVariant("M5");
-    const page = await open(`/variants/${v.file}`, [v.target]);
-    await page.focus(sel(v.target));
-    await page.keyboard.press("Tab");
-    expect(await activeId(page), id).toBe(v.target);
-    await page.keyboard.press("Shift+Tab");
-    expect(await activeId(page), id).toBe(v.target);
-    await page.keyboard.press("Escape");
-    await page.keyboard.press("Tab");
-    expect(await activeId(page), id).toBe(v.target);
-    await page.close();
-  });
+  it(
+    "M5 traps Tab and Shift+Tab on one element",
+    async () => {
+      for (const [id, v] of ofOperator("M5")) {
+        const page = await open(`/variants/${v.file}`, [v.target]);
+        await page.focus(sel(v.target));
+        await page.keyboard.press("Tab");
+        expect(await activeId(page), id).toBe(v.target);
+        await page.keyboard.press("Shift+Tab");
+        expect(await activeId(page), id).toBe(v.target);
+        await page.keyboard.press("Escape");
+        await page.keyboard.press("Tab");
+        expect(await activeId(page), id).toBe(v.target);
+        await page.close();
+      }
+    },
+    LONG,
+  );
 
-  it("M6 navigates when one element receives focus", async () => {
-    const [id, v] = firstVariant("M6");
-    const basePage = await open(`/corpus/${baseLabels.pages[v.base].file}`, [
-      v.target,
-    ]);
-    await basePage.focus(sel(v.target));
-    expect(basePage.url(), id).not.toContain("changed=1");
-    await basePage.close();
-    const page = await open(`/variants/${v.file}`, [v.target]);
-    await Promise.all([
-      page.waitForURL(/\?changed=1$/),
-      page.focus(sel(v.target)),
-    ]);
-    await page.close();
-  });
+  it(
+    "M6 navigates when one element receives focus",
+    async () => {
+      for (const [id, v] of ofOperator("M6")) {
+        const basePage = await open(
+          `/corpus/${baseLabels.pages[v.base].file}`,
+          [v.target],
+        );
+        await basePage.focus(sel(v.target));
+        expect(basePage.url(), id).not.toContain("changed=1");
+        await basePage.close();
+        const page = await open(`/variants/${v.file}`, [v.target]);
+        await Promise.all([
+          page.waitForURL(/\?changed=1$/),
+          page.focus(sel(v.target)),
+        ]);
+        await page.close();
+      }
+    },
+    LONG,
+  );
 
-  // M8-M13 were added after the labels froze, so every variant is checked, not only the first.
-  const ofOperator = (op: OperatorId): [string, VariantLabels][] =>
-    variants().filter(([, v]) => v.operator === op);
+  it(
+    "M7 drops focus from its target to body the moment it arrives",
+    async () => {
+      for (const [id, v] of ofOperator("M7")) {
+        const basePage = await open(
+          `/corpus/${baseLabels.pages[v.base].file}`,
+          [v.target],
+        );
+        await basePage.focus(sel(v.target));
+        expect(await activeId(basePage), `${id}: base holds focus`).toBe(
+          v.target,
+        );
+        await basePage.close();
+        const page = await open(`/variants/${v.file}`, [v.target]);
+        expect(
+          await page.evaluate(`(function () {
+            document.querySelector('${sel(v.target)}').focus();
+            return document.activeElement === document.body;
+          })()`),
+          `${id} drops focus on arrival`,
+        ).toBe(true);
+        await page.close();
+      }
+    },
+    LONG,
+  );
+
   const onBody = async (page: Page): Promise<boolean> =>
     (await page.evaluate(
       "document.activeElement === null || document.activeElement === document.body",
