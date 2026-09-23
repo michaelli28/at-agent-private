@@ -3,8 +3,8 @@ import {
   DeepFocusSchema,
   TabKeySchema,
   focusStop,
+  isRealElement as isRealStop,
   type DeepFocus,
-  type FocusRead,
   type TabWalkResult,
 } from './tab-walk.js'
 
@@ -81,11 +81,6 @@ function contextUrl(url: string): string {
     // Not a parseable URL (about:blank variants, data:, a truncated record): compare it verbatim.
     return url
   }
-}
-
-// The read is on a real element, not body and not "nothing focused".
-function isRealStop(read: FocusRead): boolean {
-  return read.tag !== null && !read.isBody
 }
 
 export function judgeContextChange(walk: TabWalkResult): ContextChangeResult {

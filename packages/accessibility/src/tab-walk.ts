@@ -87,7 +87,7 @@ export const PAINT_PROPERTIES = [
   'box-shadow',
   ...LINE_GROUPS.slice(0, 5).flatMap(lineProps),
 ]
-const TRANSFORM_PROPERTIES = ['transform', 'rotate', 'scale', 'translate']
+export const TRANSFORM_PROPERTIES = ['transform', 'rotate', 'scale', 'translate']
 // Changed property (regex source) -> unchanged properties recorded with it, so the checker can tell
 // whether the change draws anything.
 const STYLE_CONTEXT: [string, string[]][] = [
@@ -1216,7 +1216,7 @@ async function injectMarker(ctx: WalkContext): Promise<void> {
   )
 }
 
-function unwrap(res: EvalResult): unknown {
+export function unwrap(res: EvalResult): unknown {
   if (res.exceptionDetails) throw new Error(`in-page evaluation failed: ${res.exceptionDetails.text}`)
   return res.result.value
 }
@@ -1227,7 +1227,8 @@ function isWrapped(read: FocusRead): boolean {
   return read.isBody && !read.hasFocus
 }
 
-function isRealElement(read: FocusRead): boolean {
+// The read is on a real element, not body and not "nothing focused". The 2.1.2 and 3.2.1 judges import it.
+export function isRealElement(read: FocusRead): boolean {
   return read.tag !== null && !read.isBody
 }
 
@@ -1236,7 +1237,7 @@ function hasClosedShadowRoot(node: { shadowRoots?: { shadowRootType?: string }[]
   return node.shadowRoots?.some((root) => root.shadowRootType === 'closed') ?? false
 }
 
-function errorMessage(err: unknown): string {
+export function errorMessage(err: unknown): string {
   // Playwright appends a multi-line call log; the first line carries the cause.
   return (err instanceof Error ? err.message : String(err)).split('\n')[0]
 }

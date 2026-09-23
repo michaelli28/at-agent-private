@@ -4,7 +4,7 @@ import {
   LaunchFactsSchema,
   focusIdentity,
   focusStop,
-  type FocusRead,
+  isRealElement as isReal,
   type TabWalkResult,
   type TabWalkStep,
 } from './tab-walk.js'
@@ -79,8 +79,6 @@ export const KeyboardTrapResultSchema = z
   })
   .strict()
 export type KeyboardTrapResult = z.infer<typeof KeyboardTrapResultSchema>
-
-const isReal = (read: FocusRead): boolean => read.tag !== null && !read.isBody
 
 // A step that replaced the document BEGINS a new segment: every backendNodeId is re-minted on
 // replacement (bench/probes/wrap/RESULT.md:77), so an identity from before it names nothing after it.

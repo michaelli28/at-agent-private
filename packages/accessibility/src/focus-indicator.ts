@@ -7,6 +7,9 @@ import {
   DeepUnavailableSchema,
   IndicatorTargetSchema,
   LINE_GROUPS,
+  TRANSFORM_PROPERTIES,
+  errorMessage,
+  unwrap,
   type FocusRead,
   type LineGroup,
   type StepIndicator,
@@ -155,10 +158,6 @@ type Options = z.infer<typeof FocusIndicatorOptionsSchema>
 type Visit = { step: number; read: FocusRead; indicator: StepIndicator | null }
 type Values = Record<string, string>
 type ShotState = 'unfocused' | 'focused'
-type EvalResult = {
-  result: { value?: unknown }
-  exceptionDetails?: { text: string }
-}
 
 const LINE_OF = new Map<string, LineGroup>([
   ...LINE_GROUPS.flatMap((g) => [g.style, g.width, g.color].map((p): [string, LineGroup] => [p, g])),
@@ -166,7 +165,6 @@ const LINE_OF = new Map<string, LineGroup>([
 ])
 // Outline and physical border sides: what a box paints around itself.
 const BOX_LINES = LINE_GROUPS.slice(0, 5)
-const TRANSFORM_PROPERTIES = ['transform', 'rotate', 'scale', 'translate']
 const IDENTITY_TRANSFORMS = new Set([
   'none',
   'matrix(1, 0, 0, 1, 0, 0)',
@@ -639,7 +637,7 @@ async function screenshotElement(
     const objectId = object.objectId
     if (!objectId) return failed('element not found')
     const call = async (fn: string, args: unknown[] = []): Promise<unknown> =>
-      value(
+      unwrap(
         await session.send('Runtime.callFunctionOn', {
           objectId,
           functionDeclaration: fn,
@@ -726,16 +724,6 @@ function boxOf(quads: number[][]): Box | null {
 // Shots see only the viewport: a box cut by its edge could hide the indicator. 1 px covers subpixel rounding.
 function inside(box: Box, view: View): boolean {
   return box.left >= -1 && box.top >= -1 && box.right <= view.width + 1 && box.bottom <= view.height + 1
-}
-
-function value(res: EvalResult): unknown {
-  if (res.exceptionDetails) throw new Error(`in-page evaluation failed: ${res.exceptionDetails.text}`)
-  return res.result.value
-}
-
-function errorMessage(err: unknown): string {
-  // Playwright appends a multi-line call log; the first line carries the cause.
-  return (err instanceof Error ? err.message : String(err)).split('\n')[0]
 }
 
 function addCount(counts: IndicatorCounts, verdict: IndicatorVerdict): IndicatorCounts {
