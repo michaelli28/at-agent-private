@@ -71,8 +71,8 @@ export const ElementTypeFlagsSchema = z.object({
 })
 export type ElementTypeFlags = z.infer<typeof ElementTypeFlagsSchema>
 
-// taskgen's ElementNode minus its task-coverage fields (navigationEdges, visited*, violations),
-// which the gap path never reads or writes.
+// taskgen's ElementNode minus its task-coverage fields (navigationEdges, visited*, violations) and its
+// parent/children links, which the gap path never reads.
 export const ElementNodeSchema = z.object({
   id: z.string(),
   pageUrl: z.string(),
@@ -86,34 +86,15 @@ export const ElementNodeSchema = z.object({
   ignored: z.boolean(),
   ignoredReasons: z.array(z.string()),
   typeFlags: ElementTypeFlagsSchema,
-  children: z.array(z.string()),
-  parent: z.string().nullable(),
 })
 export type ElementNode = z.infer<typeof ElementNodeSchema>
-
-export const OutboundLinkSchema = z.object({
-  elementId: z.string(),
-  targetUrl: z.string(),
-  linkText: z.string(),
-})
-export type OutboundLink = z.infer<typeof OutboundLinkSchema>
 
 export const PageElementGraphSchema = z.object({
   pageUrl: z.string(),
   title: z.string(),
   elements: z.map(z.string(), ElementNodeSchema),
-  rootElementIds: z.array(z.string()),
-  headings: z.array(z.string()),
-  landmarks: z.array(z.string()),
-  buttons: z.array(z.string()),
-  formFields: z.array(z.string()),
-  links: z.array(z.string()),
-  tables: z.array(z.string()),
-  lists: z.array(z.string()),
-  outboundLinks: z.array(OutboundLinkSchema),
   crawledAt: z.date(),
   elementCount: z.number(),
-  interactiveCount: z.number(),
 })
 export type PageElementGraph = z.infer<typeof PageElementGraphSchema>
 

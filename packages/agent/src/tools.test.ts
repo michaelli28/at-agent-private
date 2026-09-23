@@ -118,6 +118,27 @@ describe('executeAction', () => {
       expect(result.observation).toContain('No target provided')
       await page.close()
     })
+
+    it('headed, reports a missing target as a click failure within the click timeout', async () => {
+      page = await client.newPage()
+      await page.playwrightPage.setContent('<button>Submit</button>')
+
+      const action: Action = {
+        type: 'click',
+        target: 'button named "Sumbit"',
+        reason: 'Submit the form',
+      }
+
+      const started = Date.now()
+      const result = await executeAction(action, page, { headed: true })
+      const elapsed = Date.now() - started
+
+      expect(result.success).toBe(false)
+      expect(result.observation).toContain('locator.click')
+      expect(result.observation).not.toContain('boundingBox')
+      expect(elapsed).toBeLessThan(15_000)
+      await page.close()
+    }, 60_000)
   })
 
   describe('fill', () => {

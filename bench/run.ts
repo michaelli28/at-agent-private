@@ -215,15 +215,22 @@ async function openPage(
     blocked: [],
     load: null,
   };
-  if (localOnly) {
-    await context.route("**/*", (route) => {
-      const url = route.request().url();
-      if (isLocalUrl(url)) return route.continue();
-      tracker.blocked.push(url);
-      return route.abort("blockedbyclient");
-    });
+  let page: Page;
+  try {
+    if (localOnly) {
+      await context.route("**/*", (route) => {
+        const url = route.request().url();
+        if (isLocalUrl(url)) return route.continue();
+        tracker.blocked.push(url);
+        return route.abort("blockedbyclient");
+      });
+    }
+    page = await context.newPage();
+  } catch (err: unknown) {
+    // The caller never gets this context, so nothing else would close it before the browser does.
+    await context.close().catch(() => undefined);
+    throw err;
   }
-  const page = await context.newPage();
   page.on("framenavigated", (frame) => {
     if (frame === page.mainFrame()) tracker.navigations++;
   });
@@ -305,6 +312,9 @@ function firstLine(err: unknown): string {
 const joinErrors = (...errors: Array<string | null>): string | null =>
   errors.filter((e): e is string => e !== null).join("; ") || null;
 
+const RAN_ON_PLACEHOLDER =
+  "second navigation never came: this ran on the placeholder";
+
 // One browser serves the whole set, so a page that crashes it takes every later page with it: each
 // one records "could not open a browser context" and is scored as a tool error, which is a page the
 // instrument never looked at. Relaunching costs one process start and keeps the remaining pages
@@ -371,9 +381,7 @@ export async function runTool<T>(
       };
     } else outcome = first;
     const missed =
-      tracker.load?.secondNavigation === "missing"
-        ? "second navigation never came: this ran on the placeholder"
-        : null;
+      tracker.load?.secondNavigation === "missing" ? RAN_ON_PLACEHOLDER : null;
     return {
       value: outcome.value,
       error: joinErrors(outcome.error, missed),
@@ -487,7 +495,7 @@ function walkStats(w: TabWalkResult): WalkStats {
   };
 }
 
-function legacyFrom(walk: ToolOutcome<TabWalkResult>): {
+export function legacyFrom(walk: ToolOutcome<TabWalkResult>): {
   run: LegacyRun;
   replay: LegacyReplay | null;
 } {
@@ -506,11 +514,15 @@ function legacyFrom(walk: ToolOutcome<TabWalkResult>): {
   const started = Date.now();
   const w = walk.value;
   const replay = replayLegacy(w.steps);
-  // An escape-probe error happens after the last press, so the replay itself is complete.
-  const cut = walk.budgetExceeded || w.error?.phase === "walk";
-  const error = cut
-    ? `replayed ${w.steps.length} of ${w.presses} planned presses: the walk stopped early`
-    : null;
+  // Only a press-loop error cuts the replay. An escape-probe error, or a budget that fires after the
+  // last press, happens once every press is in, so the replay itself is complete.
+  const cut = w.error?.phase === "walk";
+  const error = joinErrors(
+    cut
+      ? `replayed ${w.steps.length} of ${w.presses} planned presses: the walk stopped early`
+      : null,
+    walk.load?.secondNavigation === "missing" ? RAN_ON_PLACEHOLDER : null,
+  );
   return {
     run: {
       ...base,

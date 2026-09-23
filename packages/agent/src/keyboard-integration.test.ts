@@ -1,8 +1,15 @@
 import { describe, it, expect, vi, beforeAll, afterAll } from 'vitest'
 import { chromium, type Browser } from 'playwright'
 import { BrowserPage } from '@at-agent/browser'
+import { runTabWalk } from '@at-agent/accessibility'
 import { executeAction } from './tools.js'
 import { ActionSchema, ActionTypeSchema, type Action } from './types.js'
+
+// A pass-through spy, so one test can stand in a walk whose escape probe failed part-way.
+vi.mock('@at-agent/accessibility', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('@at-agent/accessibility')>()
+  return { ...actual, runTabWalk: vi.fn(actual.runTabWalk) }
+})
 
 // Keyboard capability of the agent loop: the `tab` action records one press per key press, and
 // `checkKeyboard` answers WCAG 2.1.2 / 3.2.1 by driving a real Tab walk in the browser.
@@ -206,6 +213,11 @@ items()[0].focus()
 </script>
 </body></html>`
 
+const LINKS = `<!doctype html><html lang="en"><head><meta charset="utf-8"><title>Links</title></head><body>
+<p><a id="l1" href="#one">One</a></p>
+<p><a id="l2" href="#two">Two</a></p>
+</body></html>`
+
 describe('checkKeyboard against a real page', () => {
   let browser: Browser
 
@@ -241,5 +253,29 @@ describe('checkKeyboard against a real page', () => {
     expect(modal.keyboard?.verdict).toBe('pass')
     expect(modal.keyboard?.keyboardTrap).toBe(true)
     expect(modal.keyboard?.trapEscapable).toBe(true)
+  }, 180_000)
+
+  it('says Escape and Shift+Tab were pressed only when the walk pressed them', async () => {
+    const wrapping = await checkKeyboardOn(LINKS)
+    expect(wrapping.keyboard?.verdict).toBe('pass')
+    expect(wrapping.observation).toContain('did not press Escape or Shift+Tab')
+    expect(wrapping.observation).not.toContain('pressed Escape')
+
+    const trapped = await checkKeyboardOn(TAB_SWALLOW_TRAP)
+    expect(trapped.observation).toContain('then pressed Escape and Shift+Tab')
+  }, 180_000)
+
+  it('says Escape and Shift+Tab may have been pressed when that part of the walk failed', async () => {
+    const actual = await vi.importActual<typeof import('@at-agent/accessibility')>('@at-agent/accessibility')
+    vi.mocked(runTabWalk).mockImplementationOnce(async (page, options) => ({
+      ...(await actual.runTabWalk(page, options)),
+      escapeProbe: null,
+      error: { phase: 'escapeProbe', index: 1, message: 'Execution context was destroyed' },
+    }))
+
+    const failed = await checkKeyboardOn(TAB_SWALLOW_TRAP)
+    expect(failed.success).toBe(true)
+    expect(failed.keyboard?.verdict).toBe('undetermined')
+    expect(failed.observation).toContain('may have pressed Escape and Shift+Tab')
   }, 180_000)
 })

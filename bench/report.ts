@@ -229,8 +229,20 @@ const currentRan = (p: PageResult): boolean =>
   p.tools.gaps.findings !== null && p.tools.walk.findings !== null;
 const axeRan = (p: PageResult): boolean => p.tools.axe.findings !== null;
 
-// One scored column of the headline tables. `undetermined` is what the judges can report and the
-// frozen detectors cannot: it stays in the denominator and counts as a miss.
+// A legacy replay of a walk that stopped early (run.ts records it "partial") never saw the presses after
+// the cut, so a trap that had not fired by then was not observed -- the 2.1.2 judge calls the same walk
+// short-walk. A trap the replay did see still counts.
+function legacyTrapUndetermined(page: PageResult): boolean {
+  const legacy = page.tools.legacy;
+  return (
+    legacy.status === "partial" &&
+    legacy.findings !== null &&
+    !legacyTrapFlagged(legacy.findings.trap)
+  );
+}
+
+// One scored column of the headline tables. `undetermined` = the column ran but did not observe the
+// criterion on this page: it stays in the denominator and counts as a miss.
 type Column = {
   ran: (p: PageResult) => boolean;
   criteria: (p: PageResult) => Map<string, Set<string>>;
@@ -243,7 +255,9 @@ const never = (): boolean => false;
 const BEFORE: Column = {
   ran: oursRan,
   criteria: ourCriteria,
-  undetermined: gapUndetermined,
+  undetermined: (p, criterion) =>
+    (criterion === "2.1.2" && legacyTrapUndetermined(p)) ||
+    gapUndetermined(p, criterion),
 };
 const AFTER: Column = {
   ran: currentRan,
@@ -434,7 +448,7 @@ function renderTestBad(summary: Summary, truth: BadTruth | null): string[] {
         ? "E"
         : ours.has(c)
           ? "O"
-          : gapUndetermined(p, c)
+          : BEFORE.undetermined(p, c)
             ? "U"
             : "–";
       const n = !currentRan(p)
@@ -539,7 +553,8 @@ function flaggedTarget(
       v.operator === "M5"
         ? legacyTrapFlagged(legacy.trap)
         : legacy.dynamicViolations.some((d) => d.criterion === "3.2.1");
-    return hit ? "Y" : "N";
+    if (hit) return "Y";
+    return v.operator === "M5" && legacyTrapUndetermined(page) ? "U" : "N";
   }
   const gaps = page.tools.gaps.findings;
   if (gaps === null) return "E";
@@ -570,6 +585,11 @@ function renderDevVariants(
     const label = labels.variants[page.pageId];
     return label === undefined ? [] : [{ page, label }];
   });
+  const unlabelled = summary.pages
+    .filter((p) => labels.variants[p.pageId] === undefined)
+    .map((p) => p.pageId);
+  if (unlabelled.length > 0)
+    out.push(`Not in the labels file (ignored): ${unlabelled.join(", ")}.`, "");
   if (rows.length === 0)
     return [...out, "No labelled variant pages recorded in this run.", ""];
   const bases = [...new Set(rows.map((r) => r.label.base))].sort();
@@ -633,12 +653,13 @@ function renderDevVariants(
     `|---|---|${GAP_TYPES.map(() => "---").join("|")}|---|---|`,
   );
   for (const expected of GAP_TYPES) {
-    const targets = rows.filter(
-      (r) =>
-        r.label.elements[r.label.target]?.expectedGapType === expected &&
-        r.page.tools.gaps.findings !== null,
+    const labelled = rows.filter(
+      (r) => r.label.elements[r.label.target]?.expectedGapType === expected,
     );
-    if (targets.length === 0) continue;
+    if (labelled.length === 0) continue;
+    // A gaps-tool error has no gap to read; the per-operator line above still counts it as a miss.
+    const targets = labelled.filter((r) => r.page.tools.gaps.findings !== null);
+    const excluded = labelled.length - targets.length;
     const reported = targets.map(
       (r) =>
         new Set(
@@ -659,7 +680,7 @@ function renderDevVariants(
     );
     const none = reported.filter((s) => s.size === 0).length;
     out.push(
-      `| ${expected} | ${targets.length} | ${byType.join(" | ")} | ${none} | ${accepted}/${targets.length} |`,
+      `| ${expected} | ${targets.length}${excluded > 0 ? ` (${excluded} excluded: tool error)` : ""} | ${byType.join(" | ")} | ${none} | ${accepted}/${targets.length} |`,
     );
   }
   out.push("");
@@ -969,6 +990,17 @@ const sha256 = (path: string): string =>
 const readJson = (path: string): unknown =>
   JSON.parse(readFileSync(path, "utf8"));
 
+// Paths relative to bench/ that the footer checks for uncommitted changes: this file and every local
+// module it imports, since each one can change the cells (GAP_WCAG_MAPPING, WALK_GATED_GAP_TYPES, ...).
+export const REPORT_CODE: readonly string[] = [
+  "report.ts",
+  "stats.ts",
+  "results-schema.ts",
+  "corpus/labels-schema.ts",
+  "../packages/accessibility/src/gaps/gap-detector.ts",
+  "../packages/accessibility/src/gaps/types.ts",
+];
+
 function main(argv: readonly string[]): number {
   const [sha, ...rest] = argv;
   let results = join(BENCH, "results");
@@ -1028,7 +1060,7 @@ function main(argv: readonly string[]): number {
   // The measurements carry their own commit; the report generator can be a later one.
   const git = (args: string[]): string =>
     execFileSync("git", args, { cwd: BENCH }).toString().trim();
-  const generator = `${git(["rev-parse", "--short", "HEAD"])}${git(["status", "--porcelain", "--", "report.ts", "stats.ts", "results-schema.ts"]) ? " (report code uncommitted)" : ""}`;
+  const generator = `${git(["rev-parse", "--short", "HEAD"])}${git(["status", "--porcelain", "--", ...REPORT_CODE]) ? " (report code uncommitted)" : ""}`;
   writeFileSync(
     out,
     `${md}\nReport generated by bench/report.ts at ${generator}.\n`,

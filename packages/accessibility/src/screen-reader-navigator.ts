@@ -87,7 +87,9 @@ export class ScreenReaderNavigator {
     if (INTERESTING_ROLES.has(node.role)) {
       return true
     }
-    if (node.role === 'StaticText' && node.name && node.name.trim().length > 0) {
+    // Prose as BrowserPage.accessibilityTree (Playwright's ariaSnapshot) names it; a paragraph with inline children
+    // is unnamed and read through its text children.
+    if ((node.role === 'text' || node.role === 'paragraph') && node.name && node.name.trim().length > 0) {
       return true
     }
     return false

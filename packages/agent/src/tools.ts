@@ -8,6 +8,7 @@ import {
   type TabKey,
   type KeyboardTrapResult,
   type ContextChangeResult,
+  type TabWalkResult,
 } from '@at-agent/accessibility'
 import {
   type Action,
@@ -272,7 +273,7 @@ async function executeCheckKeyboard(page: BrowserPage): Promise<ActionResult> {
     const contextChange = judgeContextChange(walk)
     return {
       success: true,
-      observation: describeKeyboardCheck(keyboard, contextChange),
+      observation: describeKeyboardCheck({ walk, keyboard, contextChange }),
       keyboard,
       contextChange,
     }
@@ -284,7 +285,15 @@ async function executeCheckKeyboard(page: BrowserPage): Promise<ActionResult> {
   }
 }
 
-function describeKeyboardCheck(keyboard: KeyboardTrapResult, contextChange: ContextChangeResult): string {
+function describeKeyboardCheck({
+  walk,
+  keyboard,
+  contextChange,
+}: {
+  walk: TabWalkResult
+  keyboard: KeyboardTrapResult
+  contextChange: ContextChangeResult
+}): string {
   const trapDetail =
     keyboard.reason !== null
       ? ` (undetermined: ${keyboard.reason})`
@@ -299,10 +308,23 @@ function describeKeyboardCheck(keyboard: KeyboardTrapResult, contextChange: Cont
         : ''
 
   return [
-    'Keyboard check complete. It walked focus through the whole page and pressed Escape and',
-    'Shift+Tab, so a dialog may have been dismissed and focus has moved: do not assume the page is',
+    `Keyboard check complete. ${describeKeysPressed(walk)}: do not assume the page is`,
     'still in the state it was in before this check.',
     `- Keyboard trap (WCAG 2.1.2): ${keyboard.verdict}${trapDetail}`,
     `- Change of context on focus (WCAG 3.2.1): ${contextChange.verdict}${contextDetail}`,
   ].join('\n')
+}
+
+// Read from the walk, not assumed: its escape probe (Escape, then the opposite key) runs only when
+// the end of the walk did not wrap, so on most pages the walk key is the only key pressed.
+function describeKeysPressed(walk: TabWalkResult): string {
+  const walkKey = walk.direction === 'forward' ? 'Tab' : 'Shift+Tab'
+  const probeKey = walk.direction === 'forward' ? 'Shift+Tab' : 'Tab'
+  const walked = `It walked focus through the whole page with ${walkKey}`
+  const dismissed = 'so a dialog may have been dismissed and focus has moved'
+  if (walk.escapeProbe !== null) return `${walked}, then pressed Escape and ${probeKey}, ${dismissed}`
+  if (walk.error?.phase === 'escapeProbe') {
+    return `${walked}, then may have pressed Escape and ${probeKey} before the check failed, ${dismissed}`
+  }
+  return `${walked} and did not press Escape or ${probeKey}, so focus has moved`
 }

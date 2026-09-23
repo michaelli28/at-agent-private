@@ -171,6 +171,9 @@ export class BrowserPage {
     duration: number = 500,
   ): Promise<void> {
     const locator = this.page.getByRole(role as Parameters<Page['getByRole']>[0], options)
+    // Decoration only: skip unless exactly one element matches now, so the caller's action fails on
+    // its own timeout and error. boundingBox() would wait the 30 s Playwright default for it.
+    if ((await locator.count()) !== 1) return
     const box = await locator.boundingBox()
     if (!box) return
 

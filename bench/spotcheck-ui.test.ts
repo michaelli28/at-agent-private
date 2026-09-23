@@ -91,6 +91,28 @@ describe("parseSpotcheck", () => {
     expect(first.answered).toBe(true);
     expect(first.answerLine).toContain("Enter did nothing");
   });
+
+  // The page marked an item held-out only when its GROUP said BAD. blind-labels.ts puts every item
+  // under a plain "## Flags" and says "held-out" in the title, so none of its items were marked.
+  it("marks every item of a list whose title says held-out", () => {
+    const md = worklist(2).replace("# W", "# Blind labelling — held-out flags");
+    expect(parseSpotcheck(md).map((i) => i.held)).toEqual([true, true]);
+  });
+
+  it("marks only the BAD groups of a mixed list", () => {
+    const md = [
+      "# Checkpoint 1 spot-check",
+      "",
+      "## Dev page flags (1 of 4)",
+      "",
+      item(1, "dev"),
+      "",
+      "## BAD page-level results (1 of 5)",
+      "",
+      item(2, "bad"),
+    ].join("\n");
+    expect(parseSpotcheck(md).map((i) => i.held)).toEqual([false, true]);
+  });
 });
 
 describe("itemsKey", () => {

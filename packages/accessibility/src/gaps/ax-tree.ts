@@ -1,5 +1,5 @@
 import type { Page } from 'playwright'
-import type { ElementNode, ElementTypeFlags, OutboundLink, PageElementGraph } from './types.js'
+import type { ElementNode, ElementTypeFlags, PageElementGraph } from './types.js'
 
 // Port of taskgen/src/element-crawler.ts: getAccessibilityTree, convertToElementGraph and the helpers they call.
 
@@ -22,7 +22,6 @@ export interface AXNode {
   description?: AXValue
   value?: AXValue
   properties?: AXProperty[]
-  childIds?: string[]
   backendDOMNodeId?: number
 }
 
@@ -65,18 +64,6 @@ export function convertToElementGraph(
   pageTitle: string,
 ): PageElementGraph {
   const elements = new Map<string, ElementNode>()
-  const headings: string[] = []
-  const landmarks: string[] = []
-  const buttons: string[] = []
-  const formFields: string[] = []
-  const links: string[] = []
-  const tables: string[] = []
-  const lists: string[] = []
-  const outboundLinks: OutboundLink[] = []
-  const rootElementIds: string[] = []
-
-  const nodeIdToElement = new Map<string, ElementNode>()
-  const childToParent = new Map<string, string>()
 
   // Ignored and unnamed generic nodes are kept (taskgen dropped both) so the gap detector can bridge an
   // aria-hidden control or an unnamed clickable div to its AX node (F2).
@@ -100,78 +87,17 @@ export function convertToElementGraph(
       ignored: axNode.ignored,
       ignoredReasons: (axNode.ignoredReasons ?? []).map((r) => r.name),
       typeFlags,
-      children: [],
-      parent: null,
     }
 
     elements.set(elementId, element)
-    nodeIdToElement.set(axNode.nodeId, element)
-
-    if (axNode.childIds) {
-      for (const childId of axNode.childIds) {
-        childToParent.set(childId, axNode.nodeId)
-      }
-    }
-
-    // An ignored node is not exposed to assistive technology, so it indexes nothing.
-    if (axNode.ignored) continue
-    if (typeFlags.headingLevel) headings.push(elementId)
-    if (typeFlags.isLandmark) landmarks.push(elementId)
-    if (typeFlags.isButton) buttons.push(elementId)
-    if (typeFlags.isFormField) formFields.push(elementId)
-    if (typeFlags.isLink) links.push(elementId)
-    if (typeFlags.isTable) tables.push(elementId)
-    if (typeFlags.isList) lists.push(elementId)
-
-    if (typeFlags.isLink && name) {
-      const href = extractProperty(axNode.properties, 'url')
-      if (href && isValidUrl(href)) {
-        outboundLinks.push({
-          elementId,
-          targetUrl: normalizeUrl(href, pageUrl),
-          linkText: name,
-        })
-      }
-    }
-  }
-
-  for (const axNode of axNodes) {
-    const element = nodeIdToElement.get(axNode.nodeId)
-    if (!element) continue
-
-    const parentNodeId = childToParent.get(axNode.nodeId)
-    if (parentNodeId) {
-      const parentElement = nodeIdToElement.get(parentNodeId)
-      if (parentElement) {
-        element.parent = parentElement.id
-        parentElement.children.push(element.id)
-      }
-    } else {
-      rootElementIds.push(element.id)
-    }
-  }
-
-  let interactiveCount = 0
-  for (const element of elements.values()) {
-    if (element.typeFlags.isInteractive && !element.ignored) interactiveCount++
   }
 
   return {
     pageUrl,
     title: pageTitle,
     elements,
-    rootElementIds,
-    headings,
-    landmarks,
-    buttons,
-    formFields,
-    links,
-    tables,
-    lists,
-    outboundLinks,
     crawledAt: new Date(),
     elementCount: elements.size,
-    interactiveCount,
   }
 }
 
@@ -201,25 +127,4 @@ function computeTypeFlags(role: string, properties?: readonly AXProperty[]): Ele
 
 function generateXPathFromNodeId(nodeId: string): string {
   return `node-${nodeId}`
-}
-
-function extractProperty(properties: readonly AXProperty[] | undefined, name: string): string | undefined {
-  return axText(properties?.find((p) => p.name === name)?.value.value)
-}
-
-function isValidUrl(url: string): boolean {
-  try {
-    new URL(url)
-    return true
-  } catch {
-    return false
-  }
-}
-
-function normalizeUrl(url: string, baseUrl: string): string {
-  try {
-    return new URL(url, baseUrl).href
-  } catch {
-    return url
-  }
 }

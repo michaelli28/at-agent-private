@@ -12,16 +12,18 @@ import { beforeAll, describe, expect, it } from "vitest";
 import {
   TabWalkResultSchema,
   runTabWalk,
+  type TabWalkResult,
 } from "../packages/accessibility/src/tab-walk.js";
 import {
   RawPageSchema,
   SummarySchema,
   runDirName,
+  type LoadFacts,
   type PageResult,
   type Summary,
 } from "./results-schema.js";
 import { Refusal, checkHeldOutTree, dirtyPathsFrom } from "./run-inputs.js";
-import { liveBrowser, runTool } from "./run.js";
+import { legacyFrom, liveBrowser, runTool } from "./run.js";
 
 const BENCH = dirname(fileURLToPath(import.meta.url));
 const ROOT = resolve(BENCH, "..");
@@ -353,6 +355,138 @@ describe("runTool budget", () => {
       budgetExceeded: true,
       error: "page budget of 10 ms exhausted before this tool started",
     });
+  });
+});
+
+describe("runTool when a context cannot be set up", () => {
+  // runTool gets no context handle back when openPage throws, so nothing else closes it before the
+  // browser does at the end of the run: each failed tool on each page would leave one behind.
+  it.each(["route", "newPage"] as const)(
+    "closes the context it opened when %s() then throws",
+    async (method) => {
+      const browser = await chromium.launch();
+      try {
+        const failing = {
+          newContext: async () =>
+            Object.assign(await browser.newContext(), {
+              [method]: () => Promise.reject(new Error(`${method} failed`)),
+            }),
+        } as unknown as Parameters<typeof runTool>[0];
+        const out = await runTool(
+          failing,
+          { localOnly: true, deadline: Date.now() + 10_000, budgetMs: 10_000 },
+          async () => "unreachable",
+        );
+        expect(out).toMatchObject({
+          value: null,
+          error: `could not open a browser context: ${method} failed`,
+        });
+        expect(browser.contexts()).toHaveLength(0);
+      } finally {
+        await browser.close();
+      }
+    },
+    60_000,
+  );
+});
+
+// The legacy column replays the walk's presses, so its label must say whether THAT replay was cut
+// short or ran on the placeholder -- not merely whether the walk tool hit its budget somewhere.
+describe("legacyFrom labels the legacy replay", () => {
+  let walk: TabWalkResult;
+  const outcome = (
+    over: Partial<Parameters<typeof legacyFrom>[0]>,
+  ): Parameters<typeof legacyFrom>[0] => ({
+    value: walk,
+    error: null,
+    budgetExceeded: false,
+    durationMs: 0,
+    load: null,
+    blocked: [],
+    ...over,
+  });
+  const load = (
+    secondNavigation: LoadFacts["secondNavigation"],
+  ): LoadFacts => ({
+    requestedUrl: "http://127.0.0.1/p",
+    finalUrl: "http://127.0.0.1/p",
+    status: 200,
+    title: "t",
+    mainFrameNavigations: 1,
+    secondNavigation,
+    blockedRequests: 0,
+  });
+
+  beforeAll(async () => {
+    const browser = await chromium.launch();
+    try {
+      const page = await browser.newPage();
+      await page.setContent(
+        '<!doctype html><title>t</title><a href="#a">A</a><a href="#b">B</a>',
+      );
+      walk = await runTabWalk(page);
+    } finally {
+      await browser.close();
+    }
+    expect(walk.error).toBeNull();
+    expect(walk.steps.length).toBe(walk.presses);
+  }, 120_000);
+
+  it("calls a replay complete when the budget fired after the last press (escape probe cut)", () => {
+    const { run } = legacyFrom(
+      outcome({
+        value: {
+          ...walk,
+          escapeProbe: null,
+          error: {
+            phase: "escapeProbe",
+            index: 1,
+            message: "Target page, context or browser has been closed",
+          },
+        },
+        error: "page budget of 1500 ms exceeded; context closed",
+        budgetExceeded: true,
+      }),
+    );
+    expect(run).toMatchObject({ status: "ok", error: null });
+    expect(run.findings?.presses).toBe(walk.presses);
+  });
+
+  it("still marks a walk cut mid-press partial, with how far it got", () => {
+    const { run } = legacyFrom(
+      outcome({
+        value: {
+          ...walk,
+          steps: walk.steps.slice(0, 3),
+          error: { phase: "walk", index: 4, message: "closed" },
+        },
+        error: "page budget of 1500 ms exceeded; context closed",
+        budgetExceeded: true,
+      }),
+    );
+    expect(run).toMatchObject({
+      status: "partial",
+      error: `replayed 3 of ${walk.presses} planned presses: the walk stopped early`,
+    });
+  });
+
+  it("marks a replay of a walk that ran on the placeholder partial, as the walk itself is", () => {
+    const { run } = legacyFrom(
+      outcome({
+        error: "second navigation never came: this ran on the placeholder",
+        load: load("missing"),
+      }),
+    );
+    expect(run.status).toBe("partial");
+    expect(run.error).toBe(
+      "second navigation never came: this ran on the placeholder",
+    );
+    expect(run.findings).not.toBeNull();
+  });
+
+  it("leaves a complete replay of a page whose second navigation came ok", () => {
+    const { run } = legacyFrom(outcome({ load: load("seen") }));
+    expect(run).toMatchObject({ status: "ok", error: null });
   });
 });
 
