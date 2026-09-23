@@ -395,6 +395,17 @@ document.addEventListener('keydown', (e) => {
 </script>`,
 )
 
+const EDITING_HOSTS = doc(
+  'Editing hosts',
+  `<a id="l1" href="#1">1</a>
+<div id="ce-bare" contenteditable>bare</div>
+<div id="ce-plain" contenteditable="plaintext-only">plain</div>
+<div id="ce-plain-upper" contenteditable="PLAINTEXT-ONLY">plain upper</div>
+<div id="ce-upper" contenteditable="TRUE">upper</div>
+<div id="ce-true" contenteditable="true">true</div>
+<div id="ce-false" contenteditable="false">false</div>`,
+)
+
 const TWO_SCROLLERS = doc('Two scrollers', `${THREE_LINKS}${scroller('s1')}${scroller('s2')}`)
 
 const LONE_DATETIME = doc('Lone datetime', '<label>Meeting time <input id="when" type="datetime-local"></label>')
@@ -1521,6 +1532,16 @@ describe('runTabWalk', () => {
       const result = judgeKeyboardTrap([walk])
       expect(result.verdict).toBe('undetermined')
       expect(result.reason).toBe('focusables-exceeded')
+    })
+
+    it('F counts contenteditable editing hosts in every spelling', async () => {
+      const page = await open(EDITING_HOSTS)
+      const walk = await runTabWalk(page.playwrightPage, { settleMs: FAST })
+
+      expect(new Set(walk.steps.map((s) => label(s.settled)))).toEqual(
+        new Set(['l1', 'ce-bare', 'ce-plain', 'ce-plain-upper', 'ce-upper', 'ce-true', 'body!']),
+      )
+      expect(walk.focusableCount).toBe(6)
     })
 
     // Pinned, not fixed: counting scrollers would re-implement Chromium's rule in page JS.
