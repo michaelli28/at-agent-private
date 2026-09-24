@@ -144,6 +144,32 @@ first.focus()
 </script>`,
 )
 
+// The page's only Tab stop blurs itself in its focus handler (dev one-button__M7): no read ever rests on an element.
+const ONLY_STOP_BLUR = doc('Only stop blurs', `<p><button id="only" onfocus="this.blur()">Only</button></p>`)
+
+// The body is itself a Tab stop, then a blur-on-arrival button: every read is body, only the button's are drops.
+const BODY_STOP_THEN_BLUR = doc(
+  'Body stop then blur',
+  `<p><button id="only" onfocus="this.blur()">Only</button></p><script>document.body.tabIndex = 0</script>`,
+)
+
+// The blur-on-arrival stop on a page whose window.addEventListener throws: the walk cannot see the arrival.
+const BLUR_REFUSES_LISTENER = doc(
+  'Blur refuses listener',
+  `<p><button id="only" onfocus="this.blur()">Only</button></p>
+<script>window.addEventListener = function () { throw new Error('refused') }</script>`,
+)
+
+// An ordinary page whose every addEventListener and removeEventListener throws.
+const TWO_BUTTONS_REFUSE_LISTENERS = doc(
+  'Two buttons refuse listeners',
+  `<p><button id="b1">One</button> <button id="b2">Two</button></p>
+<script>
+EventTarget.prototype.addEventListener = function () { throw new Error('refused') }
+EventTarget.prototype.removeEventListener = function () { throw new Error('refused') }
+</script>`,
+)
+
 // Two consecutive blur-on-focus stops: the step behind the second drop is itself a body read.
 const DOUBLE_DROP = doc(
   'Double drop',
@@ -1478,6 +1504,62 @@ describe('runTabWalk', () => {
     expect(label(result.initial)).toBe('first')
     expect(label(result.steps[0].settled)).toBe('body')
     expect(result.steps[0].focusLost).toBe(true)
+  })
+
+  it('focusLost: a drop no read saw arrive is marked from the focus event its press fired', async () => {
+    const page = await open(ONLY_STOP_BLUR)
+    const result = await runTabWalk(page.playwrightPage, { settleMs: FAST })
+
+    // The premise: every read is body, so lastRealSeen alone can never mark these drops.
+    expect(result.steps.every((s) => s.immediate.isBody && s.settled.isBody)).toBe(true)
+    const drops = result.steps.filter((s) => s.settled.hasFocus)
+    expect(drops.length).toBeGreaterThanOrEqual(5)
+    expect(drops.filter((s) => !s.focusLost).map((s) => s.index)).toEqual([])
+  })
+
+  it('focusLost: Tab landing on a body that is a Tab stop is no arrival, before or after a real one', async () => {
+    const page = await open(BODY_STOP_THEN_BLUR)
+    const result = await runTabWalk(page.playwrightPage, { settleMs: FAST })
+
+    // b: body stop, L: the button's drop, w: wrap. Body and window focus events must not count, and each read resets.
+    const shape = result.steps.map((s) => (s.wrapped ? 'w' : s.focusLost ? 'L' : 'b')).join('')
+    expect(shape).toBe('bLwbLwbLwbLwbLwbLwbL')
+  })
+
+  it('arrival: removes its focus listener from the page after the walk', async () => {
+    const page = await open(ONLY_STOP_BLUR)
+    const pw = page.playwrightPage
+    await runTabWalk(pw, { settleMs: FAST, presses: 3, allowFewerPresses: true })
+
+    const session = await pw.context().newCDPSession(pw)
+    const { result } = await session.send('Runtime.evaluate', { expression: 'window' })
+    if (!result.objectId) throw new Error('no handle on window')
+    const { listeners } = await session.send('DOMDebugger.getEventListeners', { objectId: result.objectId })
+    await session.detach()
+    expect(listeners.filter((l) => l.type === 'focus')).toEqual([])
+  })
+
+  it('arrival: a page whose add/removeEventListener throw still gets a complete walk and teardown', async () => {
+    const page = await open(TWO_BUTTONS_REFUSE_LISTENERS)
+    const pw = page.playwrightPage
+    const result = await runTabWalk(pw, { settleMs: FAST })
+
+    expect(result.error).toBeNull()
+    expect(result.steps).toHaveLength(result.presses)
+    expect(result.steps.some((s) => s.wrapped)).toBe(true)
+    // removeEventListener throwing too must not keep the teardown from deleting the walk's state.
+    const keys = await pw.evaluate(() => Object.getOwnPropertyNames(window).filter((k) => k.startsWith('__atAgent')))
+    expect(keys).toEqual(['__atAgentTabWalk'])
+  })
+
+  it('arrival: a drop whose focus event the page refuses to let the walk hear is not focusLost', async () => {
+    const page = await open(BLUR_REFUSES_LISTENER)
+    const result = await runTabWalk(page.playwrightPage, { settleMs: FAST })
+
+    expect(result.error).toBeNull()
+    const drops = result.steps.filter((s) => s.settled.isBody && s.settled.hasFocus)
+    expect(drops.length).toBeGreaterThanOrEqual(5)
+    expect(drops.filter((s) => s.focusLost).map((s) => s.index)).toEqual([])
   })
 
   it('focusLost: a second consecutive drop is marked', async () => {

@@ -70,8 +70,30 @@ const COUNT_FOCUSABLE_FN = `function (selector, frameTags) {
 
 // A per-walk token on window; if it is missing after a press, the document was replaced.
 const MARKER_KEY = '__atAgentTabWalk'
+// Records that focus arrived on an element since the last read, even if it was gone before this one. Capture `focus`,
+// not `focusin`: Chromium skips focusin when the focus handler itself moves focus (probed on 143). isTrusted only drops
+// synthetic events; a page script's el.focus() counts as an arrival too. A page that refuses the listener (a throwing
+// addEventListener) gets the walk anyway, with no arrival ever seen.
+const ARRIVAL_KEY = '__atAgentTabWalkArrived'
+const ARRIVAL_INSTALL_FN = `function (key) {
+  try {
+    const state = { arrived: false }
+    state.handler = (e) => {
+      if (e.isTrusted && e.target.nodeType === 1 && e.target !== document.body) state.arrived = true
+    }
+    window[key] = state
+    window.addEventListener('focus', state.handler, true)
+  } catch {}
+}`
 // Top window's store of focused-state snapshots, one per visit, until its unfocused reads are done.
 const INDICATOR_STORE_KEY = '__atAgentTabWalkIndicator'
+const TEARDOWN_FN = `function (storeKey, arrivalKey) {
+  delete window[storeKey]
+  try {
+    if (window[arrivalKey]) window.removeEventListener('focus', window[arrivalKey].handler, true)
+  } catch {}
+  delete window[arrivalKey]
+}`
 const OBJECT_GROUP = 'at-agent-tab-walk'
 // A navigation can destroy the execution context mid-read; a retry lands in the new document.
 const READ_ATTEMPTS = 3
@@ -290,7 +312,9 @@ const DEEP_FOCUS_FN = `function (frameTags) {
 // mirror packages/agent/src/tools.ts executeTab so the legacy identity string can be rebuilt.
 // container misses closed shadow hosts; the caller adds those from DOM.describeNode.
 // indicator ({ ...config, visit } or null) snapshots the deep element's focused state for that visit.
-const READ_FOCUS_FN = `function (markerKey, token, withStyle, frameTags, indicator) {
+const READ_FOCUS_FN = `function (markerKey, token, withStyle, frameTags, indicator, arrivalKey) {
+  const arrived = window[arrivalKey]?.arrived === true
+  if (arrived) window[arrivalKey].arrived = false
   const el = this && this.nodeType === 1 ? this : null
   const name = el ? el.name : undefined
   const style = el && withStyle ? getComputedStyle(el) : null
@@ -331,6 +355,7 @@ const READ_FOCUS_FN = `function (markerKey, token, withStyle, frameTags, indicat
     focusStyle,
     snapshotted,
     snapshotError,
+    arrived,
   }
 }`
 
@@ -575,6 +600,7 @@ const RawReadSchema = FocusReadSchema.omit({
   focusStyle: FocusStyleSchema.nullable(),
   snapshotted: z.boolean(),
   snapshotError: z.string().nullable(),
+  arrived: z.boolean(),
 })
 const DeepFieldsSchema = DeepFocusSchema.omit({ backendNodeId: true }).extend({
   crossOrigin: z.boolean(),
@@ -620,6 +646,7 @@ type RawRead = {
   snapshotted: boolean
   // Why storing it threw; the focus read itself still succeeded.
   snapshotError: string | null
+  arrived: boolean
 }
 type DeepPart = Pick<FocusRead, 'deep' | 'deepUnavailable'>
 type PressRead = {
@@ -629,6 +656,9 @@ type PressRead = {
   documentReplaced: boolean
   snapshotted: boolean
   snapshotError: string | null
+  // Focus arrived on an element between the previous read and the immediate one: usually the press's own arrival,
+  // but any trusted focus() in that window sets it too.
+  arrived: boolean
 }
 // A visit still waiting for its unfocused read, or for the drift read one press after it.
 type OpenVisit = { drift: boolean; checkedAt: number | null }
@@ -708,6 +738,13 @@ export async function runTabWalk(page: Page, options: TabWalkOptions = {}): Prom
       error,
     })
   } finally {
+    // Best effort: the store holds element references and the listener would outlive the walk; a closed page has
+    // already dropped both. Here, not after walkPresses: the escape probe re-installs the listener in a new document.
+    await session
+      .send('Runtime.evaluate', {
+        expression: `(${TEARDOWN_FN})(${JSON.stringify(INDICATOR_STORE_KEY)}, ${JSON.stringify(ARRIVAL_KEY)})`,
+      })
+      .catch(() => undefined)
     // Detach fails if the page already closed; that must not mask the walk's own error.
     await session.detach().catch(() => undefined)
   }
@@ -764,7 +801,9 @@ async function walkPresses(
         focusStyle: r.focusStyle,
         documentReplaced: r.documentReplaced,
         wrapped: isWrapped(r.settled),
-        focusLost: r.settled.isBody && r.settled.hasFocus && lastRealSeen,
+        // Also focusLost when a focus event since the previous read (usually this press's own) shows focus arrived
+        // before it was removed.
+        focusLost: r.settled.isBody && r.settled.hasFocus && (lastRealSeen || r.arrived),
         indicator: !readable
           ? null
           : r.snapshotError === null
@@ -794,12 +833,6 @@ async function walkPresses(
       })
     }
   }
-  // Best effort: the store holds element references; a closed page has already dropped it.
-  await ctx.session
-    .send('Runtime.evaluate', {
-      expression: `delete window[${JSON.stringify(INDICATOR_STORE_KEY)}]`,
-    })
-    .catch(() => undefined)
   return { steps, error }
 }
 
@@ -1003,6 +1036,7 @@ async function pressAndRead(ctx: WalkContext, key: string, visit?: number): Prom
     documentReplaced: !immediate.markerPresent || !settled.markerPresent,
     snapshotted: settled.snapshotted,
     snapshotError: settled.snapshotError,
+    arrived: immediate.arrived,
   }
 }
 
@@ -1024,7 +1058,7 @@ function readFocus(ctx: WalkContext, opts: { withStyle?: boolean; visit?: number
 async function readFocusOnce(ctx: WalkContext, withStyle: boolean, visit: number | undefined): Promise<RawRead> {
   const { session } = ctx
   const indicator = visit === undefined ? null : { ...indicatorConfig(ctx), visit }
-  const args = [MARKER_KEY, ctx.token, withStyle, FRAME_TAGS, indicator]
+  const args = [MARKER_KEY, ctx.token, withStyle, FRAME_TAGS, indicator, ARRIVAL_KEY]
   try {
     // Identity and fields come from the same element object, so a focus change between
     // CDP calls cannot pair one element's backendNodeId with another's fields.
@@ -1123,13 +1157,14 @@ async function readDeep(session: CDPSession, topObjectId: string): Promise<DeepP
 }
 
 function toRawRead(raw: z.infer<typeof RawReadSchema>, backendNodeId: number | null, part: DeepPart): RawRead {
-  const { markerPresent, focusStyle, classAttr, snapshotted, snapshotError, ...fields } = raw
+  const { markerPresent, focusStyle, classAttr, snapshotted, snapshotError, arrived, ...fields } = raw
   return {
     read: { backendNodeId, ...fields, ...part },
     focusStyle,
     markerPresent,
     snapshotted,
     snapshotError,
+    arrived,
   }
 }
 
@@ -1233,7 +1268,7 @@ async function readExecutableBasename(browser: Browser): Promise<string | null> 
 async function injectMarker(ctx: WalkContext): Promise<void> {
   unwrap(
     await ctx.session.send('Runtime.evaluate', {
-      expression: `window[${JSON.stringify(MARKER_KEY)}] = ${JSON.stringify(ctx.token)}`,
+      expression: `window[${JSON.stringify(MARKER_KEY)}] = ${JSON.stringify(ctx.token)}; (${ARRIVAL_INSTALL_FN})(${JSON.stringify(ARRIVAL_KEY)})`,
     }),
   )
 }
