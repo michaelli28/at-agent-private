@@ -46,12 +46,24 @@ export async function crawlPageWithGapDetection(
   await page.waitForTimeout(SETTLE_MS)
 
   // Checked after the walk (acc-gaps#1), so the walk counts only if it ran on the window crawled here. A navigation
-  // during the write leaves the new window unmarked, so the check refuses the walk; a closed page still throws.
+  // during the write leaves the new window unmarked, so the check refuses the walk; a closed page still throws. Only
+  // an explicit false or a throw caught in the page is the page refusing the mark (a wrapper may return nothing); a
+  // promise the page returns is awaited, so a reload while it is pending still reads as a navigation.
   const token = randomUUID()
-  await page
-    .evaluate(([k, v]) => Reflect.set(window, k, v), [CRAWL_MARKER, token])
+  const written = await page
+    .evaluate(
+      ([k, v]) => {
+        try {
+          return Reflect.set(window, k, v)
+        } catch {
+          return false
+        }
+      },
+      [CRAWL_MARKER, token],
+    )
     .catch((err: unknown) => {
       if (page.isClosed()) throw err
+      return null
     })
 
   const crawl = await crawlDOM(page, url)
@@ -79,7 +91,11 @@ export async function crawlPageWithGapDetection(
   // A crawled node removed before its box was read has none, so the no-box ones are checked with the rendered ones.
   const noBox = new Set(visibility.hidden.filter((h) => h.reason === 'no-box').map((h) => h.backendNodeId))
   const checked = [...crawled, ...domElements.filter((e) => noBox.has(e.backendNodeId))]
-  const keyboard = await checkWalkedDocument(page, { keyboard: walked.keyboard, token, crawled: checked })
+  const keyboard = await checkWalkedDocument(page, {
+    keyboard: walked.keyboard,
+    token: written === false ? null : token,
+    crawled: checked,
+  })
 
   // G1c: a zero-area element stays a candidate only as a Tab stop. A complete walk decides by where Tab went alone;
   // after none, or an incomplete one, the DOM's focusability rules read before it count too.
@@ -115,22 +131,25 @@ export async function crawlPageWithGapDetection(
 
 // acc-gaps#1: the walk describes the crawled nodes only if it ran on them. It did not when the crawled window was
 // replaced (its marker is gone), or when crawled nodes it never reached have left the document (a same-window
-// re-mount, a toast the page removed). A replacement the walk saw is already listed; a closed page keeps its
-// walk-error, and one that closes during this check throws. Nothing is read before the walk, so a change during
-// the crawl is caught here too.
+// re-mount, a toast the page removed). A window the page refused to mark (no token) cannot be checked, so it is
+// refused too. A replacement the walk saw is already listed; a closed page keeps its walk-error, and one that closes
+// during this check throws. Nothing is read before the walk, so a change during the crawl is caught here too.
 async function checkWalkedDocument(
   page: Page,
-  walk: { keyboard: KeyboardEvidence; token: string; crawled: readonly DOMElement[] },
+  walk: { keyboard: KeyboardEvidence; token: string | null; crawled: readonly DOMElement[] },
 ): Promise<KeyboardEvidence> {
   const { keyboard } = walk
   if (!keyboard.walkRan || keyboard.unassessedReasons.includes('document-replaced') || page.isClosed()) return keyboard
   const reached = new Set(keyboard.reachedBackendNodeIds)
   const unreached = walk.crawled.filter((e) => !reached.has(e.backendNodeId))
-  const reason: KeyboardUnassessedReason | null = !(await crawlMarked(page, walk.token))
-    ? 'document-replaced'
-    : (await anyDetached(page, unreached))
-      ? 'crawled-nodes-detached'
-      : null
+  const reason: KeyboardUnassessedReason | null =
+    walk.token === null
+      ? 'crawl-mark-failed'
+      : !(await crawlMarked(page, walk.token))
+        ? 'document-replaced'
+        : (await anyDetached(page, unreached))
+          ? 'crawled-nodes-detached'
+          : null
   if (reason === null) return keyboard
   return { ...keyboard, notFocusableAssessed: false, unassessedReasons: [...keyboard.unassessedReasons, reason] }
 }

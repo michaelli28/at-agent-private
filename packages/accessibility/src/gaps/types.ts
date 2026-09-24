@@ -148,6 +148,9 @@ export const KEYBOARD_UNASSESSED_REASONS = [
   // Crawled nodes the walk never reached left the document between the crawl and the walk's end (a same-window
   // re-mount or document.open(), a toast the page removed), so where Tab went says nothing about them.
   'crawled-nodes-detached',
+  // The page's own script refused the crawled window's mark (the write threw or returned false), so which document
+  // the walk ran on is unknown.
+  'crawl-mark-failed',
 ] as const
 export const KeyboardUnassessedReasonSchema = z.enum(KEYBOARD_UNASSESSED_REASONS)
 export type KeyboardUnassessedReason = z.infer<typeof KeyboardUnassessedReasonSchema>
