@@ -1,0 +1,6 @@
+Testing file:///Users/possible/Documents/Projects/at-agent/test-sites/single-way.html...
+Screen Reader Enabled (In-Browser)
+Screen Reader Disabled
+✅ Correctly detected failure for 2.4.5 on single-way.html
+Testing file:///Users/possible/Documents/Projects/at-agent/test-sites/good-operable.html...
+Screen Reader Enabled (In-Browser)

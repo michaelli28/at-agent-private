@@ -1,0 +1,308 @@
+[
+  {
+    "id": "2.1.1",
+    "name": "Keyboard",
+    "guideline": "2.1 Keyboard Accessible",
+    "level": "A",
+    "category": "Dynamic-only",
+    "description": "All functionality of the content is operable through a keyboard interface without requiring specific timings for individual keystrokes.",
+    "strategy": "Dynamic: Verify that all interactive elements found in the AX tree are reachable and operable via keyboard (Tab/Enter/Space) in the interaction trace."
+  },
+  {
+    "id": "2.1.2",
+    "name": "No Keyboard Trap",
+    "guideline": "2.1 Keyboard Accessible",
+    "level": "A",
+    "category": "Dynamic-only",
+    "description": "If keyboard focus can be moved to a component of the page using a keyboard interface, then focus can be moved away from that component using only a keyboard interface.",
+    "strategy": "Dynamic: Detect loops in the interaction trace where repeated Tab presses cycle within a small subset of elements without escape."
+  },
+  {
+    "id": "2.1.3",
+    "name": "Keyboard (No Exception)",
+    "guideline": "2.1 Keyboard Accessible",
+    "level": "AAA",
+    "category": "Dynamic-only",
+    "description": "All functionality of the content is operable through a keyboard interface without requiring specific timings for individual keystrokes.",
+    "strategy": "Dynamic: Same as 2.1.1 but stricter (no exceptions allowed)."
+  },
+  {
+    "id": "2.1.4",
+    "name": "Character Key Shortcuts",
+    "guideline": "2.1 Keyboard Accessible",
+    "level": "A",
+    "category": "Out-of-scope/Heuristic",
+    "description": "If a keyboard shortcut is implemented in content using only letter (including upper- and lower-case letters), punctuation, numbers, or symbol characters, then a mechanism is available to turn it off, remap it, or activate it only on focus.",
+    "strategy": "Heuristic: Difficult to detect all custom JS shortcuts automatically without deep code analysis. Could listen for single-key listeners, but high false positive rate."
+  },
+  {
+    "id": "2.2.1",
+    "name": "Timing Adjustable",
+    "guideline": "2.2 Enough Time",
+    "level": "A",
+    "category": "Static+Dynamic",
+    "description": "For each time limit that is set by the content, the user can turn off, adjust, or extend the limit.",
+    "strategy": "Static+Dynamic: Check for meta refresh. Dynamic checks for timeouts are hard without long wait times, but can look for 'session expiring' dialogs."
+  },
+  {
+    "id": "2.2.2",
+    "name": "Pause, Stop, Hide",
+    "guideline": "2.2 Enough Time",
+    "level": "A",
+    "category": "Static+Dynamic",
+    "description": "For moving, blinking, scrolling, or auto-updating information, there is a mechanism for the user to pause, stop, or hide it.",
+    "strategy": "Static+Dynamic: Detect <marquee>, CSS animations, or JS intervals updating DOM. Check for pause/stop controls (heuristic)."
+  },
+  {
+    "id": "2.2.3",
+    "name": "No Timing",
+    "guideline": "2.2 Enough Time",
+    "level": "AAA",
+    "category": "Static+Dynamic",
+    "description": "Timing is not an essential part of the event or activity presented by the content, except for non-interactive synchronized media and real-time events.",
+    "strategy": "Static+Dynamic: Similar to 2.2.1 but stricter."
+  },
+  {
+    "id": "2.2.4",
+    "name": "Interruptions",
+    "guideline": "2.2 Enough Time",
+    "level": "AAA",
+    "category": "Out-of-scope/Heuristic",
+    "description": "Interruptions can be postponed or suppressed by the user, except interruptions involving an emergency.",
+    "strategy": "Out-of-scope: Hard to simulate interruptions and user suppression preferences automatically."
+  },
+  {
+    "id": "2.2.5",
+    "name": "Re-authenticating",
+    "guideline": "2.2 Enough Time",
+    "level": "AAA",
+    "category": "Dynamic-only",
+    "description": "When an authenticated session expires, the user can continue the activity without loss of data after re-authenticating.",
+    "strategy": "Dynamic: Requires simulating session expiry, which is complex for a general agent."
+  },
+  {
+    "id": "2.2.6",
+    "name": "Timeouts",
+    "guideline": "2.2 Enough Time",
+    "level": "AAA",
+    "category": "Static+Dynamic",
+    "description": "Users are warned of the duration of any user inactivity that could cause data loss.",
+    "strategy": "Static+Dynamic: Look for warning dialogs or text about timeouts."
+  },
+  {
+    "id": "2.3.1",
+    "name": "Three Flashes or Below Threshold",
+    "guideline": "2.3 Seizures and Physical Reactions",
+    "level": "A",
+    "category": "Dynamic-only",
+    "description": "Web pages do not contain anything that flashes more than three times in any one second period, or the flash is below the general flash and red flash thresholds.",
+    "strategy": "Dynamic: Requires analyzing video/frames of the page rendering over time. Complex for this framework."
+  },
+  {
+    "id": "2.3.2",
+    "name": "Three Flashes",
+    "guideline": "2.3 Seizures and Physical Reactions",
+    "level": "AAA",
+    "category": "Dynamic-only",
+    "description": "Web pages do not contain anything that flashes more than three times in any one second period.",
+    "strategy": "Dynamic: Same as 2.3.1."
+  },
+  {
+    "id": "2.3.3",
+    "name": "Animation from Interactions",
+    "guideline": "2.3 Seizures and Physical Reactions",
+    "level": "AAA",
+    "category": "Static+Dynamic",
+    "description": "Motion animation triggered by interaction can be disabled, unless the animation is essential to the functionality or the information being conveyed.",
+    "strategy": "Static+Dynamic: Check for 'prefers-reduced-motion' media query support (static). Verify animation stops when preference is set (dynamic)."
+  },
+  {
+    "id": "2.4.1",
+    "name": "Bypass Blocks",
+    "guideline": "2.4 Navigable",
+    "level": "A",
+    "category": "Static+Dynamic",
+    "description": "A mechanism is available to bypass blocks of content that are repeated on multiple Web pages.",
+    "strategy": "Static: Check for landmarks (main, nav, etc.) and 'skip to main' links. Dynamic: Verify skip link moves focus."
+  },
+  {
+    "id": "2.4.2",
+    "name": "Page Titled",
+    "guideline": "2.4 Navigable",
+    "level": "A",
+    "category": "Static-only",
+    "description": "Web pages have titles that describe topic or purpose.",
+    "strategy": "Static: Check document.title is present and non-empty."
+  },
+  {
+    "id": "2.4.3",
+    "name": "Focus Order",
+    "guideline": "2.4 Navigable",
+    "level": "A",
+    "category": "Dynamic-only",
+    "description": "If a Web page can be navigated sequentially and the navigation sequences affect meaning or operation, focusable components receive focus in an order that preserves meaning and operability.",
+    "strategy": "Dynamic: Compare DOM order vs. Tab order from interaction trace. Flag significant deviations."
+  },
+  {
+    "id": "2.4.4",
+    "name": "Link Purpose (In Context)",
+    "guideline": "2.4 Navigable",
+    "level": "A",
+    "category": "Static-only",
+    "description": "The purpose of each link can be determined from the link text alone or from the link text together with its programmatically determined link context.",
+    "strategy": "Static: Check for generic link text ('click here') and check if context (aria-label, parent heading) provides meaning."
+  },
+  {
+    "id": "2.4.5",
+    "name": "Multiple Ways",
+    "guideline": "2.4 Navigable",
+    "level": "AA",
+    "category": "Static+Dynamic",
+    "description": "More than one way is available to locate a Web page within a set of Web pages except where the Web Page is the result of, or a step in, a process.",
+    "strategy": "Static+Dynamic: Heuristic check for presence of: Search, Sitemap, TOC, Navigation Menu. Require >= 2 mechanisms."
+  },
+  {
+    "id": "2.4.6",
+    "name": "Headings and Labels",
+    "guideline": "2.4 Navigable",
+    "level": "AA",
+    "category": "Static-only",
+    "description": "Headings and labels describe topic or purpose.",
+    "strategy": "Static: Check that form inputs have labels. Check that headings exist and are not empty."
+  },
+  {
+    "id": "2.4.7",
+    "name": "Focus Visible",
+    "guideline": "2.4 Navigable",
+    "level": "AA",
+    "category": "Dynamic-only",
+    "description": "Any keyboard operable user interface has a mode of operation where the keyboard focus indicator is visible.",
+    "strategy": "Dynamic: Heuristic check if focused element has visible outline/border changes in snapshots."
+  },
+  {
+    "id": "2.4.8",
+    "name": "Location",
+    "guideline": "2.4 Navigable",
+    "level": "AAA",
+    "category": "Static-only",
+    "description": "Information about the user's location within a set of Web pages is available.",
+    "strategy": "Static: Check for breadcrumbs or current-page indicators in nav menus."
+  },
+  {
+    "id": "2.4.9",
+    "name": "Link Purpose (Link Only)",
+    "guideline": "2.4 Navigable",
+    "level": "AAA",
+    "category": "Static-only",
+    "description": "A mechanism is available to allow the purpose of each link to be identified from link text alone.",
+    "strategy": "Static: Stricter version of 2.4.4. Link text alone must be descriptive."
+  },
+  {
+    "id": "2.4.10",
+    "name": "Section Headings",
+    "guideline": "2.4 Navigable",
+    "level": "AAA",
+    "category": "Static-only",
+    "description": "Section headings are used to organize the content.",
+    "strategy": "Static: Check that content is structured with headings (h1-h6)."
+  },
+  {
+    "id": "2.4.11",
+    "name": "Focus Not Obscured (Minimum)",
+    "guideline": "2.4 Navigable",
+    "level": "AA",
+    "category": "Dynamic-only",
+    "description": "When a user interface component receives keyboard focus, the component is not entirely hidden due to author-created content.",
+    "strategy": "Dynamic: Check intersection of focused element bounding box with viewport and other sticky elements."
+  },
+  {
+    "id": "2.4.12",
+    "name": "Focus Not Obscured (Enhanced)",
+    "guideline": "2.4 Navigable",
+    "level": "AAA",
+    "category": "Dynamic-only",
+    "description": "When a user interface component receives keyboard focus, no part of the component is hidden by author-created content.",
+    "strategy": "Dynamic: Stricter version of 2.4.11."
+  },
+  {
+    "id": "2.4.13",
+    "name": "Focus Appearance",
+    "guideline": "2.4 Navigable",
+    "level": "AAA",
+    "category": "Dynamic-only",
+    "description": "The focus indicator has sufficient size and contrast.",
+    "strategy": "Dynamic: Analyze screenshots/styles for contrast ratio and size of focus ring."
+  },
+  {
+    "id": "2.5.1",
+    "name": "Pointer Gestures",
+    "guideline": "2.5 Input Modalities",
+    "level": "A",
+    "category": "Dynamic-only",
+    "description": "All functionality that uses multipoint or path-based gestures for operation can be operated with a single pointer without a path-based gesture.",
+    "strategy": "Dynamic: Hard to automate without knowing intended gestures. Heuristic: check for specific touch event listeners."
+  },
+  {
+    "id": "2.5.2",
+    "name": "Pointer Cancellation",
+    "guideline": "2.5 Input Modalities",
+    "level": "A",
+    "category": "Dynamic-only",
+    "description": "For functionality that can be operated using a single pointer, completion of the function is on the up-event, and a mechanism is available to abort the function before completion or to undo the function after completion.",
+    "strategy": "Dynamic: Check if actions trigger on 'down' vs 'up' events."
+  },
+  {
+    "id": "2.5.3",
+    "name": "Label in Name",
+    "guideline": "2.5 Input Modalities",
+    "level": "A",
+    "category": "Static-only",
+    "description": "For user interface components with labels that include text or images of text, the name contains the text that is presented visually.",
+    "strategy": "Static: Compare visible label text with accessible name (aria-label, etc.)."
+  },
+  {
+    "id": "2.5.4",
+    "name": "Motion Actuation",
+    "guideline": "2.5 Input Modalities",
+    "level": "A",
+    "category": "Out-of-scope/Heuristic",
+    "description": "Functionality that can be operated by device motion or user motion can also be operated by user interface components and responding to the motion can be disabled to prevent accidental actuation.",
+    "strategy": "Out-of-scope: Requires device motion simulation."
+  },
+  {
+    "id": "2.5.5",
+    "name": "Target Size (Enhanced)",
+    "guideline": "2.5 Input Modalities",
+    "level": "AAA",
+    "category": "Static-only",
+    "description": "The target size for pointer inputs is at least 44 by 44 CSS pixels.",
+    "strategy": "Static: Check bounding box dimensions of interactive elements."
+  },
+  {
+    "id": "2.5.6",
+    "name": "Concurrent Input Mechanisms",
+    "guideline": "2.5 Input Modalities",
+    "level": "AAA",
+    "category": "Out-of-scope/Heuristic",
+    "description": "Web content does not restrict use of input modalities available on a platform except where the restriction is essential, required to ensure the security of the content, or required to respect user settings.",
+    "strategy": "Out-of-scope."
+  },
+  {
+    "id": "2.5.7",
+    "name": "Dragging Movements",
+    "guideline": "2.5 Input Modalities",
+    "level": "AA",
+    "category": "Dynamic-only",
+    "description": "All functionality that uses a dragging movement for operation can be operated by a single pointer without dragging.",
+    "strategy": "Dynamic: Hard to automate. Check for drag event listeners and alternative controls."
+  },
+  {
+    "id": "2.5.8",
+    "name": "Target Size (Minimum)",
+    "guideline": "2.5 Input Modalities",
+    "level": "AA",
+    "category": "Static-only",
+    "description": "The target size for pointer inputs is at least 24 by 24 CSS pixels.",
+    "strategy": "Static: Check bounding box dimensions of interactive elements."
+  }
+]
