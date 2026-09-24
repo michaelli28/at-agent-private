@@ -2,6 +2,7 @@
 // made deterministic by wrapping the CDP sessions the detector opens and changing the page at one chosen call.
 import { describe, it, expect, beforeAll, afterAll } from 'vitest'
 import { chromium, type Browser, type BrowserContext, type Page } from 'playwright'
+import { RENDERER_CRASHED } from '../renderer-crash.js'
 import { crawlPageWithGapDetection, type GapDetectionOptions } from './detect.js'
 import type { AccessibilityGap, DualCrawlResult } from './types.js'
 
@@ -373,6 +374,44 @@ describe('crawlPageWithGapDetection when the page changes between its reads', ()
         const r = await d.run
         expect(d.fired()).toBe(true)
         expect(gapsOf(r)).toEqual({})
+      } finally {
+        await d.context.close()
+      }
+    })
+  })
+
+  // A crashed renderer answers no command on the detector's own CDP sessions, so without a crash abort each of these
+  // waits forever (probe: DOM.enable, Accessibility.getFullAXTree and the walk's Runtime.evaluate all hang).
+  describe('a renderer crash fails the detection instead of hanging it', () => {
+    const crash = async (page: Page): Promise<void> => {
+      const session = await page.context().newCDPSession(page)
+      // Never answered: the renderer that would reply is the one it kills.
+      void session.send('Page.crash').catch(() => undefined)
+      await page.waitForEvent('crash')
+    }
+    for (const [stage, match] of [
+      ['before the crawl', (m: string) => m === 'DOM.enable'],
+      ['before the accessibility-tree read', isAxRead],
+      ['as the Tab walk starts', isWalkMarkerWrite],
+    ] as const) {
+      it(`rejects with the crash ${stage}`, { timeout: 15_000 }, async () => {
+        const d = await detect(CONTROLS, { when: 'before', match, act: crash })
+        try {
+          await expect(d.run).rejects.toThrow(RENDERER_CRASHED)
+          expect(d.fired()).toBe(true)
+        } finally {
+          await d.context.close()
+        }
+      })
+    }
+
+    it('leaves no crash listener on a page that does not crash', async () => {
+      const d = await detect(CONTROLS, null)
+      try {
+        await d.run
+        // Playwright keeps a crash listener of its own, so compare with a page the detector never ran on.
+        const listeners = (p: Page): number => (p as unknown as NodeJS.EventEmitter).listenerCount('crash')
+        expect(listeners(d.page)).toBe(listeners(await d.context.newPage()))
       } finally {
         await d.context.close()
       }

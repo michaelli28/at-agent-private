@@ -1,6 +1,7 @@
 import { randomUUID } from 'node:crypto'
 import type { Page } from 'playwright'
 import { z } from 'zod'
+import { failOnCrash } from '../renderer-crash.js'
 import { runTabWalk, TabWalkOptionsSchema } from '../tab-walk.js'
 import { convertToElementGraph, getAccessibilityTree } from './ax-tree.js'
 import {
@@ -39,6 +40,10 @@ export async function crawlPageWithGapDetection(
   url: string,
   options: GapDetectionOptions = {},
 ): Promise<DualCrawlResult> {
+  return failOnCrash(page, () => crawlAndWalk(page, url, options))
+}
+
+async function crawlAndWalk(page: Page, url: string, options: GapDetectionOptions): Promise<DualCrawlResult> {
   await page.goto(url, {
     waitUntil: 'domcontentloaded',
     timeout: NAVIGATION_TIMEOUT_MS,

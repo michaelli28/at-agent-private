@@ -16,6 +16,7 @@ import {
   type StyleChange,
   type TabWalkResult,
 } from './tab-walk.js'
+import { failOnCrash } from './renderer-crash.js'
 
 // WCAG 2.4.7 Focus Visible from a Tab walk. Absent needs two agreeing negatives: no qualifying CSS difference
 // (element, ::before/::after, 3 ancestors, 2 siblings; see judge) AND whole-viewport shots of the element
@@ -273,6 +274,14 @@ export async function checkFocusIndicator(
   page: Page,
   walk: TabWalkResult,
   options: FocusIndicatorOptions = {},
+): Promise<FocusIndicatorResult> {
+  return failOnCrash(page, () => screenshotAndJudge(page, walk, options))
+}
+
+async function screenshotAndJudge(
+  page: Page,
+  walk: TabWalkResult,
+  options: FocusIndicatorOptions,
 ): Promise<FocusIndicatorResult> {
   const opts = FocusIndicatorOptionsSchema.parse(options)
   const unconfirmed = judgeFocusIndicator(walk, new Map(), opts)

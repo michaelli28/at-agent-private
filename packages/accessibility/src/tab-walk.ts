@@ -3,6 +3,7 @@ import { basename } from 'node:path'
 import { setTimeout as sleep } from 'node:timers/promises'
 import { z } from 'zod'
 import type { Browser, CDPSession, Page } from 'playwright'
+import { failOnCrash } from './renderer-crash.js'
 
 // Scripted Tab walk: records where focus goes after each keypress. It marks facts
 // (wrapped, focusLost, suspectedTrap) but never issues a WCAG verdict.
@@ -671,6 +672,10 @@ type EvalResult = {
 }
 
 export async function runTabWalk(page: Page, options: TabWalkOptions = {}): Promise<TabWalkResult> {
+  return failOnCrash(page, () => walk(page, options))
+}
+
+async function walk(page: Page, options: TabWalkOptions): Promise<TabWalkResult> {
   const opts = TabWalkOptionsSchema.parse(options)
   const key: TabKey = opts.direction === 'forward' ? 'Tab' : 'Shift+Tab'
   const session = await page.context().newCDPSession(page)

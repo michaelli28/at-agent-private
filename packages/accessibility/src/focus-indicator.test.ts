@@ -4,6 +4,7 @@ import { fileURLToPath } from 'node:url'
 import { describe, it, expect, beforeAll, afterAll, afterEach } from 'vitest'
 import type { Page } from 'playwright'
 import { BrowserClient, BrowserPage } from '@at-agent/browser'
+import { RENDERER_CRASHED } from './renderer-crash.js'
 import {
   runTabWalk,
   type FocusRead,
@@ -217,6 +218,31 @@ describe('checkFocusIndicator on a real walk (headless shell)', () => {
     expect(() => FocusIndicatorResultSchema.parse(result)).not.toThrow()
     return result
   }
+
+  // The screenshot routine's focus and state calls run on the check's own CDP session, which a crashed renderer never
+  // answers; without a crash abort they wait forever.
+  it(
+    'rejects with the crash when the renderer dies as the check moves focus, instead of hanging',
+    { timeout: 15_000 },
+    async () => {
+      const page = await client.newPage()
+      pages.push(page)
+      const pw = page.playwrightPage
+      await pw.setContent(
+        doc('Crash', 'input:focus { outline: none }', '<input id="t1" aria-label="A"> <input id="t2" aria-label="B">'),
+        { waitUntil: 'load' },
+      )
+      const walk = await runTabWalk(pw, { settleMs: FAST })
+      const session = await pw.context().newCDPSession(pw)
+      // Page.crash is never answered: the renderer that would reply is the one it kills.
+      await pw.exposeFunction('crashRenderer', () => void session.send('Page.crash').catch(() => undefined))
+      await pw.evaluate(() => {
+        const crash = (): void => (window as unknown as { crashRenderer: () => void }).crashRenderer()
+        document.addEventListener('focusin', crash, { once: true })
+      })
+      await expect(checkFocusIndicator(pw, walk)).rejects.toThrow(RENDERER_CRASHED)
+    },
+  )
 
   async function check(html: string, options?: FocusIndicatorOptions): Promise<FocusIndicatorResult> {
     const page = await client.newPage()

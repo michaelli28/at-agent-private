@@ -3,6 +3,7 @@ import { gunzipSync } from 'node:zlib'
 import { describe, it, expect, beforeAll, afterAll, afterEach, vi, type MockInstance } from 'vitest'
 import type { CDPSession, Page } from 'playwright'
 import { BrowserClient, BrowserPage } from '@at-agent/browser'
+import { RENDERER_CRASHED } from './renderer-crash.js'
 import { runTabWalk, TabWalkResultSchema, focusIdentity, type FocusRead, type StyleChange } from './tab-walk.js'
 import { judgeKeyboardTrap } from './keyboard-trap.js'
 
@@ -1724,6 +1725,20 @@ describe('runTabWalk', () => {
       const walk = await runTabWalk(page.playwrightPage, { settleMs: FAST })
       expect(judgeKeyboardTrap([walk]).verdict).toBe('pass')
     })
+  })
+
+  // A crashed renderer never answers the walk's CDP session, and a press in flight at the crash never settles.
+  it('rejects with the crash when the renderer dies mid-walk, instead of hanging', { timeout: 15_000 }, async () => {
+    const page = await open(FIXTURE_A)
+    const pw = page.playwrightPage
+    const session = await pw.context().newCDPSession(pw)
+    // Page.crash is never answered: the renderer that would reply is the one it kills.
+    await pw.exposeFunction('crashRenderer', () => void session.send('Page.crash').catch(() => undefined))
+    await pw.evaluate(() => {
+      const crash = (): void => (window as unknown as { crashRenderer: () => void }).crashRenderer()
+      document.addEventListener('keydown', crash, { once: true })
+    })
+    await expect(runTabWalk(pw, { settleMs: 50 })).rejects.toThrow(RENDERER_CRASHED)
   })
 })
 
