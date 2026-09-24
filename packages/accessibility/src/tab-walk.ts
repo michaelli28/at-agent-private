@@ -9,6 +9,7 @@ import type { Browser, CDPSession, Page } from 'playwright'
 
 const FOCUSABLE_SELECTOR = [
   'a[href]',
+  'area[href]',
   'button',
   'input:not([type=hidden])',
   'select',
@@ -26,13 +27,29 @@ const FOCUSABLE_SELECTOR = [
 // Counts Tab stops page JS can see: light DOM, open shadow roots and same-origin frames. Headless
 // shell gives a rendered frame with nothing focusable one stop and skips a tabindex=-1 frame with
 // its content; a cross-origin frame counts as one stop (a lower bound) and is reported.
+// An area is a stop only while the first document <img> whose usemap (first character dropped, as
+// Chromium does) names its map by id or name is rendered; the area's and map's own boxes do not matter.
+// Unlike scrollers, this is a fixed lookup, pinned against real Tab stops in tab-walk.test.ts.
 const COUNT_FOCUSABLE_FN = `function (selector, frameTags) {
   const rendered = (el) => el.getClientRects().length > 0
+  const mapImage = (area) => {
+    const map = area.closest('map')
+    if (!map) return undefined
+    return Array.from(area.ownerDocument.images).find((img) => {
+      const key = img.useMap.slice(1)
+      return key !== '' && (key === map.id || key === map.name)
+    })
+  }
+  const shown = (el) => {
+    if (el.localName !== 'area') return rendered(el)
+    const img = mapImage(el)
+    return img !== undefined && rendered(img)
+  }
   let count = 0
   let crossOriginFrames = 0
   const visit = (root) => {
     for (const el of root.querySelectorAll(selector)) {
-      if (!el.matches(':disabled') && rendered(el)) count++
+      if (!el.matches(':disabled') && shown(el)) count++
     }
     for (const el of root.querySelectorAll('*')) {
       if (el.shadowRoot) visit(el.shadowRoot)

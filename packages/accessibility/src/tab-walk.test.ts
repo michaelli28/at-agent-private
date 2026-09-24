@@ -406,6 +406,28 @@ const EDITING_HOSTS = doc(
 <div id="ce-false" contenteditable="false">false</div>`,
 )
 
+// A 1x1 GIF, so each image map has a rendered image without a network fetch.
+const GIF = 'data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7'
+const img = (usemap: string, style = ''): string =>
+  `<img src="${GIF}" width="50" height="50" alt="${usemap}" usemap="#${usemap}" style="${style}">`
+const areas = (prefix: string, n: number): string =>
+  Array.from({ length: n }, (_, i) => `<area id="${prefix}${i}" shape="rect" coords="0,0,9,9" href="#${prefix}${i}" alt="${prefix}${i}">`).join('')
+
+// Each map pins one part of the area rule in COUNT_FOCUSABLE_FN (tab-walk.ts).
+const IMAGE_MAPS = doc(
+  'Image maps',
+  `<a id="l1" href="#1">1</a>
+${img('shown')}<map name="shown">${areas('s', 2)}</map>
+<div style="display:none"><map name="boxless">${areas('b', 1)}</map></div>${img('boxless')}
+${img('hidden', 'display:none')}<map name="hidden">${areas('h', 2)}</map>
+<img src="${GIF}" width="50" height="50" alt="plain"><map name="orphan">${areas('o', 2)}</map>
+${img('byid')}<map id="byid">${areas('i', 1)}</map>
+${img('first', 'display:none')}${img('first')}<map name="first">${areas('f', 1)}</map>
+<iframe srcdoc="${srcdoc(`${img('framed')}<map name="framed">${areas('fa', 2)}</map>`)}"></iframe>`,
+)
+
+const LINK_AND_14_AREAS = doc('A link and 14 areas', `<a id="l1" href="#1">1</a>${img('m')}<map name="m">${areas('a', 14)}</map>`)
+
 const TWO_SCROLLERS = doc('Two scrollers', `${THREE_LINKS}${scroller('s1')}${scroller('s2')}`)
 
 const LONE_DATETIME = doc('Lone datetime', '<label>Meeting time <input id="when" type="datetime-local"></label>')
@@ -1542,6 +1564,25 @@ describe('runTabWalk', () => {
         new Set(['l1', 'ce-bare', 'ce-plain', 'ce-plain-upper', 'ce-upper', 'ce-true', 'body!']),
       )
       expect(walk.focusableCount).toBe(6)
+    })
+
+    it('F counts an image-map area only while the first image naming its map is rendered', async () => {
+      const page = await open(IMAGE_MAPS)
+      const walk = await runTabWalk(page.playwrightPage, { settleMs: FAST })
+
+      expect(new Set(walk.steps.map((s) => deepLabel(s.settled)))).toEqual(
+        new Set(['l1', 's0', 's1', 'b0', 'i0', 'fa0', 'fa1', 'body!']),
+      )
+      expect(walk.focusableCount).toBe(7)
+    })
+
+    it('a link and 14 image-map areas: F is 15, the walk wraps, judged pass', async () => {
+      const page = await open(LINK_AND_14_AREAS)
+      const walk = await runTabWalk(page.playwrightPage, { settleMs: FAST })
+
+      expect(walk.focusableCount).toBe(15)
+      expect(walk.suspectedTrap).toBe(false)
+      expect(judgeKeyboardTrap([walk]).verdict).toBe('pass')
     })
 
     // Pinned, not fixed: counting scrollers would re-implement Chromium's rule in page JS.
