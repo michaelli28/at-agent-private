@@ -167,6 +167,7 @@ describe('keyboardEvidence (one document from the idle baseline to the last pres
     container: null,
     deep: { backendNodeId, tag, id: null, isBody, classAttr: null },
     deepUnavailable: null,
+    part: null,
   })
   const step = (index: number, settled: FocusRead, over: Partial<TabWalkStep> = {}): TabWalkStep => ({
     index,

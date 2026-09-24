@@ -3,6 +3,7 @@ import {
   DeepFocusSchema,
   TabKeySchema,
   focusStop,
+  groupStops,
   isRealElement as isRealStop,
   type DeepFocus,
   type TabWalkResult,
@@ -174,10 +175,12 @@ export function judgeContextChange(walk: TabWalkResult): ContextChangeResult {
       walk.idle.documentReplaced ||
       (walk.idle.urlChanged && unattributed.some((u) => u.reason === 'focus-removed-after-settle')))
 
+  // In stops, as the walk's budget and the 2.1.2 judge count them.
+  const shortWalk = groupStops(walk.steps).length < walk.defaultPresses
   const reason: ContextChangeUndeterminedReason | null =
     walk.error !== null
       ? 'walk-error'
-      : walk.steps.length < walk.defaultPresses
+      : shortWalk
         ? 'short-walk'
         : movedWithoutInput
           ? 'page-navigates-without-input'

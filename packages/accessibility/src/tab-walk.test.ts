@@ -1887,39 +1887,39 @@ describe('runTabWalk', () => {
       expect(walk.steps.slice(0, firstWrap).every((s) => label(s.settled) === 'when')).toBe(true)
       const result = judgeKeyboardTrap([walk])
       expect(result.verdict).toBe('pass')
-      expect(result.directions[0].endOfPage?.signal).toBe('all-stops-visited')
+      expect(result.directions[0].endOfPage?.signal).toBe('body-unfocused')
     })
 
-    // Known wrong verdicts (bench/COVERAGE.md): a date or time input takes several Tab presses on one element,
-    // and the walk and its probe are budgeted in presses. Drop it.fails when they are budgeted in stops.
-    it.fails('known wrong: two datetime-local inputs, a clean page, should pass', async () => {
+    // Wrong before round 4: a date or time input takes several Tab presses on one element, and the walk and its
+    // probe were budgeted in presses. They are budgeted in stops now.
+    it('two datetime-local inputs, a clean page: judged pass', async () => {
       const page = await open(TWO_DATETIMES)
       const walk = await runTabWalk(page.playwrightPage, { settleMs: FAST })
       expect(judgeKeyboardTrap([walk]).verdict).toBe('pass')
     })
 
-    it.fails('known wrong: a dialog loop over a date input and a button, a trap, should fail', async () => {
+    it('a dialog loop over a date input and a button, a trap: judged fail', async () => {
       const page = await open(DATE_LOOP)
       const walk = await runTabWalk(page.playwrightPage, { settleMs: FAST })
       expect(judgeKeyboardTrap([walk]).verdict).toBe('fail')
     })
 
-    // The recent-wrap rule introduced these three: the stops fill the 15-press walk, which never wraps, and the
-    // probe's Shift+Tabs stay inside the input, whether the walk ended inside it or just after it.
-    it.fails('known wrong: eight scrollers then a datetime-local, a clean page, should pass', async () => {
+    // The recent-wrap rule introduced these three when the walk counted presses: the stops filled the 15-press
+    // walk, which never wrapped, and the probe's Shift+Tabs stayed inside the input.
+    it('eight scrollers then a datetime-local, a clean page: judged pass', async () => {
       const page = await open(SCROLLERS_THEN_DATETIME)
       const walk = await runTabWalk(page.playwrightPage, { settleMs: FAST })
       expect(judgeKeyboardTrap([walk]).verdict).toBe('pass')
     })
 
-    it.fails('known wrong: seven scrollers, a datetime-local, one scroller, a clean page, should pass', async () => {
+    it('seven scrollers, a datetime-local, one scroller, a clean page: judged pass', async () => {
       const page = await open(SCROLLERS_DATETIME_SCROLLER)
       const walk = await runTabWalk(page.playwrightPage, { settleMs: FAST })
       expect(judgeKeyboardTrap([walk]).verdict).toBe('pass')
     })
 
     // Media controls are Tab stops on one element too, so the class is wider than date and time inputs.
-    it.fails('known wrong: a link, ten scrollers, then <audio controls>, a clean page, should pass', async () => {
+    it('a link, ten scrollers, then <audio controls>, a clean page: judged pass', async () => {
       const page = await open(LINK_SCROLLERS_AUDIO)
       const walk = await runTabWalk(page.playwrightPage, { settleMs: FAST })
       expect(judgeKeyboardTrap([walk]).verdict).toBe('pass')
@@ -1930,65 +1930,65 @@ describe('runTabWalk', () => {
       return judgeKeyboardTrap([await runTabWalk(page.playwrightPage, { settleMs: FAST, direction })])
     }
 
-    // More known wrong verdicts from the same cause, found in round 4. Drop it.fails with the five above.
-    it.fails('known wrong: a loop over every stop with a date input last before the wrap, a trap, should fail', async () => {
+    // More verdicts that were wrong from the same cause, found in round 4.
+    it('a loop over every stop with a date input last before the wrap, a trap: judged fail', async () => {
       expect((await judged(DATE_LAST_IN_LOOP)).verdict).toBe('fail')
     })
 
-    it.fails('known wrong: a lone <audio controls>, F=0, a clean page, should pass', async () => {
+    it('a lone <audio controls>, F=0, a clean page: judged pass', async () => {
       expect((await judged(LONE_AUDIO)).verdict).toBe('pass')
     })
 
-    it.fails('known wrong: a lone <video controls>, F=0, a clean page, should pass', async () => {
+    it('a lone <video controls>, F=0, a clean page: judged pass', async () => {
       expect((await judged(LONE_VIDEO)).verdict).toBe('pass')
     })
 
-    it.fails('known wrong: two text inputs that become datetime-local on focus, a clean page, should pass', async () => {
+    it('two text inputs that become datetime-local on focus, a clean page: judged pass', async () => {
       expect((await judged(TYPE_SWAP_DATETIMES)).verdict).toBe('pass')
     })
 
-    it.fails('known wrong: two datetime-local inputs in an open shadow root, a clean page, should pass', async () => {
+    it('two datetime-local inputs in an open shadow root, a clean page: judged pass', async () => {
       expect((await judged(SHADOW_DATETIMES)).verdict).toBe('pass')
     })
 
-    it.fails('known wrong: two datetime-local inputs in a same-origin frame, a clean page, should pass', async () => {
+    it('two datetime-local inputs in a same-origin frame, a clean page: judged pass', async () => {
       expect((await judged(FRAME_DATETIMES)).verdict).toBe('pass')
     })
 
-    it.fails('known wrong: a link, ten scrollers, then <video controls>, a clean page, should pass', async () => {
+    it('a link, ten scrollers, then <video controls>, a clean page: judged pass', async () => {
       expect((await judged(LINK_SCROLLERS_VIDEO)).verdict).toBe('pass')
     })
 
-    it.fails('known wrong: a dialog loop over a millisecond datetime-local and a button, a trap, should fail', async () => {
+    it('a dialog loop over a millisecond datetime-local and a button, a trap: judged fail', async () => {
       expect((await judged(MS_DATETIME_LOOP)).verdict).toBe('fail')
     })
 
-    it.fails('known wrong: a link, eight scrollers, <audio controls>, three scrollers, a clean page, should pass', async () => {
+    it('a link, eight scrollers, <audio controls>, three scrollers, a clean page: judged pass', async () => {
       expect((await judged(linkScrollersAudioScrollers(8, 3))).verdict).toBe('pass')
     })
 
-    it.fails('known wrong: backward, a dialog loop over two datetime-local inputs and a button, a trap, should fail', async () => {
+    it('backward, a dialog loop over two datetime-local inputs and a button, a trap: judged fail', async () => {
       expect((await judged(DATETIMES_SAVE_LOOP, 'backward')).verdict).toBe('fail')
     })
 
     // The same trade with F = 2, where the judge must read the walk's stops: its last F+1 stops hold 3 elements,
     // more than F, but its last F+1 presses hold 2. A walk counted in presses ends inside the audio element and passes.
-    it.fails('trade, F=2: two links, sixteen scrollers, <audio controls>, four scrollers: undetermined', async () => {
+    it('trade, F=2: two links, sixteen scrollers, <audio controls>, four scrollers: undetermined', async () => {
       const result = await judged(TWO_LINKS_SCROLLERS_AUDIO)
       expect(result.verdict).toBe('undetermined')
       expect(result.reason).toBe('focusables-exceeded')
     })
 
     // The accepted trade: 18 stops F does not count (17 scrollers and the audio element), past 4F+10 = 14. It
-    // passes today only because the walk ends inside the audio element and one Shift+Tab gets out; counted in stops
-    // it is refused, like the same page with a button in place of the audio. Drop it.fails with the pins above.
-    it.fails('trade: a link, twelve scrollers, <audio controls>, five scrollers: undetermined, focusables-exceeded', async () => {
+    // passed in presses only because the walk ended inside the audio element and one Shift+Tab got out; counted in
+    // stops it is refused, like the same page with a button in place of the audio.
+    it('trade: a link, twelve scrollers, <audio controls>, five scrollers: undetermined, focusables-exceeded', async () => {
       const result = await judged(linkScrollersAudioScrollers(12, 5))
       expect(result.verdict).toBe('undetermined')
       expect(result.reason).toBe('focusables-exceeded')
     })
 
-    // Right today, and must stay right when the walk counts stops.
+    // Right when the walk counted presses, and must stay right now that it counts stops.
     it('a date input that swallows Tab: judged fail', async () => {
       expect((await judged(SWALLOW_ON_DATE)).verdict).toBe('fail')
     })
@@ -2020,13 +2020,13 @@ describe('runTabWalk', () => {
     }
 
     // Calibration tripwire: each control must stay one stop, in fewer presses than the 10 a stop may take. A
-    // Chromium that adds parts to one fails here and names it. It passes only once the walk is budgeted in stops.
+    // Chromium that adds parts to one fails here and names it.
     for (const [control, html] of [
       ['a datetime-local input with milliseconds', MS_DATETIME_BETWEEN_LINKS],
       ['<video controls> with a captions track', CAPTIONED_VIDEO_BETWEEN_LINKS],
     ] as const) {
       for (const direction of DIRECTIONS) {
-        it.fails(`tripwire: ${control}, ${direction}, is one stop of fewer than 10 presses`, async () => {
+        it(`tripwire: ${control}, ${direction}, is one stop of fewer than 10 presses`, async () => {
           const page = await open(html)
           const walk = await runTabWalk(page.playwrightPage, { settleMs: FAST, direction })
           const runs = runLengths(walk.steps)

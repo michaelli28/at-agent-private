@@ -109,6 +109,16 @@ describe("run.ts end-to-end on two dev fixtures", () => {
     expect(stdout).toContain("three-links");
   });
 
+  it("calls the walk's counts stops, not presses, in the progress line and the results legend", () => {
+    expect(stdout).toContain("walk F=3 25/25 stops");
+    const legend = summary.notes.find((n) =>
+      n.startsWith("Walk trap (the new checker)"),
+    );
+    expect(legend).toContain(
+      "the walk's last F+1 stops held more distinct stops than F",
+    );
+  });
+
   it("three-links: the legacy trap detector reports the known wrap-around false trap (cycle of 4 at press 20)", () => {
     const p = page("three-links");
     expect(p.tools.walk.findings).toEqual({
@@ -466,7 +476,7 @@ describe("legacyFrom labels the legacy replay", () => {
     );
     expect(run).toMatchObject({
       status: "partial",
-      error: `replayed 3 of ${walk.presses} planned presses: the walk stopped early`,
+      error: `walked 3 of ${walk.presses} planned stops: the walk stopped early`,
     });
   });
 

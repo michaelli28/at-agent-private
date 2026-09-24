@@ -5,6 +5,8 @@ import { gunzipSync } from 'node:zlib'
 import { describe, it, expect } from 'vitest'
 import {
   TabWalkResultSchema,
+  collapseStops,
+  groupStops,
   type EscapeProbe,
   type FocusRead,
   type TabWalkResult,
@@ -61,6 +63,7 @@ const EMPTY_READ: FocusRead = {
   container: null,
   deep: null,
   deepUnavailable: null,
+  part: null,
 }
 
 function elementRead(backendNodeId: number, tag = 'a', id: string | null = null): FocusRead {
@@ -151,6 +154,7 @@ function synthWalk(steps: TabWalkStep[], over: Partial<TabWalkResult> = {}): Tab
 }
 
 // Walks written as press ids: WRAP is a press that wrapped to the unfocused body, any other id a real stop.
+// Their reads have part null, as in a walk that reads no parts, so each press is its own stop.
 const WRAP = 0
 
 const repeat = (id: number, n: number): number[] => Array<number>(n).fill(id)
@@ -169,7 +173,7 @@ function fullWalk(focusableCount: number, ids: readonly number[], escapeProbe: E
   return synthWalk(steps, { focusableCount, focusableCountEnd: focusableCount, escapeProbe })
 }
 
-// The probe runTabWalk runs after `ids`: its seen set is the last F+1 presses; Escape stays on the last stop
+// The probe runTabWalk runs after `ids`: its seen set is the last F+1 stops; Escape stays on the last stop
 // unless `escape` says otherwise; Shift+Tab then follows `path` (WRAP = a wrap) and stops at the first unseen
 // element or wrap.
 function probeAfter(
@@ -209,12 +213,84 @@ function probeAfter(
   }
 }
 
-// A probe that got nowhere, or none when the last F+1 presses wrapped (runTabWalk's gate): the worst case for a
+// A probe that got nowhere, or none when the last F+1 stops wrapped (runTabWalk's gate): the worst case for a
 // clean walk that reaches the probe.
 function stuckProbe(ids: readonly number[], focusableCount: number): EscapeProbe | null {
   if (ids.slice(-(focusableCount + 1)).includes(WRAP)) return null
   return probeAfter(ids, focusableCount, repeat(ids[ids.length - 1], focusableCount + 2))
 }
+
+// A press on element `id` whose focused part inside the element's browser-built inner tree is `part`.
+function partStep(index: number, id: number, part: number | null, over: Partial<TabWalkStep> = {}): TabWalkStep {
+  return synthStep(index, { ...elementRead(id), part }, over)
+}
+
+// Presses on one element, one per part.
+const onParts = (id: number, parts: readonly (number | null)[], from = 1): TabWalkStep[] =>
+  parts.map((part, i) => partStep(from + i, id, part))
+
+const stopLengths = (steps: readonly TabWalkStep[]): number[] => groupStops(steps).map((stop) => stop.length)
+
+describe('groupStops and collapseStops (hand-built walks)', () => {
+  it('a repeated part starts a new stop: a swallowed Tab on a date input', () => {
+    expect(stopLengths(onParts(11, [101, 102, 102, 103]))).toEqual([2, 2])
+  })
+
+  it('a repeated null starts a new stop: a button pressed twice is two stops', () => {
+    expect(stopLengths(onParts(11, [null, null]))).toEqual([1, 1])
+  })
+
+  it('a first null after parts continues the stop: backward audio 47, 39, 4, 25, null is one stop', () => {
+    expect(stopLengths(onParts(11, [47, 39, 4, 25, null]))).toEqual([5])
+  })
+
+  it('another element starts a new stop', () => {
+    expect(stopLengths([partStep(1, 11, 101), partStep(2, 12, 102)])).toEqual([1, 1])
+  })
+
+  it('a wrap never joins a stop', () => {
+    const wrap = (index: number): TabWalkStep => synthStep(index, bodyRead(false), { wrapped: true })
+    expect(stopLengths([partStep(1, 11, 101), wrap(2), wrap(3), partStep(4, 11, 102)])).toEqual([1, 1, 1, 1])
+  })
+
+  it('a replaced document starts a new stop', () => {
+    expect(stopLengths([partStep(1, 11, 101), partStep(2, 11, 102, { documentReplaced: true })])).toEqual([1, 1])
+  })
+
+  it('a stop holds at most 10 presses', () => {
+    expect(stopLengths(onParts(11, fresh(101, 12)))).toEqual([10, 2])
+  })
+
+  it('collapseStops keeps the first press of each stop, and collapsing twice gives the same walk', () => {
+    // [101, 102] and [102, 103] are two stops on one element: once collapsed, only the null part keeps them apart.
+    const raw = synthWalk([...onParts(11, [101, 102, 102, 103]), ...onParts(12, fresh(201, 11), 5)])
+    const once = collapseStops(raw)
+    expect(once.steps.map((step) => step.index)).toEqual([1, 3, 5, 15])
+    expect(once.steps.every((step) => step.settled.part === null)).toBe(true)
+    expect(collapseStops(once)).toEqual(once)
+  })
+
+  it('endOfPage reads a raw walk in stops: two datetime-local inputs, F=2, 20 stops in 98 presses', () => {
+    const start = fresh(101, 7)
+    const end = fresh(201, 7)
+    const steps: TabWalkStep[] = []
+    const press = (id: number, part: number): void => void steps.push(partStep(steps.length + 1, id, part))
+    for (let lap = 0; lap < 6; lap++) {
+      for (const part of start) press(11, part)
+      for (const part of end) press(12, part)
+      steps.push(synthStep(steps.length + 1, bodyRead(false), { wrapped: true }))
+    }
+    for (const part of start) press(11, part)
+    press(12, end[0])
+    const raw = synthWalk(steps, { focusableCount: 2, focusableCountEnd: 2 })
+    expect(raw.steps).toHaveLength(98)
+    expect(collapseStops(raw).steps).toHaveLength(20)
+    // Its last 3 presses sit on the two inputs, with no wrap; its last 3 stops hold one, and the end of the page is
+    // reported at the first wrap, press 15.
+    expect(endOfPage(raw)).toEqual({ signal: 'body-unfocused', atPress: 15 })
+    expect(endOfPage(raw)).toEqual(endOfPage(collapseStops(raw)))
+  })
+})
 
 describe('judgeKeyboardTrap', () => {
   // 1
@@ -529,9 +605,9 @@ describe('judgeKeyboardTrap: a complete count is the end of the page only after 
     expect(result.directions[0].release).toBe('none')
   })
 
-  // The probe's seen set is the last F+1 presses, so in a region of F+2 stops one member lies outside it and
+  // The probe's seen set is the last F+1 stops, so in a region of F+2 stops one member lies outside it and
   // reads as unseen: the release came from the seen window, not from the page.
-  it('a region of F+2 stops whose probe reaches the member outside the last F+1 presses is refused', () => {
+  it('a region of F+2 stops whose probe reaches the member outside the last F+1 stops is refused', () => {
     const ids = [11, ...around([13, 31, 32, 33], 19)]
     const result = judgeKeyboardTrap([fullWalk(2, ids, probeAfter(ids, 2, [31, 13, 33]))])
     expect(result.verdict).toBe('undetermined')
@@ -539,10 +615,10 @@ describe('judgeKeyboardTrap: a complete count is the end of the page only after 
     expect(result.keyboardTrap).toBe(false)
   })
 
-  // More than F, not F: 12 scrollers then a datetime-local (F = 1), as chrome-headless-shell 143 walks it. The walk
-  // finds 13 stops, but its last F+1 presses reach one, the input, and the third Shift+Tab leaves the input for
-  // the last scroller, a node the probe has not seen.
-  it('a walk whose last F+1 presses reach exactly F stops keeps its release read through node identity', () => {
+  // More than F, not F: 12 scrollers then a datetime-local (F = 1) whose parts the walk does not read, so each of
+  // its presses is a stop. The walk finds 13 elements, but its last F+1 stops reach one, the input, and the third
+  // Shift+Tab leaves the input for the last scroller, a node the probe has not seen.
+  it('a walk whose last F+1 stops reach exactly F elements keeps its release read through node identity', () => {
     const ids = [...fresh(100, 12), ...repeat(11, 3)]
     const result = judgeKeyboardTrap([fullWalk(1, ids, probeAfter(ids, 1, [11, 11, 111]))])
     expect(result.verdict).toBe('pass')
@@ -579,16 +655,17 @@ describe('judgeKeyboardTrap: a complete count is the end of the page only after 
   })
 
   // Chromium Tabs through the fields of a date or time input on one element (chrome-headless-shell 143:
-  // datetime-local 7 presses, date 4, month 3), so a clean lap can take more than F+1 presses. The wrap window is
-  // measured in the laps the walk saw, not in F.
-  it('a lone datetime-local (seven presses on one element) still ends at all stops visited', () => {
+  // datetime-local 7 presses, date 4, month 3). A walk that does not read their parts counts each press as a stop,
+  // so a clean lap can take more than F+1 stops. The wrap window is measured in the laps the walk saw, not in F.
+  // A walk that reads parts makes each input one stop (tab-walk.test.ts: a lone one ends body-unfocused).
+  it('a lone datetime-local read without parts (seven stops on one element) still ends at all stops visited', () => {
     const ids = [...repeat(11, 7), WRAP, ...repeat(11, 7)]
     const result = judgeKeyboardTrap([fullWalk(1, ids, probeAfter(ids, 1, repeat(11, 3)))])
     expect(result.verdict).toBe('pass')
     expect(result.directions[0].endOfPage?.signal).toBe('all-stops-visited')
   })
 
-  it('date, link, month (4 + 1 + 3 presses a lap) still ends at all stops visited', () => {
+  it('date, link, month read without parts (4 + 1 + 3 stops a lap) still ends at all stops visited', () => {
     const ids = around([...repeat(11, 4), 12, ...repeat(13, 3), WRAP], 25)
     const result = judgeKeyboardTrap([fullWalk(3, ids, probeAfter(ids, 3, [13, 12, 11, 11, 11]))])
     expect(result.verdict).toBe('pass')
