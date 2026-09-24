@@ -1,9 +1,10 @@
 import 'dotenv/config';
 import { BrowserClient } from '../browser/src/playwrightClient';
-import { ScreenReaderDriver } from '../virtual-screen-reader/src/ScreenReaderDriver';
+import { ScreenReaderDriver } from '../drivers/src/ScreenReaderDriver';
 import { AgentExperiment } from '../agent/src/AgentExperiment';
 import { Reporter } from '../evaluation/src/Reporter';
 import { Evaluator } from '../evaluation/src/Evaluator';
+import { PageMetadata } from '../evaluation/src/types';
 import { AXNode } from '../browser/src/types';
 
 // Simple ANSI color codes for cleaner output
@@ -47,7 +48,7 @@ async function main() {
   console.log(); // Spacer
 
   const client = new BrowserClient();
-  
+
   logStep("🚀", "Launching Browser...");
   await client.launch(false);
 
@@ -59,24 +60,24 @@ async function main() {
 
     const screenshotFn = captureScreenshots
       ? async () => {
-          const buffer = await client.screenshot();
-          return buffer.toString('base64');
-        }
+        const buffer = await client.screenshot();
+        return buffer.toString('base64');
+      }
       : undefined;
 
     // Instantiate AgentExperiment directly
     // Constructor: (driver, captureScreenshot, onStep, apiKey)
     const agent = new AgentExperiment(
-        driver, 
-        screenshotFn, 
-        (step) => {
-            const thought = step.thought && step.thought.trim().length > 0
-                ? step.thought
-                : '(no model thought returned)';
-            logStep("🧠", `Thought: ${thought}`);
-            logStep("⚡", `Action: ${step.action.type} ${step.action.key || ''}`);
-        }
-        // apiKey is optional, defaults to process.env['CEREBRAS_API_KEY']
+      driver,
+      screenshotFn,
+      (step) => {
+        const thought = step.thought && step.thought.trim().length > 0
+          ? step.thought
+          : '(no model thought returned)';
+        logStep("🧠", `Thought: ${thought}`);
+        logStep("⚡", `Action: ${step.action.type} ${step.action.key || ''}`);
+      }
+      // apiKey is optional, defaults to process.env['CEREBRAS_API_KEY']
     );
 
     logStep("🤖", "Starting Agent Experiment Execution...");
@@ -87,17 +88,34 @@ async function main() {
     console.log(); // Spacer
 
     logStep("🏁", "Agent execution finished.");
-    
-    logStep("📊", "Evaluating session...");
+
+    // Evaluation
+    console.log("📊 Evaluating...");
     const evaluator = new Evaluator();
     let axTree: AXNode[] = [];
+    let metadata: PageMetadata = { title: '', lang: '', duplicateIds: [] };
+
     try {
       axTree = await client.getFullAXTree();
+      metadata = await client.evaluate(() => {
+        return {
+          title: document.title,
+          lang: document.documentElement.lang,
+          duplicateIds: (function () {
+            const ids = new Set();
+            const duplicates: string[] = [];
+            document.querySelectorAll('[id]').forEach(el => {
+              if (ids.has(el.id)) duplicates.push(el.id);
+              ids.add(el.id);
+            });
+            return duplicates;
+          })()
+        };
+      });
     } catch (e) {
-      console.warn(`${colors.yellow}   Warning: Could not fetch AXTree for evaluation.${colors.reset}`);
+      console.log("⚠️ Could not fetch AXTree or metadata for evaluation.");
     }
-    
-    const violations = evaluator.evaluate(axTree, trace);
+    const violations = evaluator.evaluate(axTree, trace, metadata);
 
     // Generate Report
     const reporter = new Reporter();
@@ -106,6 +124,23 @@ async function main() {
     console.log('\n' + colors.dim + '='.repeat(60) + colors.reset);
     console.log(markdown);
     console.log(colors.dim + '='.repeat(60) + colors.reset + '\n');
+
+    // Section 2 Evaluation
+    const section2Results = evaluator.evaluateSection2(axTree, trace, metadata);
+
+    console.log(colors.bright + colors.cyan + '=== WCAG 2.2 Section 2 (Operable) Evaluation ===' + colors.reset);
+    section2Results.forEach(result => {
+      const icon = result.status === 'pass' ? '✅' : result.status === 'fail' ? '❌' : '⚠️';
+      const color = result.status === 'pass' ? colors.green : result.status === 'fail' ? colors.red : colors.yellow;
+      console.log(`${icon} ${color}[${result.successCriterion}] ${result.status.toUpperCase()}${colors.reset}: ${result.evidence.reason}`);
+      if (result.status === 'fail' && result.evidence.domNodes) {
+        result.evidence.domNodes.forEach(node => console.log(`      - ${node}`));
+      }
+      if (result.status === 'fail' && result.evidence.traceEvents) {
+        result.evidence.traceEvents.forEach(event => console.log(`      - ${event}`));
+      }
+    });
+    console.log('\n' + colors.dim + '='.repeat(60) + colors.reset + '\n');
 
   } catch (error) {
     console.error(`\n${colors.red}❌ Fatal Error:${colors.reset}`, error);

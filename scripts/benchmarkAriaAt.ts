@@ -1,6 +1,6 @@
 import 'dotenv/config';
 import { BrowserClient } from '../browser/src/playwrightClient';
-import { ScreenReaderDriver } from '../virtual-screen-reader/src/ScreenReaderDriver';
+import { ScreenReaderDriver } from '../drivers/src/ScreenReaderDriver';
 import { Agent } from '../agent/src/Agent';
 import { buildOpenAIModel } from '../agent/src/OpenAIClient';
 import { buildGeminiModel } from '../agent/src/GeminiClient';

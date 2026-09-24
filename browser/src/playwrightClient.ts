@@ -43,6 +43,14 @@ export class BrowserClient {
   }
 
   /**
+   * Evaluates a function in the page context.
+   */
+  async evaluate<T>(pageFunction: () => T): Promise<T> {
+    if (!this.page) throw new Error("Page not initialized.");
+    return await this.page.evaluate(pageFunction);
+  }
+
+  /**
    * Navigates to a URL.
    */
   async goto(url: string): Promise<void> {

@@ -2,7 +2,7 @@ import 'dotenv/config';
 import * as fs from 'fs';
 import * as path from 'path';
 import { BrowserClient } from '../browser/src/playwrightClient';
-import { ScreenReaderDriver } from '../virtual-screen-reader/src/ScreenReaderDriver';
+import { ScreenReaderDriver } from '../drivers/src/ScreenReaderDriver';
 import { Agent } from '../agent/src/Agent';
 import { buildOpenAIModel } from '../agent/src/OpenAIClient';
 import { buildGeminiModel } from '../agent/src/GeminiClient';
@@ -25,31 +25,31 @@ const TASKS: AgentTask[] = [
     id: 'task-1',
     url: 'https://news.ycombinator.com/show',
     goal: 'Click on "Show HN: KiDoom – Running DOOM on PCB Traces" post and get a summary of what it is about',
-    provider: 'gemini'
+    provider: 'openai'
   },
   {
     id: 'task-2',
     url: 'https://news.ycombinator.com/show',
     goal: 'Click on "Show HN: We built an open source, zero webhooks payment processor" post and get a summary of what it is about',
-    provider: 'gemini'
+    provider: 'openai'
   },
   {
     id: 'task-3',
     url: 'https://news.ycombinator.com/show',
     goal: 'Click on "Show HN: A WordPress plugin that rewrites image URLs for near-zero-cost delivery" post and get a summary of what it is about',
-    provider: 'gemini'
+    provider: 'openai'
   },
   {
     id: 'task-4',
     url: 'https://news.ycombinator.com/show',
     goal: 'Click on "Show HN: I built an interactive HN Simulator" post and get a summary of what it is about',
-    provider: 'gemini'
+    provider: 'openai'
   },
   {
     id: 'task-5',
     url: 'https://news.ycombinator.com/show',
     goal: 'Click on "Show HN: Parm – Install GitHub releases just like your favorite package manager" post and get a summary of what it is about',
-    provider: 'gemini'
+    provider: 'openai'
   },
 ];
 
@@ -102,9 +102,7 @@ async function runTask(task: AgentTask) {
         ? step.thought
         : '(no thought)';
       // Truncate thought if too long for cleaner parallel logs
-      const shortThought = thought.length > 100 ? thought.substring(0, 100) + '...' : thought;
-
-      log(id, "🧠", `Thought: ${shortThought}`);
+      log(id, "🧠", `Thought: ${thought}`);
       log(id, "⚡", `Action: ${step.action.type} ${step.action.key || ''}`);
     });
 
@@ -113,6 +111,7 @@ async function runTask(task: AgentTask) {
 
     // Save Transcript
     const transcriptPath = path.join(process.cwd(), 'transcripts', `${id}.json`);
+    fs.mkdirSync(path.dirname(transcriptPath), { recursive: true });
     fs.writeFileSync(transcriptPath, JSON.stringify(trace, null, 2));
     log(id, "💾", `Transcript saved to ${transcriptPath}`);
 
@@ -122,12 +121,29 @@ async function runTask(task: AgentTask) {
     log(id, "📊", "Evaluating...");
     const evaluator = new Evaluator();
     let axTree: AXNode[] = [];
+    let metadata;
+
     try {
       axTree = await client.getFullAXTree();
+      metadata = await client.evaluate(() => {
+        return {
+          title: document.title,
+          lang: document.documentElement.lang,
+          duplicateIds: (function () {
+            const ids = new Set();
+            const duplicates: string[] = [];
+            document.querySelectorAll('[id]').forEach(el => {
+              if (ids.has(el.id)) duplicates.push(el.id);
+              ids.add(el.id);
+            });
+            return duplicates;
+          })()
+        };
+      });
     } catch (e) {
-      log(id, "⚠️", "Could not fetch AXTree for evaluation.");
+      log(id, "⚠️", "Could not fetch AXTree or metadata for evaluation.");
     }
-    const violations = evaluator.evaluate(axTree, trace);
+    const violations = evaluator.evaluate(axTree, trace, metadata);
 
     // We won't print the full markdown report to console as it would be huge and interleaved.
     // Instead, we'll summarize.
@@ -156,17 +172,17 @@ async function main() {
 
   console.log(`\n${colors.bright}=== All Tasks Completed ===${colors.reset}`);
   console.log(`\n${colors.bright}=== Final Summary ===${colors.reset}`);
-  
+
   // Print header
   console.log(`${colors.dim}${'Task ID'.padEnd(15)} | ${'Success'.padEnd(10)} | ${'Score'.padEnd(6)} | ${'Violations'.padEnd(12)} | ${'Error'}${colors.reset}`);
-  console.log(`${colors.dim}${'-'.repeat(15+3+10+3+6+3+12+3+20)}${colors.reset}`);
+  console.log(`${colors.dim}${'-'.repeat(15 + 3 + 10 + 3 + 6 + 3 + 12 + 3 + 20)}${colors.reset}`);
 
   // Print rows
   for (const res of results) {
     const successStr = res.success ? `${colors.green}true${colors.reset} ` : `${colors.red}false${colors.reset}`;
     const scoreStr = res.score.toString();
     const errStr = res.error ? `${colors.red}${res.error.substring(0, 30)}...${colors.reset}` : '';
-    
+
     console.log(
       `${res.id.padEnd(15)} | ` +
       `${successStr.padEnd(19)} | ` + // padded with extra for color codes

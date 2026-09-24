@@ -6,7 +6,39 @@ import { END, MessagesZodState, START, StateGraph } from '@langchain/langgraph';
 import { z } from 'zod';
 import { AgentGraphState, AgentStep, AgentTrace } from './types';
 
-const SYSTEM_PROMPT = `Complete the task using ONLY your tools and previous screen reader output. Prioritize using the press_heading tool. Aim to find patterns that you can exploit to navigate the page faster. Prove your answer is correct.`;
+const SYSTEM_PROMPT = `You are an expert accessibility testing agent. Your goal is to navigate the web page using a screen reader to accomplish a specific task.
+
+CRITICAL INSTRUCTION:
+You MUST "think out loud" before taking any action. Explain your reasoning, what you see in the current state, and why you are choosing the next action. Your thought process is visible to the user and is crucial for debugging and trust.
+
+GOAL TRACKING:
+- At the start of EVERY thought, assess your progress toward the goal
+- Explicitly state whether you have found what you're looking for
+- If you haven't found it yet, explain what you're trying next and why
+- Only call finish_run when you have CONCRETE EVIDENCE that you've achieved the goal OR you've exhausted all reasonable options
+
+Navigation Strategy:
+1. Start by exploring the page structure with press_heading to get an overview
+2. Look for navigation menus, search bars, or links that might lead to your goal
+3. If you don't find what you're looking for in headings, use press_arrow_down to explore interactive elements like links and buttons
+4. Be persistent - if one approach doesn't work, try another strategy
+5. Don't give up early - you have many steps available to accomplish your goal
+6. If you find a promising link (like "Admissions" when looking for tuition), activate it with press_enter
+
+Success Criteria:
+- For "find X" tasks: You must actually READ the content about X (not just find a link to it)
+- For "navigate to X" tasks: You must confirm you've reached the X page
+- For accessibility tasks: Document violations as you encounter them
+
+Rules:
+1. Complete the task using ONLY your tools and previous screen reader output.
+2. Prioritize using the press_heading tool to scan structure first.
+3. If headings don't reveal the target, systematically explore links and navigation menus.
+4. Aim to find patterns that you can exploit to navigate the page faster.
+5. Prove your answer is correct before calling finish_run.
+6. ALWAYS output a thought before calling a tool.
+7. Only call finish_run when you've truly accomplished the goal OR exhausted all reasonable options.
+8. In your thoughts, regularly report on your progress: "I'm looking for X. So far I've tried Y. Next I'll try Z."`;
 
 // Key-only toolset with instructive descriptions
 const pressArrowDown = tool(async () => `Pressed ArrowDown`, {
@@ -97,7 +129,7 @@ export class Agent {
         success: false,
       };
 
-      const recursionLimit = 200;
+      const recursionLimit = 500;
       const app = this.buildGraph(goal).compile();
       const finalState = await app.invoke(initialState, { recursionLimit });
 
@@ -123,6 +155,8 @@ export class Agent {
 
     // Node: Call Model
     const callModel = async (state: AgentState) => {
+      // Don't trim messages - the recursion limit prevents runaway execution
+      // Trimming can break tool_calls/tool message pairs which causes OpenAI API errors
       const response = await boundModel.invoke(state.messages);
       return { messages: [response] };
     };
@@ -132,12 +166,16 @@ export class Agent {
       const aiMessage = state.messages[state.messages.length - 1] as AIMessage;
 
       const currentSteps = state.steps;
-      const appendedMessages: BaseMessage[] = [];
+      const toolMessages: BaseMessage[] = [];
       let done = state.done;
       let success = state.success;
       let error = state.error;
       let nextSteps = [...currentSteps];
+      let lastSnapshot: any = undefined;
+      let lastScreenshot: string | undefined = undefined;
 
+      // We must process ALL tool calls to satisfy the API contract (each call needs a response)
+      // even if we decide to finish early.
       for (const call of aiMessage.tool_calls ?? []) {
         const args = normalizeArgs(call.args);
         const mapped = mapToolToAction(call.name, args);
@@ -145,24 +183,17 @@ export class Agent {
         if (mapped.finish) {
           done = true;
           success = mapped.finish.success;
-          appendedMessages.push(new ToolMessage({
+          toolMessages.push(new ToolMessage({
             tool_call_id: call.id,
             name: call.name,
             content: JSON.stringify({ status: 'finished', success: mapped.finish.success, reason: mapped.finish.reason || '' })
           }));
-
-          // Return immediately if finished
-          return {
-            messages: appendedMessages,
-            steps: nextSteps,
-            done,
-            success,
-            error,
-          };
+          // Do NOT return here; continue to process other tool calls if any exist
+          continue;
         }
 
         if (!mapped.action) {
-          appendedMessages.push(new ToolMessage({
+          toolMessages.push(new ToolMessage({
             tool_call_id: call.id,
             name: call.name,
             content: JSON.stringify({ status: 'error', message: mapped.message })
@@ -170,6 +201,10 @@ export class Agent {
           continue;
         }
 
+        // Only perform action if we haven't finished yet (or if we want to allow actions + finish in same turn)
+        // For now, let's allow actions to execute even if finish was called in the same turn, 
+        // but typically the model shouldn't do both. 
+        // If it does, we'll execute them.
         const result = await driver.performAction(mapped.action);
         const screenshot = captureScreenshot ? await captureScreenshot() : undefined;
         const step: AgentStep = {
@@ -186,14 +221,21 @@ export class Agent {
         }
 
         nextSteps.push(step);
+        lastSnapshot = result.snapshot;
+        lastScreenshot = screenshot;
 
-        appendedMessages.push(new ToolMessage({
+        toolMessages.push(new ToolMessage({
           tool_call_id: call.id,
           name: call.name,
           content: JSON.stringify(formatActionResult(mapped.action, result))
         }));
+      }
 
-        appendedMessages.push(this.buildObservationMessage(goal, result.snapshot, screenshot));
+      const appendedMessages = [...toolMessages];
+
+      // Only add a new observation message if we actually performed actions and have a new snapshot
+      if (lastSnapshot) {
+        appendedMessages.push(this.buildObservationMessage(goal, lastSnapshot, lastScreenshot));
       }
 
       return {
@@ -342,7 +384,7 @@ function formatSnapshot(snapshot?: PerceptualSnapshot): string {
  * Flatten an AIMessage into a plain string for trace readability.
  */
 function toThought(message: AIMessage): string {
-  if (typeof message.content === 'string') return message.content.trim();
+  if (typeof message.content === 'string' && message.content.trim().length > 0) return message.content.trim();
 
   if (Array.isArray(message.content)) {
     const text = message.content

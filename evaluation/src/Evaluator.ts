@@ -1,19 +1,29 @@
 import { AXNode } from '@adf/browser/types';
 import { AgentTrace } from '@adf/agent/types';
-import { Violation } from './types';
+import { Violation, PageMetadata } from './types';
 
 export class Evaluator {
   /**
    * Evaluates the session for accessibility violations.
    * Combines static analysis of the final AXTree with dynamic analysis of the interaction trace.
    */
-  evaluate(axTree: AXNode[], trace: AgentTrace): Violation[] {
+  evaluate(axTree: AXNode[], trace: AgentTrace, metadata?: PageMetadata): Violation[] {
     const violations: Violation[] = [];
 
     // 1. Static Analysis (on the provided tree snapshot)
     violations.push(...this.checkMissingNames(axTree));
+    violations.push(...this.checkImages(axTree));
+    violations.push(...this.checkLandmarks(axTree));
+    violations.push(...this.checkLinkPurpose(axTree));
 
-    // 2. Dynamic Analysis (on the interaction history)
+    // 2. Metadata Analysis
+    if (metadata) {
+      violations.push(...this.checkPageTitle(metadata));
+      violations.push(...this.checkLanguage(metadata));
+      violations.push(...this.checkParsing(metadata));
+    }
+
+    // 3. Dynamic Analysis (on the interaction history)
     violations.push(...this.checkFocusTraps(trace));
 
     return violations;
@@ -43,6 +53,124 @@ export class Evaluator {
           });
         }
       }
+    }
+    return violations;
+  }
+
+  /**
+   * Check WCAG 1.1.1: Non-text Content.
+   * Checks for images missing alt text (name).
+   */
+  private checkImages(nodes: AXNode[]): Violation[] {
+    const violations: Violation[] = [];
+    for (const node of nodes) {
+      if (node.role?.value === 'image') {
+        const name = node.name?.value;
+        if (!name || (typeof name === 'string' && name.trim() === '')) {
+          // Note: Decorative images should be ignored by the AX tree or have role="presentation".
+          // If they appear in the AX tree as 'image', they usually need a name.
+          violations.push({
+            ruleId: 'WCAG-1.1.1',
+            description: 'Image missing alternative text.',
+            severity: 'serious',
+            axNodeId: node.nodeId,
+            evidence: `Image node (BackendID: ${node.backendDOMNodeId}) has no name.`
+          });
+        }
+      }
+    }
+    return violations;
+  }
+
+  /**
+   * Check WCAG 2.4.1: Bypass Blocks.
+   * Checks for the presence of at least one landmark role (main, navigation, search, etc.).
+   */
+  private checkLandmarks(nodes: AXNode[]): Violation[] {
+    const landmarkRoles = ['banner', 'complementary', 'contentinfo', 'form', 'main', 'navigation', 'region', 'search'];
+    const hasLandmark = nodes.some(node =>
+      node.role?.value && typeof node.role.value === 'string' && landmarkRoles.includes(node.role.value)
+    );
+
+    if (!hasLandmark && nodes.length > 0) {
+      return [{
+        ruleId: 'WCAG-2.4.1',
+        description: 'Page lacks landmark regions (main, navigation, etc.) to allow bypassing blocks.',
+        severity: 'moderate',
+        evidence: 'No nodes with landmark roles found in the accessibility tree.'
+      }];
+    }
+    return [];
+  }
+
+  /**
+   * Check WCAG 2.4.4: Link Purpose (In Context).
+   * Checks for suspicious link text like "click here", "read more".
+   */
+  private checkLinkPurpose(nodes: AXNode[]): Violation[] {
+    const violations: Violation[] = [];
+    const suspiciousTexts = ['click here', 'read more', 'more', 'here', 'link', 'go'];
+
+    for (const node of nodes) {
+      if (node.role?.value === 'link') {
+        const name = node.name?.value;
+        if (typeof name === 'string' && suspiciousTexts.includes(name.toLowerCase().trim())) {
+          violations.push({
+            ruleId: 'WCAG-2.4.4',
+            description: `Link text "${name}" may not describe the purpose of the link.`,
+            severity: 'moderate',
+            axNodeId: node.nodeId,
+            evidence: `Link (BackendID: ${node.backendDOMNodeId}) has generic text: "${name}".`
+          });
+        }
+      }
+    }
+    return violations;
+  }
+
+  /**
+   * Check WCAG 2.4.2: Page Titled.
+   */
+  private checkPageTitle(metadata: PageMetadata): Violation[] {
+    if (!metadata.title || metadata.title.trim() === '') {
+      return [{
+        ruleId: 'WCAG-2.4.2',
+        description: 'Page is missing a title.',
+        severity: 'serious',
+        evidence: 'document.title is empty.'
+      }];
+    }
+    return [];
+  }
+
+  /**
+   * Check WCAG 3.1.1: Language of Page.
+   */
+  private checkLanguage(metadata: PageMetadata): Violation[] {
+    if (!metadata.lang || metadata.lang.trim() === '') {
+      return [{
+        ruleId: 'WCAG-3.1.1',
+        description: 'Page is missing a language attribute.',
+        severity: 'serious',
+        evidence: 'document.documentElement.lang is empty.'
+      }];
+    }
+    return [];
+  }
+
+  /**
+   * Check WCAG 4.1.1: Parsing.
+   * Checks for duplicate IDs.
+   */
+  private checkParsing(metadata: PageMetadata): Violation[] {
+    const violations: Violation[] = [];
+    if (metadata.duplicateIds && metadata.duplicateIds.length > 0) {
+      violations.push({
+        ruleId: 'WCAG-4.1.1',
+        description: 'Page contains duplicate IDs.',
+        severity: 'moderate',
+        evidence: `Duplicate IDs found: ${metadata.duplicateIds.join(', ')}`
+      });
     }
     return violations;
   }
@@ -83,4 +211,14 @@ export class Evaluator {
 
     return violations;
   }
+
+  /**
+   * Runs the WCAG 2.2 Section 2 ("Operable") evaluation pipeline.
+   */
+  evaluateSection2(axTree: AXNode[], trace: AgentTrace, metadata: PageMetadata): import('./types').Section2CheckResult[] {
+    const section2Evaluator = new Section2Evaluator();
+    return section2Evaluator.evaluate(axTree, trace, metadata);
+  }
 }
+
+import { Section2Evaluator } from './operable/Section2Evaluator';

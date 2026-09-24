@@ -2,7 +2,7 @@ import 'dotenv/config';
 import * as fs from 'fs';
 import * as path from 'path';
 import { BrowserClient } from '../browser/src/playwrightClient';
-import { ScreenReaderDriver } from '../virtual-screen-reader/src/ScreenReaderDriver';
+import { ScreenReaderDriver } from '../drivers/src/ScreenReaderDriver';
 import { AgentExperiment } from '../agent/src/AgentExperiment';
 import { Reporter } from '../evaluation/src/Reporter';
 import { Evaluator } from '../evaluation/src/Evaluator';
@@ -104,12 +104,29 @@ async function runTask(task: AgentTask) {
     log(id, "📊", "Evaluating...");
     const evaluator = new Evaluator();
     let axTree: AXNode[] = [];
+    let metadata;
+
     try {
       axTree = await client.getFullAXTree();
+      metadata = await client.evaluate(() => {
+        return {
+          title: document.title,
+          lang: document.documentElement.lang,
+          duplicateIds: (function () {
+            const ids = new Set();
+            const duplicates: string[] = [];
+            document.querySelectorAll('[id]').forEach(el => {
+              if (ids.has(el.id)) duplicates.push(el.id);
+              ids.add(el.id);
+            });
+            return duplicates;
+          })()
+        };
+      });
     } catch (e) {
-      log(id, "⚠️", "Could not fetch AXTree for evaluation.");
+      log(id, "⚠️", "Could not fetch AXTree or metadata for evaluation.");
     }
-    const violations = evaluator.evaluate(axTree, trace);
+    const violations = evaluator.evaluate(axTree, trace, metadata);
 
     const score = Math.max(0, 100 - (violations.length * 10)); // Simple scoring
     log(id, "📝", `Evaluation Score: ${score}/100. Violations: ${violations.length}`);
@@ -136,17 +153,17 @@ async function main() {
 
   console.log(`\n${colors.bright}=== All Tasks Completed ===${colors.reset}`);
   console.log(`\n${colors.bright}=== Final Summary ===${colors.reset}`);
-  
+
   // Print header
   console.log(`${colors.dim}${'Task ID'.padEnd(15)} | ${'Success'.padEnd(10)} | ${'Score'.padEnd(6)} | ${'Violations'.padEnd(12)} | ${'Error'}${colors.reset}`);
-  console.log(`${colors.dim}${'-'.repeat(15+3+10+3+6+3+12+3+20)}${colors.reset}`);
+  console.log(`${colors.dim}${'-'.repeat(15 + 3 + 10 + 3 + 6 + 3 + 12 + 3 + 20)}${colors.reset}`);
 
   // Print rows
   for (const res of results) {
     const successStr = res.success ? `${colors.green}true${colors.reset} ` : `${colors.red}false${colors.reset}`;
     const scoreStr = res.score.toString();
     const errStr = res.error ? `${colors.red}${res.error.substring(0, 30)}...${colors.reset}` : '';
-    
+
     console.log(
       `${res.id.padEnd(15)} | ` +
       `${successStr.padEnd(19)} | ` + // padded with extra for color codes
