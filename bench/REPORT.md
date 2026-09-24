@@ -157,11 +157,11 @@ page's focus-order problem. Present it as a deletion.
 
 ## 4. Live sites — the result worth quoting (18 evaluable of 20)
 
-| criterion | before            | after                                       | what changed                             |
-| --------- | ----------------- | ------------------------------------------- | ---------------------------------------- |
-| 2.1.2     | **12/18 flagged** | **0/18** · 2 undetermined (worst case 2/18) | periodicity rule → keyboard-trap judge   |
-| 2.4.3     | **18/18 flagged** | 0/18                                        | **rule deleted**                         |
-| 3.2.1     | 0/18              | 2/18 · 1 undetermined (worst case 3/18)     | before could not fire on a scripted walk |
+| criterion | before                                                | after                                       | what changed                             |
+| --------- | ----------------------------------------------------- | ------------------------------------------- | ---------------------------------------- |
+| 2.1.2     | **12/18 flagged** · 1 undetermined (worst case 13/18) | **0/18** · 2 undetermined (worst case 2/18) | periodicity rule → keyboard-trap judge   |
+| 2.4.3     | **18/18 flagged**                                     | 0/18                                        | **rule deleted**                         |
+| 3.2.1     | 0/18                                                  | 2/18 · 1 undetermined (worst case 3/18)     | before could not fire on a scripted walk |
 
 _Every cell predates the round-2 fixes (§10) and was not re-run after them._
 
@@ -169,8 +169,9 @@ _Every cell predates the round-2 fixes (§10) and was not re-run after them._
 > those 12 are false alarms is not settled by a label. §6 makes the mechanical case; these columns
 > stay flag counts.
 
-**Refusals stay in the denominator** (§1), so both after-column cells with a refusal print the worst
-case beside the count.
+**Undetermined pages stay in the denominator** (§1), so every cell with one prints the worst case
+beside the count. In the before column it is `ekdromi.gr`: the page budget cut its walk after press
+2,719 of 4,680, and the old rule had not fired by then.
 
 **"Flagged" means the rule fired at some press, not that the page ended trapped.** The old agent
 latched `trapDetected` on the first `checkTrap` that fired (`packages/agent/src/agent.ts:91-92` at
