@@ -156,13 +156,13 @@ describe('checkKeyboard action', () => {
     const action = ActionSchema.parse({ type: 'checkKeyboard', reason: 'x' })
     expect(action.type).toBe('checkKeyboard')
 
-    // runTabWalk's first act is page.context().newCDPSession(page); a page whose context throws
-    // proves the action reached the walk path rather than the unknown-action branch.
+    // runTabWalk registers its crash listener, then calls page.context().newCDPSession(page); a page whose
+    // context throws proves the action reached the walk path rather than the unknown-action branch.
     const contextMock = vi.fn(() => {
       throw new Error('no browser in this test')
     })
     const mockPage = {
-      playwrightPage: { context: contextMock },
+      playwrightPage: { context: contextMock, once: vi.fn(), off: vi.fn() },
     } as unknown as BrowserPage
 
     const result = await executeAction(action, mockPage)

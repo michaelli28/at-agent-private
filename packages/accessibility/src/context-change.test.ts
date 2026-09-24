@@ -428,6 +428,16 @@ const SCROLL_SPY_BLUR = `<!doctype html><html lang="en"><head><meta charset="utf
 <script>var n = 0; setInterval(function () { n++; history.replaceState(null, '', '#tick-' + n) }, 100)</script>
 </body></html>`
 
+// The page's only Tab stop blurs itself in its focus handler (dev one-button__M7), so no read ever rests on it.
+const ONLY_STOP_BLUR = `<!doctype html><html lang="en"><head><meta charset="utf-8"><title>Only stop blurs</title></head><body>
+<p><button id="only" onfocus="this.blur()">Only</button></p>
+</body></html>`
+
+// The same stop blurs 60 ms after focus arrives (dev one-button__M8): after the immediate read, inside the settle.
+const ONLY_STOP_DEFERRED_BLUR = `<!doctype html><html lang="en"><head><meta charset="utf-8"><title>Only stop blurs late</title></head><body>
+<p><button id="only" onfocus="var e = this; setTimeout(function () { e.blur() }, 60)">Only</button></p>
+</body></html>`
+
 describe('judgeContextChange on a live page', () => {
   let client: BrowserClient
   const pages: BrowserPage[] = []
@@ -471,6 +481,36 @@ describe('judgeContextChange on a live page', () => {
     await page.playwrightPage.setContent(DEFERRED_BLUR, { waitUntil: 'load' })
 
     // The default 150 ms settle: a 20 ms settle would take the settled read before the 60 ms blur.
+    const walk = await runTabWalk(page.playwrightPage)
+    const result = judgeContextChange(walk)
+
+    expect(result.findings).toEqual([])
+    expect(result.unattributed.length).toBeGreaterThanOrEqual(5)
+    expect(result.unattributed.filter((u) => u.reason !== 'focus-removed-after-settle')).toEqual([])
+    expect(result.verdict).toBe('pass')
+  })
+
+  it('F55 live: the only Tab stop blurs on arrival, and every drop is reported', async () => {
+    const page = await client.newPage()
+    pages.push(page)
+    await page.playwrightPage.setContent(ONLY_STOP_BLUR, { waitUntil: 'load' })
+
+    const walk = await runTabWalk(page.playwrightPage, { settleMs: 20 })
+    const drops = walk.steps.filter((s) => s.settled.isBody && s.settled.hasFocus).map((s) => s.index)
+    expect(drops.length).toBeGreaterThanOrEqual(5)
+    const result = judgeContextChange(walk)
+
+    expect(result.verdict).toBe('fail')
+    expect(result.findings.map((f) => f.pressIndex)).toEqual(drops)
+    expect(result.findings.every((f) => f.kind === 'focus-removed' && f.precedingStop === null)).toBe(true)
+    expect(result.unattributed).toEqual([])
+  })
+
+  it('the only Tab stop blurring 60 ms late is refused on every drop, the first press included', async () => {
+    const page = await client.newPage()
+    pages.push(page)
+    await page.playwrightPage.setContent(ONLY_STOP_DEFERRED_BLUR, { waitUntil: 'load' })
+
     const walk = await runTabWalk(page.playwrightPage)
     const result = judgeContextChange(walk)
 

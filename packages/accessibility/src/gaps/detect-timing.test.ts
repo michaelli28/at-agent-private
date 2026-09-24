@@ -2,6 +2,7 @@
 // made deterministic by wrapping the CDP sessions the detector opens and changing the page at one chosen call.
 import { describe, it, expect, beforeAll, afterAll } from 'vitest'
 import { chromium, type Browser, type BrowserContext, type Page } from 'playwright'
+import { RENDERER_CRASHED } from '../renderer-crash.js'
 import { crawlPageWithGapDetection, type GapDetectionOptions } from './detect.js'
 import type { AccessibilityGap, DualCrawlResult } from './types.js'
 
@@ -61,6 +62,21 @@ Reflect.set = function (target, key) {
 }
 </script>`,
 )
+
+// The page's own script refuses the detector's crawl-mark write, with no navigation. The page counts its loads so a
+// test can show it was never replaced.
+const refusesCrawlMark = (write: string): string =>
+  CONTROLS.replace(
+    '</main>',
+    `</main><script>
+sessionStorage.setItem('loads', String(Number(sessionStorage.getItem('loads')) + 1))
+var set = Reflect.set
+Reflect.set = function (target, key) {
+  if (key !== '__atAgentGapCrawl') return set.apply(Reflect, arguments)
+  ${write}
+}
+</script>`,
+  )
 
 // The tab walk's own marker write (tab-walk.ts injectMarker); only its first call, at walk start, fires a hook.
 const WALK_MARKER_WRITE = 'window["__atAgentTabWalk"] ='
@@ -252,6 +268,37 @@ describe('crawlPageWithGapDetection when the page changes between its reads', ()
         await d.context.close()
       }
     })
+
+    for (const [how, write] of [
+      ['throws', "throw new Error('no marks here')"],
+      ['returns false', 'return false'],
+    ] as const) {
+      it(`does not call the document replaced when the page's crawl-mark write ${how}`, async () => {
+        const d = await detect(refusesCrawlMark(write), null)
+        try {
+          const r = await d.run
+          expect(await d.page.evaluate(() => sessionStorage.getItem('loads'))).toBe('1')
+          expect(r.keyboard.notFocusableAssessed).toBe(false)
+          expect(r.keyboard.unassessedReasons).toEqual(['crawl-mark-failed'])
+          expect(gapsOf(r)).toEqual({})
+        } finally {
+          await d.context.close()
+        }
+      })
+    }
+
+    // Only an explicit false is a refusal: a wrapper that writes the mark but returns nothing still marks the window.
+    it('keeps not_focusable assessed when the page wraps Reflect.set without returning its result', async () => {
+      const d = await detect(refusesCrawlMark('set.apply(Reflect, arguments)'), null)
+      try {
+        const r = await d.run
+        expect(await d.page.evaluate(() => typeof Reflect.get(window, '__atAgentGapCrawl'))).toBe('string')
+        expect(r.keyboard.unassessedReasons).toEqual([])
+        expect(r.keyboard.notFocusableAssessed).toBe(true)
+      } finally {
+        await d.context.close()
+      }
+    })
   })
 
   describe('acc-gaps#6: the accessibility tree and the crawl read different DOMs', () => {
@@ -327,6 +374,44 @@ describe('crawlPageWithGapDetection when the page changes between its reads', ()
         const r = await d.run
         expect(d.fired()).toBe(true)
         expect(gapsOf(r)).toEqual({})
+      } finally {
+        await d.context.close()
+      }
+    })
+  })
+
+  // A crashed renderer answers no command on the detector's own CDP sessions, so without a crash abort each of these
+  // waits forever (probe: DOM.enable, Accessibility.getFullAXTree and the walk's Runtime.evaluate all hang).
+  describe('a renderer crash fails the detection instead of hanging it', () => {
+    const crash = async (page: Page): Promise<void> => {
+      const session = await page.context().newCDPSession(page)
+      // Never answered: the renderer that would reply is the one it kills.
+      void session.send('Page.crash').catch(() => undefined)
+      await page.waitForEvent('crash')
+    }
+    for (const [stage, match] of [
+      ['before the crawl', (m: string) => m === 'DOM.enable'],
+      ['before the accessibility-tree read', isAxRead],
+      ['as the Tab walk starts', isWalkMarkerWrite],
+    ] as const) {
+      it(`rejects with the crash ${stage}`, { timeout: 15_000 }, async () => {
+        const d = await detect(CONTROLS, { when: 'before', match, act: crash })
+        try {
+          await expect(d.run).rejects.toThrow(RENDERER_CRASHED)
+          expect(d.fired()).toBe(true)
+        } finally {
+          await d.context.close()
+        }
+      })
+    }
+
+    it('leaves no crash listener on a page that does not crash', async () => {
+      const d = await detect(CONTROLS, null)
+      try {
+        await d.run
+        // Playwright keeps a crash listener of its own, so compare with a page the detector never ran on.
+        const listeners = (p: Page): number => (p as unknown as NodeJS.EventEmitter).listenerCount('crash')
+        expect(listeners(d.page)).toBe(listeners(await d.context.newPage()))
       } finally {
         await d.context.close()
       }

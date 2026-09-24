@@ -609,6 +609,19 @@ describe('judgeKeyboardTrap: a complete count is the end of the page only after 
     expect(judgeKeyboardTrap([fullWalk(3, ids, stuckProbe(ids, 3))]).verdict).toBe('pass')
   })
 
+  // Pins the lenient 2F+1 floor as shipped; the source gives no reason for F in it. Laps are 2 presses here, so a
+  // loop over every stop armed 5 or 6 presses before the end passes, where 2L+1 would send it to the probe and fail
+  // it like 'B: a loop over every stop that arms after one lap is a trap'.
+  it('the recent-wrap window never drops below 2F+1 presses when every measured lap is shorter than F', () => {
+    for (let after = 4; after <= 7; after++) {
+      const ids = [...around([11, WRAP], 25 - after, after + 1), ...around([11, 12, 13], after)]
+      const signal = endOfPage(fullWalk(3, ids, null))?.signal ?? null
+      expect(signal, `${after} presses after the last wrap`).toBe(after <= 6 ? 'all-stops-visited' : null)
+      const verdict = judgeKeyboardTrap([fullWalk(3, ids, stuckProbe(ids, 3))]).verdict
+      expect(verdict, `${after} presses after the last wrap`).toBe(after <= 6 ? 'pass' : 'fail')
+    }
+  })
+
   // Unactivated new headless skips body on every other wrap (bench/probes/wrap/RESULT.md:16), so some end
   // phases hold no wrap in their last F+1 presses. Each phase gets a probe that got nowhere, the worst case.
   it('every end phase of the unactivated F=3 cycle passes, with or without its first stop re-rendered', () => {

@@ -134,7 +134,8 @@ export function judgeContextChange(walk: TabWalkResult): ContextChangeResult {
     } else if (step.settled.isBody && step.settled.hasFocus) {
       // isBody && hasFocus is focus DROPPED; a wrap past the last stop is isBody && !hasFocus.
       if (step.focusLost && step.immediate.isBody && step.immediate.hasFocus) {
-        // C: F55 — focus thrown away the moment it arrived, after a real stop in this segment. Like A, the drop must
+        // C: F55 — focus thrown away the moment it arrived: after a real stop in this segment, or on a focus event
+        // since the previous read, usually this press's own (precedingStop is then null). Like A, the drop must
         // already show at the immediate read.
         findings.push(finding('focus-removed'))
       } else if (step.focusLost) {
@@ -146,8 +147,9 @@ export function judgeContextChange(walk: TabWalkResult): ContextChangeResult {
           reason: 'focus-removed-after-settle',
         })
       } else {
-        // D: no preceding stop to attribute the drop to. Indistinguishable from "the first stop is
-        // simply unreachable", which belongs to the 2.1.1 gap path. Recorded, never reported.
+        // D: no earlier read in this document, and no focus event the walk heard since the previous read, showed focus
+        // on an element. Indistinguishable from "the first stop is simply unreachable", which belongs to the 2.1.1 gap
+        // path. Recorded, never reported.
         unattributed.push({
           pressIndex: step.index,
           reason: 'no-preceding-stop',

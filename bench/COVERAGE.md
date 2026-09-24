@@ -122,9 +122,9 @@ same dev changes as the bullets below; `bench/REPORT.md` §10 has the Run A → 
 - **2.1.2: scrollers are Tab stops F does not count.** Chromium stops on a scrollable box with no
   focusable child, and counting one would re-implement that rule in page JS. F does count every editing
   host (bare `contenteditable`, `true` or `plaintext-only` in any case), and the gap detector's walk
-  shares that count. F also misses image-map areas, which Chromium stops on: the selector's `a[href]`
-  does not match `area[href]`, and round 2 did not add it. A link and 14 areas (F = 1) is refused, where
-  13 pass (the cost below; measured, not pinned). No dev page has an image map.
+  shares that count. Until round 3 (below) F also missed image-map areas, which Chromium stops on: the
+  selector's `a[href]` did not match `area[href]`, and round 2 did not add it. A link and 14 areas (F = 1)
+  was refused, where 13 passed (the cost below; measured, not pinned). No dev page has an image map.
 - **2.1.2: what the recent-wrap rule and the refusal cost on clean pages** (synthetic pages walked in
   chrome-headless-shell 143). A page with F ≥ 1 loses `all-stops-visited` when no wrap falls in its
   walk's last 2·max(F, L)+1 presses, and the release probe decides. If a Shift+Tab reaches a wrap, or a
@@ -178,24 +178,24 @@ same dev changes as the bullets below; `bench/REPORT.md` §10 has the Run A → 
   in the ~1 ms between a press and its first read is still reported. A small local page whose timer
   replaced a button every 100 ms (about 30 drops a walk) was walked 10 times in `chrome-headless-shell`
   when the fix was designed: 2 walks still failed, against 10 of 10 before. The mixed-timing refusal that
-  would close this was declined.
+  would close this was declined. Round 3's arrival fix widens it (below).
 - **3.2.1: the idle fix stops a fragment-only change voiding the walk.** Before the first press the walk
   watches the idle page, and a URL change there voids the walk as
   `undetermined / page-navigates-without-input`. A change to the `#fragment` alone no longer does, as every
   other URL comparison in the judge already ignores it, except on a walk that also has a
   `focus-removed-after-settle` refusal: a timer setting `location.hash` clears focus by itself, so that
   walk stays `undetermined`. Re-judged, 8 of the 9 M9 variants go from `undetermined` to `fail` with the
-  same findings. `one-button__M9__only-button` goes to `pass`: the walk never sets `focusLost` there, the
-  same miss as `one-button__M7__only-button` below, which the void was hiding.
+  same findings. `one-button__M9__only-button` goes to `pass` (until round 3, below): the walk never set
+  `focusLost` there, the same miss as `one-button__M7__only-button` below, which the void was hiding.
 - **3.2.1, M8: focus held for tens of milliseconds counts as reached by the gap detector.** It takes an
   element as reached when either read after a Tab press found focus on it (`gaps/keyboard.ts`). An M8
   target holds focus for 60 ms, so a person cannot operate it and it is labelled `not_focusable`, but the
   detector reports no gap: 9 known misses, pinned in `bench/gaps-dev.test.ts`.
-- **`one-button__M7__only-button` reads 3.2.1 `pass`, an old-checker miss.** The walk marks a drop
-  `focusLost` only after focus has been on a real element in the document (`lastRealSeen`, `tab-walk.ts`).
-  The page's only stop blurs on arrival, so every read is `body` and all 8 drops are filed
+- **`one-button__M7__only-button` reads 3.2.1 `pass` in Runs A and B, an old-checker miss.** The walk
+  marked a drop `focusLost` only after focus had been on a real element in the document (`lastRealSeen`,
+  `tab-walk.ts`). The page's only stop blurs on arrival, so every read is `body` and all 8 drops were filed
   `no-preceding-stop`; the gap detector does flag it `not_focusable`. B1's settle fix also needs `focusLost`,
-  so the cell stays `pass`.
+  so the cell stays `pass` there. Round 3's arrival fix (below) makes it `fail`.
 - **`scroll-panel__M6__agree-button` reads 2.1.2 `undetermined / document-replaced`; the other 8 M6 pages
   pass.** The walk counts 3 stops (not the two scrollers), so the judge wants a wrap in the last 4 presses,
   and a lap here is 6. M6's reload at press 3 puts the wraps at 9, 15 and 21, none in 22-25, and a replaced
@@ -236,8 +236,9 @@ same dev changes as the bullets below; `bench/REPORT.md` §10 has the Run A → 
   control the walk never reached `not_focusable` (critical). A page reloaded before or during the walk (its idle
   baseline included), re-mounted in the same window, or rewritten with `document.open()` left the walk reaching
   only new nodes, so every crawled control was flagged on a page with no defect. The detector now marks the
-  window before the crawl and checks after the walk: a lost mark gives `document-replaced`, and a crawled node the
-  walk never reached that has left the document gives `crawled-nodes-detached`. The nodes checked include those
+  window before the crawl and checks after the walk: a lost mark gives `document-replaced` (a mark the page's own
+  script refuses gives `crawl-mark-failed` since round 3, below), and a crawled node the walk never reached that
+  has left the document gives `crawled-nodes-detached`. The nodes checked include those
   read as `no-box`, because a node removed before its box is read has none: without them, a re-mount right after
   the crawl left no candidate to check, and a real `not_focusable` was lost with the page scored as an assessed
   pass (CONFIRMED by two tests in `detect-timing.test.ts`: a re-mount just before the box read, and one just
@@ -252,8 +253,8 @@ same dev changes as the bullets below; `bench/REPORT.md` §10 has the Run A → 
   (`Target page, context or browser has been closed`) where it used to return a result, so `bench/run.ts`
   records no gap result for it; and a navigation that lands during the title read after the tree read
   (`Execution context was destroyed`), as before these fixes (1 of those 105 runs; 3 of 31 self-reload runs at
-  `6ee3b83`). On the probe (`bench/probes/gap-timing/RESULT.md`) the reload, idle-baseline and
-  `document.open()` rows go from 4 × `not_focusable` to no gap.
+  `6ee3b83`); and since round 3 a renderer crash (below). On the probe (`bench/probes/gap-timing/RESULT.md`)
+  the reload, idle-baseline and `document.open()` rows go from 4 × `not_focusable` to no gap.
 - **gaps timing: the accessibility tree is read after the DOM crawl.** Every candidate now existed when the tree was
   read, so content the page adds while the detector reads is no longer flagged `missing_from_a11y_tree`
   (critical): on the probe's timer page, 20 to 23 flags in 5 of 5 runs before, none in 5 of 5 after. A page
@@ -287,3 +288,67 @@ same dev changes as the bullets below; `bench/REPORT.md` §10 has the Run A → 
   cells become undetermined on a page labelled clean. The other 106 pages are unchanged in gap list, assessment
   and reasons, the earlier gap fixes' cells included. The page was built to show this hazard, so this shows the
   fix runs, not how much it helps.
+
+## Round-3 fixes: what they cover and cost (decided 2026-09-24)
+
+Five small commits on the checker, f1-f5 below. Run C, the checker at `c013aa1` on the same dev pages as Run B
+(`bench/results/c013aa1/`), moves dev cells only through f5; `bench/REPORT.md` §11 has the Run B → Run C table.
+No held-out page was run.
+
+- **f1, renderer crash: the gap tool, the Tab walk and the focus check fail instead of hanging.** After a page's
+  renderer crashed, a send on a CDP session the check had opened itself never settled, so
+  `crawlPageWithGapDetection`, `runTabWalk` and `checkFocusIndicator` waited for ever: with no timeout in the CLI's
+  `gaps` command (the first) and the agent's keyboard check (the second), and in the bench (both) until the
+  20-minute page budget closed the context, which also starved the page's later tools. The third has no caller. Each
+  now rejects with `the page's renderer crashed` when the page's `crash` event fires (pinned in
+  `gaps/detect-timing.test.ts`, `tab-walk.test.ts` and `focus-indicator.test.ts`, each crashing the renderer with
+  CDP `Page.crash`). The cost: a crash anywhere in the call rejects the whole call. A crash during the gap
+  detector's walk drops the crawl gaps already read and the walk's steps, where a page closed during the walk keeps
+  its crawl gaps and `walk-error` (above); the bench records the gaps tool as an error, which `bench/report.ts`
+  counts as a miss on the per-operator line and excludes ("tool error") from the columns that read the gap tool. Not
+  covered: a page whose renderer crashed before the call. The detector still fails there (its `page.goto` rejects),
+  but `runTabWalk` and `checkFocusIndicator` would still wait. No committed summary records a crash, and every tool
+  ran ok on all 107 Run C pages.
+- **f2, gaps timing: a crawl mark the page's own script refuses is labelled `crawl-mark-failed`.** The detector
+  writes its mark through the page's own `Reflect.set`. A page that replaced it to throw, or to return `false` for
+  the key, had its walk refused as `document-replaced` though nothing was replaced. An exact `false` or a throw now
+  gives `crawl-mark-failed` instead, when the walk ran, saw no replacement itself and the page is open (pinned in
+  `gaps/detect-timing.test.ts`). Both reasons leave `not_focusable` unassessed, so the fix changes a label, not a
+  verdict or a score. Not covered (from the code; not tested): a `Reflect.set` that returns `true` without writing
+  still gives `document-replaced`, and one that returns a promise that rejects is read as a navigation. A reload
+  during the write still gives `document-replaced`. No dev page mentions `Reflect`, and no Run C gap cell moved.
+- **f3, 2.1.2: F counts an image-map area while the first image naming its map is rendered.** The selector gains
+  `area[href]`, and an area (with `href` or `tabindex`) counts only while the first image in its document whose
+  `usemap`, first character dropped, names its `<map>` by id or name is rendered; the area's and the map's own
+  boxes are ignored. Unlike a scroller's, this is a fixed lookup, and `tab-walk.test.ts` pins it against
+  Chromium's own Tab stops on a page of mixed maps. A link and 14 areas now has F = 15, wraps and passes (pinned).
+  The cost: the end-of-walk re-count uses the same rule, so a page that shows or hides an image-map image during
+  the walk can now be refused as `focusables-changed` (from the code; not run). Not covered: F counts an area
+  Chromium skips when the area's image is inert or `visibility: hidden`, or the area has `tabindex="-1"` (links
+  already share these), and it misjudges a map whose own name starts with `#` (the design's probes on
+  chrome-headless-shell 143; not re-run). The DOM crawler's own `focusable` flag (`gaps/dom-crawler.ts`) and the
+  sampling rule's selector in `bench/test-sites/draw.ts` are unchanged. F is unchanged on a page with no
+  `<area>`: no dev page has one, and F is equal in Runs B and C on all 107 pages.
+- **f4, 2.1.2: the 2F+1 floor on the recent-wrap window is pinned as shipped, not re-decided.** The window is
+  2·max(F, L)+1 presses, but no test reached its F floor: with the floor removed every keyboard-trap test passed.
+  A new test in `keyboard-trap.test.ts` pins it: F = 3 walks whose longest lap is 2 presses pass 5 and 6 presses
+  after their last wrap, even with a probe that gets nowhere, and fail at 7. The floor only makes the rule more
+  lenient: a wider window finds a wrap in more walks, and such a walk ends at `all-stops-visited` and passes,
+  unless the focusables checks refuse it, before any release probe runs. The source gives no reason for F; the
+  test's comment says so. No source, verdict or dev cell changes.
+- **f5, 3.2.1: a drop is `focusLost` when a focus event since the last read shows focus arrived.** A page whose only
+  stop blurs on arrival filed every drop `no-preceding-stop` and passed (above). The walk now also listens, capture
+  phase on `window`, for a trusted `focus` event on an element other than `body`: a step that ends on `body` with
+  focus is `focusLost` when such an event landed between the previous read and the press's immediate read. The judge
+  is unchanged: the drop is reported as `focus-removed`, `precedingStop` `null`, when the immediate read shows it,
+  and refused as `focus-removed-after-settle` when only the settled read does. Press 1 counts, and the listener is
+  removed after the walk. The cost: `isTrusted` is true for a page script's `el.focus()`, so a timer that focuses
+  and blurs an element between the previous read and a press's immediate read is reported too, the settle leak above
+  now also on press 1 and on pages whose stops never hold focus. A drop that moves from `no-preceding-stop` to
+  `focus-removed-after-settle` can move a verdict: with a fragment-only change seen while idle the walk becomes
+  `undetermined / page-navigates-without-input`, findings or not (from the code; not tested). Not covered: a drop
+  first seen after the immediate read stays refused; a `body` that is itself a Tab stop is no arrival; a page that
+  blocks the listener (an earlier capture listener calling `stopImmediatePropagation`, or an `addEventListener` that
+  throws or does nothing), or a read that is retried, loses the evidence, and the drop is judged as before, never
+  newly reported (only the throwing `addEventListener` is tested); a page that deletes the walk's marker itself
+  leaves the first listener behind (not guarded).

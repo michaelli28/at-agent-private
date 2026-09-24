@@ -3,6 +3,7 @@ import { gunzipSync } from 'node:zlib'
 import { describe, it, expect, beforeAll, afterAll, afterEach, vi, type MockInstance } from 'vitest'
 import type { CDPSession, Page } from 'playwright'
 import { BrowserClient, BrowserPage } from '@at-agent/browser'
+import { RENDERER_CRASHED } from './renderer-crash.js'
 import { runTabWalk, TabWalkResultSchema, focusIdentity, type FocusRead, type StyleChange } from './tab-walk.js'
 import { judgeKeyboardTrap } from './keyboard-trap.js'
 
@@ -141,6 +142,32 @@ const AUTOFOCUS_DROP = doc(
 const first = document.getElementById('first')
 first.addEventListener('keydown', (e) => { if (e.key === 'Tab') { e.preventDefault(); first.blur() } })
 first.focus()
+</script>`,
+)
+
+// The page's only Tab stop blurs itself in its focus handler (dev one-button__M7): no read ever rests on an element.
+const ONLY_STOP_BLUR = doc('Only stop blurs', `<p><button id="only" onfocus="this.blur()">Only</button></p>`)
+
+// The body is itself a Tab stop, then a blur-on-arrival button: every read is body, only the button's are drops.
+const BODY_STOP_THEN_BLUR = doc(
+  'Body stop then blur',
+  `<p><button id="only" onfocus="this.blur()">Only</button></p><script>document.body.tabIndex = 0</script>`,
+)
+
+// The blur-on-arrival stop on a page whose window.addEventListener throws: the walk cannot see the arrival.
+const BLUR_REFUSES_LISTENER = doc(
+  'Blur refuses listener',
+  `<p><button id="only" onfocus="this.blur()">Only</button></p>
+<script>window.addEventListener = function () { throw new Error('refused') }</script>`,
+)
+
+// An ordinary page whose every addEventListener and removeEventListener throws.
+const TWO_BUTTONS_REFUSE_LISTENERS = doc(
+  'Two buttons refuse listeners',
+  `<p><button id="b1">One</button> <button id="b2">Two</button></p>
+<script>
+EventTarget.prototype.addEventListener = function () { throw new Error('refused') }
+EventTarget.prototype.removeEventListener = function () { throw new Error('refused') }
 </script>`,
 )
 
@@ -405,6 +432,28 @@ const EDITING_HOSTS = doc(
 <div id="ce-true" contenteditable="true">true</div>
 <div id="ce-false" contenteditable="false">false</div>`,
 )
+
+// A 1x1 GIF, so each image map has a rendered image without a network fetch.
+const GIF = 'data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7'
+const img = (usemap: string, style = ''): string =>
+  `<img src="${GIF}" width="50" height="50" alt="${usemap}" usemap="#${usemap}" style="${style}">`
+const areas = (prefix: string, n: number): string =>
+  Array.from({ length: n }, (_, i) => `<area id="${prefix}${i}" shape="rect" coords="0,0,9,9" href="#${prefix}${i}" alt="${prefix}${i}">`).join('')
+
+// Each map pins one part of the area rule in COUNT_FOCUSABLE_FN (tab-walk.ts).
+const IMAGE_MAPS = doc(
+  'Image maps',
+  `<a id="l1" href="#1">1</a>
+${img('shown')}<map name="shown">${areas('s', 2)}</map>
+<div style="display:none"><map name="boxless">${areas('b', 1)}</map></div>${img('boxless')}
+${img('hidden', 'display:none')}<map name="hidden">${areas('h', 2)}</map>
+<img src="${GIF}" width="50" height="50" alt="plain"><map name="orphan">${areas('o', 2)}</map>
+${img('byid')}<map id="byid">${areas('i', 1)}</map>
+${img('first', 'display:none')}${img('first')}<map name="first">${areas('f', 1)}</map>
+<iframe srcdoc="${srcdoc(`${img('framed')}<map name="framed">${areas('fa', 2)}</map>`)}"></iframe>`,
+)
+
+const LINK_AND_14_AREAS = doc('A link and 14 areas', `<a id="l1" href="#1">1</a>${img('m')}<map name="m">${areas('a', 14)}</map>`)
 
 const TWO_SCROLLERS = doc('Two scrollers', `${THREE_LINKS}${scroller('s1')}${scroller('s2')}`)
 
@@ -1458,6 +1507,62 @@ describe('runTabWalk', () => {
     expect(result.steps[0].focusLost).toBe(true)
   })
 
+  it('focusLost: a drop no read saw arrive is marked from the focus event its press fired', async () => {
+    const page = await open(ONLY_STOP_BLUR)
+    const result = await runTabWalk(page.playwrightPage, { settleMs: FAST })
+
+    // The premise: every read is body, so lastRealSeen alone can never mark these drops.
+    expect(result.steps.every((s) => s.immediate.isBody && s.settled.isBody)).toBe(true)
+    const drops = result.steps.filter((s) => s.settled.hasFocus)
+    expect(drops.length).toBeGreaterThanOrEqual(5)
+    expect(drops.filter((s) => !s.focusLost).map((s) => s.index)).toEqual([])
+  })
+
+  it('focusLost: Tab landing on a body that is a Tab stop is no arrival, before or after a real one', async () => {
+    const page = await open(BODY_STOP_THEN_BLUR)
+    const result = await runTabWalk(page.playwrightPage, { settleMs: FAST })
+
+    // b: body stop, L: the button's drop, w: wrap. Body and window focus events must not count, and each read resets.
+    const shape = result.steps.map((s) => (s.wrapped ? 'w' : s.focusLost ? 'L' : 'b')).join('')
+    expect(shape).toBe('bLwbLwbLwbLwbLwbLwbL')
+  })
+
+  it('arrival: removes its focus listener from the page after the walk', async () => {
+    const page = await open(ONLY_STOP_BLUR)
+    const pw = page.playwrightPage
+    await runTabWalk(pw, { settleMs: FAST, presses: 3, allowFewerPresses: true })
+
+    const session = await pw.context().newCDPSession(pw)
+    const { result } = await session.send('Runtime.evaluate', { expression: 'window' })
+    if (!result.objectId) throw new Error('no handle on window')
+    const { listeners } = await session.send('DOMDebugger.getEventListeners', { objectId: result.objectId })
+    await session.detach()
+    expect(listeners.filter((l) => l.type === 'focus')).toEqual([])
+  })
+
+  it('arrival: a page whose add/removeEventListener throw still gets a complete walk and teardown', async () => {
+    const page = await open(TWO_BUTTONS_REFUSE_LISTENERS)
+    const pw = page.playwrightPage
+    const result = await runTabWalk(pw, { settleMs: FAST })
+
+    expect(result.error).toBeNull()
+    expect(result.steps).toHaveLength(result.presses)
+    expect(result.steps.some((s) => s.wrapped)).toBe(true)
+    // removeEventListener throwing too must not keep the teardown from deleting the walk's state.
+    const keys = await pw.evaluate(() => Object.getOwnPropertyNames(window).filter((k) => k.startsWith('__atAgent')))
+    expect(keys).toEqual(['__atAgentTabWalk'])
+  })
+
+  it('arrival: a drop whose focus event the page refuses to let the walk hear is not focusLost', async () => {
+    const page = await open(BLUR_REFUSES_LISTENER)
+    const result = await runTabWalk(page.playwrightPage, { settleMs: FAST })
+
+    expect(result.error).toBeNull()
+    const drops = result.steps.filter((s) => s.settled.isBody && s.settled.hasFocus)
+    expect(drops.length).toBeGreaterThanOrEqual(5)
+    expect(drops.filter((s) => s.focusLost).map((s) => s.index)).toEqual([])
+  })
+
   it('focusLost: a second consecutive drop is marked', async () => {
     const page = await open(DOUBLE_DROP)
     const result = await runTabWalk(page.playwrightPage, { settleMs: FAST })
@@ -1544,6 +1649,25 @@ describe('runTabWalk', () => {
       expect(walk.focusableCount).toBe(6)
     })
 
+    it('F counts an image-map area only while the first image naming its map is rendered', async () => {
+      const page = await open(IMAGE_MAPS)
+      const walk = await runTabWalk(page.playwrightPage, { settleMs: FAST })
+
+      expect(new Set(walk.steps.map((s) => deepLabel(s.settled)))).toEqual(
+        new Set(['l1', 's0', 's1', 'b0', 'i0', 'fa0', 'fa1', 'body!']),
+      )
+      expect(walk.focusableCount).toBe(7)
+    })
+
+    it('a link and 14 image-map areas: F is 15, the walk wraps, judged pass', async () => {
+      const page = await open(LINK_AND_14_AREAS)
+      const walk = await runTabWalk(page.playwrightPage, { settleMs: FAST })
+
+      expect(walk.focusableCount).toBe(15)
+      expect(walk.suspectedTrap).toBe(false)
+      expect(judgeKeyboardTrap([walk]).verdict).toBe('pass')
+    })
+
     // Pinned, not fixed: counting scrollers would re-implement Chromium's rule in page JS.
     it('a keyboard-focusable scroller is a Tab stop F does not count', async () => {
       const page = await open(TWO_SCROLLERS)
@@ -1601,6 +1725,20 @@ describe('runTabWalk', () => {
       const walk = await runTabWalk(page.playwrightPage, { settleMs: FAST })
       expect(judgeKeyboardTrap([walk]).verdict).toBe('pass')
     })
+  })
+
+  // A crashed renderer never answers the walk's CDP session, and a press in flight at the crash never settles.
+  it('rejects with the crash when the renderer dies mid-walk, instead of hanging', { timeout: 15_000 }, async () => {
+    const page = await open(FIXTURE_A)
+    const pw = page.playwrightPage
+    const session = await pw.context().newCDPSession(pw)
+    // Page.crash is never answered: the renderer that would reply is the one it kills.
+    await pw.exposeFunction('crashRenderer', () => void session.send('Page.crash').catch(() => undefined))
+    await pw.evaluate(() => {
+      const crash = (): void => (window as unknown as { crashRenderer: () => void }).crashRenderer()
+      document.addEventListener('keydown', crash, { once: true })
+    })
+    await expect(runTabWalk(pw, { settleMs: 50 })).rejects.toThrow(RENDERER_CRASHED)
   })
 })
 
