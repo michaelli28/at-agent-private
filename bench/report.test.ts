@@ -270,7 +270,7 @@ function cutReplay(page: PageResult): PageResult {
   cut.tools.legacy = {
     ...cut.tools.legacy,
     status: "partial",
-    error: "replayed 10 of 25 planned presses: the walk stopped early",
+    error: "walked 10 of 25 planned stops: the walk stopped early",
   };
   return cut;
 }
@@ -597,6 +597,16 @@ describe("an undetermined verdict counts as a miss", () => {
     expect(r).toContain(
       "0/1 · 0.00 [0.00, 0.79] · 1 undetermined (1 excluded: tool error)",
     );
+  });
+});
+
+describe("per-page flag table", () => {
+  it("prints a walk cut short as stops walked of stops planned", () => {
+    const cut = fakeSummary("dev-fixtures", [
+      fakePage("three-links", { walk: { presses: 10 } }),
+    ]);
+    const md = renderReport(input({ "dev-fixtures": cut }));
+    expect(md).toContain("| three-links | 3 / 6 (10/25 stops) |");
   });
 });
 

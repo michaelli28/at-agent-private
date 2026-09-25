@@ -1,5 +1,6 @@
 import { z } from 'zod'
 import {
+  collapseStops,
   DeepFocusSchema,
   LaunchFactsSchema,
   focusIdentity,
@@ -21,7 +22,7 @@ export const TrapReleaseSchema = z.enum(['escape-key', 'opposite-key', 'none', '
 export type TrapRelease = z.infer<typeof TrapReleaseSchema>
 
 // Two signals: in new-headless the first wrap skips body entirely, so a body read in the last F+1
-// presses alone misses it, and the count covers that, but only after a recent wrap, because a loop over
+// stops alone misses it, and the count covers that, but only after a recent wrap, because a loop over
 // every stop completes the count too (endOfPage). A cyclic trap also revisits its first element, so
 // "returned to the first element" is NOT a signal (it passes 4 of 6 M5 fixtures).
 export const EndOfPageSignalSchema = z.enum(['body-unfocused', 'all-stops-visited'])
@@ -90,7 +91,7 @@ function lastSegment(steps: readonly TabWalkStep[]): readonly TabWalkStep[] {
   return steps.slice(start)
 }
 
-// The last F+1 presses: one full cycle plus the wrap. A whole-walk test cannot see a trap that opens
+// The last F+1 stops: one full cycle plus the wrap. A whole-walk test cannot see a trap that opens
 // after the page has already wrapped once.
 function tailOf(segment: readonly TabWalkStep[], focusableCount: number): readonly TabWalkStep[] {
   return segment.slice(-Math.min(focusableCount + 1, segment.length))
@@ -108,7 +109,7 @@ function identitiesOf(steps: readonly TabWalkStep[]): number[] {
   return out
 }
 
-// The most presses from one wrap to the next that the segment measured, its start counting as a wrap;
+// The most stops from one wrap to the next that the segment measured, its start counting as a wrap;
 // 0 when it never wrapped.
 function longestLap(segment: readonly TabWalkStep[]): number {
   let lap = 0
@@ -123,8 +124,10 @@ function longestLap(segment: readonly TabWalkStep[]): number {
 
 // Did the walk reach the end of the page? Two signals, and NEVER "focus returned to the
 // first element it visited" — every cyclic trap does that, and it silently passes 4 of the 6 M5
-// fixtures (bench/results/cd3b122/dev-variants).
-export function endOfPage(walk: TabWalkResult): EndOfPage | null {
+// fixtures (bench/results/cd3b122/dev-variants). It reads one step per stop (collapseStops), so a raw walk and the
+// judge's collapsed one get the same answer.
+export function endOfPage(raw: TabWalkResult): EndOfPage | null {
+  const walk = collapseStops(raw)
   const segment = lastSegment(walk.steps)
   const tail = tailOf(segment, walk.focusableCount)
   const firstWrap = segment.find((step) => step.wrapped)
@@ -137,14 +140,13 @@ export function endOfPage(walk: TabWalkResult): EndOfPage | null {
   // nothing to have visited, and would otherwise report an end-of-page at a press that never happened.
   if (walk.focusableCount === 0 || walk.steps.some((step) => step.documentReplaced)) return null
   // Completing the count only means the walk ARRIVED on every stop, and a trap met after that (on the
-  // last stop, among the last few, or closing after a lap) completes it too. The last F+1 presses must
+  // last stop, among the last few, or closing after a lap) completes it too. The last F+1 stops must
   // still reach F distinct stops, which a trap confined to fewer than F cannot do.
   if (identitiesOf(tail).length < walk.focusableCount) return null
   // A trap confined to F or more completes that too: the page's only stop, a script loop over every stop,
   // a region padded with stops F does not count. Only a recent wrap tells the page's own lap from a loop.
-  // Unactivated new headless shows body on every other wrap (bench/probes/wrap/RESULT.md:16), and a date or
-  // time input takes several Tab presses on one element, so the window is two of the longest laps the walk
-  // measured, at least 2F+1.
+  // Unactivated new headless shows body on every other wrap (bench/probes/wrap/RESULT.md:16), so the window is
+  // two of the longest laps the walk measured, at least 2F+1.
   const lapWindow = 2 * Math.max(walk.focusableCount, longestLap(segment)) + 1
   if (!segment.slice(-lapWindow).some((step) => step.wrapped)) return null
   const seen = new Set<number>()
@@ -234,7 +236,7 @@ function judgeWalk(walk: TabWalkResult): TrapDirection {
   // 8
   const probe = walk.escapeProbe
   if (probe === null) return undetermined('no-release-probe')
-  // "Unseen" is a release read through node identity. More distinct stops in the last F+1 presses than
+  // "Unseen" is a release read through node identity. More distinct stops in the last F+1 stops than
   // F counts means F misses stops (a keyboard-focusable scroller) or the page re-creates nodes as focus
   // moves; either way a new node is no evidence of a new place, so such a release is refused. A wrap or a
   // replaced document is not read through identity and stays a release; a probe that got nowhere still fails.
@@ -263,9 +265,10 @@ function judgeWalk(walk: TabWalkResult): TrapDirection {
 // A region smaller than F never decides a verdict by itself: F legitimately over-counts (the recorded
 // navbar walk has F=12 and reaches 8 real stops, the modal F=8 and reaches 4). It only holds back the
 // all-stops-visited end of page (endOfPage), which sends a wrapless tail to the release probe. A region
-// larger than F refuses a release read through node identity (clauses 9-10).
+// larger than F refuses a release read through node identity (clauses 9-10). Each walk is judged in stops
+// (collapseStops): a date, time or media control that takes several presses is one step.
 export function judgeKeyboardTrap(walks: readonly TabWalkResult[]): KeyboardTrapResult {
-  const directions = walks.map(judgeWalk)
+  const directions = walks.map((walk) => judgeWalk(collapseStops(walk)))
   const passes = directions.filter((direction) => direction.verdict === 'pass')
   const verdict: TrapVerdict = directions.some((direction) => direction.verdict === 'fail')
     ? 'fail'

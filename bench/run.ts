@@ -32,6 +32,7 @@ import type {
   DualCrawlResult,
 } from "../packages/accessibility/src/gaps/types.js";
 import {
+  groupStops,
   runTabWalk,
   type TabWalkResult,
 } from "../packages/accessibility/src/tab-walk.js";
@@ -92,7 +93,7 @@ const NOTES = [
   "Legacy trap: detectTrap() is replayed after every walk press; trapped is its verdict after the last press, and firstTrappedPress is the first press where it said trapped (report.ts scores a page flagged if it ever did, as the agent latches trapDetected).",
   LEGACY_TRAP_NOTE,
   "The legacy identity is rebuilt from each press's immediate read (the walk's step.immediate: top-level document.activeElement as soon as keyboard.press resolves, with no settle), which is when executeTab reads it; focus a page script moves later is not seen, and focus inside frames or shadow roots shows as the container.",
-  "Walk trap (the new checker): judgeKeyboardTrap over this walk. pass = focus reached the end of the page, or it was confined but Escape or the opposite Tab key got out (a correct modal). fail = confined with neither key escaping. undetermined = the walk errored, F is only a lower bound, the focusable count changed mid-walk, the walk's last F+1 presses reached more stops than F and the release was read through node identity (focusables-exceeded), or no release probe ran; an undetermined verdict is never counted as flagged: a miss on a detection count, and on a false-alarm count it scores like a clean pass, with the worst case printed beside it. contextChange is judgeContextChange (3.2.1 incl. F55) over the same walk. The legacy detector's verdicts are reported as-is, unchanged, from the frozen copy in bench/legacy-detectors.ts.",
+  "Walk trap (the new checker): judgeKeyboardTrap over this walk. pass = focus reached the end of the page, or it was confined but Escape or the opposite Tab key got out (a correct modal). fail = confined with neither key escaping. undetermined = the walk errored, F is only a lower bound, the focusable count changed mid-walk, the walk's last F+1 stops held more distinct stops than F and the release was read through node identity (focusables-exceeded), or no release probe ran; an undetermined verdict is never counted as flagged: a miss on a detection count, and on a false-alarm count it scores like a clean pass, with the worst case printed beside it. contextChange is judgeContextChange (3.2.1 incl. F55) over the same walk. The legacy detector's verdicts are reported as-is, unchanged, from the frozen copy in bench/legacy-detectors.ts.",
   "Gaps run their own Tab walk on their own load (tabWalk: true). F3 needs it: without a walk the detector never emits not_focusable at all, so a run without it reports 0 not_focusable whatever the page does. That is a SECOND walk per page, separate from the one the judges read, and it roughly doubles the per-page keyboard cost.",
   "Each page's gaps run records the detector's own keyboard evidence (tools.gaps.findings.keyboard): whether the walk ran, whether not_focusable was assessed, and the reasons if it was not. A page where it was NOT assessed is scored undetermined for 2.1.1 and 2.4.7 in BOTH columns -- never counted as flagged: a miss on a detection count, a clean-looking pass on a false-alarm count, whose worst case is printed beside it -- and drops the rule-of-three bound there, because the only gap type carrying those criteria could not be emitted at all. Without this record a check that could not run is indistinguishable in the report from a check that ran and found nothing.",
   "Gaps come from the CURRENT post-fix detector (F1/F2/F3/F9 landed at 6b7abff and c1f94b2: hidden elements are filtered, reachability comes from the Tab walk). The same gap findings feed both the before and the after column, so the before/after delta isolates the keyboard rules and takes no credit for the gap fixes; those were measured separately against cd3b122.",
@@ -467,7 +468,7 @@ function walkStats(w: TabWalkResult): WalkStats {
     fIncomplete: w.fIncomplete,
     fIncompleteCauses: w.fIncompleteCauses,
     plannedPresses: w.presses,
-    presses: w.steps.length,
+    presses: groupStops(w.steps).length,
     wraps: w.steps.filter((s) => s.wrapped).length,
     focusLost: w.steps.filter((s) => s.focusLost).length,
     deep: {
@@ -519,7 +520,7 @@ export function legacyFrom(walk: ToolOutcome<TabWalkResult>): {
   const cut = w.error?.phase === "walk";
   const error = joinErrors(
     cut
-      ? `replayed ${w.steps.length} of ${w.presses} planned presses: the walk stopped early`
+      ? `walked ${groupStops(w.steps).length} of ${w.presses} planned stops: the walk stopped early`
       : null,
     walk.load?.secondNavigation === "missing" ? RAN_ON_PLACEHOLDER : null,
   );
@@ -678,7 +679,7 @@ function describePage(p: PageResult): string {
     `axe ${axe.findings?.length ?? "-"} rules/${axe.findings?.reduce((n, v) => n + v.targets.length, 0) ?? "-"} nodes${flag(axe.status, axe.error)}`,
     walk.findings === null
       ? `walk -${flag(walk.status, walk.error)}`
-      : `walk F=${walk.findings.fIncomplete ? "≥" : ""}${walk.findings.F} ${walk.findings.presses}/${walk.findings.plannedPresses} presses, ${walk.findings.wraps} wraps${walk.findings.trap.verdict === "pass" ? "" : `, trap ${walk.findings.trap.verdict}${walk.findings.trap.reason === null ? "" : ` (${walk.findings.trap.reason})`}`}${walk.findings.contextChange.verdict === "pass" ? "" : `, 3.2.1 ${walk.findings.contextChange.verdict}`}${flag(walk.status, walk.error)}`,
+      : `walk F=${walk.findings.fIncomplete ? "≥" : ""}${walk.findings.F} ${walk.findings.presses}/${walk.findings.plannedPresses} stops, ${walk.findings.wraps} wraps${walk.findings.trap.verdict === "pass" ? "" : `, trap ${walk.findings.trap.verdict}${walk.findings.trap.reason === null ? "" : ` (${walk.findings.trap.reason})`}`}${walk.findings.contextChange.verdict === "pass" ? "" : `, 3.2.1 ${walk.findings.contextChange.verdict}`}${flag(walk.status, walk.error)}`,
     trap === undefined
       ? `legacy -${flag(legacy.status, legacy.error)}`
       : `legacy trap ${trap.trapped ? `YES (first @${trap.firstTrappedPress}, cycle ${trap.cycleLength})` : "no"}, dynamic [${legacy.findings?.dynamicViolations.map((v) => v.criterion).join(",")}]`,

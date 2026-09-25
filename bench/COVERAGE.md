@@ -109,11 +109,13 @@ same dev changes as the bullets below; `bench/REPORT.md` §10 has the Run A → 
   2·max(F, L)+1 presses, L being the longest lap the walk measured. Without one, the release probe
   decides, so a trap on the page's only stop (`one-button__M5`), a loop over every stop (M10, labelled a
   trap above) and a loop padded with scrollers (M12) now fail. A trap armed too late to leave that many
-  trapped presses before the walk ends still passes.
+  trapped presses before the walk ends still passes. Since round 4 (below), both windows and L count
+  stops, not presses.
 - **2.1.2: a walk's release read through node identity is refused when
   its last F+1 presses reach more stops than F**, as `undetermined / focusables-exceeded`. F then misses
   stops or the page re-creates nodes, so reaching an "unseen" element proves nothing. A wrap or a
-  replaced document still releases, and a probe that gets nowhere still fails.
+  replaced document still releases, and a probe that gets nowhere still fails. Since round 4 (below), the
+  last F+1 are stops.
 - **2.1.2: a stop re-rendered on every press (M11) is refused, not failed.** Each press lands on a new
   node, which the walk cannot tell from moving on; failing it needs an identity beyond the DOM node, which
   the rebuild removed on purpose. It counts as a miss. A trap where only some stops re-render can still
@@ -126,32 +128,32 @@ same dev changes as the bullets below; `bench/REPORT.md` §10 has the Run A → 
   selector's `a[href]` did not match `area[href]`, and round 2 did not add it. A link and 14 areas (F = 1)
   was refused, where 13 passed (the cost below; measured, not pinned). No dev page has an image map.
 - **2.1.2: what the recent-wrap rule and the refusal cost on clean pages** (synthetic pages walked in
-  chrome-headless-shell 143). A page with F ≥ 1 loses `all-stops-visited` when no wrap falls in its
-  walk's last 2·max(F, L)+1 presses, and the release probe decides. If a Shift+Tab reaches a wrap, or a
-  stop outside the last F+1 presses, the page passes, unless it was a stop and those presses reached
-  more stops than F: then it is refused (`focusables-exceeded`). If all F+2 Shift+Tabs stay on those
-  presses' stops, as inside a stop that takes several presses, it fails (next bullet), whether the walk
-  ended inside that stop or just after it. 12 scrollers then a datetime-local passes
-  (`pass [opposite-key]`): the walk ends on the input's third field, so the third Shift+Tab gets out.
-  With one-press stops and focus starting at the top, the 5(F+1)+5-press walk misses the wrap exactly
-  when the page has 4F+10 or more stops F does not count, and the page is refused (pinned in
+  chrome-headless-shell 143). A page with F ≥ 1 loses `all-stops-visited` when no wrap falls in its walk's
+  last 2·max(F, L)+1 presses, and the release probe decides. If a Shift+Tab reaches a wrap, or a stop
+  outside the last F+1 presses, the page passes, unless it was a stop and those presses reached more stops
+  than F: then it is refused (`focusables-exceeded`). If all F+2 Shift+Tabs stay on those presses' stops,
+  it fails. With one-press stops and focus starting at the top, the 5(F+1)+5-press walk misses the wrap
+  exactly when the page has 4F+10 or more stops F does not count, and the page is refused (pinned in
   `keyboard-trap.test.ts`). Autofocus breaks that bound: a button, 17 scrollers and an autofocused last
-  button (F = 2, so 4F+10 = 18) wrap on the first press only and are refused. Several-press stops need
-  fewer: one datetime-local then 8 scrollers (F = 1, 7 + 8 = 15 presses) is refused, where 7 scrollers
-  pass. Only the 4F+10 bound is pinned. A page where F is 0 (only scrollers, say) is refused unless its
-  walk ends on its first stop or on a wrap.
-- **2.1.2: stops that take several Tab presses give wrong verdicts both ways.** Tab steps through the
-  fields of a date or time input, and through the controls of `<audio controls>`, on one element
-  (chrome-headless-shell 143: datetime-local 7 presses, date and time 4, month 3, audio with a silent
-  clip 5), and the walk and its probe count presses as if every stop took one. A clean page with two
-  datetime-local inputs fails, and a dialog loop over a date input and a button, a trap, passes. The
-  recent-wrap rule adds false fails on clean pages whose walk never wraps and whose probe stays inside
-  such a stop: 8 to 11 scrollers then a datetime-local (the walk ends inside it); 7 scrollers, a
+  button (F = 2, so 4F+10 = 18) wrap on the first press only and are refused. Until round 4 (below),
+  several-press stops needed fewer: one datetime-local then 8 scrollers (F = 1, 7 + 8 = 15 presses) was
+  refused, where 7 scrollers passed. Since then such a control is one stop against the same bound: a
+  datetime-local then 13 scrollers passes and 14 are refused, and 9 to 12 scrollers then a datetime-local
+  pass (the design's prototype of the fix; not pinned). Only the 4F+10 bound is pinned. A page where F is
+  0 (only scrollers, say) is refused unless its walk ends on its first stop or on a wrap.
+- **2.1.2: stops that take several Tab presses gave wrong verdicts both ways, until round 4 (below).** Tab
+  steps through the fields of a date or time input, and through the controls of `<audio controls>`, on one
+  element (chrome-headless-shell 143: datetime-local 7 presses, date and time 4, month 3, audio with a
+  silent clip 5), and the walk and its probe counted presses as if every stop took one. A clean page with
+  two datetime-local inputs failed, and a dialog loop over a date input and a button, a trap, passed. The
+  recent-wrap rule added false fails on clean pages whose walk never wrapped and whose probe stayed inside
+  such a stop: 8 to 11 scrollers then a datetime-local (the walk ended inside it); 7 scrollers, a
   datetime-local and one more scroller, or with F = 2 a link, 10 scrollers, a datetime-local and 2 more
-  (the walk ends just after it); and a link and 10 scrollers then `<audio controls>`. `it.fails` pins
-  five (`tab-walk.test.ts`): the two-datetime page, the date loop, 8 scrollers then a datetime-local,
-  7 scrollers with one after the input, and the audio page. No dev page has a date, time or media input,
-  so no dev number measures this.
+  (the walk ended just after it); and a link and 10 scrollers then `<audio controls>`. `it.fails` pinned
+  five (`tab-walk.test.ts`): the two-datetime page, the date loop, 8 scrollers then a datetime-local, 7
+  scrollers with one after the input, and the audio page. Round 4 counts stops, and the five pass; closed
+  shadow roots, cross-origin frames, Firefox and WebKit are not covered (below). No dev page has a date,
+  time or media input, so no dev number measures this.
 - **`native-dialog` is labelled clean.** Its age gate is a `<dialog>` opened with `showModal()` on
   load. The page behind it is inert until Confirm closes the dialog and is then reachable with Tab, so
   the background controls are labelled accessible with no gap. Tab from Confirm leaves the page for the
@@ -352,3 +354,59 @@ No held-out page was run.
   throws or does nothing), or a read that is retried, loses the evidence, and the drop is judged as before, never
   newly reported (only the throwing `addEventListener` is tested); a page that deletes the walk's marker itself
   leaves the first listener behind (not guarded).
+
+## Round-4 fix: Tab stops that take several presses (decided 2026-09-24)
+
+One fix, `483fac9`, with its tests pinned first in `9cf2aac` (design C, approved 2026-09-24): the Tab walk, its
+escape probe, the 2.1.2 judge and the 3.2.1 short-walk check count Tab stops, not Tab presses. Run D, the checker at
+`483fac9` on the same dev pages as Run C (`bench/results/483fac9/`), changes no dev cell: no dev page has a date,
+time or media control. `bench/REPORT.md` §12 has the comparison and the held-out direction. No held-out page was
+run.
+
+- **What it covers.** Each settled read records `part`, the node that has focus inside the element's user-agent
+  shadow root (Chromium's own inner tree of a date, time or media control), or `null`. One function, `groupStops`
+  (`tab-walk.ts`), groups presses into stops: a press continues the stop while it is on the same element, did not
+  replace the document, the stop has fewer than 10 presses, and its `part` is one the stop has not had, `null`
+  included, so a button pressed twice is two stops. A read whose node DevTools no longer finds gives `part` null, so
+  it joins the current stop only if that stop has had no `null` yet (one `null` per stop), and otherwise begins a
+  new stop. The walk's 5(F+1)+5 budget, the probe gate, the probe's seen set (the last F+1 stops) and its F+2 keys,
+  the judge (it reads one step per stop, `collapseStops`), `endOfPage` and the 3.2.1 short-walk check count stops.
+  So does every window and budget of the walk, its probe and its 2.1.2 judge that this file gives in presses above;
+  stops and presses are equal on a page where no read gives a `part`. The summary fields keep their names: `presses`
+  and `plannedPresses` count stops from Run D on. In `tab-walk.test.ts` (chrome-headless-shell 143) the five round-2
+  `it.fails` pins and 10 more wrong verdicts found in round 4, among them two datetime-local inputs in an open
+  shadow root and in a same-origin frame, now pass; 8 guards that were right before stay right; and a tripwire fails
+  if Chromium gives either of two controls (a datetime-local with milliseconds, a captioned `<video controls>`) 10
+  or more presses. `keyboard-trap.test.ts` pins the grouping, its collapse and `endOfPage` on a raw walk (9 unit
+  tests).
+- **What it costs.**
+  - **The trade, accepted by the owner.** A long clean page with a date or media control, past the 4F+10 bound in
+    stops F does not count, is now `undetermined / focusables-exceeded`, as the same page with a text input in place
+    of a date input, or a scroller in place of a media control, already was. Where it passed before, it passed only
+    because the walk ended inside the control and a Shift+Tab got out. Pinned in `tab-walk.test.ts` for F = 1 (a
+    link, 12 scrollers, `<audio controls>`, 5 scrollers) and F = 2 (two links, 16 scrollers, `<audio controls>`, 4
+    scrollers).
+  - **A change no design predicted.** A page found in review, a link, a date input and a link, whose date input is
+    replaced by a clone that takes focus on every other forward Tab, so forward Tab never leaves it and Shift+Tab
+    does, went from `pass [opposite-key]` to `undetermined / focusables-exceeded`: its last F+1 = 4 stops are 4
+    clones, more than F = 3. It is the round-2 refusal for pages that re-create nodes (above), now read over stops:
+    a refusal, not a wrong verdict. Run on chrome-headless-shell 143 in review; not pinned.
+  - **Longer walks.** A walk over such controls takes up to 10 times as many presses, the cap per stop; on the
+    design's prototype pages it took up to 4.9 times as many (98 presses for 20 stops on a page with two
+    datetime-local inputs, 90 for 40 on a mixed form). The gap detector's walk has the same budget, the legacy
+    replay reads the longer walk, and the agent's `checkKeyboard` walks longer too. Not timed.
+  - **More DevTools calls.** From `readPart`'s calls, a settled read makes no extra call on links, buttons and
+    checkboxes, 2 on text, range and file inputs, selects, textareas and a media control itself, and 3 on a part of
+    a date, time or media control, plus 1 inside an open shadow root or a same-origin frame. The design's prototype
+    took 2.0 to 4.4 ms on average to read the focused element and its part (chrome-headless-shell 143; the whole
+    read, the extra time was not measured).
+- **What it does not cover.**
+  - Firefox and WebKit were not run. Closed shadow roots and cross-origin frames read `part` null, so they keep
+    press counting and its wrong verdicts (from the code; not run).
+  - A trap on a button that is replaced by a clone on every fourth Tab passes before and after, a false pass (found
+    and run in design and review; not pinned). It belongs with the refusal for re-created nodes.
+  - No test covers four parts, as `483fac9` says: the catch that gives `part` null when DevTools reports the node
+    not found (catching every error, or none, passes the keyboard-trap, tab-walk and context-change tests); the
+    probe gate and the 3.2.1 short-walk count, each of which passes those tests when it counts presses again; and
+    bench's stop counts (`walkStats.presses` and "walked N of M planned stops"), whose test walks read `part` null
+    on every step, where stops equal presses.

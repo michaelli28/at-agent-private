@@ -374,7 +374,8 @@ export const TabKeySchema = z.enum(['Tab', 'Shift+Tab'])
 export type TabKey = z.infer<typeof TabKeySchema>
 
 export const TabWalkOptionsSchema = z.object({
-  // Must be >= the default (5 full cycles) unless allowFewerPresses is set (tests only).
+  // Tab stops to walk (groupStops), not presses; the name predates stops. Must be >= the default (5 full cycles)
+  // unless allowFewerPresses is set (tests only).
   presses: z.number().int().positive().optional(),
   allowFewerPresses: z.boolean().default(false),
   settleMs: z.number().int().nonnegative().default(150),
@@ -426,6 +427,10 @@ export const FocusReadSchema = z.object({
   // behind a boundary page JS cannot cross (deepUnavailable says which).
   deep: DeepFocusSchema.nullable(),
   deepUnavailable: DeepUnavailableSchema.nullable(),
+  // Settled reads only: backendNodeId of the focused part inside the deep element's user-agent shadow root (a date
+  // field, a media button), which page JS cannot see; null on the element itself and on elements without such a
+  // root. Defaulted so walks recorded before it existed still parse.
+  part: z.number().int().nullable().default(null),
 })
 export type FocusRead = z.infer<typeof FocusReadSchema>
 
@@ -522,7 +527,7 @@ export type EscapeProbeStep = z.infer<typeof EscapeProbeStepSchema>
 export const EscapeProbeSchema = z.object({
   // Opposite of the walk key: Shift+Tab after a forward walk, Tab after a backward one.
   probeKey: TabKeySchema,
-  // focusIdentity of the last F+1 walk steps; "unseen" is relative to these.
+  // focusIdentity of the last F+1 walk stops (groupStops); "unseen" is relative to these.
   seenBackendNodeIds: z.array(z.number().int()),
   before: FocusReadSchema,
   escape: z.object({
@@ -532,6 +537,7 @@ export const EscapeProbeSchema = z.object({
     unseenElement: z.boolean(),
     wrapped: z.boolean(),
   }),
+  // In Tab stops (groupStops), not presses, like the walk's budget.
   maxPresses: z.number().int().positive(),
   steps: z.array(EscapeProbeStepSchema),
   // Probe press that first reached an unseen element or a wrapped state; null if none did.
@@ -541,7 +547,7 @@ export type EscapeProbe = z.infer<typeof EscapeProbeSchema>
 
 export const TabWalkErrorSchema = z.object({
   phase: z.enum(['walk', 'escapeProbe']),
-  // Press being attempted: walk 1..presses; escape probe 0 = Escape, 1..maxPresses after it.
+  // Press being attempted, counted in presses, not stops: walk from 1; escape probe 0 = Escape, from 1 after it.
   index: z.number().int().nonnegative(),
   message: z.string(),
 })
@@ -573,6 +579,8 @@ export const TabWalkResultSchema = z.object({
     crossOriginFrames: z.number().int().nonnegative(),
     closedShadowRoots: z.number().int().nonnegative(),
   }),
+  // In Tab stops (groupStops), not presses; the names predate stops. defaultPresses is 5(F+1)+5, presses the budget
+  // walked; a date, time or media control is one stop of several presses.
   defaultPresses: z.number().int().positive(),
   presses: z.number().int().positive(),
   settleMs: z.number().int().nonnegative(),
@@ -595,6 +603,7 @@ const RawReadSchema = FocusReadSchema.omit({
   backendNodeId: true,
   deep: true,
   deepUnavailable: true,
+  part: true,
 }).extend({
   classAttr: z.string().nullable(),
   markerPresent: z.boolean(),
@@ -714,7 +723,9 @@ async function walk(page: Page, options: TabWalkOptions): Promise<TabWalkResult>
     const suspectedTrap = error ? null : !steps.some((s) => s.wrapped)
     // The probe is gated on the END of the walk, not the whole of it: a page that wrapped early and
     // then opened a trapping dialog is invisible to suspectedTrap, which gaps/keyboard.ts still reads.
-    const tailWrapped = steps.slice(-(focusableCount + 1)).some((s) => s.wrapped)
+    const tailWrapped = groupStops(steps)
+      .slice(-(focusableCount + 1))
+      .some(([first]) => first.wrapped)
     let escapeProbe: EscapeProbe | null = null
     if (!error && !tailWrapped && opts.escapeProbe) {
       const probed = await runEscapeProbe(ctx, key, focusableCount, steps)
@@ -769,6 +780,45 @@ export function focusStop(read: FocusRead): DeepFocus | null {
   return { backendNodeId: read.backendNodeId, tag: read.tag, id: read.id, isBody: false, classAttr: read.className }
 }
 
+// More presses than any Chromium control has parts (datetime-local with milliseconds: 9), so a page that keeps
+// minting parts on one element still ends its stop.
+const MAX_PRESSES_PER_STOP = 10
+type Press = { settled: FocusRead; documentReplaced: boolean }
+
+// Tab moves through a date input's fields or a media element's controls while the element keeps focus. A press
+// continues the stop while it stays on that element on a part the stop has not had yet, null (the element itself)
+// included; a repeated part (a swallowed Tab, a script refocusing the element) begins a new stop, so a one-press
+// element is one stop per press. A wrap or a replaced document always begins one.
+function continuesStop(stop: readonly Press[], press: Press): boolean {
+  const id = focusIdentity(press.settled)
+  return (
+    stop.length > 0 &&
+    stop.length < MAX_PRESSES_PER_STOP &&
+    !press.documentReplaced &&
+    isRealElement(press.settled) &&
+    id !== null &&
+    id === focusIdentity(stop[0].settled) &&
+    stop.every((p) => p.settled.part !== press.settled.part)
+  )
+}
+
+export function groupStops<T extends Press>(presses: readonly T[]): T[][] {
+  const stops: T[][] = []
+  for (const press of presses) {
+    const stop = stops.at(-1)
+    if (stop !== undefined && continuesStop(stop, press)) stop.push(press)
+    else stops.push([press])
+  }
+  return stops
+}
+
+// The walk the 2.1.2 judge reads: one step per stop, its first press. Each kept step's part is null, so every step
+// stays its own stop and collapsing twice gives the same walk.
+export function collapseStops(walk: TabWalkResult): TabWalkResult {
+  const steps = groupStops(walk.steps).map(([first]) => ({ ...first, settled: { ...first.settled, part: null } }))
+  return { ...walk, steps }
+}
+
 // Each press stores the settled element's focused style in the page as a visit; later presses read
 // every open visit until focus has left the element's subtree (the unfocused read), then once more.
 async function walkPresses(
@@ -785,7 +835,8 @@ async function walkPresses(
   // previous step instead would make press 1 unable to lose focus and would miss a second drop in a row.
   let lastRealSeen = isRealElement(initial)
   try {
-    for (; index <= presses; index++) {
+    // The budget is in stops: a press that continues a stop does not use it up.
+    for (; groupStops(steps).length < presses; index++) {
       const r = await pressAndRead(ctx, key, index)
       // A closed shadow host is stored in the page too, but its deep element is unknown: dropped.
       const tried = r.snapshotted || r.snapshotError !== null
@@ -949,9 +1000,9 @@ async function runEscapeProbe(
   const probeKey: TabKey = walkKey === 'Tab' ? 'Shift+Tab' : 'Tab'
   const seen = [
     ...new Set(
-      walkSteps
+      groupStops(walkSteps)
         .slice(-(focusableCount + 1))
-        .map((s) => focusIdentity(s.settled))
+        .map(([first]) => focusIdentity(first.settled))
         .filter((id): id is number => id !== null),
     ),
   ]
@@ -975,7 +1026,7 @@ async function runEscapeProbe(
 
     const steps: EscapeProbeStep[] = []
     let reachedAt: number | null = null
-    for (index = 1; index <= maxPresses && reachedAt === null; index++) {
+    for (index = 1; groupStops(steps).length < maxPresses && reachedAt === null; index++) {
       const r = await pressAndRead(ctx, probeKey)
       const step = {
         index,
@@ -1082,6 +1133,7 @@ async function readFocusOnce(ctx: WalkContext, withStyle: boolean, visit: number
       return toRawRead(RawReadSchema.parse(value), null, {
         deep: null,
         deepUnavailable: null,
+        part: null,
       })
     }
     const node = (await session.send('DOM.describeNode', { objectId })).node
@@ -1099,7 +1151,8 @@ async function readFocusOnce(ctx: WalkContext, withStyle: boolean, visit: number
       container: raw.container ?? (hasClosedShadowRoot(node) ? 'shadow-host' : null),
     }
     const deepPart = top.container === null ? topAsDeep(node.backendNodeId, top) : await readDeep(session, objectId)
-    return toRawRead(top, node.backendNodeId, deepPart)
+    const part = withStyle ? await readPart(session, node, deepPart.deep?.backendNodeId ?? null) : null
+    return toRawRead(top, node.backendNodeId, { ...deepPart, part })
   } finally {
     await session.send('Runtime.releaseObjectGroup', {
       objectGroup: OBJECT_GROUP,
@@ -1161,10 +1214,50 @@ async function readDeep(session: CDPSession, topObjectId: string): Promise<DeepP
   }
 }
 
-function toRawRead(raw: z.infer<typeof RawReadSchema>, backendNodeId: number | null, part: DeepPart): RawRead {
+// DevTools' errors for a node that no longer exists: describeNode and resolveNode by backendNodeId.
+const NODE_NOT_FOUND = ['No node found for given backend id', 'No node with given id found']
+
+// The focused part inside the deep element's user-agent shadow root; describeNode lists that root without pierce.
+// A node removed mid-read gives null: groupStops then starts a new stop, or after other parts joins the current one
+// (one null per stop). Any other error still fails the read.
+async function readPart(
+  session: CDPSession,
+  top: { backendNodeId: number; shadowRoots?: { shadowRootType?: string; backendNodeId: number }[] },
+  deepId: number | null,
+): Promise<number | null> {
+  if (deepId === null) return null
+  try {
+    const node =
+      deepId === top.backendNodeId ? top : (await session.send('DOM.describeNode', { backendNodeId: deepId })).node
+    const root = node.shadowRoots?.find((r) => r.shadowRootType === 'user-agent')
+    if (root === undefined) return null
+    const { object } = await session.send('DOM.resolveNode', {
+      backendNodeId: root.backendNodeId,
+      objectGroup: OBJECT_GROUP,
+    })
+    if (!object.objectId) return null
+    const active = await session.send('Runtime.callFunctionOn', {
+      objectId: object.objectId,
+      functionDeclaration: 'function () { return this.activeElement }',
+      objectGroup: OBJECT_GROUP,
+    })
+    if (!active.result.objectId) return null
+    return (await session.send('DOM.describeNode', { objectId: active.result.objectId })).node.backendNodeId
+  } catch (err) {
+    const message = errorMessage(err)
+    if (NODE_NOT_FOUND.some((text) => message.includes(text))) return null
+    throw err
+  }
+}
+
+function toRawRead(
+  raw: z.infer<typeof RawReadSchema>,
+  backendNodeId: number | null,
+  deepPart: DeepPart & Pick<FocusRead, 'part'>,
+): RawRead {
   const { markerPresent, focusStyle, classAttr, snapshotted, snapshotError, arrived, ...fields } = raw
   return {
-    read: { backendNodeId, ...fields, ...part },
+    read: { backendNodeId, ...fields, ...deepPart },
     focusStyle,
     markerPresent,
     snapshotted,

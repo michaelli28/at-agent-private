@@ -182,6 +182,8 @@ export const WalkStatsSchema = z
     // F is a lower bound: a rendered cross-origin frame or closed shadow root may hide Tab stops.
     fIncomplete: z.boolean(),
     fIncompleteCauses: TabWalkResultSchema.shape.fIncompleteCauses.strict(),
+    // Tab stops (groupStops in tab-walk.ts) since the walk recorded part; records before it counted presses,
+    // which exceed stops on a page with a date, time or media control (one stop of several presses).
     plannedPresses: z.number().int().positive(),
     presses: z.number().int().nonnegative(),
     wraps: z.number().int().nonnegative(),

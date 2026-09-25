@@ -4,8 +4,15 @@ import { describe, it, expect, beforeAll, afterAll, afterEach, vi, type MockInst
 import type { CDPSession, Page } from 'playwright'
 import { BrowserClient, BrowserPage } from '@at-agent/browser'
 import { RENDERER_CRASHED } from './renderer-crash.js'
-import { runTabWalk, TabWalkResultSchema, focusIdentity, type FocusRead, type StyleChange } from './tab-walk.js'
-import { judgeKeyboardTrap } from './keyboard-trap.js'
+import {
+  runTabWalk,
+  TabWalkResultSchema,
+  focusIdentity,
+  type FocusRead,
+  type StyleChange,
+  type TabWalkStep,
+} from './tab-walk.js'
+import { judgeKeyboardTrap, type KeyboardTrapResult } from './keyboard-trap.js'
 
 // Fixtures A, D, E are copied from bench/probes/wrap/fixtures (shell-mode sequences in bench/probes/wrap/RESULT.md).
 const FIXTURE_A = `<!doctype html><html lang="en"><head><meta charset="utf-8"><title>Fixture A</title></head><body>
@@ -480,12 +487,192 @@ const SCROLLERS_DATETIME_SCROLLER = doc(
   `${scrollers(7)}\n${PICKUP_TIME}${scroller('t0')}`,
 )
 
-// A silent clip: Tab stops on five of its controls, all on the one element.
+// A silent clip: Tab stops on five of an <audio controls>'s controls, all on the one element.
+const WAV = 'data:audio/wav;base64,UklGRiQAAABXQVZFZm10IBAAAAABAAEAQB8AAEAfAAABAAgAZGF0YQAAAAA='
+
 const LINK_SCROLLERS_AUDIO = doc(
   'Link, scrollers, audio',
   `<a id="l1" href="#1">1</a>${scrollers(10)}
-<audio id="au" controls src="data:audio/wav;base64,UklGRiQAAABXQVZFZm10IBAAAAABAAEAQB8AAEAfAAABAAgAZGF0YQAAAAA="></audio>`,
+<audio id="au" controls src="${WAV}"></audio>`,
 )
+
+// Round 4: more pages with a Tab stop that takes several presses, which a walk budgeted in presses judges wrongly,
+// the guards it judges rightly, and the widest such controls on Chromium 143.
+
+// A loop over every stop, armed after the first lap: the date input is the last stop before the wrap, and its
+// fourth Tab (from its picker button) goes back to the first link.
+const DATE_LAST_IN_LOOP = doc(
+  'Date last in a loop',
+  `<a id="l1" href="#1">1</a><a id="l2" href="#2">2</a><label>Date <input id="d" type="date"></label>
+<script>
+const l1 = document.getElementById('l1')
+const d = document.getElementById('d')
+let laps = 0
+let presses = 0
+l1.addEventListener('focus', () => { laps++ })
+d.addEventListener('focus', () => { presses = 0 })
+document.addEventListener('keydown', (e) => {
+  if (e.key !== 'Tab' || laps < 2) return
+  if (!e.shiftKey && document.activeElement === d && ++presses === 4) { e.preventDefault(); l1.focus() }
+  if (e.shiftKey && document.activeElement === l1) { e.preventDefault(); d.focus() }
+})
+</script>`,
+)
+
+const LONE_AUDIO = doc('Lone audio', `<audio id="au" controls src="${WAV}"></audio>`)
+
+const LONE_VIDEO = doc('Lone video', `<video id="v" controls width="320" height="180" src="${WAV}"></video>`)
+
+// A common idiom: a text input that becomes a date and time input when it takes focus.
+const TYPE_SWAP_DATETIMES = doc(
+  'Type swap datetimes',
+  `<label>Start <input id="start" type="text" onfocus="this.type='datetime-local'"></label>
+<label>End <input id="end" type="text" onfocus="this.type='datetime-local'"></label>`,
+)
+
+const TWO_DATETIME_INPUTS = '<input id="start" type="datetime-local"> <input id="end" type="datetime-local">'
+
+const SHADOW_DATETIMES = doc(
+  'Shadow datetimes',
+  `<div id="host"></div>
+<script>document.getElementById('host').attachShadow({ mode: 'open' }).innerHTML = ${JSON.stringify(TWO_DATETIME_INPUTS)}</script>`,
+)
+
+const FRAME_DATETIMES = doc(
+  'Frame datetimes',
+  `<a id="l1" href="#1">1</a>
+<iframe id="frame" srcdoc="${srcdoc(TWO_DATETIME_INPUTS)}"></iframe>`,
+)
+
+const LINK_SCROLLERS_VIDEO = doc(
+  'Link, scrollers, video',
+  `<a id="l1" href="#1">1</a>${scrollers(10)}
+<video id="v" controls width="320" height="180" src="${WAV}"></video>`,
+)
+
+// DATE_LOOP with the widest native control: a datetime-local input with milliseconds takes 9 presses.
+const MS_DATETIME_LOOP = doc(
+  'Millisecond datetime loop',
+  `<a id="l1" href="#1">1</a>
+<div role="dialog" aria-label="Dialog"><label>Time <input id="d" type="datetime-local" step="0.001"></label> <button id="save" type="button">Save</button></div>
+${tabLoop(['d', 'save'])}`,
+)
+
+const linkScrollersAudioScrollers = (before: number, after: number): string =>
+  doc(
+    'Link, scrollers, audio, scrollers',
+    `<a id="l1" href="#1">1</a>${scrollers(before)}
+<audio id="au" controls src="${WAV}"></audio>${scrollers(after, 't')}`,
+  )
+
+// F = 2: in stops, the walk's last F+1 are [s15, audio, t0], 3 elements; its last F+1 presses are [audio, audio, t0].
+const TWO_LINKS_SCROLLERS_AUDIO = doc(
+  'Two links, scrollers, audio, scrollers',
+  `<a id="l1" href="#1">1</a><a id="l2" href="#2">2</a>${scrollers(16)}
+<audio id="au" controls src="${WAV}"></audio>${scrollers(4, 't')}`,
+)
+
+// A dialog loop from the first datetime-local input to the save button, over a second datetime-local input.
+const DATETIMES_SAVE_LOOP = doc(
+  'Datetimes and save loop',
+  `<a id="l1" href="#1">1</a>
+<div role="dialog" aria-label="Dialog"><input id="a" type="datetime-local"> <input id="b" type="datetime-local"> <button id="save" type="button">Save</button></div>
+<a id="l2" href="#2">2</a>
+${tabLoop(['a', 'save'])}`,
+)
+
+// The same loop, last on the page. The probe's seen set must be the walk's last F+1 stops: the last F+1 presses
+// hold only part of the loop, so the other key reaching a stop they miss would read as a release.
+const DATETIMES_SAVE_LOOP_LAST = doc(
+  'Datetimes and save loop, last',
+  `<a id="l1" href="#1">1</a>
+<div role="dialog" aria-label="Dialog"><input id="a" type="datetime-local"> <input id="b" type="datetime-local"> <button id="save" type="button">Save</button></div>
+${tabLoop(['a', 'save'])}`,
+)
+
+const SWALLOW_ON_DATE = doc(
+  'Swallow on date',
+  `<a id="l1" href="#1">1</a><input id="d" type="date"><a id="l2" href="#2">2</a>
+<script>document.getElementById('d').addEventListener('keydown', (e) => { if (e.key === 'Tab') e.preventDefault() })</script>`,
+)
+
+// A dialog loop [save, date]: the date input's fields are walked natively, and its fourth Tab goes back to save.
+const SAVE_DATE_LATE_LOOP = doc(
+  'Save, date loop',
+  `<a id="l1" href="#1">1</a>
+<div role="dialog" aria-label="Dialog"><button id="save" type="button">Save</button> <label>Date <input id="d" type="date"></label></div>
+<script>
+const save = document.getElementById('save')
+const d = document.getElementById('d')
+let presses = 0
+d.addEventListener('focus', () => { presses = 0 })
+document.addEventListener('keydown', (e) => {
+  if (e.key !== 'Tab') return
+  if (!e.shiftKey && document.activeElement === d && ++presses === 4) { e.preventDefault(); save.focus() }
+  if (e.shiftKey && document.activeElement === save) { e.preventDefault(); d.focus() }
+})
+</script>`,
+)
+
+// Every fourth Tab on the date input (from its picker button) refocuses it at its first field; Shift+Tab is native.
+const REFOCUS_AT_PICKER = doc(
+  'Refocus at picker',
+  `<a id="l1" href="#1">1</a><input id="d" type="date"><a id="l2" href="#2">2</a>
+<script>
+const d = document.getElementById('d')
+let presses = 0
+d.addEventListener('keydown', (e) => {
+  if (e.key === 'Tab' && !e.shiftKey && ++presses % 4 === 0) { e.preventDefault(); d.blur(); d.focus() }
+})
+</script>`,
+)
+
+// The same, and every Shift+Tab refocuses it too.
+const REFOCUS_AT_PICKER_BOTH_KEYS = doc(
+  'Refocus at picker, both keys',
+  `<a id="l1" href="#1">1</a><input id="d" type="date"><a id="l2" href="#2">2</a>
+<script>
+const d = document.getElementById('d')
+let presses = 0
+d.addEventListener('keydown', (e) => {
+  if (e.key !== 'Tab') return
+  if (e.shiftKey) { e.preventDefault(); d.blur(); d.focus(); return }
+  if (++presses % 4 === 0) { e.preventDefault(); d.blur(); d.focus() }
+})
+</script>`,
+)
+
+// Every Tab and Shift+Tab is caught and moves focus round [x, date, y] by script, so no press walks the date's fields.
+const MODAL_INTERCEPT_DATE = doc(
+  'Modal intercept over a date',
+  `<button id="x">x</button><input id="d" type="date"><button id="y">y</button>
+<script>
+const order = ['x', 'd', 'y'].map((id) => document.getElementById(id))
+document.addEventListener('keydown', (e) => {
+  if (e.key !== 'Tab') return
+  e.preventDefault()
+  const i = order.indexOf(document.activeElement)
+  order[(i + (e.shiftKey ? order.length - 1 : 1)) % order.length].focus()
+})
+</script>`,
+)
+
+// The calibration tripwire's controls, each between two links: on Chromium 143 the datetime-local input with
+// milliseconds takes 9 presses and the captioned video 6.
+const MS_DATETIME_BETWEEN_LINKS = doc(
+  'Millisecond datetime between links',
+  `<a id="l1" href="#1">1</a><label>Time <input id="when" type="datetime-local" step="0.001"></label><a id="l2" href="#2">2</a>`,
+)
+
+const CAPTIONED_VIDEO_BETWEEN_LINKS = doc(
+  'Captioned video between links',
+  `<a id="l1" href="#1">1</a>
+<video id="v" controls width="320" height="180" src="${WAV}"><track kind="captions" srclang="en" label="English" src="data:text/vtt,WEBVTT" default></video>
+<a id="l2" href="#2">2</a>`,
+)
+
+const DIRECTIONS = ['forward', 'backward'] as const
+type Direction = (typeof DIRECTIONS)[number]
 
 const OUTLINE_KEYS = ['outline-color', 'outline-offset', 'outline-style', 'outline-width']
 // Unchanged properties a change record may carry: what the checker needs to tell whether a change draws anything.
@@ -552,6 +739,18 @@ function expectBehindOneContainer(reads: FocusRead[], container: FocusRead['cont
   const deepIds = reads.map(focusIdentity)
   expect(new Set(deepIds).size).toBe(reads.length)
   expect(deepIds.some((id) => hostIds.has(id))).toBe(false)
+}
+
+// Lengths of the runs of consecutive presses on one element. A multi-press control between two links is one run per
+// visit, so a walk budgeted in stops walks exactly `presses` runs there; a walk budgeted in presses walks fewer.
+function runLengths(steps: readonly TabWalkStep[]): number[] {
+  const runs: number[] = []
+  steps.forEach((step, i) => {
+    const continues = i > 0 && !step.wrapped && focusIdentity(step.settled) === focusIdentity(steps[i - 1].settled)
+    if (continues) runs[runs.length - 1]++
+    else runs.push(1)
+  })
+  return runs
 }
 
 describe('runTabWalk', () => {
@@ -1688,43 +1887,154 @@ describe('runTabWalk', () => {
       expect(walk.steps.slice(0, firstWrap).every((s) => label(s.settled) === 'when')).toBe(true)
       const result = judgeKeyboardTrap([walk])
       expect(result.verdict).toBe('pass')
-      expect(result.directions[0].endOfPage?.signal).toBe('all-stops-visited')
+      expect(result.directions[0].endOfPage?.signal).toBe('body-unfocused')
     })
 
-    // Known wrong verdicts (bench/COVERAGE.md): a date or time input takes several Tab presses on one element,
-    // and the walk and its probe are budgeted in presses. Drop it.fails when they are budgeted in stops.
-    it.fails('known wrong: two datetime-local inputs, a clean page, should pass', async () => {
+    // Wrong before round 4: a date or time input takes several Tab presses on one element, and the walk and its
+    // probe were budgeted in presses. They are budgeted in stops now.
+    it('two datetime-local inputs, a clean page: judged pass', async () => {
       const page = await open(TWO_DATETIMES)
       const walk = await runTabWalk(page.playwrightPage, { settleMs: FAST })
       expect(judgeKeyboardTrap([walk]).verdict).toBe('pass')
     })
 
-    it.fails('known wrong: a dialog loop over a date input and a button, a trap, should fail', async () => {
+    it('a dialog loop over a date input and a button, a trap: judged fail', async () => {
       const page = await open(DATE_LOOP)
       const walk = await runTabWalk(page.playwrightPage, { settleMs: FAST })
       expect(judgeKeyboardTrap([walk]).verdict).toBe('fail')
     })
 
-    // The recent-wrap rule introduced these three: the stops fill the 15-press walk, which never wraps, and the
-    // probe's Shift+Tabs stay inside the input, whether the walk ended inside it or just after it.
-    it.fails('known wrong: eight scrollers then a datetime-local, a clean page, should pass', async () => {
+    // The recent-wrap rule introduced these three when the walk counted presses: the stops filled the 15-press
+    // walk, which never wrapped, and the probe's Shift+Tabs stayed inside the input.
+    it('eight scrollers then a datetime-local, a clean page: judged pass', async () => {
       const page = await open(SCROLLERS_THEN_DATETIME)
       const walk = await runTabWalk(page.playwrightPage, { settleMs: FAST })
       expect(judgeKeyboardTrap([walk]).verdict).toBe('pass')
     })
 
-    it.fails('known wrong: seven scrollers, a datetime-local, one scroller, a clean page, should pass', async () => {
+    it('seven scrollers, a datetime-local, one scroller, a clean page: judged pass', async () => {
       const page = await open(SCROLLERS_DATETIME_SCROLLER)
       const walk = await runTabWalk(page.playwrightPage, { settleMs: FAST })
       expect(judgeKeyboardTrap([walk]).verdict).toBe('pass')
     })
 
     // Media controls are Tab stops on one element too, so the class is wider than date and time inputs.
-    it.fails('known wrong: a link, ten scrollers, then <audio controls>, a clean page, should pass', async () => {
+    it('a link, ten scrollers, then <audio controls>, a clean page: judged pass', async () => {
       const page = await open(LINK_SCROLLERS_AUDIO)
       const walk = await runTabWalk(page.playwrightPage, { settleMs: FAST })
       expect(judgeKeyboardTrap([walk]).verdict).toBe('pass')
     })
+
+    async function judged(html: string, direction: Direction = 'forward'): Promise<KeyboardTrapResult> {
+      const page = await open(html)
+      return judgeKeyboardTrap([await runTabWalk(page.playwrightPage, { settleMs: FAST, direction })])
+    }
+
+    // More verdicts that were wrong from the same cause, found in round 4.
+    it('a loop over every stop with a date input last before the wrap, a trap: judged fail', async () => {
+      expect((await judged(DATE_LAST_IN_LOOP)).verdict).toBe('fail')
+    })
+
+    it('a lone <audio controls>, F=0, a clean page: judged pass', async () => {
+      expect((await judged(LONE_AUDIO)).verdict).toBe('pass')
+    })
+
+    it('a lone <video controls>, F=0, a clean page: judged pass', async () => {
+      expect((await judged(LONE_VIDEO)).verdict).toBe('pass')
+    })
+
+    it('two text inputs that become datetime-local on focus, a clean page: judged pass', async () => {
+      expect((await judged(TYPE_SWAP_DATETIMES)).verdict).toBe('pass')
+    })
+
+    it('two datetime-local inputs in an open shadow root, a clean page: judged pass', async () => {
+      expect((await judged(SHADOW_DATETIMES)).verdict).toBe('pass')
+    })
+
+    it('two datetime-local inputs in a same-origin frame, a clean page: judged pass', async () => {
+      expect((await judged(FRAME_DATETIMES)).verdict).toBe('pass')
+    })
+
+    it('a link, ten scrollers, then <video controls>, a clean page: judged pass', async () => {
+      expect((await judged(LINK_SCROLLERS_VIDEO)).verdict).toBe('pass')
+    })
+
+    it('a dialog loop over a millisecond datetime-local and a button, a trap: judged fail', async () => {
+      expect((await judged(MS_DATETIME_LOOP)).verdict).toBe('fail')
+    })
+
+    it('a link, eight scrollers, <audio controls>, three scrollers, a clean page: judged pass', async () => {
+      expect((await judged(linkScrollersAudioScrollers(8, 3))).verdict).toBe('pass')
+    })
+
+    it('backward, a dialog loop over two datetime-local inputs and a button, a trap: judged fail', async () => {
+      expect((await judged(DATETIMES_SAVE_LOOP, 'backward')).verdict).toBe('fail')
+    })
+
+    // The same trade with F = 2, where the judge must read the walk's stops: its last F+1 stops hold 3 elements,
+    // more than F, but its last F+1 presses hold 2. A walk counted in presses ends inside the audio element and passes.
+    it('trade, F=2: two links, sixteen scrollers, <audio controls>, four scrollers: undetermined', async () => {
+      const result = await judged(TWO_LINKS_SCROLLERS_AUDIO)
+      expect(result.verdict).toBe('undetermined')
+      expect(result.reason).toBe('focusables-exceeded')
+    })
+
+    // The accepted trade: 18 stops F does not count (17 scrollers and the audio element), past 4F+10 = 14. It
+    // passed in presses only because the walk ended inside the audio element and one Shift+Tab got out; counted in
+    // stops it is refused, like the same page with a button in place of the audio.
+    it('trade: a link, twelve scrollers, <audio controls>, five scrollers: undetermined, focusables-exceeded', async () => {
+      const result = await judged(linkScrollersAudioScrollers(12, 5))
+      expect(result.verdict).toBe('undetermined')
+      expect(result.reason).toBe('focusables-exceeded')
+    })
+
+    // Right when the walk counted presses, and must stay right now that it counts stops.
+    it('a date input that swallows Tab: judged fail', async () => {
+      expect((await judged(SWALLOW_ON_DATE)).verdict).toBe('fail')
+    })
+
+    for (const direction of DIRECTIONS) {
+      it(`a dialog loop [save, date] caught after the date's fields, ${direction}: judged fail`, async () => {
+        expect((await judged(SAVE_DATE_LATE_LOOP, direction)).verdict).toBe('fail')
+      })
+    }
+
+    it('a date input refocused at its first field, forward only: confined, Shift+Tab releases it, judged pass', async () => {
+      const result = await judged(REFOCUS_AT_PICKER)
+      expect(result.verdict).toBe('pass')
+      expect(result.directions[0].confined).toBe(true)
+    })
+
+    it('a date input refocused on Tab and on Shift+Tab: judged fail', async () => {
+      expect((await judged(REFOCUS_AT_PICKER_BOTH_KEYS)).verdict).toBe('fail')
+    })
+
+    it('every Tab moved by script round two buttons and a date input: judged fail', async () => {
+      expect((await judged(MODAL_INTERCEPT_DATE)).verdict).toBe('fail')
+    })
+
+    for (const direction of DIRECTIONS) {
+      it(`a dialog loop over two datetime-local inputs and a button, last on the page, ${direction}: judged fail`, async () => {
+        expect((await judged(DATETIMES_SAVE_LOOP_LAST, direction)).verdict).toBe('fail')
+      })
+    }
+
+    // Calibration tripwire: each control must stay one stop, in fewer presses than the 10 a stop may take. A
+    // Chromium that adds parts to one fails here and names it.
+    for (const [control, html] of [
+      ['a datetime-local input with milliseconds', MS_DATETIME_BETWEEN_LINKS],
+      ['<video controls> with a captions track', CAPTIONED_VIDEO_BETWEEN_LINKS],
+    ] as const) {
+      for (const direction of DIRECTIONS) {
+        it(`tripwire: ${control}, ${direction}, is one stop of fewer than 10 presses`, async () => {
+          const page = await open(html)
+          const walk = await runTabWalk(page.playwrightPage, { settleMs: FAST, direction })
+          const runs = runLengths(walk.steps)
+          expect(Math.max(...runs), `${control}: presses on one stop`).toBeLessThan(10)
+          expect(runs, `${control}: one run per stop`).toHaveLength(walk.presses)
+        })
+      }
+    }
   })
 
   // A crashed renderer never answers the walk's CDP session, and a press in flight at the crash never settles.

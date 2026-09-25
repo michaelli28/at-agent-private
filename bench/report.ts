@@ -782,7 +782,7 @@ function renderFlagTable(
       p.pageId,
       walk.findings === null
         ? "E"
-        : `${walk.findings.fIncomplete ? "≥" : ""}${walk.findings.F} / ${walk.findings.wraps}${walk.findings.presses < walk.findings.plannedPresses ? ` (${walk.findings.presses}/${walk.findings.plannedPresses} presses)` : ""}`,
+        : `${walk.findings.fIncomplete ? "≥" : ""}${walk.findings.F} / ${walk.findings.wraps}${walk.findings.presses < walk.findings.plannedPresses ? ` (${walk.findings.presses}/${walk.findings.plannedPresses} stops)` : ""}`,
       gaps.findings === null
         ? "E"
         : `${gaps.findings.gaps.length} / ${t.gapComponents}${keyboardCell(gaps.findings.keyboard)}`,
