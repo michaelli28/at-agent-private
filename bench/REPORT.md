@@ -444,10 +444,10 @@ needs a valid labelling pass, which is deferred, along with the test–retest κ
   published label exists for a live site, so this is a strong mechanical case, not a scored result.
   The 12th, `zelesta.nl`, fired inside a real cookie dialog that was never probed for release (§4).
 - **Anything about reverse-entry traps.** Every judged walk is forward-only — one walk per page
-  (`bench/run.ts:480`) — so a trap armed only on reverse entry is out of scope
-  (`bench/COVERAGE.md:58`). The release probe (Escape, then Shift+Tab) ran on exactly one live page,
-  `zelesta.nl`, on its discount pop-up, and got out; the `release: "not-probed"` in that page's
-  verdict is the placeholder every `undetermined` carries.
+  (`walkStats` in `bench/run.ts`) — so a trap armed only on reverse entry is out of scope
+  (`bench/COVERAGE.md`, "One forward walk per page"). The release probe (Escape, then Shift+Tab) ran
+  on exactly one live page, `zelesta.nl`, on its discount pop-up, and got out; the
+  `release: "not-probed"` in that page's verdict is the placeholder every `undetermined` carries.
 - **That the 3.2.1 rule was designed blind to the test set.** `bench/COVERAGE.md:37` records that
   the F55 rule "was chosen knowing how the BAD pages fail" — focus removed on arrival is how all four
   W3C Before-and-After pages fail 3.2.1 — and calls it "the most attackable fact in the project".
@@ -815,14 +815,15 @@ last F+1 stops held more distinct stops than F".
   the tests above, on synthetic pages, in one browser build.
 - That it has no cost. It has the accepted trade (below; pinned for F = 1 and F = 2); a refusal no
   design predicted on a page found in review whose date input is replaced by a clone as focus moves
-  (not pinned); walks of up to 10 presses per stop over such controls (up to 4.9 times the presses
-  on the prototype's pages); and up to 4 more DevTools calls per settled read (`bench/COVERAGE.md`,
-  round-4 section).
+  (pinned in round 5, 2026-09-25, in `tab-walk.test.ts`); walks of up to 10 presses per stop over
+  such controls (up to 4.9 times the presses on the prototype's pages); and up to 4 more DevTools
+  calls per settled read (`bench/COVERAGE.md`, round-4 section).
 - That 2.1.2 has no wrong verdicts. A trap on a button that is replaced by a clone on every fourth
   Tab passes before and after (not pinned). Closed shadow roots and cross-origin frames keep press
   counting, and Firefox and WebKit were not run.
-- That every part of the fix is tested. No test covers the not-found catch, the probe gate, the
-  3.2.1 short-walk count or bench's stop counts (`bench/COVERAGE.md`, round-4 section).
+- That every part of the fix was tested at `483fac9`. No test covered the not-found catch, the probe
+  gate, the 3.2.1 short-walk count or bench's stop counts until round 5 added a test for each
+  (`bench/COVERAGE.md`, round-4 section).
 - That anything is "fixed" or "works" beyond the evidence class above.
 
 **Direction of effect on the held-out numbers: reasoned from code, not measured.**

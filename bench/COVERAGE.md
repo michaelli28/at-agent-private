@@ -20,10 +20,10 @@
 
 ## What the 2.1.2 and 3.2.1 verdicts do not establish (decided 2026-09-19)
 
-- **A backward-armed trap is not covered.** A page is judged from one forward Tab walk; no second walk in either direction is judged (the gap detector's own walk, bench/run.ts:96, feeds no judge). A handler that traps only on reverse entry is invisible.
+- **A backward-armed trap is not covered.** A page is judged from one forward Tab walk; no second walk in either direction is judged (the gap detector's own walk, run by `runPage` in bench/run.ts, feeds no judge). A handler that traps only on reverse entry is invisible.
 - **A trap needing two Escape presses reads as inescapable.** The probe presses Escape exactly once, in `runEscapeProbe` (packages/accessibility/src/tab-walk.ts).
 - **Shift+Tab is never independent evidence.** Escape is pressed before the probe key, so only the conjunction "Escape failed AND the opposite key failed" is meaningful.
-- **F55 ships with no recorded dev fixture.** `focusLostOnArrival` is false on all 8 dev bases (bench/corpus/dev/labels.json) and on all 27 variants recorded at cd3b122, because no operator in bench/corpus/dev/operators.ts produced it when they were seeded. The M7 blur-on-focus operator was added at 4d7356a so the rule has dev-corpus evidence, but the variants recorded at cd3b122 predate it: until a fresh dev-variant run is recorded, the focus-removed rule is proven on synthetic and inline fixtures plus the M7 variant, not on any recorded baseline walk.
+- **F55 ships with no recorded dev fixture.** `focusLostOnArrival` is false on all 13 dev bases (bench/corpus/dev/labels.json; 8 when cd3b122 was recorded) and on all 27 variants recorded at cd3b122, because no operator in bench/corpus/dev/operators.ts produced it when they were seeded. The M7 blur-on-focus operator was added at 4d7356a so the rule has dev-corpus evidence, but the variants recorded at cd3b122 predate it. No recorded dev base walk has a focus-removed finding, but every dev-variant run committed since records M7 walks with them (`bench/results/<sha>/dev-variants/summary.json`): all 6 M7 variants at e1eb294, 118bb99 and 7140b7e, 8 of 9 at 0a71e4e and 145b3da (Runs A and B; `one-button__M7__only-button` is the old-checker miss below), and all 9 at c013aa1 and 483fac9 (Runs C and D).
 - **A same-document SPA route change is not seen.** The URL rule needs `location.href` to change.
 - **One observation, one criterion.** An F55 failure also fails 2.1.1 and 2.4.7; those stay with the gap detector and the focus-indicator check, so 3.2.1 recall is not counted three times.
 - **A context change that arrives after the 150 ms settle is refused, not reported** — a timer cannot be told from a focus handler. Those presses are listed as `url-changed-after-settle`. Since round 2 a focus drop first seen at the settled read is refused the same way, as `focus-removed-after-settle` (see the round-2 section).
@@ -390,7 +390,9 @@ run.
     replaced by a clone that takes focus on every other forward Tab, so forward Tab never leaves it and Shift+Tab
     does, went from `pass [opposite-key]` to `undetermined / focusables-exceeded`: its last F+1 = 4 stops are 4
     clones, more than F = 3. It is the round-2 refusal for pages that re-create nodes (above), now read over stops:
-    a refusal, not a wrong verdict. Run on chrome-headless-shell 143 in review; not pinned.
+    a refusal, not a wrong verdict. Run on chrome-headless-shell 143 in review; round 5 (2026-09-25) pins the
+    refusal in `tab-walk.test.ts`, "a date input replaced by a clone on every other Tab, Shift+Tab native:
+    undetermined, focusables-exceeded".
   - **Longer walks.** A walk over such controls takes up to 10 times as many presses, the cap per stop; on the
     design's prototype pages it took up to 4.9 times as many (98 presses for 20 stops on a page with two
     datetime-local inputs, 90 for 40 on a mixed form). The gap detector's walk has the same budget, the legacy
@@ -405,8 +407,10 @@ run.
     press counting and its wrong verdicts (from the code; not run).
   - A trap on a button that is replaced by a clone on every fourth Tab passes before and after, a false pass (found
     and run in design and review; not pinned). It belongs with the refusal for re-created nodes.
-  - No test covers four parts, as `483fac9` says: the catch that gives `part` null when DevTools reports the node
-    not found (catching every error, or none, passes the keyboard-trap, tab-walk and context-change tests); the
-    probe gate and the 3.2.1 short-walk count, each of which passes those tests when it counts presses again; and
-    bench's stop counts (`walkStats.presses` and "walked N of M planned stops"), whose test walks read `part` null
-    on every step, where stops equal presses.
+  - Until round 5, no test covered four parts, as `483fac9` says: the catch that gives `part` null when DevTools
+    reports the node not found (catching every error, or none, passed the keyboard-trap, tab-walk and context-change
+    tests); the probe gate and the 3.2.1 short-walk count, each of which passed those tests when it counted presses
+    again; and bench's stop counts (`walkStats.presses` and "walked N of M planned stops"), whose test walks read
+    `part` null on every step, where stops equal presses. Round 5 (2026-09-25) adds a test that each of those
+    changes fails: four in `tab-walk.test.ts` (the not-found catch for resolveNode's and describeNode's messages,
+    any other error, the probe gate), one in `context-change.test.ts` and two in `bench/run.test.ts`.
