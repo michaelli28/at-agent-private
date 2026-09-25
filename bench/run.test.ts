@@ -23,7 +23,7 @@ import {
   type Summary,
 } from "./results-schema.js";
 import { Refusal, checkHeldOutTree, dirtyPathsFrom } from "./run-inputs.js";
-import { legacyFrom, liveBrowser, runTool } from "./run.js";
+import { legacyFrom, liveBrowser, runTool, walkStats } from "./run.js";
 
 const BENCH = dirname(fileURLToPath(import.meta.url));
 const ROOT = resolve(BENCH, "..");
@@ -497,6 +497,58 @@ describe("legacyFrom labels the legacy replay", () => {
   it("leaves a complete replay of a page whose second navigation came ok", () => {
     const { run } = legacyFrom(outcome({ load: load("seen") }));
     expect(run).toMatchObject({ status: "ok", error: null });
+  });
+});
+
+// A date input is one Tab stop the walk takes in several presses (its fields, then its picker button), and the
+// walk is budgeted in stops, so the counts the bench records must be stops too.
+describe("walkStats and the cut-walk message count a date input's presses as one stop", () => {
+  let walk: TabWalkResult;
+
+  beforeAll(async () => {
+    const browser = await chromium.launch();
+    try {
+      const page = await browser.newPage();
+      await page.setContent(
+        '<!doctype html><title>t</title><input type="date"><a href="#b">B</a>',
+      );
+      walk = await runTabWalk(page);
+    } finally {
+      await browser.close();
+    }
+    expect(walk.error).toBeNull();
+    // More presses than stops, or neither test below could tell the two counts apart.
+    expect(walk.steps.length).toBeGreaterThan(walk.presses);
+  }, 120_000);
+
+  it("records a complete walk as every planned stop walked, not the presses it took", () => {
+    expect(walkStats(walk)).toMatchObject({
+      F: 2,
+      plannedPresses: 20,
+      presses: 20,
+    });
+  });
+
+  it("says how far a cut walk got in stops, not presses: the date input and the link are 2", () => {
+    const cut = walk.steps.slice(
+      0,
+      walk.steps.findIndex((s) => s.settled.tag === "a") + 1,
+    );
+    const { run } = legacyFrom({
+      value: {
+        ...walk,
+        steps: cut,
+        error: { phase: "walk", index: cut.length + 1, message: "closed" },
+      },
+      error: "page budget of 1500 ms exceeded; context closed",
+      budgetExceeded: true,
+      durationMs: 0,
+      load: null,
+      blocked: [],
+    });
+    expect(run.error).toBe(
+      "walked 2 of 20 planned stops: the walk stopped early",
+    );
   });
 });
 
