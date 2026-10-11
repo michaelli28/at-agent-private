@@ -8,6 +8,7 @@ import {
   runTabWalk,
   TabWalkResultSchema,
   focusIdentity,
+  groupStops,
   type FocusRead,
   type StyleChange,
   type TabWalkStep,
@@ -669,6 +670,26 @@ const CAPTIONED_VIDEO_BETWEEN_LINKS = doc(
   `<a id="l1" href="#1">1</a>
 <video id="v" controls width="320" height="180" src="${WAV}"><track kind="captions" srclang="en" label="English" src="data:text/vtt,WEBVTT" default></video>
 <a id="l2" href="#2">2</a>`,
+)
+
+// The date first: the walk's 20th stop is then the link, so its last F+1 presses miss the wrap its last F+1 stops hold.
+const DATE_THEN_LINK = doc('Date then link', '<label>Date <input id="d" type="date"></label><a id="l1" href="#1">1</a>')
+
+// Every other forward Tab on the date input focuses a clone in its place, so Tab never leaves it; Shift+Tab is native.
+const RERENDER_DATE_EVERY_OTHER_TAB = doc(
+  'Re-render date every other Tab',
+  `<a id="l1" href="#1">1</a><input class="x" type="date"><a id="l2" href="#2">2</a>
+<script>
+let n = 0
+document.addEventListener('keydown', (e) => {
+  const el = document.activeElement
+  if (e.key !== 'Tab' || e.shiftKey || !el.classList.contains('x') || ++n % 2 === 0) return
+  e.preventDefault()
+  const clone = el.cloneNode(true)
+  el.replaceWith(clone)
+  clone.focus()
+})
+</script>`,
 )
 
 const DIRECTIONS = ['forward', 'backward'] as const
@@ -1694,6 +1715,106 @@ describe('runTabWalk', () => {
     expect(probe.reachedAt).toBeNull()
   })
 
+  it('probe gate: a wrap in the last F+1 stops skips the probe, though the last F+1 presses miss it', async () => {
+    const page = await open(DATE_THEN_LINK)
+    const result = await runTabWalk(page.playwrightPage, { settleMs: FAST })
+
+    expect(result.focusableCount).toBe(2)
+    expect(result.steps.slice(-3).map((s) => label(s.settled))).toEqual(['d', 'd', 'l1'])
+    const lastStops = groupStops(result.steps).slice(-3)
+    expect(lastStops.map(([first]) => label(first.settled))).toEqual(['body!', 'd', 'l1'])
+    expect(result.suspectedTrap).toBe(false)
+    expect(result.escapeProbe).toBeNull()
+    expect(judgeKeyboardTrap([result]).verdict).toBe('pass')
+  })
+
+  // This browser's own error for a backendNodeId that names no node, so a changed message fails the tests below.
+  async function notFoundError(pw: Page, method: 'DOM.resolveNode' | 'DOM.describeNode'): Promise<string> {
+    const session = await pw.context().newCDPSession(pw)
+    try {
+      await session.send('DOM.getDocument', { depth: 0 })
+      await session.send(method, { backendNodeId: 987654321 })
+    } catch (err) {
+      return err instanceof Error ? err.message : String(err)
+    } finally {
+      await session.detach()
+    }
+    throw new Error(`${method} found a node for a made-up backendNodeId`)
+  }
+
+  // Rejects every matching call of the walk's session, so withRetry cannot hide a rethrow.
+  function failSend(
+    pw: Page,
+    reject: { fails: (method: string, params: object | undefined) => boolean; message: string },
+  ): void {
+    const { fails, message } = reject
+    interceptNextSession(pw, (session) => {
+      const send = session.send.bind(session)
+      vi.spyOn(session, 'send').mockImplementation(async (method, params) => {
+        if (fails(method, params)) throw new Error(message)
+        return send(method, params)
+      })
+    })
+  }
+
+  it('part: a node DevTools no longer finds is part null, and the walk goes on', async () => {
+    const page = await open(DATE_THEN_LINK)
+    const pw = page.playwrightPage
+    // On a top-level date input readPart's resolveNode is the walk's only one: no closed shadow root to count.
+    const message = await notFoundError(pw, 'DOM.resolveNode')
+    failSend(pw, { fails: (method) => method === 'DOM.resolveNode', message })
+    const result = await runTabWalk(pw, {
+      settleMs: FAST,
+      presses: 3,
+      allowFewerPresses: true,
+      escapeProbe: false,
+    })
+
+    expect(result.error).toBeNull()
+    // A null part repeats the stop's null, so each press on the date is a stop of its own.
+    expect(result.steps.map((s) => [label(s.settled), s.settled.part])).toEqual([
+      ['d', null],
+      ['d', null],
+      ['d', null],
+    ])
+  })
+
+  it('part: a deep node DevTools no longer finds (describeNode, open shadow root) is part null too', async () => {
+    const page = await open(SHADOW_DATETIMES)
+    const pw = page.playwrightPage
+    // readPart describes the deep element by backendNodeId; no other call of the walk does.
+    const byId = (method: string, params: object | undefined): boolean =>
+      method === 'DOM.describeNode' && params !== undefined && 'backendNodeId' in params
+    failSend(pw, { fails: byId, message: await notFoundError(pw, 'DOM.describeNode') })
+    const result = await runTabWalk(pw, {
+      settleMs: FAST,
+      presses: 3,
+      allowFewerPresses: true,
+      escapeProbe: false,
+    })
+
+    expect(result.error).toBeNull()
+    expect(result.steps.map((s) => [deepLabel(s.settled), s.settled.part])).toEqual([
+      ['start', null],
+      ['start', null],
+      ['start', null],
+    ])
+  })
+
+  it('part: any other error reading the part fails the read, and the walk records it', async () => {
+    const page = await open(DATE_THEN_LINK)
+    failSend(page.playwrightPage, { fails: (method) => method === 'DOM.resolveNode', message: 'boom' })
+    const result = await runTabWalk(page.playwrightPage, {
+      settleMs: FAST,
+      presses: 3,
+      allowFewerPresses: true,
+      escapeProbe: false,
+    })
+
+    expect(result.error).toEqual({ phase: 'walk', index: 1, message: 'boom' })
+    expect(result.steps).toHaveLength(0)
+  })
+
   it('focusLost: a press-1 drop on an autofocused page is marked', async () => {
     const page = await open(AUTOFOCUS_DROP)
     const result = await runTabWalk(page.playwrightPage, {
@@ -1986,6 +2107,17 @@ describe('runTabWalk', () => {
       const result = await judged(linkScrollersAudioScrollers(12, 5))
       expect(result.verdict).toBe('undetermined')
       expect(result.reason).toBe('focusables-exceeded')
+    })
+
+    // Round 2's refusal for re-created nodes, in stops (pass is right). A trap that re-creates its node still passes
+    // (bench/COVERAGE.md, round-4 section).
+    it('a date input replaced by a clone on every other Tab, Shift+Tab native: undetermined, focusables-exceeded', async () => {
+      const result = await judged(RERENDER_DATE_EVERY_OTHER_TAB)
+      expect(result.verdict).toBe('undetermined')
+      expect(result.reason).toBe('focusables-exceeded')
+      // The last F+1 = 4 stops are 4 clones, more than F = 3.
+      expect(result.directions[0].focusableCount).toBe(3)
+      expect(result.directions[0].region).toHaveLength(4)
     })
 
     // Right when the walk counted presses, and must stay right now that it counts stops.

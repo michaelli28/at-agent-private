@@ -461,7 +461,7 @@ function toAxeFinding(v: Violation): AxeFinding {
   };
 }
 
-function walkStats(w: TabWalkResult): WalkStats {
+export function walkStats(w: TabWalkResult): WalkStats {
   const reads = w.steps.map((s) => s.settled);
   return {
     F: w.focusableCount,

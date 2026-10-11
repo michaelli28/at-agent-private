@@ -398,6 +398,20 @@ describe('judgeContextChange', () => {
     expect(result.findings).toHaveLength(1)
     expect(result.findings[0].pressIndex).toBe(1)
   })
+
+  it('short-walk counts stops, not presses: two fields of one date input are one stop', () => {
+    // 3 presses, but 2 of the 3 stops owed: Tab crosses two of a date input's fields while the input keeps focus.
+    // The walker ends a walk short with no error only under a lowered budget (allowFewerPresses), hence presses: 2.
+    const field = (part: number): FocusRead => ({ ...elementRead(11, BASE_URL, 'input'), part })
+    const walk = makeWalk([step(1, field(101)), step(2, field(102)), step(3, elementRead(12, BASE_URL))], {
+      defaultPresses: 3,
+      presses: 2,
+    })
+    const result = judgeContextChange(walk)
+
+    expect(result.verdict).toBe('undetermined')
+    expect(result.reason).toBe('short-walk')
+  })
 })
 
 // Inline on purpose: no dev-corpus page sets focusLostOnArrival, so the F55 clause has no recorded
