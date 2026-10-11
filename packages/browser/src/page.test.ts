@@ -2,6 +2,13 @@ import { describe, it, expect, beforeAll, afterAll } from 'vitest'
 import { BrowserClient } from './client.js'
 import { BrowserPage } from './page.js'
 
+// example.com dropped its <h1> in 2026-10 and asks not to be used for testing; tests that need
+// the heading load this fixed copy of the old page instead.
+const EXAMPLE_DOMAIN =
+  '<title>Example Domain</title><h1>Example Domain</h1>' +
+  '<p>This domain is for use in illustrative examples in documents.</p>' +
+  '<a href="https://www.iana.org/domains/example">Learn more</a>'
+
 describe('BrowserPage', () => {
   let client: BrowserClient
   let page: BrowserPage
@@ -66,7 +73,7 @@ describe('BrowserPage', () => {
 
     it('finds elements by text', async () => {
       page = await client.newPage()
-      await page.goto('https://example.com')
+      await page.playwrightPage.setContent(EXAMPLE_DOMAIN)
       const elements = await page.getByText('Example Domain')
       expect(elements.length).toBeGreaterThan(0)
       await page.close()
@@ -93,7 +100,7 @@ describe('BrowserPage', () => {
 
     it('tree contains heading', async () => {
       page = await client.newPage()
-      await page.goto('https://example.com')
+      await page.playwrightPage.setContent(EXAMPLE_DOMAIN)
       const tree = await page.accessibilityTree()
 
       const findHeading = (node: any): any => {
@@ -136,7 +143,7 @@ describe('BrowserPage', () => {
   describe('highlight', () => {
     it('injects overlay element with label', async () => {
       page = await client.newPage()
-      await page.goto('https://example.com')
+      await page.playwrightPage.setContent(EXAMPLE_DOMAIN)
 
       const highlightPromise = page.highlight('heading', { name: 'Example Domain' }, 'CLICK', 500)
 

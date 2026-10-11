@@ -2,6 +2,13 @@ import { describe, it, expect, beforeAll, afterAll } from "vitest"
 import { BrowserClient, BrowserPage } from "@at-agent/browser"
 import { ScreenReaderSimulator } from "./screen-reader.js"
 
+// example.com dropped its <h1> in 2026-10 and asks not to be used for testing; tests that need
+// the heading load this fixed copy of the old page instead.
+const EXAMPLE_DOMAIN =
+  "<title>Example Domain</title><h1>Example Domain</h1>" +
+  "<p>This domain is for use in illustrative examples in documents.</p>" +
+  '<a href="https://www.iana.org/domains/example">Learn more</a>'
+
 describe("ScreenReaderSimulator", () => {
   let client: BrowserClient
   let page: BrowserPage
@@ -19,7 +26,7 @@ describe("ScreenReaderSimulator", () => {
   describe("readPage", () => {
     it("returns page content in reading order", async () => {
       page = await client.newPage()
-      await page.goto("https://example.com")
+      await page.playwrightPage.setContent(EXAMPLE_DOMAIN)
       simulator = new ScreenReaderSimulator(page)
 
       const content = await simulator.readPage()
@@ -34,7 +41,7 @@ describe("ScreenReaderSimulator", () => {
   describe("getHeadings", () => {
     it("returns all headings with levels", async () => {
       page = await client.newPage()
-      await page.goto("https://example.com")
+      await page.playwrightPage.setContent(EXAMPLE_DOMAIN)
       simulator = new ScreenReaderSimulator(page)
 
       const headings = await simulator.getHeadings()
