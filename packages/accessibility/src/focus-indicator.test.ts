@@ -1071,6 +1071,7 @@ function read(node: Node | 'body' | 'frame-body' | 'cross-origin' | 'closed-shad
     hasFocus: true,
     url: 'http://fixture.test/',
     deepUnavailable: null,
+    part: null,
   }
   if (node === 'body') {
     const deep = {

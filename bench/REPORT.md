@@ -5,7 +5,7 @@ Generated tables: `bench/results/74c4349/REPORT-baseline.md` (regenerate with
 `npx tsx bench/report.ts 74c4349`).
 
 **Which checker:** every held-out number in this report describes the checker at `74c4349` plus the
-§7 2.1.2 fix. The round-2 and round-3 changes in §10-§11 came later and were not run on held-out
+§7 2.1.2 fix. The round-2 to round-4 changes in §10-§12 came later and were not run on held-out
 pages. A `file:line` citation that names no commit points into the tree at `4e4a9d6`, the §7 fix's
 commit; later commits have moved some of those lines.
 
@@ -61,9 +61,10 @@ figure we were ready to headline earlier (35 of 35 false alarms on our practice 
 wrong explanation — we blamed our small practice pages, but the live sites show the old rule
 misfires on ordinary real-world markup too. Both are written up below rather than quietly dropped.
 
-**Since this run:** four more groups of checker fixes, then five smaller changes, were tested or
-measured on our own pages only, not on any page scored here; §10 and §11 list exactly what
-changed and what it costs.
+**Since this run:** four more groups of checker fixes, then five smaller changes, then a change to
+how the keyboard walk counts its steps through date and media controls, were tested or measured on
+our own pages only, not on any page scored here; §10-§12 list exactly what changed and what it
+costs.
 
 ---
 
@@ -106,7 +107,7 @@ Pages whose published report says the criterion **fails**. Did the checker flag 
 | 3.2.1     | 4     | 0/4    | **4/4** | 0/4      | before is 0 _by construction_ — see below  |
 | 4.1.2     | 4     | 4/4    | 4/4     | 4/4      | shared; axe matches                        |
 
-_Every cell predates the round-2 and round-3 fixes (§10-§11) and was not re-run after them._
+_Every cell predates the round-2 to round-4 fixes (§10-§12) and was not re-run after them._
 
 **The 3.2.1 result is not the improvement it looks like.** The old DynamicEvaluator could only fire
 after an agent `navigate` action, and a scripted Tab walk never produces one. Its before column is
@@ -133,7 +134,7 @@ Pages the published report marks **clean** for the criterion.
 | 3.2.1     | 4     | 0/4     | 0/4     |
 | 4.1.2     | 4     | 0/4     | 0/4     |
 
-_Every cell predates the round-2 and round-3 fixes (§10-§11) and was not re-run after them._
+_Every cell predates the round-2 to round-4 fixes (§10-§12) and was not re-run after them._
 
 **With 8 pages in one cluster every bound here is wide.** "0 false alarms on 8 pages" is consistent
 with a true rate around 31%. The generated report prints three upper bounds per zero cell and they
@@ -164,7 +165,7 @@ page's focus-order problem. Present it as a deletion.
 | 2.4.3     | **18/18 flagged**                                     | 0/18                                        | **rule deleted**                         |
 | 3.2.1     | 0/18                                                  | 2/18 · 1 undetermined (worst case 3/18)     | before could not fire on a scripted walk |
 
-_Every cell predates the round-2 and round-3 fixes (§10-§11) and was not re-run after them._
+_Every cell predates the round-2 to round-4 fixes (§10-§12) and was not re-run after them._
 
 > **These are FLAG COUNTS, not precision.** No published labels exist for live sites, so whether
 > those 12 are false alarms is not settled by a label. §6 makes the mechanical case; these columns
@@ -260,7 +261,7 @@ The recorded `cycleLength` is an end state, not a maximum.)_
 | `walk-error`            | 1     | the page budget was exhausted                                 |
 | `no-wrap`               | 1     | the walk never completed a focus cycle                        |
 
-_Every cell predates the round-2 and round-3 fixes (§10-§11) and was not re-run after them._
+_Every cell predates the round-2 to round-4 fixes (§10-§12) and was not re-run after them._
 
 These reasons come from the **gap detector's own Tab walk**, a second walk per page separate from
 the one the judges read (recorded in the run's own summary note, `bench/run.ts:96`). The two can
@@ -421,12 +422,17 @@ needs a valid labelling pass, which is deferred, along with the test–retest κ
   pages.
   With one-press stops and focus starting at the top, a page with 4F+10 or more stops F does not
   count (scrollers) never wraps within the walk and is refused (pinned in `keyboard-trap.test.ts`).
-  Stops that take several Tab presses (date and time inputs, `<audio controls>`) give wrong verdicts
-  both ways, and `it.fails` pins five in `tab-walk.test.ts`: a clean page with two datetime-local
-  inputs fails; a dialog loop over a date input and a button, a trap, passes; and the recent-wrap
-  rule adds false fails on clean pages, of which three are pinned: eight scrollers then a
-  datetime-local; seven scrollers, a datetime-local and one more scroller; and a link and ten
+  Until round 4, stops that take several Tab presses (date and time inputs, `<audio controls>`) gave
+  wrong verdicts both ways, and `it.fails` pinned five in `tab-walk.test.ts`: a clean page with two
+  datetime-local inputs failed; a dialog loop over a date input and a button, a trap, passed; and
+  the recent-wrap rule added false fails on clean pages, of which three were pinned: eight scrollers
+  then a datetime-local; seven scrollers, a datetime-local and one more scroller; and a link and ten
   scrollers then `<audio controls>`. `bench/COVERAGE.md`'s round-2 section has the full conditions.
+  **Round 4 changed that after the run, and was not run on held-out pages (§12):** every count above
+  in presses now counts Tab stops, which differ from presses only where Tab visits the parts of one
+  control, and the five pass. Closed shadow roots and cross-origin frames keep press counting;
+  Firefox and WebKit were not run. The accepted trade: a long clean page with such a control,
+  past the 4F+10 bound, that passed only because the walk ended inside the control is now refused.
 - **That this run could have caught a 2.1.2 regression.** It contains **no positive control**: no
   BAD page fails 2.1.2 and no live page is known to contain a trap. A checker hardwired to return
   `pass` reproduces §3's 0/8 exactly and would score §4's row as 0/18 with no refusals — the only
@@ -451,7 +457,7 @@ needs a valid labelling pass, which is deferred, along with the test–retest κ
   disclosures. Likewise, the probe that re-classified `vdc.ru` (§6) was designed after reading that
   held-out page's walk.
 - **3.2.1 as an improvement ratio.** The before column is structurally zero on this harness.
-- **That §2's, §3's and §4's 3.2.1 numbers describe the round-2 or round-3 judge.** The walk reads
+- **That §2's, §3's and §4's 3.2.1 numbers describe the round-2 to round-4 judge.** The walk reads
   focus about 1 ms after each Tab press and again after the 150 ms settle. Since the settle fix
   (§10), a focus drop first seen at the second read is refused as `focus-removed-after-settle`, not
   reported. That covers any focus removal first seen after the first read, whatever deferred it: a
@@ -461,8 +467,9 @@ needs a valid labelling pass, which is deferred, along with the test–retest κ
   voids the walk as `undetermined / page-navigates-without-input`, unless the walk also has a
   `focus-removed-after-settle` refusal. Since the arrival fix (§11), a drop can also be reported, or
   refused, when a focus event shows focus arrived since the previous read, the first press included.
-  None of these fixes was run on a held-out page, and whether every BAD page's focus removal shows
-  at the first read is ASSUMED, not measured (§10).
+  Since round 4 (§12), the short-walk check counts stops, and walks over date and media controls are
+  longer. None of these fixes was run on a held-out page, and whether every BAD page's focus removal
+  shows at the first read is ASSUMED, not measured (§10).
 - **2.4.7.** The focus-indicator check is built, exported and tested but **not wired into the
   harness, the agent or the CLI**, so 2.4.7 scores only the gap detector's `not_focusable` mapping and
   the check itself has no number. Leaving it out of the harness was deliberate (`COVERAGE.md`);
@@ -547,23 +554,23 @@ figures quoted in the Plain English summary, §2 and §7 are on the `dev-variant
 which none of these commands touches. Do not run `bench/fetch-bad.ts` with no arguments: that mode
 re-downloads the W3C site and rewrites the tracked manifest.
 
-Runs A and B (§10) and Run C (§11) cover the two dev sets only. Each ran from a clean detached
-worktree at its commit, so its results are stamped with that commit:
+Runs A and B (§10), Run C (§11) and Run D (§12) cover the two dev sets only. Each ran from a clean
+detached worktree at its commit, so its results are stamped with that commit:
 
 ```
-git checkout 0a71e4e              # Run A, the old checker; 145b3da for Run B, c013aa1 for Run C
+git checkout 0a71e4e              # Run A, the old checker; Runs B, C, D: 145b3da, c013aa1, 483fac9
 npx tsx bench/seed.ts && npx tsx bench/seed.ts --check
 npx tsx bench/run.ts dev-fixtures
 npx tsx bench/run.ts dev-variants
-npx tsx bench/report.ts 0a71e4e   # 145b3da for Run B, c013aa1 for Run C
+npx tsx bench/report.ts 0a71e4e   # 145b3da for Run B, c013aa1 for Run C, 483fac9 for Run D
 ```
 
-§10's and §11's cells come from the runs' `summary.json` files, compared page by page on
+§10's to §12's cells come from the runs' `summary.json` files, compared page by page on
 `tools.walk.findings.trap` (verdict and reason), `tools.walk.findings.contextChange.verdict`,
 `tools.gaps.findings.gaps` and `tools.gaps.findings.keyboard` (`notFocusableAssessed`,
-`unassessedReasons`). §11 also compares `tools.walk.findings` `focusLost`, `F`, `wraps` and
+`unassessedReasons`). §11 and §12 also compare `tools.walk.findings` `focusLost`, `F`, `wraps` and
 `presses`, the press list of `contextChange.findings`, and the press and reason of each
-`contextChange.unattributed` entry.
+`contextChange.unattributed` entry, and §12 every tool's `findings`.
 
 Four figures are hand analyses of the raw files (`bench/results/74c4349/test-live/raw/*.json.gz`),
 not generated tables, and no command above prints them: the 2.4.3 replay in §6 (first firing against
@@ -651,8 +658,9 @@ fix, and all but one were predicted before the fixes were built (`one-button__M9
   `packages/accessibility/src/context-change.test.ts` and the local-page walks recorded in
   `bench/COVERAGE.md`.
 - That re-render traps (M11) are detected. They are refused, and an `undetermined` counts as a miss.
-- That 2.1.2 has no wrong verdicts. The several-press stops and the pinned false fails in §7 stand,
-  and no dev page has a date, time or media input, so no dev number measures them.
+- That 2.1.2 has no wrong verdicts. The several-press stops and the pinned false fails in §7 stood
+  until round 4 (§12), and no dev page has a date, time or media input, so no dev number measures
+  them.
 - That anything is "fixed" or "works" beyond the evidence class above.
 
 **Direction of effect on the held-out numbers: reasoned from code, not measured.**
@@ -763,3 +771,75 @@ All of it is f5.
   becomes `pass`. But a refusal on a walk whose idle check saw a fragment-only change voids the walk,
   so `pass` or `fail` can become `undetermined`. §2's, §3's and §4's 3.2.1 counts can therefore
   rise, and fall only through that void.
+
+## 12. After round 3: stops that take several presses, measured on dev pages only (2026-09-25)
+
+After round 3, one fix (`483fac9`, its tests pinned first in `9cf2aac`) made the Tab walk, its
+escape probe, the 2.1.2 judge and the 3.2.1 short-walk check count Tab stops, not Tab presses. A
+date, time or media control is one stop, but Tab visits its parts first (month, day, year; play,
+timeline, volume), and counting presses gave wrong verdicts both ways (§7). It was measured on the
+two dev sets only, and **no held-out page was run or re-judged**: §2-§8 describe the checker at
+`74c4349` plus the §7 2.1.2 fix, §10 round 2, §11 round 3. Run D is the checker at `483fac9`
+(`bench/results/483fac9/`), over the same 13 dev bases and 94 variants as Run C; §9 has the
+commands. What the fix covers and costs is in `bench/COVERAGE.md`, round-4 section.
+
+**What changed.** Nothing, as predicted. On the columns §11 compares, 0 cells change on the 107
+pages, and F, wraps, presses (now stops), `focusLost`, 3.2.1 finding presses and unattributed
+entries are equal on all 107. A comparison of every tool's findings (walk, gaps, legacy, axe) finds
+no other difference than the local server's port and M9's `#tick-n` fragment in 3.2.1 finding URLs
+(125 `fromUrl`, 125 `toUrl`) and backend node ids in 2.1.2 regions, one stuck-on stop and 3.2.1
+preceding stops (33). Every tool ran ok on all 107. No dev page has a date, time or media control,
+and none of Run D's 8695 reads gives a `part`, so every stop there is one press (CONFIRMED: `jq`
+over its raw walk records, which are not committed). In the generated report
+(`bench/results/483fac9/REPORT-baseline.md`) only the 2.1.2 legend's wording changes: "the walk's
+last F+1 stops held more distinct stops than F".
+
+**What the tests show instead.** The fix shows only in unit and Chromium tests on synthetic pages
+(chrome-headless-shell 143), not in any run: the five §7 pins and 10 more wrong verdicts now pass
+(`bench/COVERAGE.md`, round-4 section).
+
+**What Run D MAY be read as saying:**
+
+- On our own dev pages, counting stops changed nothing: every tool's findings match Run C's apart
+  from the URL and node-id differences above.
+- Evidence class: local end-to-end runs on local pages, one machine, `chrome-headless-shell`
+  143.0.7499.4 (Playwright 1.57.0, axe-core 4.11.0, Node v24.10.0), 1-minute load 3.0-5.5 at the set
+  boundaries (5-minute up to 7.0 at the start), at times above the limit of about 4 set for these
+  runs. No live site and no held-out page was opened.
+
+**What it MAY NOT be read as saying:**
+
+- Any rate, ratio, precision or improvement figure.
+- That any held-out number in §2-§8 was re-measured or describes the round-4 checker.
+- That the fix works on a real page. Run D never groups two presses into one stop; its evidence is
+  the tests above, on synthetic pages, in one browser build.
+- That it has no cost. It has the accepted trade (below; pinned for F = 1 and F = 2); a refusal no
+  design predicted on a page found in review whose date input is replaced by a clone as focus moves
+  (not pinned); walks of up to 10 presses per stop over such controls (up to 4.9 times the presses
+  on the prototype's pages); and up to 4 more DevTools calls per settled read (`bench/COVERAGE.md`,
+  round-4 section).
+- That 2.1.2 has no wrong verdicts. A trap on a button that is replaced by a clone on every fourth
+  Tab passes before and after (not pinned). Closed shadow roots and cross-origin frames keep press
+  counting, and Firefox and WebKit were not run.
+- That every part of the fix is tested. No test covers the not-found catch, the probe gate, the
+  3.2.1 short-walk count or bench's stop counts (`bench/COVERAGE.md`, round-4 section).
+- That anything is "fixed" or "works" beyond the evidence class above.
+
+**Direction of effect on the held-out numbers: reasoned from code, not measured.**
+
+- **Recorded walks.** A walk recorded before the fix has no `part`, so it parses with `part` null on
+  every read, each press is its own stop, and re-judging it gives what the round-3 judge gives.
+- **Pages whose every read gives `part` null** walk and judge as before. That only date, time and
+  media controls give a `part` was checked on the element kinds the design tried; for the rest it is
+  ASSUMED.
+- **Pages with a date, time or media control can move both ways.** Toward the right answer: a clean
+  page failed as a trap can pass, and a trap looping through such a control can fail (shown on
+  synthetic pages). Toward `undetermined`: a clean page past the 4F+10 bound that passed through a
+  release read inside the control is refused (the trade), and a page that re-creates such a control
+  as focus moves can be refused even well inside the bound (the clone page above). Whether any
+  held-out page has such a control was not checked.
+- **Longer walks on those pages.** The gap detector's walk has the same budget in stops, so it can
+  reach a wrap where it did not and assess `not_focusable` where it read `no-wrap`; the legacy
+  replay reads the longer walk, so the before column can move; the 3.2.1 judge reads more presses,
+  so it can add findings or refusals; and a page that ran out of time takes longer still. All
+  ASSUMED.

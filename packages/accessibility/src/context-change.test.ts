@@ -71,6 +71,7 @@ function bodyRead(url: string, hasFocus: boolean, backendNodeId = 9): FocusRead 
       classAttr: null,
     },
     deepUnavailable: null,
+    part: null,
   }
 }
 
@@ -96,6 +97,7 @@ function elementRead(backendNodeId: number, url: string, tag = 'a'): FocusRead {
       classAttr: null,
     },
     deepUnavailable: null,
+    part: null,
   }
 }
 
